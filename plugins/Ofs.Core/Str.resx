@@ -155,6 +155,10 @@
     <value>Shape Curve</value>
     <comment>Display name of the Shape Curve processing node.</comment>
   </data>
+  <data name="NodeShapeCurveDesc" xml:space="preserve">
+    <value>Remaps each input position through a gamma curve to ease or sharpen the motion; optionally inverts the result.</value>
+    <comment>Add-node menu hover tooltip for the Shape Curve processing node.</comment>
+  </data>
   <data name="ParamGamma" xml:space="preserve">
     <value>Gamma</value>
     <comment>Shape Curve node: gamma slider label.</comment>

@@ -133,11 +133,12 @@ typedef struct {
     int hasState;         // 1 → TState-backed registration: the managed wrapper owns capture/encode/decode,
                           // and the host carries the node's state as JSON in ProcessingGraphNode::nodeState
     // Palette presentation (both optional).
-    const char *group; // add-node menu group header (rendered verbatim like displayName); null/"" → defaults
-                       // to the plugin name. Lets one plugin split its nodes across groups, or several
-                       // plugins share a group.
-    OfsNodeIcon icon;  // leaf glyph in the palette and on the node title bar; OfsNodeIconDefault → the
-                       // arity-bucket icon (Generate/Modify/Combine).
+    const char *group;       // add-node menu group header (rendered verbatim like displayName); null/"" → defaults
+                             // to the plugin name. Lets one plugin split its nodes across groups, or several
+                             // plugins share a group.
+    OfsNodeIcon icon;        // leaf glyph in the palette and on the node title bar; OfsNodeIconDefault → the
+                             // arity-bucket icon (Generate/Modify/Combine).
+    const char *description; // add-node menu hover tooltip (rendered verbatim like displayName); null/"" → none.
 } OfsNodeDef;
 
 // Command registration — main thread only, call from onLoad.
@@ -370,14 +371,14 @@ static_assert(offsetof(OfsCommandDef, id) == 0 && offsetof(OfsCommandDef, group)
                   offsetof(OfsCommandDef, inPalette) == 28,
               "OfsCommandDef field drift");
 
-static_assert(sizeof(OfsNodeDef) == 88, "OfsNodeDef layout drift");
+static_assert(sizeof(OfsNodeDef) == 96, "OfsNodeDef layout drift");
 static_assert(offsetof(OfsNodeDef, id) == 0 && offsetof(OfsNodeDef, displayName) == 8 &&
                   offsetof(OfsNodeDef, inputNames) == 16 && offsetof(OfsNodeDef, outputNames) == 24 &&
                   offsetof(OfsNodeDef, fn) == 32 && offsetof(OfsNodeDef, userData) == 40 &&
                   offsetof(OfsNodeDef, onNodeUi) == 48 && offsetof(OfsNodeDef, signal) == 56 &&
                   offsetof(OfsNodeDef, inputCount) == 60 && offsetof(OfsNodeDef, outputCount) == 64 &&
                   offsetof(OfsNodeDef, hasState) == 68 && offsetof(OfsNodeDef, group) == 72 &&
-                  offsetof(OfsNodeDef, icon) == 80,
+                  offsetof(OfsNodeDef, icon) == 80 && offsetof(OfsNodeDef, description) == 88,
               "OfsNodeDef field drift");
 
 static_assert(sizeof(OfsEditIntent) == 48, "OfsEditIntent layout drift");

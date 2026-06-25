@@ -145,6 +145,9 @@
   <data name="NodeShapeCurve" xml:space="preserve">
     <value>シェイプカーブ</value>
   </data>
+  <data name="NodeShapeCurveDesc" xml:space="preserve">
+    <value>各入力位置をガンマカーブで再マッピングし、動きを緩急付けします。必要に応じて結果を反転します。</value>
+  </data>
   <data name="ParamGamma" xml:space="preserve">
     <value>ガンマ</value>
   </data>

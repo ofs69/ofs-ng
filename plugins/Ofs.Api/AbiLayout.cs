@@ -36,10 +36,10 @@ namespace Ofs
             Size<OfsCommandDef>(32);
             Offsets<OfsCommandDef>(("Id", 0), ("Group", 8), ("Title", 16), ("InRebindList", 24), ("InPalette", 28));
 
-            Size<OfsNodeDef>(88);
+            Size<OfsNodeDef>(96);
             Offsets<OfsNodeDef>(("Id", 0), ("DisplayName", 8), ("InputNames", 16), ("OutputNames", 24),
                 ("Fn", 32), ("UserData", 40), ("OnNodeUi", 48), ("Signal", 56), ("InputCount", 60),
-                ("OutputCount", 64), ("HasState", 68), ("Group", 72), ("Icon", 80));
+                ("OutputCount", 64), ("HasState", 68), ("Group", 72), ("Icon", 80), ("Description", 88));
 
             Size<OfsEditIntent>(48);
             Offsets<OfsEditIntent>(("Kind", 0), ("Axis", 4), ("Time", 8), ("FromTime", 16), ("Pos", 24),

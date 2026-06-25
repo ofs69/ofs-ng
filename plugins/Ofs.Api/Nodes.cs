@@ -59,7 +59,7 @@ namespace Ofs
 
     /// <summary>The glyph a node shows in the add-node palette and on its title bar — a curated subset of
     /// the host's icons, chosen by value so a plugin never needs the host font's codepoints. Pass one to
-    /// <see cref="Nodes.AddNode{TState}(string, string, NodeShape, EvalFunctional{TState}, NodeUi{TState}, string, NodeIcon)"/>.
+    /// <see cref="Nodes.AddNode{TState}(string, string, NodeShape, EvalFunctional{TState}, NodeUi{TState}, string, NodeIcon, string)"/>.
     /// <see cref="Default"/> lets the host pick by arity (Generate / Modify / Combine). The list is
     /// append-only; an older host that doesn't know a newer value falls back to <see cref="Default"/>.</summary>
     public enum NodeIcon
@@ -335,24 +335,28 @@ namespace Ofs
         /// <param name="group">Optional add-node menu group header; defaults to the plugin name. Pass the same
         /// string from several nodes (or plugins) to collect them under one heading.</param>
         /// <param name="icon">Optional palette/title-bar glyph; defaults to the node's arity icon.</param>
+        /// <param name="description">Optional add-node menu hover tooltip describing the node; omit for none.</param>
         public void AddNode<TState>(string id, string name, NodeShape shape, EvalFunctional<TState> eval,
-            NodeUi<TState>? ui = null, string? group = null, NodeIcon icon = NodeIcon.Default) where TState : struct
-            => RegisterFunctional(id, name, shape, eval, ui, group, icon);
+            NodeUi<TState>? ui = null, string? group = null, NodeIcon icon = NodeIcon.Default,
+            string? description = null) where TState : struct
+            => RegisterFunctional(id, name, shape, eval, ui, group, icon, description);
 
         /// <summary>Registers a discrete node: its <paramref name="eval"/> reads the input action lists and
         /// writes the output action lists, once per region.</summary>
-        /// <inheritdoc cref="AddNode{TState}(string, string, NodeShape, EvalFunctional{TState}, NodeUi{TState}, string, NodeIcon)"/>
+        /// <inheritdoc cref="AddNode{TState}(string, string, NodeShape, EvalFunctional{TState}, NodeUi{TState}, string, NodeIcon, string)"/>
         public void AddNode<TState>(string id, string name, NodeShape shape, EvalDiscrete<TState> eval,
-            NodeUi<TState>? ui = null, string? group = null, NodeIcon icon = NodeIcon.Default) where TState : struct
-            => RegisterDiscrete(id, name, shape, eval, ui, group, icon);
+            NodeUi<TState>? ui = null, string? group = null, NodeIcon icon = NodeIcon.Default,
+            string? description = null) where TState : struct
+            => RegisterDiscrete(id, name, shape, eval, ui, group, icon, description);
 
         /// <summary>Registers a functional node whose <paramref name="prepare"/> factory runs once per region
         /// eval and returns the per-sample closure — build a LUT or other artifact there rather than
         /// rebuilding it every sample.</summary>
-        /// <inheritdoc cref="AddNode{TState}(string, string, NodeShape, EvalFunctional{TState}, NodeUi{TState}, string, NodeIcon)"/>
+        /// <inheritdoc cref="AddNode{TState}(string, string, NodeShape, EvalFunctional{TState}, NodeUi{TState}, string, NodeIcon, string)"/>
         public void AddNode<TState>(string id, string name, NodeShape shape, PrepareFunctional<TState> prepare,
-            NodeUi<TState>? ui = null, string? group = null, NodeIcon icon = NodeIcon.Default) where TState : struct
-            => RegisterFactory(id, name, shape, prepare, ui, group, icon);
+            NodeUi<TState>? ui = null, string? group = null, NodeIcon icon = NodeIcon.Default,
+            string? description = null) where TState : struct
+            => RegisterFactory(id, name, shape, prepare, ui, group, icon, description);
 
         /// <summary>Registers a stateless functional node — one with no parameters or persisted state and no
         /// body UI. Its <paramref name="eval"/> reads the input values at each sampled time and writes the
@@ -363,24 +367,25 @@ namespace Ofs
         /// <param name="eval">Worker-thread compute. A stateless node has no <c>TState</c>.</param>
         /// <param name="group">Optional add-node menu group header; defaults to the plugin name.</param>
         /// <param name="icon">Optional palette/title-bar glyph; defaults to the node's arity icon.</param>
+        /// <param name="description">Optional add-node menu hover tooltip describing the node; omit for none.</param>
         public void AddNode(string id, string name, NodeShape shape, EvalFunctional eval,
-            string? group = null, NodeIcon icon = NodeIcon.Default)
-            => RegisterFunctionalStateless(id, name, shape, eval, group, icon);
+            string? group = null, NodeIcon icon = NodeIcon.Default, string? description = null)
+            => RegisterFunctionalStateless(id, name, shape, eval, group, icon, description);
 
         /// <summary>Registers a stateless discrete node: its <paramref name="eval"/> reads the input action
         /// lists and writes the output action lists, once per region.</summary>
-        /// <inheritdoc cref="AddNode(string, string, NodeShape, EvalFunctional, string, NodeIcon)"/>
+        /// <inheritdoc cref="AddNode(string, string, NodeShape, EvalFunctional, string, NodeIcon, string)"/>
         public void AddNode(string id, string name, NodeShape shape, EvalDiscrete eval,
-            string? group = null, NodeIcon icon = NodeIcon.Default)
-            => RegisterDiscreteStateless(id, name, shape, eval, group, icon);
+            string? group = null, NodeIcon icon = NodeIcon.Default, string? description = null)
+            => RegisterDiscreteStateless(id, name, shape, eval, group, icon, description);
 
         /// <summary>Registers a stateless functional node whose <paramref name="prepare"/> factory runs once
         /// per region eval and returns the per-sample closure — build a LUT or other artifact there rather
         /// than rebuilding it every sample.</summary>
-        /// <inheritdoc cref="AddNode(string, string, NodeShape, EvalFunctional, string, NodeIcon)"/>
+        /// <inheritdoc cref="AddNode(string, string, NodeShape, EvalFunctional, string, NodeIcon, string)"/>
         public void AddNode(string id, string name, NodeShape shape, PrepareFunctional prepare,
-            string? group = null, NodeIcon icon = NodeIcon.Default)
-            => RegisterFactoryStateless(id, name, shape, prepare, group, icon);
+            string? group = null, NodeIcon icon = NodeIcon.Default, string? description = null)
+            => RegisterFactoryStateless(id, name, shape, prepare, group, icon, description);
 
         // ── Trampoline infrastructure ──────────────────────────────
         //
@@ -696,7 +701,7 @@ namespace Ofs
         }
 
         private void RegisterFunctional<TState>(string id, string name, NodeShape shape, EvalFunctional<TState> eval,
-            NodeUi<TState>? ui, string? group, NodeIcon icon) where TState : struct
+            NodeUi<TState>? ui, string? group, NodeIcon icon, string? description) where TState : struct
         {
             _host.AssertMainThread("Nodes.AddNode");
             _host.AssertOnLoad("Nodes.AddNode");
@@ -719,11 +724,11 @@ namespace Ofs
             var tramp = (IntPtr)(delegate* unmanaged[Cdecl]<double, float*, int, OfsEvalCtx*, float*, int, void*, void>)
                 &FunctionalTrampoline;
             SubmitNodeDef(id, name ?? string.Empty, OfsSignalKind.Functional, shape, tramp, (void*)(nint)slot,
-                          hasState: 1, onNodeUi: NodeUiPtr(entry), group: group, icon: icon);
+                          hasState: 1, onNodeUi: NodeUiPtr(entry), group: group, icon: icon, description: description);
         }
 
         private void RegisterFactory<TState>(string id, string name, NodeShape shape, PrepareFunctional<TState> prepare,
-            NodeUi<TState>? ui, string? group, NodeIcon icon) where TState : struct
+            NodeUi<TState>? ui, string? group, NodeIcon icon, string? description) where TState : struct
         {
             _host.AssertMainThread("Nodes.AddNode");
             _host.AssertOnLoad("Nodes.AddNode");
@@ -746,11 +751,11 @@ namespace Ofs
             var tramp = (IntPtr)(delegate* unmanaged[Cdecl]<double, float*, int, OfsEvalCtx*, float*, int, void*, void>)
                 &FunctionalTrampoline;
             SubmitNodeDef(id, name ?? string.Empty, OfsSignalKind.Functional, shape, tramp, (void*)(nint)slot,
-                          hasState: 1, onNodeUi: NodeUiPtr(entry), group: group, icon: icon);
+                          hasState: 1, onNodeUi: NodeUiPtr(entry), group: group, icon: icon, description: description);
         }
 
         private void RegisterDiscrete<TState>(string id, string name, NodeShape shape, EvalDiscrete<TState> eval,
-            NodeUi<TState>? ui, string? group, NodeIcon icon) where TState : struct
+            NodeUi<TState>? ui, string? group, NodeIcon icon, string? description) where TState : struct
         {
             _host.AssertMainThread("Nodes.AddNode");
             _host.AssertOnLoad("Nodes.AddNode");
@@ -774,7 +779,7 @@ namespace Ofs
             var tramp = (IntPtr)(delegate* unmanaged[Cdecl]<void**, int, OfsEvalCtx*, void**, int, void*, void>)
                 &DiscreteTrampoline;
             SubmitNodeDef(id, name ?? string.Empty, OfsSignalKind.Discrete, shape, tramp, (void*)(nint)slot,
-                          hasState: 1, onNodeUi: NodeUiPtr(entry), group: group, icon: icon);
+                          hasState: 1, onNodeUi: NodeUiPtr(entry), group: group, icon: icon, description: description);
         }
 
         // ── Stateless registration ──────────────────────────────
@@ -784,7 +789,7 @@ namespace Ofs
         // so it is held to the same no-capture rule.
 
         private void RegisterFunctionalStateless(string id, string name, NodeShape shape, EvalFunctional eval,
-            string? group, NodeIcon icon)
+            string? group, NodeIcon icon, string? description)
         {
             _host.AssertMainThread("Nodes.AddNode");
             _host.AssertOnLoad("Nodes.AddNode");
@@ -800,7 +805,7 @@ namespace Ofs
             var tramp = (IntPtr)(delegate* unmanaged[Cdecl]<double, float*, int, OfsEvalCtx*, float*, int, void*, void>)
                 &FunctionalTrampoline;
             SubmitNodeDef(id, name ?? string.Empty, OfsSignalKind.Functional, shape, tramp, (void*)(nint)slot,
-                          hasState: 0, onNodeUi: default, group: group, icon: icon);
+                          hasState: 0, onNodeUi: default, group: group, icon: icon, description: description);
         }
 
         // A factory node memoizes its per-sample closure under the eval's stateHandle (see GetPrepared), so a
@@ -810,7 +815,7 @@ namespace Ofs
         private static readonly object s_statelessBox = new();
 
         private void RegisterFactoryStateless(string id, string name, NodeShape shape, PrepareFunctional prepare,
-            string? group, NodeIcon icon)
+            string? group, NodeIcon icon, string? description)
         {
             _host.AssertMainThread("Nodes.AddNode");
             _host.AssertOnLoad("Nodes.AddNode");
@@ -827,11 +832,11 @@ namespace Ofs
             var tramp = (IntPtr)(delegate* unmanaged[Cdecl]<double, float*, int, OfsEvalCtx*, float*, int, void*, void>)
                 &FunctionalTrampoline;
             SubmitNodeDef(id, name ?? string.Empty, OfsSignalKind.Functional, shape, tramp, (void*)(nint)slot,
-                          hasState: 1, onNodeUi: default, group: group, icon: icon);
+                          hasState: 1, onNodeUi: default, group: group, icon: icon, description: description);
         }
 
         private void RegisterDiscreteStateless(string id, string name, NodeShape shape, EvalDiscrete eval,
-            string? group, NodeIcon icon)
+            string? group, NodeIcon icon, string? description)
         {
             _host.AssertMainThread("Nodes.AddNode");
             _host.AssertOnLoad("Nodes.AddNode");
@@ -847,7 +852,7 @@ namespace Ofs
             var tramp = (IntPtr)(delegate* unmanaged[Cdecl]<void**, int, OfsEvalCtx*, void**, int, void*, void>)
                 &DiscreteTrampoline;
             SubmitNodeDef(id, name ?? string.Empty, OfsSignalKind.Discrete, shape, tramp, (void*)(nint)slot,
-                          hasState: 0, onNodeUi: default, group: group, icon: icon);
+                          hasState: 0, onNodeUi: default, group: group, icon: icon, description: description);
         }
 
         // The shared node-UI trampoline pointer, but only for a node that actually renders something — a node
@@ -1049,7 +1054,8 @@ namespace Ofs
         // survive the RegisterNode call. Plugin nodes are TState-backed: there is no scalar param list —
         // every widget renders through onNodeUi.
         private void SubmitNodeDef(string id, string displayName, OfsSignalKind signal, NodeShape shape,
-            IntPtr trampoline, void* userData, int hasState, IntPtr onNodeUi, string? group, NodeIcon icon)
+            IntPtr trampoline, void* userData, int hasState, IntPtr onNodeUi, string? group, NodeIcon icon,
+            string? description)
         {
             var pins = new List<GCHandle>();
             GCHandle PinUtf8(string s)
@@ -1059,8 +1065,10 @@ namespace Ofs
                 return h;
             }
             // A null/empty group stays a null pointer (the host defaults it to the plugin name); only an
-            // explicit group string is pinned and passed.
+            // explicit group string is pinned and passed. A null/empty description likewise stays null (no tooltip).
             byte* GroupOrNull() => string.IsNullOrEmpty(group) ? null : (byte*)PinUtf8(group!).AddrOfPinnedObject();
+            byte* DescriptionOrNull() =>
+                string.IsNullOrEmpty(description) ? null : (byte*)PinUtf8(description!).AddrOfPinnedObject();
             try
             {
                 var hId = PinUtf8(id);
@@ -1090,6 +1098,7 @@ namespace Ofs
                     HasState = hasState,
                     Group = GroupOrNull(),
                     Icon = (int)icon,
+                    Description = DescriptionOrNull(),
                 };
                 _api->RegisterNode(_api->Ctx, &def);
             }

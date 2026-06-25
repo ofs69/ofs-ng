@@ -1920,6 +1920,10 @@ description = "Processing: tooltip on the Auto checkbox."
 english     = "Sampling rate for any node that turns a continuous signal into discrete actions."
 description = "Processing: tooltip on the region Hz drag."
 
+[ProcDiscretizeDesc]
+english     = "Resample any input onto a uniform Hz grid, producing one action per sample."
+description = "Processing: description tooltip for the built-in Discretize node in the add-node menu."
+
 [ProcEvalPrefix]
 english     = "eval: "
 description = "Processing: footer status label shown before the spinner while evaluating (note trailing space)."

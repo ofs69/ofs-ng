@@ -228,12 +228,13 @@ public sealed class ProbePlugin : OfsPlugin
                 outs[0] = 0.5f);
 
         // A custom node so the test can confirm registerNode round-trips into the native effect registry —
-        // including the author-declared group + icon (which override the default plugin-name bucket / arity icon).
+        // including the author-declared group + icon + description (group/icon override the default
+        // plugin-name bucket / arity icon; description is the add-menu hover tooltip).
         Host.Nodes.AddNode<ProbeGenState>("pnode", "Probe Gen",
             new NodeShape(inputs: [], outputs: ["out"]),
             static (double t, ReadOnlySpan<float> ins, in ProbeGenState s, NodeContext ctx, Span<float> outs) =>
                 outs[0] = 0.5f,
-            group: "Probes", icon: NodeIcon.Waveform);
+            group: "Probes", icon: NodeIcon.Waveform, description: "Probe node description");
 
         // A NodeShape with a repeated input name is ambiguous: the constructor must throw, so the node is
         // never registered (a C++ test asserts "dupinnode" is absent from the effect registry).

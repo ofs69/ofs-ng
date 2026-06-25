@@ -66,6 +66,7 @@ namespace Ofs
         public int HasState;        // 1 → TState-backed registration
         public byte* Group;         // add-node menu group header; null/"" → host defaults to plugin name
         public int Icon;            // NodeIcon value; 0 (Default) → host uses the arity-bucket icon
+        public byte* Description;   // add-node menu hover tooltip; null/"" → none
     }
 
     // ── Interaction-intent types (edit modes + navigators) ────────────────────

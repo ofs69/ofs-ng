@@ -55,6 +55,7 @@ struct EffectDefinition {
 struct PluginNodeEntry {
     std::string id;
     std::string displayName;
+    std::string description;               // add-node menu hover tooltip (def->description; empty → none)
     std::string category;                  // add-node menu group header (def->group, or the plugin name when unset)
     OfsNodeIcon icon = OfsNodeIconDefault; // author-declared glyph; Default → palette uses the arity icon
     OfsSignalKind signal = OfsSignalFunctional;

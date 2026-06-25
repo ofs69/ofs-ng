@@ -300,11 +300,13 @@ TEST_CASE("Probe plugin loads and round-trips its registrations through the brid
     CHECK(fx.cmdReg.find("Ofs.ProbePlugin.ping") != nullptr);
 
     // registerNode round-tripped into the native effect registry, carrying the author-declared group +
-    // icon (group overrides the default plugin-name bucket; icon is the curated NodeIcon enum by value).
+    // icon + description (group overrides the default plugin-name bucket; icon is the curated NodeIcon enum
+    // by value; description is the add-menu hover tooltip).
     REQUIRE(fx.effectReg.pluginNodes.count("Ofs.ProbePlugin.pnode") == 1);
     const auto &pnode = fx.effectReg.pluginNodes.at("Ofs.ProbePlugin.pnode");
     CHECK(pnode.category == "Probes");
     CHECK(pnode.icon == OfsNodeIconWaveform);
+    CHECK(pnode.description == "Probe node description");
 
     // The real loaded plugin reports the host ABI version.
     const LoadedPlugin *lp = nullptr;

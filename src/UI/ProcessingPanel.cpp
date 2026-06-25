@@ -1337,6 +1337,17 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
             ImGui::EndTooltip();
         };
 
+        auto renderDiscretizeTooltip = [] {
+            if (!ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+                return;
+            ImGui::BeginTooltip();
+            ImGui::PushTextWrapPos(ImGui::GetFontSize() * 22.0f);
+            ImGui::TextUnformatted(Str::ProcDiscretizeDesc.c_str());
+            ImGui::TextDisabled("%s", Str::ProcDiscrete.c_str());
+            ImGui::PopTextWrapPos();
+            ImGui::EndTooltip();
+        };
+
         auto renderScriptTooltip = [](const ScriptCatalogEntry &e) {
             if (!ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
                 return;
@@ -1347,6 +1358,19 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
             const char *sig = (e.signal == OfsSignalDiscrete ? Str::ProcDiscrete : Str::ProcFunctional).c_str();
             const char *kind = (e.library ? Str::ProcLibraryScript : Str::ProcScript).c_str();
             ImGui::TextDisabled("%s \xc2\xb7 %s", sig, kind); // "·" is a separator glyph, not translatable text
+            ImGui::PopTextWrapPos();
+            ImGui::EndTooltip();
+        };
+
+        auto renderPluginNodeTooltip = [](const PluginNodeEntry &pn) {
+            if (!ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+                return;
+            ImGui::BeginTooltip();
+            ImGui::PushTextWrapPos(ImGui::GetFontSize() * 22.0f);
+            if (!pn.description.empty())
+                ImGui::TextUnformatted(pn.description.c_str());
+            const char *sig = (pn.signal == OfsSignalDiscrete ? Str::ProcDiscrete : Str::ProcFunctional).c_str();
+            ImGui::TextDisabled("%s", sig);
             ImGui::PopTextWrapPos();
             ImGui::EndTooltip();
         };
@@ -1392,6 +1416,7 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
                     if (ImGui::MenuItem(fmtScratch("{}  Discretize", ICON_BAR_CHART)))
                         pendingAddType = GraphNodeType::Discretize;
                     ImGui::PopStyleColor();
+                    renderDiscretizeTooltip();
                 }
                 for (const auto &key : effectReg.orderedKeys) {
                     const auto &def = effectReg.effects.at(key);
@@ -1453,6 +1478,7 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
                                 ImGui::CloseCurrentPopup();
                             }
                             ImGui::PopStyleColor();
+                            renderPluginNodeTooltip(pn2);
                         }
                         if (kindOpen)
                             ImGui::EndMenu();
@@ -1502,6 +1528,7 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
                         ImGui::CloseCurrentPopup();
                     }
                     ImGui::PopStyleColor();
+                    renderDiscretizeTooltip();
                 }
                 for (const auto &key : effectReg.orderedKeys) {
                     const auto &def = effectReg.effects.at(key);
@@ -1554,6 +1581,7 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
                     ImGui::CloseCurrentPopup();
                 }
                 ImGui::PopStyleColor();
+                renderPluginNodeTooltip(pn);
             }
         }
 

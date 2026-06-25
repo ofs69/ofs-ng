@@ -154,7 +154,8 @@ namespace Ofs.Core
                 {
                     ui.Slider(Str.ParamGamma, ref s.Gamma, 0.1f, 4.0f);
                     ui.Checkbox(Str.ParamInvert, ref s.Invert);
-                });
+                },
+                description: Str.NodeShapeCurveDesc);
         }
 
         // Continue the motion past the playhead. A port of classic OFS GetLastStroke + repeatLastStroke,

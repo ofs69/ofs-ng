@@ -875,6 +875,7 @@ void hostRegisterNode(void *ctx, const OfsNodeDef *def) {
     // An author-declared group overrides the default plugin-name bucket (rendered verbatim, no catalog
     // localization); the icon is a curated enum value the UI maps to a glyph (Default → arity bucket).
     entry.category = (def->group && def->group[0]) ? def->group : p->currentPluginName;
+    entry.description = (def->description && def->description[0]) ? def->description : "";
     entry.icon = def->icon;
     entry.signal = static_cast<OfsSignalKind>(def->signal);
     entry.inputCount = def->inputCount;
