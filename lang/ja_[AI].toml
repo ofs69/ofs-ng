@@ -2951,8 +2951,8 @@ english     = "Playing the original video — click to optimize it for faster st
 translation = "オリジナル動画を再生中 — クリックするとフレーム送りとシークを高速化するために最適化できます。"
 
 [FtManagedHeapTip]
-english     = "Managed (.NET) heap memory currently in use by plugins and script nodes."
-translation = "プラグインとスクリプトノードが現在使用しているマネージド（.NET）ヒープメモリ。"
+english     = "Managed (.NET) heap, incl. uncollected garbage — a climbing value is normal, not a leak."
+translation = "マネージド（.NET）ヒープ（未回収のガベージを含む）— 値が増加するのは正常で、リークではありません。"
 
 [FtWorkersTip]
 english     = "Background evaluation workers currently running."

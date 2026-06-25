@@ -3105,8 +3105,8 @@ english     = "Playing the original video — click to optimize it for faster st
 description = "Footer tooltip on the Original source badge when it is clickable (optimizing is possible) — clicking opens the optimize dialog."
 
 [FtManagedHeapTip]
-english     = "Managed (.NET) heap memory currently in use by plugins and script nodes."
-description = "Footer tooltip on the managed-heap readout (.NET GC heap size)."
+english     = "Managed (.NET) heap, incl. uncollected garbage — a climbing value is normal, not a leak."
+description = "Footer tooltip on the managed-heap readout (raw .NET heap total). Notes that the figure includes uncollected garbage so the rising-then-dropping sawtooth is expected."
 
 [FtWorkersTip]
 english     = "Background evaluation workers currently running."
