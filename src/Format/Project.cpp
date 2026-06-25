@@ -437,7 +437,8 @@ void to_json(nlohmann::json &j, const Project &p) {
                                 {"autoNameSeed", p.autoNameSeed},
                                 {"activeNavigator", p.activeNavigator},
                                 {"activeEditMode", p.activeEditMode},
-                                {"activeSelectionMode", p.activeSelectionMode}});
+                                {"activeSelectionMode", p.activeSelectionMode},
+                                {"showAudioWaveform", p.showAudioWaveform}});
     if (p.lastExport)
         j["lastExport"] = *p.lastExport;
     // Only persist plugin data when something is stored, so an untouched project doesn't carry a "{}".
@@ -472,6 +473,7 @@ void from_json(const nlohmann::json &j, Project &p) {
     p.activeNavigator = j.value("activeNavigator", std::string("follow-overlay"));
     p.activeEditMode = j.value("activeEditMode", std::string("native"));
     p.activeSelectionMode = j.value("activeSelectionMode", std::string("native"));
+    p.showAudioWaveform = j.value("showAudioWaveform", false);
     if (j.contains("lastExport"))
         p.lastExport = j["lastExport"].get<ExportConfig>();
     // Absent or a non-object (corrupt) → empty object, never null.

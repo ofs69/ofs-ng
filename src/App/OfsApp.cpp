@@ -16,6 +16,7 @@
 #include "Services/SelectIntentRouter.h"
 #include "Services/UndoSystem.h"
 #include "Services/VideoTranscoder.h"
+#include "Services/WaveformService.h"
 #include "UI/AboutWindow.h"
 #include "UI/ConfigurationWindow.h"
 #include "UI/DockLayout.h"
@@ -35,6 +36,7 @@
 #include "UI/TitleBar.h"
 #include "UI/VideoPlayerControls.h"
 #include "UI/VideoPlayerWindow.h"
+#include "UI/WaveformRenderer.h"
 #include "UI/WelcomeScreen.h"
 #include "Util/FileFingerprint.h"
 #include "Util/FrameAllocator.h"
@@ -282,6 +284,8 @@ bool OfsApp::init() {
         scriptSystem = std::make_unique<ofs::ScriptSystem>(scriptProject, scriptRegistry, eventQueue, jobSystem);
         // Intra-frame transcoder — registers its handlers before freeze(); runs ffmpeg on JobSystem workers.
         videoTranscoder = std::make_unique<ofs::VideoTranscoder>(scriptProject, eventQueue, jobSystem);
+        // Audio-waveform extraction — registers handlers before freeze(); runs ffmpeg on JobSystem workers.
+        waveformService = std::make_unique<ofs::WaveformService>(scriptProject, eventQueue, jobSystem);
 
         // reopenLastProject is cleared by an explicit user close, so a deliberately-closed project stays
         // closed across a restart (it remains in lastProjectPaths for the welcome screen's recent list).
@@ -299,6 +303,9 @@ bool OfsApp::init() {
     // Sole SelectRequestEvent subscriber (the selection seam); registers in its ctor before freeze().
     selectIntentRouter = std::make_unique<ofs::SelectIntentRouter>(scriptProject, eventQueue, selectionModeRegistry);
     scriptTimelineWindow = std::make_unique<ofs::ScriptTimelineWindow>();
+    // Owns the waveform shader; reads the service's GL texture. Created here (after the GL context exists)
+    // so the shader compiles, and before the timeline renders it.
+    waveformRenderer = std::make_unique<ofs::WaveformRenderer>(*waveformService);
     videoControlsWindow = std::make_unique<ofs::VideoControlsWindow>(eventQueue);
     previewPopup = std::make_unique<ofs::TimelinePreviewPopup>();
     // init() only registers handlers + loads the mpv lib (must run before freeze() below); the second
@@ -453,6 +460,15 @@ void OfsApp::onUpdate(float dt) {
     // the update phase so resumed business logic / ScriptProject mutations stay out of render.
     if (modalManager)
         modalManager->pump();
+
+    // Raise the waveform-extraction progress modal on the rising edge of an active extraction (the
+    // WaveformService set waveform.active during the drain above). The latch is cleared by the modal body
+    // when it closes, so a subsequent extraction re-raises it; a cache hit never sets active, so no modal
+    // flashes for it.
+    if (scriptProject.waveform.active && !waveformModalShown_) {
+        waveformModalShown_ = true;
+        openWaveformProgressModal();
+    }
 
     // Keep the registry-resident provider commands in step with the mode set / scratch-axis existence / UI
     // language (all can change via events just drained — plugin load/unload, scratch create/delete, language
@@ -900,7 +916,7 @@ void OfsApp::renderEditor() {
     }
 
     if (scriptTimelineWindow)
-        scriptTimelineWindow->render(scriptProject, eventQueue, *player);
+        scriptTimelineWindow->render(scriptProject, eventQueue, *player, *waveformRenderer);
     if (videoControlsWindow)
         videoControlsWindow->render(scriptProject, eventQueue, *player, *videoPreview, *previewPopup);
     if (scriptStatisticsWindow)
@@ -1678,6 +1694,48 @@ void OfsApp::openTranscodeProgressModal() {
              ImGui::Separator();
              if (ImGui::Button(Str::TranscodeCancel.id("intra_prog_cancel")))
                  eqp->push(ofs::CancelTranscodeEvent{});
+             return false; // stays up until the worker reports done/failed/cancelled
+         }});
+}
+
+void OfsApp::openWaveformProgressModal() {
+    // Blocking modal that mirrors ScriptProject::waveform (set by WaveformService each frame). `shownFlag`
+    // is OfsApp::waveformModalShown_: cleared when this modal closes so a later extraction re-raises it.
+    ofs::showCustomModal(
+        eventQueue,
+        {.title = Str::WaveformProgressTitle.c_str(),
+         .width = ImGui::GetFontSize() * 22.0f,
+         .body = [proj = &scriptProject, eqp = &eventQueue, shownFlag = &waveformModalShown_]() -> bool {
+             const auto &w = proj->waveform;
+
+             if (w.phase == ofs::WaveformPhase::Done || w.phase == ofs::WaveformPhase::Idle) {
+                 *shownFlag = false;
+                 return true; // finished (or cleared by a toggle-off / media close): close
+             }
+
+             if (w.phase == ofs::WaveformPhase::Failed || w.phase == ofs::WaveformPhase::Cancelled) {
+                 const bool cancelled = w.phase == ofs::WaveformPhase::Cancelled;
+                 ImGui::TextColored(ofs::theme::GetStyleColorVec4(AppCol_Error), "%s",
+                                    cancelled ? Str::WaveformCancelled.c_str() : Str::WaveformFailed.c_str());
+                 ImGui::Separator();
+                 if (ImGui::Button(Str::WaveformClose.id("wf_prog_close"))) {
+                     *shownFlag = false;
+                     return true;
+                 }
+                 return false;
+             }
+
+             ImGui::TextUnformatted(w.phase == ofs::WaveformPhase::Probing ? Str::WaveformProbing.c_str()
+                                                                           : Str::WaveformExtracting.c_str());
+             ImGui::ProgressBar(static_cast<float>(w.progress), ImVec2(-FLT_MIN, 0.0f));
+             if (w.phase == ofs::WaveformPhase::Extracting && w.etaSeconds >= 0.0) {
+                 const auto secs = static_cast<int>(std::lround(w.etaSeconds));
+                 ImGui::TextUnformatted(Str::WaveformEta.fmt(fmtScratch("{}:{:02}", secs / 60, secs % 60)));
+             }
+
+             ImGui::Separator();
+             if (ImGui::Button(Str::WaveformCancel.id("wf_prog_cancel")))
+                 eqp->push(ofs::CancelWaveformEvent{});
              return false; // stays up until the worker reports done/failed/cancelled
          }});
 }

@@ -494,18 +494,31 @@ constexpr ColorItem kAxisColors[] = {
 constexpr ColorItem kHeatmapBase[] = {{AppCol_HeatmapBase, "Base Color"}};
 
 constexpr ColorItem kTimelineColors[] = {
-    {AppCol_CurveBgTop, "Curve BG Top"},          {AppCol_CurveBgBottom, "Curve BG Bottom"},
-    {AppCol_CurveHoverBg, "Curve Hover"},         {AppCol_GridLine, "Grid Line"},
-    {AppCol_GridLineMid, "Grid Line Mid"},        {AppCol_StripBg, "Strip BG"},
-    {AppCol_StripActiveBg, "Strip Active"},       {AppCol_StripHoverBg, "Strip Hover"},
-    {AppCol_StripSeparator, "Strip Sep."},        {AppCol_StripDivider, "Strip Divider"},
-    {AppCol_LockIndicator, "Lock Indicator"},     {AppCol_SelectedLine, "Selected Line"},
-    {AppCol_DragPreview, "Drag Preview"},         {AppCol_DragPreviewOutline, "Drag Outline"},
-    {AppCol_SelectionBox, "Selection Box"},       {AppCol_SelectionBoxFill, "Selection Fill"},
-    {AppCol_TimelineOutline, "Point Outline"},    {AppCol_TimelinePoint, "Point"},
-    {AppCol_TimelinePointSelected, "Point Sel."}, {AppCol_OverlayLineMajor, "Overlay Major"},
-    {AppCol_OverlayLineMinor, "Overlay Minor"},   {AppCol_ScriptSeekCursor, "Seek Cursor"},
-    {AppCol_ScriptPlayCursor, "Play Cursor"},     {AppCol_TempoMeasureLine, "Tempo Measure"},
+    {AppCol_CurveBgTop, "Curve BG Top"},
+    {AppCol_CurveBgBottom, "Curve BG Bottom"},
+    {AppCol_CurveHoverBg, "Curve Hover"},
+    {AppCol_Waveform, "Waveform"},
+    {AppCol_GridLine, "Grid Line"},
+    {AppCol_GridLineMid, "Grid Line Mid"},
+    {AppCol_StripBg, "Strip BG"},
+    {AppCol_StripActiveBg, "Strip Active"},
+    {AppCol_StripHoverBg, "Strip Hover"},
+    {AppCol_StripSeparator, "Strip Sep."},
+    {AppCol_StripDivider, "Strip Divider"},
+    {AppCol_LockIndicator, "Lock Indicator"},
+    {AppCol_SelectedLine, "Selected Line"},
+    {AppCol_DragPreview, "Drag Preview"},
+    {AppCol_DragPreviewOutline, "Drag Outline"},
+    {AppCol_SelectionBox, "Selection Box"},
+    {AppCol_SelectionBoxFill, "Selection Fill"},
+    {AppCol_TimelineOutline, "Point Outline"},
+    {AppCol_TimelinePoint, "Point"},
+    {AppCol_TimelinePointSelected, "Point Sel."},
+    {AppCol_OverlayLineMajor, "Overlay Major"},
+    {AppCol_OverlayLineMinor, "Overlay Minor"},
+    {AppCol_ScriptSeekCursor, "Seek Cursor"},
+    {AppCol_ScriptPlayCursor, "Play Cursor"},
+    {AppCol_TempoMeasureLine, "Tempo Measure"},
 };
 
 constexpr ColorItem kVideoColors[] = {
@@ -1098,7 +1111,8 @@ void ConfigurationWindow::renderThemeTab(const ScriptProject &project, EventQueu
         const bool wPlay = pass("Play Cursor Width");
         const bool wGrid = pass("Grid Mid Width");
         const bool wOverlay = pass("Overlay Major Width");
-        const bool anyWidth = wSeek || wPlay || wGrid || wOverlay;
+        const bool wWave = pass("Waveform Height");
+        const bool anyWidth = wSeek || wPlay || wGrid || wOverlay || wWave;
         if (beginSection(Str::PrefSecTimeline.id("sec_timeline"),
                          countMatch(std::span(kTimelineColors)) > 0 || anyWidth, true)) {
             if (colorGrid("##tl", kTimelineColors))
@@ -1122,6 +1136,8 @@ void ConfigurationWindow::renderThemeTab(const ScriptProject &project, EventQueu
                 applyAndSave();
             if (wOverlay && ImGui::DragFloat("Overlay Major Width", &t.vars[AppVar_OverlayLineMajorWidth].x, 0.1f, 0.5f,
                                              4.f, "%.1f"))
+                applyAndSave();
+            if (wWave && ImGui::SliderFloat("Waveform Height", &t.vars[AppVar_WaveformScale].x, 0.1f, 1.f, "%.2f"))
                 applyAndSave();
             // Curve BG gradient preview (vertical, top → bottom). Decorative — hidden while searching.
             if (themeFilter_.empty()) {

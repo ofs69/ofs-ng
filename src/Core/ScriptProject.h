@@ -14,6 +14,7 @@
 #include "Core/StandardAxis.h"
 #include "Core/TranscodeState.h"
 #include "Core/VectorSet.h"
+#include "Core/WaveformState.h"
 #include "Services/JobSystem.h"
 #include "Video/VideoPlayerSettings.h"
 #include <cstdint>
@@ -151,6 +152,10 @@ struct ScriptProject {
     // Transient: progress mirror of the running intra-frame transcode (if any). Driven by the
     // transcode events, read by the blocking progress modal. NOT serialized.
     TranscodeState transcode;
+
+    // Transient: progress mirror of the running audio-waveform extraction (if any). Driven by the
+    // waveform events, read by the blocking progress modal. NOT serialized.
+    WaveformState waveform;
 
     // Effective navigator id — what the prev/next-step keys do *right now* (the id NavigatorRouter
     // dispatches on and the footer shows). Equals storedNavigator while that id resolves to a loaded

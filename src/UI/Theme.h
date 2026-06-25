@@ -89,6 +89,7 @@ enum AppCol : int {
     AppCol_CurveBgTop,
     AppCol_CurveBgBottom,
     AppCol_CurveHoverBg,
+    AppCol_Waveform, // audio waveform envelope drawn behind the curves; opaque, high-contrast vs the track
     AppCol_GridLine,
     AppCol_GridLineMid,
     // Timeline actions
@@ -164,6 +165,8 @@ enum AppVar : int {
     // Timeline grid/overlay coarse-line widths (fine lines are fixed at 1px)
     AppVar_GridLineMidWidth,
     AppVar_OverlayLineMajorWidth,
+    // Audio waveform envelope height as a fraction of the lane half-height (<1 leaves an edge margin)
+    AppVar_WaveformScale,
     // Simulator 2D bar: thickness/border/line widths are now derived from the content-space
     // OverlayAnchor::widthNorm (they scale with zoom), so only the opacity remains a theme var.
     AppVar_SimGlobalOpacity,

@@ -380,6 +380,10 @@ struct SetTimelineShowPointsEvent {
     bool show;
 };
 
+struct SetTimelineShowWaveformEvent {
+    bool show;
+};
+
 struct EvalCompleteEvent {
     StandardAxis role;
     std::shared_ptr<EvalJob> job; // compared against AxisState::pendingEval for staleness

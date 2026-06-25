@@ -83,6 +83,7 @@ constexpr const char *kCustomColorNames[static_cast<int>(AppCol_COUNT) - static_
     "CurveBgTop",
     "CurveBgBottom",
     "CurveHoverBg",
+    "Waveform",
     "GridLine",
     "GridLineMid",
     "SelectedLine",
@@ -135,9 +136,9 @@ static_assert(std::size(kCustomColorNames) == static_cast<int>(AppCol_COUNT) - s
 // Names for the custom (>= ImGuiStyleVar_COUNT) style-var slots, in AppVar order.
 // Must match the appVars keys emitted by tools/gen_theme.py.
 constexpr const char *kCustomVarNames[static_cast<int>(AppVar_COUNT) - static_cast<int>(ImGuiStyleVar_COUNT)] = {
-    "ScriptSeekCursorWidth", "ScriptPlayCursorWidth", "GridLineMidWidth",   "OverlayLineMajorWidth",
-    "SimGlobalOpacity",      "NodeGridSpacing",       "NodeCornerRounding", "NodePadding",
-    "NodeBorderThickness",   "NodeLinkThickness",     "NodePinRadius"};
+    "ScriptSeekCursorWidth", "ScriptPlayCursorWidth", "GridLineMidWidth",  "OverlayLineMajorWidth",
+    "WaveformScale",         "SimGlobalOpacity",      "NodeGridSpacing",   "NodeCornerRounding",
+    "NodePadding",           "NodeBorderThickness",   "NodeLinkThickness", "NodePinRadius"};
 static_assert(std::size(kCustomVarNames) == static_cast<int>(AppVar_COUNT) - static_cast<int>(ImGuiStyleVar_COUNT),
               "kCustomVarNames out of sync with AppVar enum");
 
@@ -535,6 +536,9 @@ void fillBaseAppColors(Theme *dst) {
     dst->colors[AppCol_CurveBgTop] = mix(win, text, 0.03f);
     dst->colors[AppCol_CurveBgBottom] = ImColor(win);
     dst->colors[AppCol_CurveHoverBg] = t(0.02f);
+    // Opaque but muted: a blend toward the text color reads clearly on the recessed curve track
+    // without overpowering the curves drawn on top.
+    dst->colors[AppCol_Waveform] = mix(win, text, 0.62f);
     dst->colors[AppCol_GridLine] = t(0.18f);
     dst->colors[AppCol_GridLineMid] = t(0.30f);
 
@@ -621,6 +625,7 @@ void makeBaseDefaults(Theme *dst, bool dark) {
     dst->vars[AppVar_ScriptPlayCursorWidth] = {1.f, 0.f};
     dst->vars[AppVar_GridLineMidWidth] = {1.f, 0.f};
     dst->vars[AppVar_OverlayLineMajorWidth] = {1.f, 0.f};
+    dst->vars[AppVar_WaveformScale] = {0.9f, 0.f};
     dst->vars[AppVar_SimGlobalOpacity] = {0.75f, 0.f};
 
     if (dark)

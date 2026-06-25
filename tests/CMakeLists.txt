@@ -240,6 +240,7 @@ add_executable(ofs-unit-tests
         util/test_fuzzy_match.cpp
         services/test_command_registry.cpp
         services/test_video_transcoder.cpp
+        services/test_waveform_peaks.cpp
         video/test_playback_cursor.cpp
         localization/test_translator.cpp
 
@@ -271,6 +272,8 @@ add_executable(ofs-unit-tests
         # the Process/runCaptured symbols its worker references (no process is spawned by the tests).
         ${CMAKE_SOURCE_DIR}/src/Services/VideoTranscoder.cpp
         ${CMAKE_SOURCE_DIR}/src/Util/Subprocess.cpp
+        # Pure waveform helpers (ofs::waveform): bucketing math + cache round-trip, no GL.
+        ${CMAKE_SOURCE_DIR}/src/Services/WaveformPeaks.cpp
         ${CMAKE_SOURCE_DIR}/src/Video/PlaybackCursor.cpp
 )
 

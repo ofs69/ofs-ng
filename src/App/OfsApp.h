@@ -9,6 +9,7 @@
 #include "Core/StandardAxis.h"
 #include "Core/TranscodeEvents.h"
 #include "Core/VectorSet.h"
+#include "Core/WaveformEvents.h"
 #include "Format/AppSettings.h"
 #include "Format/LayoutStore.h"
 #include "Services/BindingSystem.h"
@@ -60,6 +61,8 @@ class VideoTranscoder;
 class ProcessingPanel;
 class ModalManager;
 class WelcomeScreen;
+class WaveformService;
+class WaveformRenderer;
 } // namespace ofs
 
 class OfsApp : public ofs::Application {
@@ -129,6 +132,7 @@ class OfsApp : public ofs::Application {
     void promptForMissingIntraDir();   // alert + force re-pick when the configured output folder is gone
     void pickIntraOutputDir();         // open the folder picker, persist the choice, re-open the options modal
     void openTranscodeProgressModal(); // show the blocking progress modal that mirrors ScriptProject::transcode
+    void openWaveformProgressModal();  // show the blocking progress modal that mirrors ScriptProject::waveform
     void maybeOfferOptimize();         // consume optimizePromptPending once media is ready; offer the prompt
     bool renderNewLayoutBody();        // interior of the New Layout modal; returns true to close
     void saveActiveLayout();           // snapshot current dock arrangement into the active preset
@@ -202,6 +206,11 @@ class OfsApp : public ofs::Application {
     // optimizing an unoptimized source. Deferred (not handled at load) because the video loads async.
     bool optimizePromptPending = false;
 
+    // True while the waveform-extraction progress modal is up. Set on the rising edge of
+    // ScriptProject::waveform.active (onUpdate); cleared by the modal body when it closes, so a later
+    // extraction re-raises exactly one modal (no FIFO stacking).
+    bool waveformModalShown_ = false;
+
     // Which mode's options to open, latched by OpenToolOptionsEvent (footer affordance or palette command)
     // and consumed in onImGuiRender to raise the click-away modal (showCustomModal). Latched (not raised
     // inline) so the modal is built inside a live ImGui frame.
@@ -266,6 +275,13 @@ class OfsApp : public ofs::Application {
     std::unique_ptr<ofs::VideoTranscoder> videoTranscoder;
     std::unique_ptr<ofs::ProcessingPanel> processingPanel;
     std::unique_ptr<ofs::WelcomeScreen> welcomeScreen;
+
+    // Audio waveform behind the timeline: the service extracts/caches peaks and owns the GL texture; the
+    // renderer (declared after, so it destructs first — it holds a reference to the service) owns the
+    // shader and draws. Both use GL, which is safe in their dtors since the base Application (and its GL
+    // context) outlives all OfsApp members.
+    std::unique_ptr<ofs::WaveformService> waveformService;
+    std::unique_ptr<ofs::WaveformRenderer> waveformRenderer;
 
     // Second mpv instance + its popup renderer for the seek-bar hover frame preview. Declared after
     // mpvPlayer so they destruct first, while the GL context is still alive (the engine deletes its

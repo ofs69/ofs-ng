@@ -13,12 +13,13 @@ namespace ofs {
 class VideoPlayer;
 struct ScriptProject;
 class EventQueue;
+class WaveformRenderer;
 
 class ScriptTimelineWindow {
   public:
     ScriptTimelineWindow();
 
-    void render(const ScriptProject &project, EventQueue &eq, VideoPlayer &videoPlayer);
+    void render(const ScriptProject &project, EventQueue &eq, VideoPlayer &videoPlayer, WaveformRenderer &waveform);
     [[nodiscard]] bool wasRegionClickedThisFrame() const { return m_regionClickedThisFrame; }
 
   private:
@@ -61,8 +62,8 @@ class ScriptTimelineWindow {
         int anchorRow = -1;
     };
 
-    void renderTimeline(const ScriptProject &project, EventQueue &eq, VideoPlayer &videoPlayer, const ImVec2 &pos,
-                        const ImVec2 &size);
+    void renderTimeline(const ScriptProject &project, EventQueue &eq, VideoPlayer &videoPlayer,
+                        WaveformRenderer &waveform, const ImVec2 &pos, const ImVec2 &size);
     void renderOverlay(const ScriptProject &project, const ImVec2 &pos, const ImVec2 &size, double offsetTime) const;
     void renderPlayhead(VideoPlayer &videoPlayer, const ImVec2 &pos, const ImVec2 &size, double offsetTime) const;
     void renderRegionBar(VideoPlayer &videoPlayer, const ScriptProject &project, EventQueue &eq, const ImVec2 &barMin,

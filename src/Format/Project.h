@@ -72,6 +72,9 @@ struct Project {
     // ScriptProject::activeSelectionMode. Default matches the native selection mode.
     std::string activeSelectionMode = "native";
     std::optional<ExportConfig> lastExport;
+    // Whether the timeline audio waveform is enabled for this project. Opt-in and persisted; mirrors
+    // ScriptProject::timelineView.showAudioWaveform. Default off.
+    bool showAudioWaveform = false;
     // Per-plugin custom data: a JSON object shaped pluginName → { key → value }. Opaque to the host;
     // round-trips losslessly. Mirrors ScriptProject::pluginData. Object (never null) so it writes as {}.
     nlohmann::json pluginData = nlohmann::json::object();

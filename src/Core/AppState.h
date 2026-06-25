@@ -27,6 +27,9 @@ struct TimelineViewState {
     // Hide source points in the timeline: disables both their rendering and all point
     // hit-testing so the curve can be scrubbed without grabbing points. Not serialized.
     bool showPoints = true;
+    // Show the audio waveform behind the timeline curves. Opt-in (extraction is comparatively costly),
+    // so it defaults off and is persisted with the project (see Format/Project showAudioWaveform).
+    bool showAudioWaveform = false;
 };
 
 } // namespace ofs

@@ -141,6 +141,7 @@ class ProjectManager {
     void onClearRegionSelection(const ClearRegionSelectionEvent &event);
     void onUpdateTimelineView(const UpdateTimelineViewEvent &event);
     void onSetTimelineShowPoints(const SetTimelineShowPointsEvent &event);
+    void onSetTimelineShowWaveform(const SetTimelineShowWaveformEvent &event);
     // Apply a project's saved resume position once the freshly opened media reports its real length.
     // The seek is deferred to here because the load fires LoadVideoEvent asynchronously: at load time
     // the player's duration is still 0, so a SeekEvent would clamp the target to 0.

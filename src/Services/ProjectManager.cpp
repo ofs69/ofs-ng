@@ -166,6 +166,7 @@ ProjectManager::ProjectManager(ScriptProject &project, EventQueue &eq, const App
     eq.on<ClearRegionSelectionEvent>([this](const auto &e) { onClearRegionSelection(e); });
     eq.on<UpdateTimelineViewEvent>([this](const auto &e) { onUpdateTimelineView(e); });
     eq.on<SetTimelineShowPointsEvent>([this](const auto &e) { onSetTimelineShowPoints(e); });
+    eq.on<SetTimelineShowWaveformEvent>([this](const auto &e) { onSetTimelineShowWaveform(e); });
     eq.on<DurationChangedEvent>([this](const DurationChangedEvent &e) { onDurationChanged(e); });
 
     // this->project below (not the same-named ctor parameter that shadows it here).
@@ -1434,6 +1435,7 @@ void ProjectManager::loadFromProject(const Project &proj) {
     project.activeNavigator = proj.activeNavigator;
     project.activeEditMode = proj.activeEditMode;
     project.activeSelectionMode = proj.activeSelectionMode;
+    project.timelineView.showAudioWaveform = proj.showAudioWaveform;
     project.pluginData = proj.pluginData;
     project.metadata = proj.metadata;
     project.overlay = proj.overlaySettings;
@@ -1522,6 +1524,7 @@ void ProjectManager::saveToProject(Project &proj) const {
     proj.activeNavigator = project.storedNavigator;
     proj.activeEditMode = project.storedEditMode;
     proj.activeSelectionMode = project.storedSelectionMode;
+    proj.showAudioWaveform = project.timelineView.showAudioWaveform;
     proj.pluginData = project.pluginData;
     proj.simP1 = project.simulator.p1;
     proj.simP2 = project.simulator.p2;
@@ -2633,6 +2636,10 @@ void ProjectManager::onUpdateTimelineView(const UpdateTimelineViewEvent &event) 
 
 void ProjectManager::onSetTimelineShowPoints(const SetTimelineShowPointsEvent &event) {
     project.timelineView.showPoints = event.show;
+}
+
+void ProjectManager::onSetTimelineShowWaveform(const SetTimelineShowWaveformEvent &event) {
+    project.timelineView.showAudioWaveform = event.show;
 }
 
 void ProjectManager::onCommitAxisActions(const CommitAxisActionsEvent &event) {

@@ -525,6 +525,9 @@ MAP_APP = {
     "CurveBgTop": _mix(_mix("surfaceContainerLowest", "surfaceContainerLow", 0.25), "primary", 0.05),
     "CurveBgBottom": "surfaceContainerLowest",
     "CurveHoverBg": _ra("onSurface", 0.015),
+    # Opaque, muted foreground: visible against the recessed curve track without overpowering the
+    # heat-colored curves that draw on top. onSurfaceVariant reads softer than full onSurface.
+    "Waveform": "onSurfaceVariant",
     "GridLine": _ra("onSurfaceVariant", 0.30),
     "GridLineMid": _ra("onSurfaceVariant", 0.55),
     "SelectedLine": "primary",
@@ -608,6 +611,7 @@ _IMGUI_VARS = {
 _APP_VARS = {
     "ScriptSeekCursorWidth": 2.0, "ScriptPlayCursorWidth": 1.0,
     "GridLineMidWidth": 1.0, "OverlayLineMajorWidth": 1.0,
+    "WaveformScale": 0.9,
     "SimGlobalOpacity": 0.75,
     "NodeGridSpacing": 24.0, "NodeCornerRounding": 5.0, "NodePadding": [10.0, 8.0],
     "NodeBorderThickness": 1.0, "NodeLinkThickness": 3.0, "NodePinRadius": 4.0,
@@ -621,7 +625,7 @@ _APP_VARS = {
 # Number of entries the "colors" JSON object must contain.
 # = AppCol_COUNT - ImGuiCol_COUNT minus the 20 AxisDim* slots,
 #   which are always derived in C++ (fillAxisDimColors) and never serialised.
-_APP_COL_JSON_COUNT = 84
+_APP_COL_JSON_COUNT = 85
 
 
 def _c(rgba):

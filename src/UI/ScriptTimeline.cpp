@@ -13,6 +13,7 @@
 #include "UI/ImGuiHelpers.h"
 #include "UI/Theme.h"
 #include "UI/TimelineLayout.h"
+#include "UI/WaveformRenderer.h"
 #include "Util/FrameAllocator.h"
 #include "Util/TimeUtil.h"
 #include "Video/VideoPlayer.h"
@@ -124,7 +125,7 @@ static const ScriptAxisAction *findNearestAction(const VectorSet<ScriptAxisActio
 ScriptTimelineWindow::ScriptTimelineWindow() = default;
 
 void ScriptTimelineWindow::renderTimeline(const ScriptProject &project, EventQueue &eq, VideoPlayer &videoPlayer,
-                                          const ImVec2 &pos, const ImVec2 &size) {
+                                          WaveformRenderer &waveform, const ImVec2 &pos, const ImVec2 &size) {
     ImDrawList *drawList = ImGui::GetWindowDrawList();
     double offsetTime = project.playback.cursorPos - viewState.visibleTime / 2.0;
 
@@ -328,6 +329,11 @@ void ScriptTimelineWindow::renderTimeline(const ScriptProject &project, EventQue
         ImU32 bgBottom = ofs::theme::GetColorU32(AppCol_CurveBgBottom);
         drawList->AddRectFilledMultiColor(curvePos, curvePos + curveSize, bgTop, bgTop, bgBottom, bgBottom);
     }
+
+    // Audio waveform: drawn on top of the background gradient but before the grid lines and curves, so it
+    // sits behind everything the user edits while staying legible.
+    if (project.timelineView.showAudioWaveform)
+        waveform.drawBackground(drawList, curvePos, curveSize, offsetTime, viewState.visibleTime);
 
     if (windowHovered && ImGui::IsMouseHoveringRect(curvePos, curvePos + curveSize))
         drawList->AddRectFilled(curvePos, curvePos + curveSize, ofs::theme::GetColorU32(AppCol_CurveHoverBg));
@@ -698,6 +704,10 @@ void ScriptTimelineWindow::renderTimeline(const ScriptProject &project, EventQue
         if (ImGui::MenuItem(Str::TlShowPoints.id("tl_show_points"), nullptr, &showPoints))
             eq.push(SetTimelineShowPointsEvent{showPoints});
 
+        bool showWaveform = project.timelineView.showAudioWaveform;
+        if (ImGui::MenuItem(Str::TlShowWaveform.id("tl_show_waveform"), nullptr, &showWaveform))
+            eq.push(SetTimelineShowWaveformEvent{showWaveform});
+
         // Scripting overlay settings (Frame/Tempo), folded into the timeline's own context menu.
         ImGui::Separator();
         if (ImGui::BeginMenu(Str::TlOverlay.id("tl_overlay_menu"))) {
@@ -772,7 +782,8 @@ void ScriptTimelineWindow::renderTimeline(const ScriptProject &project, EventQue
     }
 }
 
-void ScriptTimelineWindow::render(const ScriptProject &project, EventQueue &eq, VideoPlayer &videoPlayer) {
+void ScriptTimelineWindow::render(const ScriptProject &project, EventQueue &eq, VideoPlayer &videoPlayer,
+                                  WaveformRenderer &waveform) {
     m_regionClickedThisFrame = false;
 
     // NoNavInputs: this panel owns the unmodified arrow/Space editor shortcuts (frame-step, play/pause).
@@ -837,7 +848,8 @@ void ScriptTimelineWindow::render(const ScriptProject &project, EventQueue &eq, 
         selectionState.relSelEnd = std::clamp((mouseX - curvePos.x) / curveSize.x, 0.0f, 1.0f);
     }
 
-    renderTimeline(project, eq, videoPlayer, outerPos, {outerSize.x, outerSize.y - regionBarH - regionBarGap});
+    renderTimeline(project, eq, videoPlayer, waveform, outerPos,
+                   {outerSize.x, outerSize.y - regionBarH - regionBarGap});
     renderOverlay(project, curvePos, curveSize, offsetTime);
     renderPlayhead(videoPlayer, curvePos, curveSize, offsetTime);
 

@@ -347,6 +347,38 @@ translation = "最適化をキャンセルしました"
 english     = "Close"
 translation = "閉じる"
 
+[WaveformProgressTitle]
+english     = "Processing Audio Waveform"
+translation = "音声波形を処理中"
+
+[WaveformProbing]
+english     = "Analyzing audio…"
+translation = "音声を解析中…"
+
+[WaveformExtracting]
+english     = "Extracting waveform…"
+translation = "波形を抽出中…"
+
+[WaveformEta]
+english     = "About {0} remaining"
+translation = "残り約 {0}"
+
+[WaveformFailed]
+english     = "Could not extract audio — the media may have no audio track."
+translation = "音声を抽出できませんでした — メディアに音声トラックがない可能性があります。"
+
+[WaveformCancelled]
+english     = "Cancelled"
+translation = "キャンセルしました"
+
+[WaveformCancel]
+english     = "Cancel"
+translation = "キャンセル"
+
+[WaveformClose]
+english     = "Close"
+translation = "閉じる"
+
 [TlpDelta]
 english      = "Δ {0}"
 placeholders = [
@@ -2209,6 +2241,10 @@ translation = "処理領域を追加"
 [TlShowPoints]
 english     = "Show points"
 translation = "ポイントを表示"
+
+[TlShowWaveform]
+english     = "Show audio waveform"
+translation = "音声波形を表示"
 
 [TlOverlay]
 english     = "Overlay"

@@ -364,6 +364,41 @@ description = "Intra-frame optimize progress modal: heading shown when the trans
 english     = "Close"
 description = "Intra-frame optimize progress modal: button to dismiss the modal after a failure/cancel."
 
+[WaveformProgressTitle]
+english     = "Processing Audio Waveform"
+description = "Audio-waveform extraction progress modal: window title."
+
+[WaveformProbing]
+english     = "Analyzing audio…"
+description = "Audio-waveform extraction progress modal: phase label while probing the media duration."
+
+[WaveformExtracting]
+english     = "Extracting waveform…"
+description = "Audio-waveform extraction progress modal: phase label while decoding audio into the waveform."
+
+[WaveformEta]
+english      = "About {0} remaining"
+description  = "Audio-waveform extraction progress modal: estimated time remaining, below the progress bar."
+placeholders = [
+    "{0} = formatted time remaining, e.g. 1:23",
+]
+
+[WaveformFailed]
+english     = "Could not extract audio — the media may have no audio track."
+description = "Audio-waveform extraction progress modal: message shown when extraction fails."
+
+[WaveformCancelled]
+english     = "Cancelled"
+description = "Audio-waveform extraction progress modal: heading shown when the user cancelled extraction."
+
+[WaveformCancel]
+english     = "Cancel"
+description = "Audio-waveform extraction progress modal: button to abort the running extraction."
+
+[WaveformClose]
+english     = "Close"
+description = "Audio-waveform extraction progress modal: button to dismiss the modal after a failure/cancel."
+
 [TlpDelta]
 english      = "Δ {0}"
 description  = "Timeline hover preview: signed time offset from the current playhead, e.g. 'Δ +0:03'."
@@ -2311,6 +2346,10 @@ description = "Timeline curve right-click menu — create a processing region sp
 [TlShowPoints]
 english     = "Show points"
 description = "Timeline curve right-click menu — toggle rendering and editing of the source action points."
+
+[TlShowWaveform]
+english     = "Show audio waveform"
+description = "Timeline curve right-click menu — toggle the audio waveform drawn behind the curves."
 
 [TlOverlay]
 english     = "Overlay"
