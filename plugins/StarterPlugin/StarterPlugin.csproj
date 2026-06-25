@@ -1,0 +1,173 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Required: lets ofs-ng load this assembly into its own collectible context. -->
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <!-- ofs-ng loads <folder>/<folder>.dll, so the folder name must equal the assembly name. -->
+    <AssemblyName>StarterPlugin</AssemblyName>
+    <RootNamespace>StarterPlugin</RootNamespace>
+    <!-- Shown next to the name in the plugin list (OfsPlugin.Version reads this). -->
+    <Version>1.0.0</Version>
+    <!-- Strings.resx is the neutral (English) catalog; declaring the neutral language emits
+         [assembly: NeutralResourcesLanguage] so the resource manager skips a satellite probe for English. -->
+    <NeutralLanguage>en</NeutralLanguage>
+  </PropertyGroup>
+
+  <!-- ======================================================================
+       Where is ofs-ng installed?
+
+       OfsDir must point at the folder that contains the ofs-ng executable, plus
+       managed/ (the build reads Ofs.Api.dll from there).
+
+       Standalone copy? Just uncomment the line below and set your path. Because it
+       lives in the project file, BOTH the build and IntelliSense pick it up — no
+       environment variable, no command-line flag. Forward slashes work on every
+       OS, e.g. C:/Tools/ofs-ng or /home/you/ofs-ng.
+
+       Resolution order if this line stays commented out:
+         1. -p:OfsDir=...   on the command line (build only)
+         2. the OFS_DIR     environment variable  (build only)
+         3. ../../bin       (default: this template living inside the ofs-ng repo)
+       ====================================================================== -->
+  <PropertyGroup>
+    <!-- <OfsDir>C:/Tools/ofs-ng</OfsDir> -->
+
+    <OfsDir Condition="'$(OfsDir)' == '' and '$(OFS_DIR)' != ''">$(OFS_DIR)</OfsDir>
+    <OfsDir Condition="'$(OfsDir)' == ''">$(MSBuildProjectDirectory)/../../bin</OfsDir>
+    <OfsManagedDir>$(OfsDir)/managed</OfsManagedDir>
+  </PropertyGroup>
+
+  <!-- ======================================================================
+       Native NuGet assets (e.g. Emgu.CV's cvextern.dll, shipped under
+       runtimes/<rid>/native/ inside the package) are only restored and copied
+       to the build output for a RID-specific build. A framework-dependent
+       class-library build with no RuntimeIdentifier emits the *managed*
+       assemblies (so Emgu.CV.dll appears) but drops every native runtime asset
+       — so the plugin loads, then dies at the first P/Invoke with a
+       DllNotFoundException, and the natives are absent from both dist/<name>.zip
+       and <pref>/plugins. (EnableDynamicLoading already turns on
+       CopyLocalLockFileAssemblies, which covers managed transitive deps but NOT
+       the runtimes/ native tree.)
+
+       Defaulting to the building SDK's RID makes the natives land next to the
+       plugin in $(TargetDir), from where PackPluginZip / DeployToPrefPlugins
+       glob them in. This pins the plugin to one OS/arch — which a native
+       dependency does anyway. Override with -p:RuntimeIdentifier=linux-x64 etc.
+       SelfContained stays false: we want the package's native assets, not a
+       private copy of the .NET runtime. -->
+  <PropertyGroup>
+    <RuntimeIdentifier Condition="'$(RuntimeIdentifier)' == ''">$(NETCoreSdkRuntimeIdentifier)</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+  </PropertyGroup>
+
+
+  <!-- Optional localization: build-time strongly-typed accessor for Strings.resx, so you call
+       Str.ClickMe (compile-checked) instead of a "ClickMe" string key. MSBuild generates the class into
+       obj/ on every build — no Visual Studio, no committed Designer.cs. OfsPlugin keeps the generated
+       accessor's static Culture synced to ofs-ng's language picker, so the getters follow the in-app
+       language with zero wiring. Don't want localization? Delete Str.resx and this ItemGroup and
+       pass literal strings to ui.* directly. See README "Localization". -->
+  <ItemGroup>
+    <EmbeddedResource Update="Str.resx">
+      <Generator>MSBuild:Compile</Generator>
+      <StronglyTypedLanguage>CSharp</StronglyTypedLanguage>
+      <StronglyTypedNamespace>StarterPlugin</StronglyTypedNamespace>
+      <StronglyTypedClassName>Str</StronglyTypedClassName>
+      <!-- Fixed, config/RID-independent path (Generated/, gitignored), NOT $(IntermediateOutputPath):
+           with a RuntimeIdentifier set (above) the latter gains a RID segment
+           (obj/Debug/net10.0/win-x64/). The full build generates+compiles from there fine, but Roslyn
+           (C# Dev Kit *and* Visual Studio) loads source from the evaluation-time **/*.cs Compile glob —
+           which excludes obj/ — so Str builds yet red-underlines in the editor. A stable in-tree path is
+           globbed at evaluation time, so IntelliSense resolves Str. -->
+      <StronglyTypedFileName>$(MSBuildProjectDirectory)/Generated/Str.Designer.cs</StronglyTypedFileName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <!-- GenerateResource won't create the output dir; make it before the strongly-typed class is written. -->
+  <Target Name="EnsureGeneratedDir" BeforeTargets="CoreResGen">
+    <MakeDir Directories="$(MSBuildProjectDirectory)/Generated" />
+  </Target>
+
+  <!-- Once the file exists on disk (any rebuild) the default **/*.cs glob picks it up, and CoreResGen
+       also adds the StronglyTypedFileName to @(Compile) — two entries → CS2002 ("specified multiple
+       times"), an error under /WX. Drop the glob copy for a real build so only CoreResGen's copy
+       remains. Keep it for the design-time build ($(DesignTimeBuild)='true'), which doesn't run
+       CoreResGen — Roslyn resolves Str solely from the evaluation-time glob (see the path note above). -->
+  <ItemGroup Condition="'$(DesignTimeBuild)' != 'true'">
+    <Compile Remove="$(MSBuildProjectDirectory)/Generated/Str.Designer.cs" />
+  </ItemGroup>
+
+  <!-- The single assembly a plugin references. Private=false: never copy it next
+       to the plugin — ofs-ng owns the one canonical Ofs.Api it loads everyone against. -->
+  <ItemGroup>
+    <Reference Include="Ofs.Api">
+      <HintPath>$(OfsManagedDir)/Ofs.Api.dll</HintPath>
+      <Private>false</Private>
+    </Reference>
+  </ItemGroup>
+
+  <Target Name="CheckOfsApi" BeforeTargets="ResolveAssemblyReferences">
+    <Error Condition="!Exists('$(OfsManagedDir)/Ofs.Api.dll')"
+           Text="Ofs.Api.dll not found at '$(OfsManagedDir)'. Point OfsDir at your ofs-ng install (the folder containing the ofs-ng executable) — set OFS_DIR (e.g. in .vscode/tasks.json) or build with -p:OfsDir=/path/to/ofs-ng." />
+  </Target>
+
+  <!-- After a successful build, pack the plugin into an installable zip:
+       <project>/dist/StarterPlugin.zip, laid out as
+         StarterPlugin/
+           StarterPlugin.dll
+           StarterPlugin.runtimeconfig.json
+           StarterPlugin.deps.json
+           StarterPlugin.pdb        (symbols; fine to delete before sharing a Release build)
+       — the exact <name>/<name>.dll shape ofs-ng's "Install plugin from zip" flow expects. Install
+       it from inside ofs-ng (Plugins → Install from zip); it lands in <pref>/plugins/<name>/ after the
+       trust prompt. (User plugins are NOT loaded from the folder next to the executable — that root is
+       reserved for shipped first-party plugins — so the zip + install flow is the only way to load one.)
+       Ofs.Api is excluded: ofs-ng owns the one canonical copy it loads everyone against. -->
+  <Target Name="PackPluginZip" AfterTargets="Build" Condition="'$(PackPlugin)' != 'false'">
+    <PropertyGroup>
+      <PluginDistDir>$(MSBuildProjectDirectory)/dist</PluginDistDir>
+      <!-- Stage under a folder named after the assembly so the zip's top-level entry is <name>/. -->
+      <PluginStageRoot>$(IntermediateOutputPath)pluginzip</PluginStageRoot>
+      <PluginStageDir>$(PluginStageRoot)/$(AssemblyName)</PluginStageDir>
+      <PluginZipFile>$(PluginDistDir)/$(AssemblyName).zip</PluginZipFile>
+    </PropertyGroup>
+    <ItemGroup>
+      <PluginZipFiles Include="$(TargetDir)**/*.*" Exclude="$(TargetDir)Ofs.Api.dll" />
+    </ItemGroup>
+    <!-- Rebuild the stage from scratch so a since-renamed/removed file never lingers in the zip. -->
+    <RemoveDir Directories="$(PluginStageRoot)" />
+    <Copy SourceFiles="@(PluginZipFiles)"
+          DestinationFiles="@(PluginZipFiles->'$(PluginStageDir)/%(RecursiveDir)%(Filename)%(Extension)')" />
+    <MakeDir Directories="$(PluginDistDir)" /> <!-- ZipDirectory does not create the destination dir -->
+    <ZipDirectory SourceDirectory="$(PluginStageRoot)" DestinationFile="$(PluginZipFile)" Overwrite="true" />
+    <Message Importance="high"
+             Text="Packed $(AssemblyName) -> $(PluginZipFile)  (install via ofs-ng: Plugins → Install from zip)" />
+  </Target>
+
+  <!-- Dev convenience: also drop the plugin straight into ofs-ng's per-user plugins dir, so a rebuild
+       is picked up without the install-from-zip step. That dir is SDL_GetPrefPath("ofs","ofs-ng")/plugins
+       (the only writable root ofs-ng scans); we mirror its per-OS location below. ofs-ng still shows the
+       one-time trust prompt the first time it loads these bytes; turn on Plugins → "Hot reload (developer)"
+       to have an already-loaded plugin auto-reload on each rebuild. Opt out with -p:DeployToPref=false. -->
+  <Target Name="DeployToPrefPlugins" AfterTargets="Build" Condition="'$(DeployToPref)' != 'false'">
+    <PropertyGroup>
+      <OfsPrefDir Condition="'$(OS)' == 'Windows_NT'">$(APPDATA)\ofs\ofs-ng</OfsPrefDir>
+      <OfsPrefDir Condition="'$(OS)' != 'Windows_NT' and '$(XDG_DATA_HOME)' != ''">$(XDG_DATA_HOME)/ofs/ofs-ng</OfsPrefDir>
+      <OfsPrefDir Condition="'$(OS)' != 'Windows_NT' and '$(XDG_DATA_HOME)' == '' and $([MSBuild]::IsOSPlatform('OSX'))">$(HOME)/Library/Application Support/ofs/ofs-ng</OfsPrefDir>
+      <OfsPrefDir Condition="'$(OS)' != 'Windows_NT' and '$(XDG_DATA_HOME)' == '' and !$([MSBuild]::IsOSPlatform('OSX'))">$(HOME)/.local/share/ofs/ofs-ng</OfsPrefDir>
+      <PrefDeployDir>$(OfsPrefDir)/plugins/$(AssemblyName)</PrefDeployDir>
+    </PropertyGroup>
+    <ItemGroup>
+      <PrefDeployFiles Include="$(TargetDir)**/*.*" Exclude="$(TargetDir)Ofs.Api.dll" />
+    </ItemGroup>
+    <MakeDir Directories="$(PrefDeployDir)" />
+    <Copy SourceFiles="@(PrefDeployFiles)"
+          DestinationFiles="@(PrefDeployFiles->'$(PrefDeployDir)/%(RecursiveDir)%(Filename)%(Extension)')"
+          SkipUnchangedFiles="true" />
+    <Message Importance="high" Text="Deployed $(AssemblyName) -> $(PrefDeployDir)" />
+  </Target>
+
+</Project>

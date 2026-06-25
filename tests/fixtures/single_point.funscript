@@ -1,0 +1,9 @@
+{
+    "actions": [
+        { "at": 1000, "pos": 50 }
+    ],
+    "metadata": {
+        "type": "basic",
+        "title": "single_point fixture"
+    }
+}

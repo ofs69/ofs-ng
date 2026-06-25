@@ -1,0 +1,24 @@
+- name: Home
+  href: index.md
+- name: Guides
+  items:
+    - name: Getting Started
+      href: articles/getting-started.md
+    - name: Plugin Loading & OnLoad
+      href: articles/plugin-onload.md
+    - name: Debugging Plugins
+      href: articles/plugin-debugging.md
+    - name: Plugin Localization
+      href: articles/plugin-localization.md
+- name: Nodes
+  items:
+    - name: Script Nodes
+      href: articles/script-nodes.md
+    - name: Node Best Practices
+      href: articles/node-best-practices.md
+- name: Reference
+  items:
+    - name: Project File
+      href: articles/project-file.md
+    - name: API Reference
+      href: api/

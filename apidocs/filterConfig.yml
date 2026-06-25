@@ -1,0 +1,10 @@
+# Drop the inherited System.Object / System.ValueType boilerplate (Equals, GetHashCode, ToString,
+# GetType, ReferenceEquals) that DocFX otherwise stamps onto every struct/class page. Plugin authors
+# never call these; hiding them keeps each type page to its actual API surface.
+apiRules:
+  - exclude:
+      uidRegex: ^System\.Object$
+      type: Type
+  - exclude:
+      uidRegex: ^System\.ValueType$
+      type: Type

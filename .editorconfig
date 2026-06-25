@@ -1,0 +1,16 @@
+# EditorConfig for ofs-ng. Only the managed (C#) analyzer policy lives here — C++ formatting is governed
+# by clang-format (the `format` build target), and the [*.cs] scoping below keeps these rules off it.
+root = true
+
+[*.cs]
+# CA1051 (do not declare visible instance fields): the plugin Settings pattern deliberately exposes public
+# fields so the UI can bind to them by ref (e.g. ui.Slider(ref S.Foo)) and System.Text.Json round-trips
+# them with IncludeFields. A property cannot be passed by ref, so enforcing this rule would break the
+# documented binding model (see CorePlugin.Settings, AppScoped<T>/ProjectScoped<T>). Disabled by design.
+dotnet_diagnostic.CA1051.severity = none
+
+# CA1863 (cache a CompositeFormat for repeated use): every user-facing formatted string comes from the Str.*
+# localization catalog and is re-fetched on each call because it changes with ofs-ng's active UI language. A
+# cached CompositeFormat would pin the format to whatever language was current at first use and never follow a
+# language switch, breaking localization. The format strings are therefore deliberately not cacheable.
+dotnet_diagnostic.CA1863.severity = none

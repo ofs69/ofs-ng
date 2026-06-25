@@ -1,0 +1,112 @@
+#include "UI/DockLayout.h"
+#include "imgui.h"
+#include "imgui_internal.h" // DockBuilder* API — not part of the public imgui.h API.
+
+namespace ofs::ui {
+
+namespace {
+// Discards any existing arrangement and builds the hardcoded default split layout.
+void buildDefault(ImGuiID dockspaceId, ImGuiViewport *viewport) {
+    ImGui::DockBuilderRemoveNode(dockspaceId);
+    ImGui::DockBuilderAddNode(dockspaceId, ImGuiDockNodeFlags_DockSpace);
+    ImGui::DockBuilderSetNodeSize(dockspaceId, viewport->Size);
+
+    ImGuiID dockMainId = dockspaceId;
+    ImGuiID dockIdBottom = ImGui::DockBuilderSplitNode(dockMainId, ImGuiDir_Down, 0.30f, nullptr, &dockMainId);
+    ImGuiID dockIdRight = ImGui::DockBuilderSplitNode(dockMainId, ImGuiDir_Right, 0.2f, nullptr, &dockMainId);
+    // The right column is split into three rows, top to bottom: Statistics, Tool Options, and the
+    // Simulator. Peel each off the bottom in turn so the remaining top portion keeps splitting: Simulator
+    // (bottom quarter), then Tool Options (a slim middle band), leaving Statistics with the top.
+    ImGuiID dockIdStatistics = dockIdRight;
+    ImGuiID dockIdSimulator =
+        ImGui::DockBuilderSplitNode(dockIdStatistics, ImGuiDir_Down, 0.35f, nullptr, &dockIdStatistics);
+    ImGuiID dockIdToolOptions =
+        ImGui::DockBuilderSplitNode(dockIdStatistics, ImGuiDir_Down, 0.55f, nullptr, &dockIdStatistics);
+    ImGuiID dockIdTimeline = dockIdBottom;
+    // The Video Controls window holds only two compact widget rows (transport/seek/time +
+    // volume/bookmarks/speed), so it needs far less height than the timeline above it. With the
+    // layout locked (the intended clean presentation) the node sheds its tab bar, so both rows —
+    // the second carries the bookmark/chapter band — fit in this slim slot.
+    ImGuiID dockIdTimelineControls =
+        ImGui::DockBuilderSplitNode(dockIdTimeline, ImGuiDir_Down, 0.28f, nullptr, &dockIdTimeline);
+
+    // The Processing panel renders into this same node via the "###video_player" shared id slug, so
+    // only one window is ever docked here — one window per node keeps a hidden tab bar from being reset.
+    ImGui::DockBuilderDockWindow("Video Player###video_player", dockMainId);
+    ImGui::DockBuilderDockWindow("Timeline###timeline", dockIdTimeline);
+    ImGui::DockBuilderDockWindow("Video Controls###video_controls", dockIdTimelineControls);
+    ImGui::DockBuilderDockWindow("Statistics###statistics", dockIdStatistics);
+    ImGui::DockBuilderDockWindow("Tool Options###tool_options", dockIdToolOptions);
+    ImGui::DockBuilderDockWindow("Simulator###Simulator", dockIdSimulator);
+    ImGui::DockBuilderFinish(dockspaceId);
+}
+
+// Per-node chrome hidden while locked: the whole tab/title bar (NoTabBar), the top-left
+// window/docking-menu triangle, and the close button — a clean chrome-less look. These are *local*
+// node flags (LocalFlagsTransferMask_), so the dockspace's shared flags don't reach leaf nodes — we
+// set them on every node directly. They live in SavedFlagsMask_, so a saved layout may bake them in,
+// but re-applying every frame from the live lock state overrides that.
+constexpr ImGuiDockNodeFlags kLockedNodeFlags =
+    ImGuiDockNodeFlags_NoTabBar | ImGuiDockNodeFlags_NoWindowMenuButton | ImGuiDockNodeFlags_NoCloseButton;
+
+void applyLockToAllNodes(bool locked) {
+    ImGuiContext &g = *ImGui::GetCurrentContext();
+    for (int i = 0; i < g.DockContext.Nodes.Data.Size; ++i) {
+        auto *node = static_cast<ImGuiDockNode *>(g.DockContext.Nodes.Data[i].val_p);
+        if (node == nullptr)
+            continue;
+        if (locked)
+            node->LocalFlags |= kLockedNodeFlags;
+        else
+            node->LocalFlags &= ~kLockedNodeFlags;
+        node->UpdateMergedFlags();
+    }
+}
+} // namespace
+
+void beginDockspace(bool locked) {
+    ImGuiID dockspaceId = ImGui::GetID("MyDockSpace");
+    ImGuiViewport *viewport = ImGui::GetMainViewport();
+
+    if (ImGui::DockBuilderGetNode(dockspaceId) == nullptr)
+        buildDefault(dockspaceId, viewport);
+
+    // Enforce the locked chrome on every node before DockSpace() folds LocalFlags into MergedFlags.
+    applyLockToAllNodes(locked);
+
+    // AutoHideTabBar is a shared dockspace flag (SharedFlagsInheritMask_ is ~0, so every child node
+    // inherits it): any node holding a single window drops its tab bar, leaving only a small corner
+    // triangle to reveal it for undocking. This keeps the unlocked layout as clean and space-efficient
+    // as the locked one — a slim slot (e.g. the Video Controls strip) no longer loses a row to a tab
+    // bar it doesn't need. When locked, the per-node NoTabBar from applyLockToAllNodes takes over.
+    ImGuiDockNodeFlags flags = ImGuiDockNodeFlags_PassthruCentralNode | ImGuiDockNodeFlags_AutoHideTabBar;
+    if (locked)
+        // NoUndocking pins docked windows in place; NoDocking (a shared flag inherited by every child
+        // node) stops floating windows from being dropped into the layout — together the arrangement is
+        // fully frozen. The two live in different enums (public imgui.h vs. imgui_internal.h), so cast
+        // both to the ImGuiDockNodeFlags integer type to avoid a cross-enum-OR clang-tidy error.
+        flags |= static_cast<ImGuiDockNodeFlags>(ImGuiDockNodeFlags_NoUndocking) |
+                 static_cast<ImGuiDockNodeFlags>(ImGuiDockNodeFlags_NoDocking);
+    ImGui::DockSpaceOverViewport(dockspaceId, viewport, flags);
+
+    // HACK (re-evaluate on every imgui upgrade): DockSpace() hardcodes its dock-node host window flags
+    // (imgui.cpp: "ChildWindow | DockNodeHost | …") with no native way to add NoNavInputs — neither the
+    // window class, the dock-node flags, nor any SetNextWindowFlags reaches them. Dragging a dock-node
+    // splitter focuses such a host; without NoNavInputs it then keeps io.NavActive — hence
+    // io.WantCaptureKeyboard (imgui.cpp: "io.NavActive && NavEnableKeyboard") — true after the drag ends,
+    // silently swallowing the app's keyboard shortcuts (the BindingSystem keyboardCaptured gate) until the
+    // user clicks elsewhere. The splitter's FocusWindow runs inside DockSpaceOverViewport above, so
+    // g.NavWindow is the focused host by the time we get here: forcing NoNavInputs onto it makes the next
+    // NavUpdate zero io.NavActive (`!(NavWindow->Flags & NoNavInputs)`). Hosts carry only mouse-driven
+    // splitters/tab bars and don't propagate flags to the windows docked inside them, so this is safe. A
+    // native opt-out in a future imgui would replace this.
+    ImGuiContext &g = *ImGui::GetCurrentContext();
+    if (g.NavWindow != nullptr && (g.NavWindow->Flags & ImGuiWindowFlags_DockNodeHost))
+        g.NavWindow->Flags |= ImGuiWindowFlags_NoNavInputs;
+}
+
+void applyDefaultLayout() {
+    buildDefault(ImGui::GetID("MyDockSpace"), ImGui::GetMainViewport());
+}
+
+} // namespace ofs::ui

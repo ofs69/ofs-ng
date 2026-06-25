@@ -1,0 +1,9 @@
+/* The modern template ships no sizing rule for the navbar brand logo, so a raster (PNG) logo
+   renders at its intrinsic pixel size and overflows the navbar. Constrain it to the brand height.
+   The logo is the title-less logomark (no baked-in wordmark), so it can sit larger than a
+   labeled mark would. */
+#logo {
+  height: 2.25rem;
+  width: auto;
+  margin-right: 0.5rem; /* breathing room between the mark and the 'ofs-ng Plugin API' title */
+}

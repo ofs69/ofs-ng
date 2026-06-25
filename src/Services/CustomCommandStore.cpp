@@ -1,0 +1,142 @@
+#include "Services/CustomCommandStore.h"
+
+#include "Core/CommandEvents.h"
+#include "Core/EventQueue.h"
+#include "Services/CommandRegistry.h"
+#include "Services/CustomCommandTemplate.h"
+#include "Util/FileUtil.h"
+#include "Util/Log.h"
+#include "Util/PathUtil.h"
+
+#include <algorithm>
+#include <charconv>
+#include <nlohmann/json.hpp>
+#include <spdlog/fmt/fmt.h>
+
+namespace ofs {
+
+static std::filesystem::path getCustomCommandsPath() {
+    return ofs::util::getPrefPath() / "custom_commands.json";
+}
+
+// The numeric suffix of a "custom.<n>" id, or -1 if it doesn't fit the pattern (hand-edited / foreign).
+static int idNumber(const std::string &id) {
+    constexpr std::string_view kPrefix = "custom.";
+    if (!id.starts_with(kPrefix))
+        return -1;
+    int n = 0;
+    const char *first = id.data() + kPrefix.size();
+    const char *last = id.data() + id.size();
+    const auto [ptr, ec] = std::from_chars(first, last, n);
+    if (ec != std::errc{} || ptr != last)
+        return -1;
+    return n;
+}
+
+CustomCommandStore::CustomCommandStore(EventQueue &eq, CommandRegistry &registry,
+                                       const CustomCommandTemplateRegistry &templates)
+    : eventQueue_(eq), commandRegistry_(registry), templates_(templates) {
+    eventQueue_.on<AddCustomCommandEvent>([this](const AddCustomCommandEvent &e) { onAdd(e); });
+    eventQueue_.on<UpdateCustomCommandEvent>([this](const UpdateCustomCommandEvent &e) { onUpdate(e); });
+    eventQueue_.on<RemoveCustomCommandEvent>([this](const RemoveCustomCommandEvent &e) { onRemove(e); });
+}
+
+void CustomCommandStore::load() {
+    commands_.clear();
+    nextId_ = 0;
+
+    auto text = ofs::util::readFile(getCustomCommandsPath());
+    if (!text) {
+        reregisterAll(); // nothing to register, but clears any stale Custom entries
+        return;
+    }
+
+    try {
+        nlohmann::json j = nlohmann::json::parse(*text);
+        nextId_ = j.value("nextId", 0);
+        if (j.contains("commands")) {
+            for (const auto &entry : j["commands"]) {
+                CustomCommand def;
+                def.id = entry.value("id", std::string{});
+                def.name = entry.value("name", std::string{});
+                def.templateKey = entry.value("kind", std::string{});
+                const CustomCommandTemplate *t = templates_.find(def.templateKey);
+                if (!t)
+                    continue; // unknown/absent kind — forward-tolerant skip (no template registered)
+                if (!t->readParams(entry, def))
+                    continue; // template rejected the params (e.g. unknown granularity) — skip
+                if (def.id.empty())
+                    continue;
+                // De-duplicate a hand-edited duplicate id: last wins.
+                std::erase_if(commands_, [&def](const CustomCommand &c) { return c.id == def.id; });
+                commands_.push_back(std::move(def));
+            }
+        }
+    } catch (const std::exception &e) {
+        OFS_CORE_ERROR("CustomCommandStore: failed to load: {}", e.what());
+        commands_.clear();
+    }
+
+    // Bump the allocator past any id seen, in case the file was hand-edited with a stale nextId.
+    for (const auto &c : commands_)
+        nextId_ = std::max(nextId_, idNumber(c.id) + 1);
+
+    reregisterAll();
+}
+
+void CustomCommandStore::onAdd(const AddCustomCommandEvent &e) {
+    CustomCommand def = e.def;
+    def.id = fmt::format("custom.{}", nextId_++); // store assigns the stable id; any incoming id ignored
+    commands_.push_back(std::move(def));
+    reregisterAll();
+    save();
+}
+
+void CustomCommandStore::onUpdate(const UpdateCustomCommandEvent &e) {
+    auto it = std::ranges::find_if(commands_, [&e](const CustomCommand &c) { return c.id == e.def.id; });
+    if (it == commands_.end())
+        return;
+    const std::string id = it->id; // editing keeps the id so existing bindings stay attached
+    *it = e.def;
+    it->id = id;
+    reregisterAll();
+    save();
+}
+
+void CustomCommandStore::onRemove(const RemoveCustomCommandEvent &e) {
+    const auto removed = std::erase_if(commands_, [&e](const CustomCommand &c) { return c.id == e.id; });
+    if (removed == 0)
+        return;
+    reregisterAll();
+    save();
+    // Binding cleanup is BindingSystem's own handler for this same event — not called from here.
+}
+
+void CustomCommandStore::reregisterAll() {
+    commandRegistry_.removeBySource(CommandSource::Custom);
+    for (const auto &def : commands_)
+        if (const CustomCommandTemplate *t = templates_.find(def.templateKey))
+            commandRegistry_.add(t->build(def));
+}
+
+void CustomCommandStore::save() const {
+    try {
+        nlohmann::json arr = nlohmann::json::array();
+        for (const auto &c : commands_) {
+            // The "kind" key is the template's stable id; the template owns its kind-specific fields.
+            nlohmann::json e{{"id", c.id}, {"name", c.name}, {"kind", c.templateKey}};
+            if (const CustomCommandTemplate *t = templates_.find(c.templateKey))
+                t->writeParams(c, e);
+            arr.push_back(std::move(e));
+        }
+        nlohmann::json j;
+        j["version"] = 1;
+        j["nextId"] = nextId_;
+        j["commands"] = std::move(arr);
+        ofs::util::writeFile(getCustomCommandsPath(), j.dump(4));
+    } catch (const std::exception &e) {
+        OFS_CORE_ERROR("CustomCommandStore: failed to save: {}", e.what());
+    }
+}
+
+} // namespace ofs

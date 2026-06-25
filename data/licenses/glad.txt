@@ -1,0 +1,14 @@
+glad — multi-language GL/GLES/EGL/GLX/WGL loader generator (https://github.com/Dav1dde/glad).
+
+The glad generator and the loader code it produces are released under the
+following terms (SPDX-License-Identifier: (WTFPL OR CC0-1.0) AND Apache-2.0):
+
+  - The generated loader code is dedicated to the public domain under the terms
+    of either the WTFPL or the Creative Commons Zero (CC0 1.0) — no attribution
+    is required.
+  - The API descriptions used to generate the loader are derived from the
+    Khronos OpenGL XML registry, which is licensed under the Apache License,
+    Version 2.0 (http://www.apache.org/licenses/LICENSE-2.0).
+
+This component imposes no attribution obligation; it is listed here for
+completeness.

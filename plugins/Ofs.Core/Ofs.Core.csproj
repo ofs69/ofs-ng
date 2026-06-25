@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ofs.Api\Ofs.Api.csproj" Private="false" ExcludeAssets="runtime" />
+  </ItemGroup>
+
+  <!-- Build-time strongly-typed accessor for the resx (use Str.CmdEqualize, not a "CmdEqualize" string
+       key). MSBuild generates the class on every build — no Visual Studio, no committed Designer.cs
+       (Generated/ is gitignored). OfsPlugin keeps the generated accessor's static Culture pointed at
+       ofs-ng's language picker, so the getters follow the in-app language automatically.
+
+       StronglyTypedFileName MUST be a fixed, config/RID-independent path (Generated/, NOT
+       $(IntermediateOutputPath)): the SDK puts $(IntermediateOutputPath) under a config/platform/RID
+       segment (obj/x64/Debug/net10.0/, or .../win-x64/ once a RuntimeIdentifier is set). The full build
+       generates+compiles from there fine, but Roslyn (C# Dev Kit *and* Visual Studio) loads source from
+       the evaluation-time Compile glob — which excludes obj/ and is evaluated for a different config
+       than the last build used — so Str builds yet red-underlines in the editor. A stable in-tree path
+       is picked up by the default **/*.cs glob at evaluation time, so IntelliSense resolves Str. -->
+  <ItemGroup>
+    <EmbeddedResource Update="Str.resx">
+      <Generator>MSBuild:Compile</Generator>
+      <StronglyTypedLanguage>CSharp</StronglyTypedLanguage>
+      <StronglyTypedNamespace>Ofs.Core</StronglyTypedNamespace>
+      <StronglyTypedClassName>Str</StronglyTypedClassName>
+      <StronglyTypedFileName>$(MSBuildProjectDirectory)/Generated/Str.Designer.cs</StronglyTypedFileName>
+    </EmbeddedResource>
+  </ItemGroup>
+
+  <!-- GenerateResource won't create the output dir; make it before the strongly-typed class is written. -->
+  <Target Name="EnsureGeneratedDir" BeforeTargets="CoreResGen">
+    <MakeDir Directories="$(MSBuildProjectDirectory)/Generated" />
+  </Target>
+
+  <!-- Once the file exists on disk (any rebuild) the default **/*.cs glob picks it up, and CoreResGen
+       also adds the StronglyTypedFileName to @(Compile) — two entries → CS2002 ("specified multiple
+       times"), an error under /WX. Drop the glob copy for a real build so only CoreResGen's copy
+       remains. Keep it for the design-time build ($(DesignTimeBuild)='true'), which doesn't run
+       CoreResGen — Roslyn resolves Str solely from the evaluation-time glob (see the path note above). -->
+  <ItemGroup Condition="'$(DesignTimeBuild)' != 'true'">
+    <Compile Remove="$(MSBuildProjectDirectory)/Generated/Str.Designer.cs" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <!-- Str.resx is the neutral (English) catalog; the Str.<culture>.resx files are its satellites. Declaring
+         the neutral language emits [assembly: NeutralResourcesLanguage] so the resource manager skips a
+         satellite probe for English (and satisfies CA1824). -->
+    <NeutralLanguage>en</NeutralLanguage>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(apidocs/_site/**)",
+      "Read(apidocs/api/*.yml)",
+      "Read(apidocs/api/.manifest)"
+    ]
+  }
+}

@@ -1,0 +1,61 @@
+name: Nightly
+
+# Scheduled clang-tidy run. Tidy re-analyses every TU and is never cached, so it is too slow to
+# gate every PR — it lives here on a nightly cron instead of in ci.yml. The build itself shares the
+# `ci-linux` ccache that ci.yml writes on main, so only the (uncached) tidy analysis is unique work.
+# Also exposed via workflow_dispatch so it can be kicked off on demand.
+on:
+  schedule:
+    - cron: '0 4 * * *' # 04:00 UTC nightly
+  workflow_dispatch:
+
+concurrency:
+  group: nightly-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # --- clang-tidy --------------------------------------------------------------
+  # clang-tidy is wired into the build as warnings-as-errors (CXX_CLANG_TIDY on the ofs-ng target),
+  # so a clang build with clang-tidy present *is* the lint check. ccache restores object compilation
+  # from the shared ci-linux cache; tidy analysis is what this job actually exercises.
+  lint:
+    name: clang-tidy (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # GenBuildInfo.cmake reads `git describe` for the build identity
+          submodules: recursive # lib/* (SDL3, imgui, json, …) are submodules the build needs
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            ninja-build clang clang-tidy python3 \
+            libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev \
+            libxi-dev libxss-dev libxtst-dev libxkbcommon-dev libwayland-dev wayland-protocols \
+            libdecor-0-dev libgl1-mesa-dev libegl1-mesa-dev libudev-dev libdbus-1-dev
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x' # NetHost is found via the SDK; configure links NetHost::NetHost
+
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1
+        with:
+          key: ci-linux
+          max-size: 500M
+          save: false # consume ci.yml's cache; the build-test job on main owns writing it
+
+      - name: Configure
+        # OFS_CLANG_TIDY=ON (the default) + clang-tidy on PATH lints the ofs-ng target inline as
+        # warnings-as-errors. ccache caches compilation; tidy analysis is not cached.
+        run: >
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Debug
+          -DOFS_CLANG_TIDY=ON
+          -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+
+      - name: Build (clang-tidy runs inline)
+        run: cmake --build build -j

@@ -1,0 +1,22 @@
+{
+    "axes": [
+        {
+            "id": "alpha",
+            "actions": [
+                { "at": 1000, "pos": 20 },
+                { "at": 2000, "pos": 80 }
+            ]
+        },
+        {
+            "id": "beta",
+            "actions": [
+                { "at": 1000, "pos": 30 },
+                { "at": 2000, "pos": 70 }
+            ]
+        }
+    ],
+    "metadata": {
+        "type": "basic",
+        "title": "multi_unmatched fixture"
+    }
+}

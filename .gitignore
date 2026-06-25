@@ -1,0 +1,33 @@
+# Build output
+bin/
+build*/
+cmake-build-*/
+**/obj/
+plugins/Ofs.Core/Generated/
+
+# Generated theme preview artifacts
+data/themes/preview.html
+data/themes/palette.json
+
+# IDE / editor
+.idea/
+.vs/
+
+# Python
+__pycache__/
+
+# OS cruft (Windows)
+Thumbs.db
+[Dd]esktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# External wiki mirrors cloned under docs/ (each carries its own .git) — reference only, not ours.
+docs/imgui.wiki/
+docs/imgui_test_engine.wiki/
+
+# DocFX generated output (apidocs/). The api/*.md landing pages are tracked; the extracted
+# metadata (api/*.yml) and the rendered site are build artifacts. (obj/ covered above.)
+apidocs/_site/
+apidocs/api/*.yml
+apidocs/api/.manifest

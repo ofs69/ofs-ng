@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="Ofs.Api/Ofs.Api.csproj" />
+  <Project Path="Ofs.PluginHost/Ofs.PluginHost.csproj" />
+  <Project Path="Ofs.ScriptHost/Ofs.ScriptHost.csproj" />
+  <Project Path="SamplePlugin/SamplePlugin.csproj" />
+  <Project Path="Ofs.Core/Ofs.Core.csproj" />
+</Solution>

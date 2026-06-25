@@ -1,0 +1,3558 @@
+# strings.toml — English source of truth for ofs-ng localization.
+#
+# One [Key] table per UI string. The key (table name) is PascalCase and a valid C++
+# identifier; it becomes a `Tr` enum member and a `Str::` constant via the build-time
+# generator (localization_gen → <build>/generated/Localization/StringsGenerated.{h,cpp}).
+#
+# Fields:
+#   english      — the source string (authoritative here).
+#   description  — what the string is / where it appears, written for a translator.
+#   placeholders — ordered docs for {0}, {1}, … Omitted entirely for non-formatted strings;
+#                  written one entry per line when present.
+#
+# Translation files (lang/<id>.toml) use the same schema with a `translation` field added.
+#
+# Extraction is proceeding window by window. Keys are grouped
+# by the window they were pulled from. Strings that are user-named data (theme names, file paths)
+# or pure identifiers (icon glyphs, format/extension names) are intentionally NOT keyed.
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# Preferences window (src/UI/ConfigurationWindow.cpp)
+#
+# Note: the Theme tab's ~100 data-driven color/variable swatch labels (axis colors, timeline
+# colors, geometry vars, node-editor colors, …) are deliberately left in English for a later
+# dedicated pass; only the window chrome (titles, headers, buttons, hints, notifications) is keyed.
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+
+[PrefTitle]
+english     = "Preferences"
+description = "Title of the Preferences window."
+
+[PrefTabApplication]
+english     = "Application"
+description = "Preferences tab: general application settings (video, backup, view, localization)."
+
+[PrefSimulator]
+english     = "Simulator"
+description = "Label for the Simulator: a Preferences tab, and a Theme-tab section header."
+
+[PrefTheme]
+english     = "Theme"
+description = "Label for the Theme: a Preferences tab, and the theme-browser section header."
+
+# --- Simulator tab ---
+
+[PrefDisplay]
+english     = "Display"
+description = "Preferences › Simulator: section header for display toggles."
+
+[PrefIndicators]
+english     = "Indicators"
+description = "Preferences › Simulator: toggle for on-screen position indicators."
+
+[PrefShowPosition]
+english     = "Show Position"
+description = "Preferences › Simulator: toggle for the numeric position readout."
+
+[PrefHeightLines]
+english     = "Height Lines"
+description = "Preferences › Simulator: toggle for horizontal height reference lines."
+
+[PrefExtraLines]
+english     = "Extra Lines"
+description = "Preferences › Simulator: number of extra reference lines to draw."
+
+[Pref3dLabels]
+english     = "3D Labels"
+description = "Preferences › Simulator: which 3D degree-of-freedom labels to show."
+
+[Pref3dLabelUnits]
+english     = "3D Label Units"
+description = "Preferences › Simulator: unit for 3D labels (degrees or percent)."
+
+[PrefDegrees]
+english     = "Degrees"
+description = "Preferences › Simulator: 3D label unit option — angle in degrees."
+
+[PrefPercent]
+english     = "Percent"
+description = "Preferences › Simulator: 3D label unit option — value as a percentage."
+
+[PrefSim3dRanges]
+english     = "3D mapping ranges"
+description = "Preferences › Simulator: section header for per-axis 3D mapping range settings."
+
+[PrefStrokeL0]
+english     = "Stroke (L0)"
+description = "Preferences › Simulator: mapping range for the L0 Stroke axis."
+
+[PrefSurgeL1]
+english     = "Surge (L1)"
+description = "Preferences › Simulator: mapping range for the L1 Surge axis."
+
+[PrefSwayL2]
+english     = "Sway (L2)"
+description = "Preferences › Simulator: mapping range for the L2 Sway axis."
+
+[PrefTwistR0]
+english     = "Twist (R0)"
+description = "Preferences › Simulator: mapping range (degrees) for the R0 Twist axis."
+
+[PrefRollR1]
+english     = "Roll (R1)"
+description = "Preferences › Simulator: mapping range (degrees) for the R1 Roll axis."
+
+[PrefPitchR2]
+english     = "Pitch (R2)"
+description = "Preferences › Simulator: mapping range (degrees) for the R2 Pitch axis."
+
+# --- Application tab ---
+
+[PrefVideo]
+english     = "Video"
+description = "Preferences › Application: section header for video playback settings."
+
+[PrefHwDecoding]
+english     = "HW Decoding"
+description = "Preferences › Application: toggle for hardware (GPU) video decoding."
+
+[PrefTimelinePreview]
+english     = "Timeline Preview"
+description = "Preferences › Application › Video: toggle the video frame preview shown when hovering the player seek bar."
+
+[PrefTimelinePreviewHint]
+english     = "Timeline Preview runs a second video player to decode hover frames, so it uses extra memory and CPU/GPU."
+description = "Preferences › Application › Video: help-marker tooltip on the Timeline Preview toggle warning that it is resource-intensive."
+
+[PrefIntraSection]
+english     = "Optimized Video"
+description = "Preferences › Application: section header for intra-frame (all-keyframe) video optimization settings."
+
+[PrefIntraOutputDirNotSet]
+english     = "No output folder set — choose one to enable video optimization."
+description = "Preferences › Application › Optimized Video: placeholder shown when no output folder has been chosen yet."
+
+[PrefIntraChooseFolder]
+english     = "Choose Folder"
+description = "Preferences › Application › Optimized Video: button that opens a folder picker for the optimized-video output folder."
+
+[PrefIntraChooseFolderTitle]
+english     = "Choose the optimized-video output folder"
+description = "Preferences › Application › Optimized Video: title of the folder-picker dialog for the output folder."
+
+[PrefIntraOpenFolder]
+english     = "Open Folder"
+description = "Preferences › Application › Optimized Video: button that opens the optimized-video output folder in the file browser."
+
+[PrefIntraClear]
+english     = "Clear"
+description = "Preferences › Application › Optimized Video: button that clears the chosen output folder, disabling optimization again."
+
+[PrefIntraOutputDirHint]
+english     = "All optimized videos are written here. You manage this folder yourself — the app never deletes its contents."
+description = "Preferences › Application › Optimized Video: help-marker tooltip on the output-folder row explaining the folder is shared and user-managed."
+
+[PrefIntraStorageHint]
+english     = "Use fast local storage (an SSD) — not a network drive (NAS)."
+description = "Preferences › Application › Optimized Video: warning that all-intra copies need lots of fast local disk, not network storage."
+
+[TranscodeTitle]
+english     = "Optimize Video for Seeking"
+description = "Intra-frame optimize options modal: window title."
+
+[TranscodeIntro]
+english     = "Create an all-keyframe copy of this video so frame stepping and seeking are instant. The original is never changed."
+description = "Intra-frame optimize options modal: explanatory line at the top of the dialog."
+
+[TranscodeNoDirTitle]
+english     = "Output Folder Missing"
+description = "Alert shown when the optimized-video output folder set in Preferences no longer exists on disk; the optimize step cannot start until a new folder is chosen."
+
+[TranscodeNoDirBody]
+english      = "The optimized-video output folder no longer exists:\n\n{0}\n\nChoose a new folder to continue."
+description  = "Body of the missing-output-folder alert; {0} is the absolute path that was configured but is now gone."
+placeholders = [
+    "{0} = configured output folder path",
+]
+
+[TranscodeScale]
+english     = "Scale"
+description = "Intra-frame optimize options modal: label for the output-resolution downscale factor (shown as 100% / 75% / 50% / 25% of each source dimension; the percentages themselves are literal, not translated)."
+
+[TranscodeResProbing]
+english     = "Reading source resolution…"
+description = "Intra-frame optimize options modal: shown under the scale radios while ffprobe is still reading the source video's dimensions."
+
+[TranscodeResSource]
+english      = "Source {0}"
+description  = "Intra-frame optimize options modal: source resolution preview. {0} is the pixel size (literal, not translated)."
+placeholders = [
+    "{0} = source pixel size, e.g. 1920×1080",
+]
+
+[TranscodeResOutput]
+english      = "→ {0}"
+description  = "Intra-frame optimize options modal: resulting output resolution after the chosen scale factor. {0} is the pixel size (literal, not translated)."
+placeholders = [
+    "{0} = output pixel size, e.g. 1440×810",
+]
+
+[TranscodeTiming]
+english     = "Timing"
+description = "Intra-frame optimize options modal: label for the frame-timing choice."
+
+[TranscodeTimingKeep]
+english     = "Keep original"
+description = "Intra-frame optimize options modal: timing option — pass source frame timestamps through unchanged (the safe default)."
+
+[TranscodeTimingCfr]
+english     = "Constant FPS"
+description = "Intra-frame optimize options modal: timing option — re-time the output to a fixed frame rate."
+
+[TranscodeFps]
+english     = "fps"
+description = "Intra-frame optimize options modal: unit label after the constant-FPS rate input."
+
+[TranscodeCfrNote]
+english     = "Constant FPS resamples frames — the timeline is preserved but temporal granularity changes."
+description = "Intra-frame optimize options modal: caution shown when Constant FPS is selected."
+
+[TranscodeQuality]
+english     = "Quality"
+description = "Intra-frame optimize options modal: section header for the quality slider (libx264 CRF or MJPEG -q:v depending on the chosen codec)."
+
+[TranscodeQualityHint]
+english     = "Lower is higher quality and a larger file."
+description = "Intra-frame optimize options modal: help-marker tooltip on the quality slider explaining the slider direction (true for both CRF and MJPEG -q:v)."
+
+[TranscodeCodec]
+english     = "Codec"
+description = "Intra-frame optimize options modal: section header for the output video codec choice."
+
+[TranscodeCodecH264]
+english     = "H.264 (all-intra)"
+description = "Intra-frame optimize options modal: codec option — libx264 with every frame a keyframe (the size/quality default)."
+
+[TranscodeCodecMjpeg]
+english     = "MJPEG (experimental)"
+description = "Intra-frame optimize options modal: codec option — Motion JPEG, fastest possible seeking but very large files."
+
+[TranscodeMjpegNote]
+english     = "MJPEG re-encodes every frame as a full JPEG: the fastest possible seeking, but files run several times larger and demand fast local storage (SSD/NVMe). This is an expert option — if you're not sure, use H.264 instead. It's the right choice for almost everyone."
+description = "Intra-frame optimize options modal: warning shown when the experimental MJPEG codec is selected; steers unsure users back to H.264."
+
+[TranscodeFastDecode]
+english     = "Optimize for decode speed"
+description = "Intra-frame optimize options modal: checkbox enabling x264 -tune fastdecode (H.264 only)."
+
+[TranscodeFastDecodeTip]
+english     = "Drops CABAC and the deblocking filter so each frame decodes faster, improving seeking and frame stepping. Cost: a larger file and more visible block artifacts at the same quality."
+description = "Intra-frame optimize options modal: tooltip disclaiming the cost of the decode-speed option."
+
+[TranscodeForceYuv420p]
+english     = "Force 8-bit 4:2:0 (yuv420p)"
+description = "Intra-frame optimize options modal: checkbox pinning the output pixel format to 8-bit 4:2:0."
+
+[TranscodeMjpegWarnTitle]
+english     = "Use MJPEG?"
+description = "Confirm modal raised when MJPEG is selected: title."
+
+[TranscodeMjpegWarnAccept]
+english     = "Use MJPEG anyway"
+description = "Confirm modal raised when MJPEG is selected: button that keeps the experimental MJPEG codec despite the warning."
+
+[TranscodeMjpegWarnDecline]
+english     = "Use H.264 instead"
+description = "Confirm modal raised when MJPEG is selected: button (the recommended, default-on-Escape choice) that reverts to the safe H.264 codec."
+
+[TranscodeResWarnTitle]
+english     = "Very high resolution"
+description = "Confirm modal raised on starting an optimize whose output stays beyond 4K: title."
+
+[TranscodeResWarnBody]
+english      = "This source is {0}. An all-keyframe copy at this resolution will be extremely large. Reducing the output to 50% or 25% first is strongly recommended. Optimize at this size anyway?"
+description  = "Confirm modal raised on starting an optimize whose output stays beyond 4K: body. {0} is the source pixel size."
+placeholders = [
+    "{0} = source pixel size, e.g. 7680×4320",
+]
+
+[TranscodeResWarnReduce]
+english     = "Reduce resolution"
+description = "High-resolution confirm modal: button that dismisses the warning and returns to the options dialog to lower the scale."
+
+[TranscodeResWarnProceed]
+english     = "Optimize anyway"
+description = "High-resolution confirm modal: button that proceeds with the transcode at the current (oversized) resolution."
+
+[TranscodeForceYuv420pTip]
+english     = "Forces 8-bit 4:2:0 output so playback stays on the hardware-decode fast path. Cost: 10-bit and HDR sources lose color accuracy (banding, and HDR is not tone-mapped)."
+description = "Intra-frame optimize options modal: tooltip disclaiming the cost of forcing 8-bit 4:2:0."
+
+[TranscodeSwitchAfter]
+english     = "Switch to the optimized copy when finished"
+description = "Intra-frame optimize options modal: checkbox to load the optimized copy once the transcode completes."
+
+[TranscodeExists]
+english     = "An optimized copy already exists for this video."
+description = "Intra-frame optimize options modal: note shown when a matching optimized file is already present in the output folder."
+
+[TranscodeUseExisting]
+english     = "Use Existing"
+description = "Intra-frame optimize options modal: button to adopt the already-present optimized copy without re-encoding."
+
+[TranscodeReoptimize]
+english     = "Re-optimize"
+description = "Intra-frame optimize options modal: button to re-encode and overwrite the already-present optimized copy."
+
+[TranscodeStart]
+english     = "Start"
+description = "Intra-frame optimize options modal: button to begin the transcode."
+
+[TranscodeCancel]
+english     = "Cancel"
+description = "Intra-frame optimize modals: dismiss the options dialog / abort the running transcode."
+
+[OptimizePromptTitle]
+english     = "Optimize this video?"
+description = "Modal shown on opening a project whose video isn't optimized: title."
+
+[OptimizePromptBody]
+english     = "This video isn't optimized for seeking. Creating an all-keyframe copy makes frame stepping and seeking much faster — the original is never changed."
+description = "Modal shown on opening a project whose video isn't optimized: explanatory body."
+
+[OptimizePromptOptimize]
+english     = "Optimize…"
+description = "Optimize-prompt modal: button that opens the optimize options dialog."
+
+[OptimizePromptNotNow]
+english     = "Not now"
+description = "Optimize-prompt modal: button that dismisses the prompt without optimizing."
+
+[TranscodeProgressTitle]
+english     = "Optimizing Video"
+description = "Intra-frame optimize progress modal: window title."
+
+[TranscodePhaseProbing]
+english     = "Analyzing…"
+description = "Intra-frame optimize progress modal: phase label while probing the source."
+
+[TranscodePhaseEncoding]
+english     = "Encoding…"
+description = "Intra-frame optimize progress modal: phase label while encoding the all-keyframe copy."
+
+[TranscodePhaseVerifying]
+english     = "Verifying…"
+description = "Intra-frame optimize progress modal: phase label while verifying the output duration."
+
+[TranscodeStats]
+english      = "{0}× · {1} remaining"
+description  = "Intra-frame optimize progress modal: encode speed and estimated time remaining."
+placeholders = [
+    "{0} = encode speed multiple, e.g. 2.4",
+    "{1} = estimated time remaining, M:SS, e.g. 1:23",
+]
+
+[TranscodeFailed]
+english     = "Optimization failed"
+description = "Intra-frame optimize progress modal: heading shown when the transcode failed."
+
+[TranscodeCancelled]
+english     = "Optimization cancelled"
+description = "Intra-frame optimize progress modal: heading shown when the transcode was cancelled."
+
+[TranscodeClose]
+english     = "Close"
+description = "Intra-frame optimize progress modal: button to dismiss the modal after a failure/cancel."
+
+[TlpDelta]
+english      = "Δ {0}"
+description  = "Timeline hover preview: signed time offset from the current playhead, e.g. 'Δ +0:03'."
+placeholders = [
+    "{0} = signed time offset, e.g. +0:03 or -1:12",
+]
+
+[PrefPerformance]
+english     = "Performance"
+description = "Preferences › Application: section header for rendering performance settings."
+
+[PrefMaxFps]
+english     = "Max Frame Rate"
+description = "Preferences › Application › Performance: label for the UI frame-rate cap selector."
+
+[PrefMaxFpsMatchDisplay]
+english      = "Match Display ({0} Hz)"
+description  = "Preferences › Application › Performance: the no-cap option in the Max Frame Rate selector — runs at the monitor's native refresh; {0} is the display refresh rate."
+placeholders = [
+    "{0} = display refresh rate in Hz, e.g. 144",
+]
+
+[PrefMaxFpsValue]
+english      = "{0} FPS"
+description  = "Preferences › Application › Performance: a frame-rate cap option in the Max Frame Rate selector; {0} is the capped frames-per-second."
+placeholders = [
+    "{0} = frames per second, e.g. 72",
+]
+
+[PrefMaxFpsHint]
+english     = "Caps the interface frame rate to save power on high-refresh displays. Video playback always runs at full smoothness."
+description = "Preferences › Application › Performance: help-marker tooltip on the Max Frame Rate selector."
+
+[PrefUndoMemory]
+english     = "Undo Memory"
+description = "Preferences › Application › Performance: label for the undo-history memory budget selector."
+
+[PrefUndoMemoryValue]
+english      = "{0} MB"
+description  = "Preferences › Application › Performance: a memory-budget option in the Undo Memory selector; {0} is the budget in megabytes."
+placeholders = [
+    "{0} = memory budget in megabytes, e.g. 256",
+]
+
+[PrefUndoMemoryHint]
+english     = "Limits the RAM used by the undo/redo history. Older steps are dropped once the limit is reached; the most recent edit always stays undoable."
+description = "Preferences › Application › Performance: help-marker tooltip on the Undo Memory selector."
+
+[PrefBackup]
+english     = "Backup"
+description = "Preferences › Application: section header for automatic backup settings."
+
+[PrefAutoBackup]
+english     = "Auto Backup"
+description = "Preferences › Application: toggle for periodic automatic project backups."
+
+[PrefOpenAppDataFolder]
+english     = "Open App Data Folder"
+description = "Preferences › Application: button that opens the app's data folder in the file browser."
+
+[PrefOpenBackupFolder]
+english     = "Open Backup Folder"
+description = "Preferences › Application: button that opens the backup folder in the file browser."
+
+[PrefSoftwareDecodingHint]
+english     = "Software decoding uses less RAM but more CPU."
+description = "Preferences › Application: help-marker tooltip on the Hardware Decoding toggle, shown when it is off."
+
+[PrefHardwareDecodingHint]
+english     = "Hardware decoding offloads work to the GPU but can use more memory."
+description = "Preferences › Application: help-marker tooltip on the Hardware Decoding toggle, shown when it is on."
+
+[PrefRestartHint]
+english     = "Restart required for changes to take effect."
+description = "Preferences › Application: hint that decoding changes need an app restart."
+
+[PrefView]
+english     = "View"
+description = "Preferences › Application: section header for view/appearance settings."
+
+[PrefBgAxes]
+english     = "BG Axes"
+description = "Preferences › Application: opacity of background axes drawn behind the timeline."
+
+[PrefFontSize]
+english     = "Font Size"
+description = "Preferences › Application: base UI font size in pixels."
+
+[PrefLocalization]
+english     = "Localization"
+description = "Preferences › Application: section header for language/translation settings."
+
+[PrefLanguage]
+english     = "Language"
+description = "Preferences › Application: label for the UI language selector."
+
+[PrefLiveReload]
+english     = "Live Reload"
+description = "Preferences › Application: toggle to re-apply a translation file when it changes on disk."
+
+[PrefLiveReloadHint]
+english     = "Live Reload re-applies a translation file when it changes on disk (translator aid)."
+description = "Preferences › Application: help-marker tooltip explaining the Live Reload translation toggle."
+
+[PrefLanguagePluginReloadHint]
+english     = "Changing the language reloads all plugins so they re-register their text in the new language."
+description = "Preferences › Application: help-marker tooltip on the Language selector noting that switching the UI language reloads all plugins."
+
+[PrefExportCatalog]
+english     = "Export Catalog..."
+description = "Preferences › Application: button that exports the full translation catalog to a file."
+
+[PrefExportCatalogTitle]
+english     = "Export Catalog"
+description = "Title of the file dialog for exporting the translation catalog."
+
+# --- Restart-required notice ---
+
+[PrefRestartTitle]
+english     = "Restart Required"
+description = "Title of the dialog shown when a preference change needs an app restart."
+
+[PrefRestartBody]
+english     = "Please restart the application for all preference changes to take full effect."
+description = "Body of the restart-required dialog."
+
+# --- Theme tab: browser chrome ---
+
+[PrefThemeShippedSuffix]
+english      = "{0} (shipped)"
+description  = "Theme-selector entry for a built-in (shipped, read-only) theme."
+placeholders = [
+    "{0} = theme name",
+]
+
+[PrefRevealInFolder]
+english     = "Reveal in Folder"
+description = "Preferences › Theme: button that opens the themes folder in the file browser."
+
+[ShowInFileBrowser]
+english     = "Show in File Explorer"
+description = "Context-menu item that reveals the referenced file in the OS file browser — selected in Explorer on Windows, its containing folder opened on other platforms."
+
+[WelRemoveRecent]
+english     = "Remove from List"
+description = "Welcome screen recent-projects context menu: removes this single entry from the list (does not delete the file)."
+
+[PrefResetToDefaults]
+english     = "Reset to Defaults"
+description = "Preferences › Theme: button that resets all theme colors/vars to their defaults."
+
+[PrefNewThemeNameHint]
+english     = "new theme name"
+description = "Preferences › Theme: placeholder text in the Save-As theme-name input."
+
+[PrefSaveAs]
+english     = "Save As"
+description = "Preferences › Theme: button that saves the current (edited) theme under a new name."
+
+[PrefDelete]
+english     = "Delete"
+description = "Preferences › Theme: button that deletes the active user theme."
+
+[PrefExport]
+english     = "Export..."
+description = "Preferences › Theme: button that exports the active theme to a file."
+
+[PrefImport]
+english     = "Import..."
+description = "Preferences › Theme: button that imports a theme from a file."
+
+[PrefExportThemeTitle]
+english     = "Export Theme"
+description = "Title of the file dialog for exporting a theme."
+
+[PrefImportThemeTitle]
+english     = "Import Theme"
+description = "Title of the file dialog for importing a theme."
+
+[PrefShippedReadOnlyHint]
+english     = "Shipped theme is read-only — edits apply live; use Save As to keep them."
+description = "Preferences › Theme: help-marker tooltip on the theme selector, shown when a built-in (shipped) theme is active."
+
+[PrefThemeSaved]
+english      = "Theme \"{0}\" saved."
+description  = "Notification after saving a theme under a new name."
+placeholders = [
+    "{0} = theme name",
+]
+
+[PrefThemeSaveFailed]
+english      = "Failed to save theme \"{0}\"."
+description  = "Notification when saving a theme fails."
+placeholders = [
+    "{0} = theme name",
+]
+
+[PrefThemeExported]
+english     = "Theme exported."
+description = "Notification after successfully exporting a theme to a file."
+
+[PrefThemeExportFailed]
+english     = "Failed to export theme."
+description = "Notification when exporting a theme to a file fails."
+
+[PrefThemeImported]
+english      = "Theme \"{0}\" imported."
+description  = "Notification after successfully importing a theme from a file."
+placeholders = [
+    "{0} = theme name",
+]
+
+[PrefThemeImportFailed]
+english     = "Failed to import theme."
+description = "Notification when importing a theme from a file fails."
+
+# --- Theme tab: search + section headers ---
+
+[PrefFilterHint]
+english     = "Filter…  (Ctrl+F)"
+description = "Preferences › Theme: placeholder text in the color/variable search box (Ctrl+F focuses it)."
+
+[PrefSecAxisColors]
+english     = "Axis Colors"
+description = "Preferences › Theme: collapsing-header for per-axis curve colors."
+
+[PrefSecHeatmap]
+english     = "Heatmap"
+description = "Preferences › Theme: collapsing-header for heatmap gradient and speed settings."
+
+[PrefSecTimeline]
+english     = "Timeline"
+description = "Preferences › Theme: collapsing-header for timeline colors and cursor widths."
+
+[PrefSecVideoControls]
+english     = "Video Controls"
+description = "Preferences › Theme: collapsing-header for video-player control colors."
+
+[PrefSecBookmarksMisc]
+english     = "Bookmarks & Misc"
+description = "Preferences › Theme: collapsing-header for bookmark and miscellaneous colors."
+
+[PrefSecProcessing]
+english     = "Processing"
+description = "Preferences › Theme: collapsing-header for processing-panel colors."
+
+[PrefSecGeometry]
+english     = "Geometry"
+description = "Preferences › Theme: collapsing-header (and node-editor sub-caption) for geometry/spacing vars."
+
+[PrefSecNodeEditor]
+english     = "Node Editor"
+description = "Preferences › Theme: collapsing-header for node-editor colors and geometry."
+
+[PrefSecImguiColors]
+english     = "ImGui Colors"
+description = "Preferences › Theme: collapsing-header for raw Dear ImGui style colors."
+
+[PrefHeatmapColorsCaption]
+english     = "Colors (slow → fast)"
+description = "Preferences › Theme › Heatmap: caption above the speed-gradient editor."
+
+[PrefHeatmapMaxSpeedCaption]
+english     = "Max speed (pos/s)"
+description = "Preferences › Theme › Heatmap: caption above the max-speed input (units: positions per second)."
+
+[PrefSim3dViews]
+english     = "3D views"
+description = "Preferences › Theme › Simulator: caption above the 3D-view color swatches."
+
+[PrefSim2dColors]
+english     = "2D bar colors"
+description = "Preferences › Theme › Simulator: caption above the 2D-bar color swatches."
+
+[PrefSim2dMetrics]
+english     = "2D bar metrics"
+description = "Preferences › Theme › Simulator: caption above the 2D-bar metric (opacity) settings."
+
+# --- Theme tab: tooltips + status ---
+
+[PrefResetToDefaultTip]
+english     = "Reset to default"
+description = "Preferences › Theme: tooltip on a per-color/variable reset button."
+
+[PrefResetGradientTip]
+english     = "Reset gradient to default"
+description = "Preferences › Theme › Heatmap: tooltip on the gradient reset button."
+
+[PrefResetMaxSpeedTip]
+english     = "Reset max speed to default (400)"
+description = "Preferences › Theme › Heatmap: tooltip on the max-speed reset button."
+
+[PrefNoThemeMatch]
+english      = "No theme settings match \"{0}\"."
+description  = "Preferences › Theme: shown when the search filter matches nothing."
+placeholders = [
+    "{0} = the current search text",
+]
+
+# =============================================================================
+# Window 2 — ProjectConfigWindow (src/UI/ProjectConfigWindow.cpp). Prefix: Pcf*
+# =============================================================================
+
+# --- Window + tabs ---
+
+[PcfTitle]
+english     = "Project"
+description = "Project window: title bar."
+
+[PcfTabSettings]
+english     = "Settings"
+description = "Project window: Settings tab label."
+
+[PcfTabMetadata]
+english     = "Metadata"
+description = "Project window: Metadata tab label."
+
+[PcfTabInfo]
+english     = "Info"
+description = "Project window: Info tab label."
+
+# --- Info tab ---
+
+[PcfWorkTime]
+english     = "Work Time"
+description = "Project > Info: section header above the editing-time rows."
+
+[PcfSession]
+english     = "Session"
+description = "Project > Info: label for time spent editing this session."
+
+[PcfTotal]
+english     = "Total"
+description = "Project > Info: label for cumulative editing time across all sessions."
+
+[PcfSessions]
+english     = "Sessions"
+description = "Project > Info: label for the number of editing sessions (project opens)."
+
+[PcfAvgSession]
+english     = "Avg / Session"
+description = "Project > Info: label for average editing time per session."
+
+[PcfHistory]
+english     = "History"
+description = "Project > Info: section header above the created / last-modified dates."
+
+[PcfCreated]
+english     = "Created"
+description = "Project > Info: label for the date the project was first saved."
+
+[PcfModified]
+english     = "Last Modified"
+description = "Project > Info: label for the date the project was last saved."
+
+[PcfNotSaved]
+english     = "Not saved yet"
+description = "Project > Info: shown for a created/modified date when the project has never been saved."
+
+[PcfContent]
+english     = "Content"
+description = "Project > Info: section header above the action/coverage counts."
+
+[PcfActions]
+english     = "Actions"
+description = "Project > Info: label for the total number of actions across all axes."
+
+[PcfThisSession]
+english     = "This Session"
+description = "Project > Info: label for the net change in action count during this session."
+
+[PcfActionsPerHour]
+english     = "Actions / Hour"
+description = "Project > Info: label for the lifetime authoring rate (actions per editing hour)."
+
+[PcfAxesScripted]
+english     = "Axes Scripted"
+description = "Project > Info: label for the number of axes that hold at least one action."
+
+[PcfCoverage]
+english     = "Coverage"
+description = "Project > Info: label for the scripted span as a percentage of the media length."
+
+[PcfStructure]
+english     = "Structure"
+description = "Project > Info: section header above the chapter / region / bookmark counts."
+
+[PcfChapters]
+english     = "Chapters"
+description = "Project > Info: label for the number of chapters."
+
+[PcfRegions]
+english     = "Regions"
+description = "Project > Info: label for the number of processing regions."
+
+[PcfBookmarks]
+english     = "Bookmarks"
+description = "Project > Info: label for the number of bookmarks."
+
+# --- Markers tab ---
+
+[PcfTabChapters]
+english     = "Chapters"
+description = "Project window: Chapters tab label (chapters & bookmarks table view)."
+
+[PcfMarkerName]
+english     = "Name"
+description = "Project > Markers: table column header for the chapter/bookmark name."
+
+[PcfMarkerStart]
+english     = "Start"
+description = "Project > Markers: table column header for a chapter's start time."
+
+[PcfMarkerEnd]
+english     = "End"
+description = "Project > Markers: table column header for a chapter's end time."
+
+[PcfMarkerDuration]
+english     = "Duration"
+description = "Project > Markers: table column header for a chapter's duration."
+
+[PcfMarkerTime]
+english     = "Time"
+description = "Project > Markers: table column header for a bookmark's time."
+
+[PcfNoChapters]
+english     = "No chapters."
+description = "Project > Markers: empty-state text when the project has no chapters."
+
+[PcfNoBookmarks]
+english     = "No bookmarks."
+description = "Project > Markers: empty-state text when the project has no bookmarks."
+
+# --- Metadata tab: presets ---
+
+[PcfPresets]
+english     = "Presets"
+description = "Project > Metadata: section header for metadata presets."
+
+[PcfSelectPreset]
+english     = "— select preset —"
+description = "Project > Metadata: placeholder shown in the preset picker when none is selected."
+
+[PcfLoad]
+english     = "Load"
+description = "Project > Metadata: button that loads the selected preset into the metadata fields."
+
+[PcfDelete]
+english     = "Delete"
+description = "Project > Metadata: button that deletes the selected preset."
+
+[PcfPresetLoaded]
+english      = "Preset \"{0}\" loaded."
+description  = "Project > Metadata: toast after loading a preset."
+placeholders = [
+    "{0} = preset name",
+]
+
+[PcfPresetNameHint]
+english     = "Preset name..."
+description = "Project > Metadata: hint text in the new-preset name field."
+
+[PcfSave]
+english     = "Save"
+description = "Project > Metadata: button that saves the current metadata as a preset."
+
+[PcfPresetSaved]
+english      = "Preset \"{0}\" saved."
+description  = "Project > Metadata: toast after saving a preset."
+placeholders = [
+    "{0} = preset name",
+]
+
+[PcfReset]
+english     = "Reset"
+description = "Project > Metadata: button that clears all metadata fields."
+
+[PcfClearAllTip]
+english     = "Clear all metadata fields"
+description = "Project > Metadata: tooltip on the Reset button."
+
+# --- Metadata tab: script info ---
+
+[PcfScriptInfo]
+english     = "Script Info"
+description = "Project > Metadata: section header for the core script metadata fields."
+
+[PcfFieldTitle]
+english     = "Title"
+description = "Project > Metadata: label for the script title field."
+
+[PcfCreator]
+english     = "Creator"
+description = "Project > Metadata: label for the script creator/author field."
+
+[PcfScriptUrl]
+english     = "Script URL"
+description = "Project > Metadata: label for the script URL field."
+
+[PcfVideoUrl]
+english     = "Video URL"
+description = "Project > Metadata: label for the video URL field."
+
+[PcfLicense]
+english     = "License"
+description = "Project > Metadata: label for the license picker."
+
+[PcfLicenseFree]
+english     = "Free"
+description = "Project > Metadata: license option meaning the script is free."
+
+[PcfLicensePaid]
+english     = "Paid"
+description = "Project > Metadata: license option meaning the script is paid."
+
+[PcfDescription]
+english     = "Description"
+description = "Project > Metadata: section header above the description text box."
+
+[PcfNotes]
+english     = "Notes"
+description = "Project > Metadata: section header above the notes text box."
+
+[PcfTags]
+english     = "Tags"
+description = "Project > Metadata: section header above the tag chips."
+
+[PcfPerformers]
+english     = "Performers"
+description = "Project > Metadata: section header above the performer chips."
+
+# --- Metadata tab: custom fields ---
+
+[PcfCustomFields]
+english     = "Custom Fields"
+description = "Project > Metadata: section header for user-defined custom JSON fields."
+
+[PcfTypeNull]
+english     = "Null"
+description = "Project > Metadata > Custom Fields: JSON value type — null."
+
+[PcfTypeBool]
+english     = "Bool"
+description = "Project > Metadata > Custom Fields: JSON value type — boolean."
+
+[PcfTypeNumber]
+english     = "Number"
+description = "Project > Metadata > Custom Fields: JSON value type — number."
+
+[PcfTypeString]
+english     = "String"
+description = "Project > Metadata > Custom Fields: JSON value type — string."
+
+[PcfTypeArray]
+english     = "Array"
+description = "Project > Metadata > Custom Fields: JSON value type — array."
+
+[PcfTypeObject]
+english     = "Object"
+description = "Project > Metadata > Custom Fields: JSON value type — object."
+
+[PcfNullValue]
+english     = "(null)"
+description = "Project > Metadata > Custom Fields: shown in the value column for a null field."
+
+[PcfInvalidJson]
+english     = "invalid JSON"
+description = "Project > Metadata > Custom Fields: error shown under an array/object editor with unparseable text."
+
+[PcfFieldNameHint]
+english     = "Field name..."
+description = "Project > Metadata > Custom Fields: hint text in the new-field name input."
+
+# --- Settings tab: media ---
+
+[PcfMedia]
+english     = "Media"
+description = "Project > Settings: section header for the media (video) file."
+
+[PcfBrowse]
+english     = "Browse..."
+description = "Project > Settings: button that opens a file picker to choose a media file."
+
+[PcfUnload]
+english     = "Unload"
+description = "Project > Settings: button that detaches the current media file."
+
+[PcfNoVideo]
+english     = "No video"
+description = "Project > Settings: shown when no media file is loaded."
+
+[PcfSource]
+english     = "Source"
+description = "Project > Settings › Media: label for the active-source toggle (original video vs. its optimized copy)."
+
+[PcfSourceOriginal]
+english     = "Original"
+description = "Project > Settings › Media: active-source option — play the original source video."
+
+[PcfSourceOptimized]
+english     = "Optimized"
+description = "Project > Settings › Media: active-source option — play the all-keyframe optimized copy."
+
+[PcfOptimize]
+english     = "Optimize"
+description = "Project > Settings › Media: button (icon + label, on the media row) that opens the intra-frame optimize dialog for the current video."
+
+[CmdOptimizeIntraNoFfmpeg]
+english     = "ffmpeg / ffprobe not found."
+description = "Project > Settings › Media: hint under the disabled Optimize button when the ffmpeg/ffprobe binaries are unavailable."
+
+[PcfStartWithoutVideo]
+english     = "Start without video"
+description = "Project > Settings: button that starts a dummy player with no media."
+
+[PcfDurationLabel]
+english     = "Duration (HH:MM:SS or seconds):"
+description = "Project > Settings: label above the dummy-player duration input."
+
+[PcfApply]
+english     = "Apply"
+description = "Project > Settings: button that applies the typed dummy-player duration."
+
+[PcfInvalid]
+english     = "Invalid"
+description = "Project > Settings: shown next to the duration field when the typed value can't be parsed."
+
+[PcfOpenMediaTitle]
+english     = "Open Media"
+description = "Project > Settings: title of the media file-open dialog."
+
+[PcfMediaFilesDesc]
+english     = "Media files"
+description = "Project > Settings: filter description in the media file-open dialog."
+
+# --- Settings tab: video player ---
+
+[PcfVideoPlayer]
+english     = "Video Player"
+description = "Project > Settings: section header for video-player options."
+
+[PcfMode]
+english     = "Mode"
+description = "Project > Settings > Video Player: label for the playback mode picker."
+
+[PcfModeFull]
+english     = "Full"
+description = "Project > Settings > Video Player: mode option — full/flat video."
+
+[PcfModeVr]
+english     = "VR"
+description = "Project > Settings > Video Player: mode option — VR video."
+
+[PcfResolution]
+english     = "Resolution"
+description = "Project > Settings > Video Player: label for the render-resolution scale picker."
+
+# --- Settings tab: overlay ---
+
+[PcfOverlay]
+english     = "Overlay"
+description = "Project > Settings: section header for the scripting overlay."
+
+[PcfType]
+english     = "Type"
+description = "Project > Settings > Overlay: label for the overlay-type picker."
+
+[PcfOverlayFrame]
+english     = "Frame"
+description = "Project > Settings > Overlay: overlay type — per-frame grid."
+
+[PcfOverlayTempo]
+english     = "Tempo"
+description = "Project > Settings > Overlay: overlay type — tempo/beat grid."
+
+[PcfFps]
+english     = "FPS"
+description = "Project > Settings > Overlay: label for the frames-per-second drag (Frame mode)."
+
+[PcfBpm]
+english     = "BPM"
+description = "Project > Settings > Overlay: label for the beats-per-minute drag (Tempo mode)."
+
+[PcfOffset]
+english     = "Offset"
+description = "Project > Settings > Overlay: label for the tempo time-offset drag (Tempo mode)."
+
+[PcfSnap]
+english     = "Snap"
+description = "Project > Settings > Overlay: label for the tempo subdivision/snap picker (Tempo mode)."
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# Shortcut Bindings window (src/UI/ShortcutWindow.cpp)
+#
+# Note: trigger/chord text (SDL key & gamepad-button names, the Ctrl+/Shift+/Alt+/GUI+ prefixes,
+# the "[Pad]" device tag) is technical identifier text shared with the binding filter and is left
+# in English on purpose — same rationale as the resolution percentages in window 2. Command titles
+# and group names come from CommandRegistry (command metadata), not this catalog.
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+
+[ScTitle]
+english     = "Shortcut Bindings"
+description = "Title of the Shortcut Bindings window."
+
+[ScResetToDefaults]
+english     = "Reset to Defaults"
+description = "Shortcuts: top-row button that restores every binding to its built-in default."
+
+[ScResetTip]
+english     = "Restore every shortcut to its built-in default"
+description = "Shortcuts: tooltip on the Reset to Defaults button."
+
+[ScOnlyBound]
+english     = "Only bound"
+description = "Shortcuts: top-row toggle that hides commands with no binding."
+
+[ScOnlyBoundTip]
+english     = "Show only commands that currently have at least one binding"
+description = "Shortcuts: tooltip on the Only bound toggle."
+
+[ScFilterHint]
+english     = "Filter…  (Ctrl+F)"
+description = "Shortcuts: placeholder text in the command-filter search box (Ctrl+F focuses it)."
+
+[ScNoMatch]
+english     = "No commands match the filter."
+description = "Shortcuts: shown in the command list when the filter matches nothing."
+
+[ScNone]
+english     = "(none)"
+description = "Shortcuts: shown in place of a binding when a command has none."
+
+# --- Gamepad / Analog and Hold Repeat sections ---
+
+[ScGamepadAnalog]
+english     = "Gamepad / Analog"
+description = "Shortcuts: collapsing-header for the gamepad/analog stick tunables."
+
+[ScDeadzone]
+english     = "Deadzone"
+description = "Shortcuts > Gamepad / Analog: slider — stick/trigger travel treated as idle."
+
+[ScDeadzoneTip]
+english     = "Stick/trigger travel below this reads as idle — raise it to kill drift."
+description = "Shortcuts: tooltip on the Deadzone slider."
+
+[ScSmoothing]
+english     = "Smoothing"
+description = "Shortcuts > Gamepad / Analog: slider — low-pass smoothing of analog input."
+
+[ScSmoothingTip]
+english     = "Low-pass time constant — larger smooths jitter but adds lag."
+description = "Shortcuts: tooltip on the Smoothing slider."
+
+[ScHoldRepeat]
+english     = "Hold Repeat"
+description = "Shortcuts: collapsing-header for the global hold-to-repeat cadence settings."
+
+[ScInitialDelay]
+english     = "Initial delay"
+description = "Shortcuts > Hold Repeat: slider — pause before a held key starts repeating."
+
+[ScInitialDelayTip]
+english     = "Pause after the first fire before a held key starts repeating."
+description = "Shortcuts: tooltip on the Initial delay slider."
+
+[ScRepeatSpeed]
+english     = "Repeat speed"
+description = "Shortcuts > Hold Repeat: slider — starting repeat rate while held, in repeats per second."
+
+[ScRepeatSpeedTip]
+english     = "How fast a held key repeats before acceleration, in repeats per second. Higher is faster."
+description = "Shortcuts: tooltip on the Repeat speed slider."
+
+[ScAcceleration]
+english     = "Acceleration"
+description = "Shortcuts > Hold Repeat: slider — how much repeats speed up the longer a key is held."
+
+[ScAccelerationTip]
+english     = "How much repeats speed up the longer you hold. 0% keeps a steady cadence; higher ramps up toward the maximum rate."
+description = "Shortcuts: tooltip on the Acceleration slider."
+
+[ScHoldRepeatPreview]
+english      = "Holding ramps ~{0} → {1} /s over ~{2}s"
+description  = "Shortcuts > Hold Repeat: live one-line preview of the resulting cadence while acceleration is on."
+placeholders = [
+    "{0} = starting repeats/sec, e.g. 17",
+    "{1} = top repeats/sec, e.g. 250",
+    "{2} = seconds to reach the top rate, e.g. 1.1",
+]
+
+[ScHoldRepeatPreviewSteady]
+english      = "Steady ~{0} /s while held"
+description  = "Shortcuts > Hold Repeat: live preview when acceleration is 0 (a constant cadence)."
+placeholders = [
+    "{0} = repeats/sec, e.g. 17",
+]
+
+# --- Per-command binding table ---
+
+[ScColAction]
+english     = "Action"
+description = "Shortcuts: binding-table column header for the command name."
+
+[ScColBinding]
+english     = "Binding"
+description = "Shortcuts: binding-table column header for the assigned trigger(s)."
+
+[ScColMode]
+english     = "Mode"
+description = "Shortcuts: binding-table column header for the Press/Hold activation selector."
+
+[ScChangeModifier]
+english     = "Change modifier..."
+description = "Shortcuts: context-menu entry to re-capture a binding's hold-modifier."
+
+[ScClearModifier]
+english     = "Clear modifier"
+description = "Shortcuts: context-menu entry to remove a binding's hold-modifier."
+
+[ScModChipTip]
+english      = "Hold-modifier — this binding drives only while {0} is held. Click to change or clear."
+description  = "Shortcuts: tooltip on a binding's active hold-modifier chip."
+placeholders = [
+    "{0} = modifier name (gamepad button/stick/trigger)",
+]
+
+[ScAddModifierTip]
+english     = "Add a hold-modifier (a held gamepad button, trigger, or stick): this binding then fires only while the modifier is held"
+description = "Shortcuts: tooltip on the add-hold-modifier button (gamepad triggers only)."
+
+[ScRemoveBindingTip]
+english     = "Remove this binding"
+description = "Shortcuts: tooltip on the per-binding trash button."
+
+[ScRebindBindingTip]
+english     = "Re-capture this binding — listen for a new key or gamepad input and overwrite it"
+description = "Shortcuts: tooltip on the per-binding re-capture (rebind) button."
+
+[ScPress]
+english     = "Press"
+description = "Shortcuts: Mode selector option — fire the command once on press."
+
+[ScHold]
+english     = "Hold"
+description = "Shortcuts: Mode selector option — repeat/drive the command while held."
+
+[ScModeDisabledTip]
+english     = "This command fires once — it has no while-held behavior"
+description = "Shortcuts: tooltip on a disabled Press/Hold selector (non-holdable command)."
+
+[ScModeTip]
+english     = "Press: fire once. Hold: repeat / drive while held down."
+description = "Shortcuts: tooltip on an enabled Press/Hold selector."
+
+[ScAddBindingTip]
+english     = "Add a key or gamepad binding"
+description = "Shortcuts: tooltip on the per-command add-binding (+) button."
+
+# --- Capture modal ---
+
+[ScAddBindingTitle]
+english     = "Add Binding"
+description = "Shortcuts: title of the trigger-capture modal."
+
+[ScRebindTitle]
+english     = "Rebind"
+description = "Shortcuts: title of the trigger-capture modal when re-capturing (overwriting) an existing binding."
+
+[ScSetModifierTitle]
+english     = "Set Modifier"
+description = "Shortcuts: title of the hold-modifier capture modal."
+
+[ScModifierFor]
+english      = "Modifier for: {0} ({1})"
+description  = "Shortcuts: capture-modal heading when setting a hold-modifier."
+placeholders = [
+    "{0} = command title",
+    "{1} = the trigger the modifier gates",
+]
+
+[ScCaptureBinding]
+english      = "Binding: {0}"
+description  = "Shortcuts: capture-modal heading when setting a trigger."
+placeholders = [
+    "{0} = command title",
+]
+
+[ScCaptured]
+english      = "Captured: {0}"
+description  = "Shortcuts: capture-modal line showing the captured trigger awaiting Apply."
+placeholders = [
+    "{0} = the captured trigger text",
+]
+
+[ScCapturedConflict]
+english      = "Currently bound to \"{0}\" — applying will reassign it."
+description  = "Shortcuts: capture-modal warning that the captured trigger is already in use."
+placeholders = [
+    "{0} = the command currently holding the trigger",
+]
+
+[ScApply]
+english     = "Apply"
+description = "Shortcuts: capture-modal button that commits the captured trigger/modifier."
+
+[ScRecapture]
+english     = "Re-capture"
+description = "Shortcuts: capture-modal button that discards the result and listens again."
+
+[ScCancel]
+english     = "Cancel"
+description = "Shortcuts: generic Cancel button (capture and confirm modals)."
+
+[ScModifierPrompt]
+english     = "Hold a gamepad button or push a stick/trigger to use as the modifier...  (Escape to cancel)"
+description = "Shortcuts: capture-modal prompt while listening for a hold-modifier."
+
+[ScCapturePrompt]
+english     = "Press any key or gamepad button, or push a stick/trigger...  (Escape to cancel)"
+description = "Shortcuts: capture-modal prompt while listening for a trigger."
+
+# --- Reset-to-defaults confirmation ---
+
+[ScResetTitle]
+english     = "Reset Shortcuts?"
+description = "Shortcuts: title of the reset-to-defaults confirmation modal."
+
+[ScResetBody]
+english     = "Restore all shortcut bindings, the gamepad/analog tunables, and the hold-repeat settings to their defaults? Your customizations will be lost."
+description = "Shortcuts: body of the reset-to-defaults confirmation modal."
+
+[ScReset]
+english     = "Reset"
+description = "Shortcuts: confirm button in the reset-to-defaults modal."
+
+# --- Preset bar and its modals ---
+
+[ScSelectPreset]
+english     = "(select preset)"
+description = "Shortcuts: preset combo preview text when no preset is selected."
+
+[ScBuiltinSuffix]
+english      = "{0} (built-in)"
+description  = "Shortcuts: preset combo entry for a read-only built-in preset."
+placeholders = [
+    "{0} = preset name",
+]
+
+[ScLoad]
+english     = "Load"
+description = "Shortcuts: preset-bar button (and load-confirm button) to apply a preset."
+
+[ScPresetLoadTip]
+english     = "Replace the active bindings with this preset"
+description = "Shortcuts: tooltip on the preset Load button."
+
+[ScSaveAs]
+english     = "Save As..."
+description = "Shortcuts: preset-bar button to save the current bindings as a new preset."
+
+[ScPresetSaveAsTip]
+english     = "Save the current bindings as a new preset"
+description = "Shortcuts: tooltip on the preset Save As button."
+
+[ScDelete]
+english     = "Delete"
+description = "Shortcuts: preset-bar button (and delete-confirm button) to remove a preset."
+
+[ScPresetDeleteTip]
+english     = "Delete this user preset"
+description = "Shortcuts: tooltip on the preset Delete button when a user preset is selected."
+
+[ScPresetDeleteDisabledTip]
+english     = "Built-in presets can't be deleted"
+description = "Shortcuts: tooltip on the disabled preset Delete button for a built-in preset."
+
+[ScSavePresetTitle]
+english     = "Save Binding Preset"
+description = "Shortcuts: title of the save-preset modal."
+
+[ScPresetNameLabel]
+english     = "Preset name:"
+description = "Shortcuts: label above the preset-name input in the save-preset modal."
+
+[ScSave]
+english     = "Save"
+description = "Shortcuts: confirm button in the save-preset modal."
+
+[ScAddCommand]
+english     = "Add command…"
+description = "Shortcuts: button that opens the Add-command picker (create a custom command, or bind an existing provider command)."
+
+[ScAddCommandTip]
+english     = "Create a custom command, or assign a key to a command not listed by default (mode switches, window openers)"
+description = "Shortcuts: tooltip on the Add command button."
+
+[ScAddProviderPrompt]
+english     = "Pick one to bind — you'll choose a key next."
+description = "Shortcuts: prompt above the target list in the Add-command provider-category modal (e.g. which axis)."
+
+[ScCustomNewTitle]
+english     = "New Custom Command"
+description = "Shortcuts: title of the custom-command editor modal when creating a command."
+
+[ScCustomEditTitle]
+english     = "Edit Custom Command"
+description = "Shortcuts: title of the custom-command editor modal when editing an existing command."
+
+[ScCustomName]
+english     = "Name"
+description = "Shortcuts: label above the custom-command name field."
+
+[ScCustomNameHint]
+english     = "e.g. Jump 5 frames forward"
+description = "Shortcuts: placeholder text in the empty custom-command name field."
+
+[ScCustomKindStep]
+english     = "Step (seek)"
+description = "Shortcuts: custom-command type that seeks the playhead by a number of steps."
+
+[ScCustomKindMovePos]
+english     = "Move position"
+description = "Shortcuts: custom-command type that nudges the selected actions up/down by a position amount."
+
+[ScCustomKindMoveTime]
+english     = "Move time"
+description = "Shortcuts: custom-command type that shifts the selected actions earlier/later in time."
+
+[ScCustomDirection]
+english     = "Direction"
+description = "Shortcuts: label above the forward/backward selector in the custom-command editor."
+
+[ScCustomDirForward]
+english     = "Forward"
+description = "Shortcuts: forward direction option in the custom-command editor."
+
+[ScCustomDirBackward]
+english     = "Backward"
+description = "Shortcuts: backward direction option in the custom-command editor."
+
+[ScCustomCount]
+english     = "Count"
+description = "Shortcuts: label above the step/move count input in the custom-command editor."
+
+[ScCustomGranularity]
+english     = "Step by"
+description = "Shortcuts: label above the step-granularity selector (frame / action) in the custom-command editor."
+
+[ScCustomGranFrame]
+english     = "Frame / grid"
+description = "Shortcuts: step-granularity option — step by the overlay grid (frame or beat)."
+
+[ScCustomGranAction]
+english     = "Action"
+description = "Shortcuts: step-granularity option — step to the adjacent action on the active axis."
+
+[ScCustomGranActionAll]
+english     = "Action (all axes)"
+description = "Shortcuts: step-granularity option — step to the nearest adjacent action across all axes."
+
+[ScCustomAmount]
+english     = "Amount"
+description = "Shortcuts: label above the signed position-units input for a Move position custom command."
+
+[ScCustomSeekAfter]
+english     = "Seek after move"
+description = "Shortcuts: checkbox — seek the playhead to the moved selection after a Move time command."
+
+[ScCustomEditTip]
+english     = "Edit this custom command"
+description = "Shortcuts: tooltip for the edit button on a custom-command row."
+
+[ScCustomDeleteTip]
+english     = "Delete this custom command"
+description = "Shortcuts: tooltip for the delete button on a custom-command row."
+
+[ScCustomDeleteTitle]
+english     = "Delete Custom Command?"
+description = "Shortcuts: title of the custom-command delete-confirmation modal."
+
+[ScCustomDeleteBody]
+english      = "Delete the custom command \"{0}\"? Any keys bound to it are removed."
+description  = "Shortcuts: body of the custom-command delete-confirmation modal; {0} is the command name."
+placeholders = [
+    "{0} = custom command name",
+]
+
+[ScLoadTitle]
+english     = "Load Preset?"
+description = "Shortcuts: title of the load-preset confirmation modal."
+
+[ScLoadBody]
+english      = "Load \"{0}\"? This replaces your current bindings."
+description  = "Shortcuts: body of the load-preset confirmation modal."
+placeholders = [
+    "{0} = preset name",
+]
+
+[ScPresetLoaded]
+english      = "Loaded shortcut preset \"{0}\"."
+description  = "Shortcuts: success toast after a preset loads with every binding applied."
+placeholders = [
+    "{0} = preset name",
+]
+
+[ScPresetLoadedPartial]
+english      = "Loaded \"{0}\" — {1} binding(s) couldn't be applied because their commands aren't available here."
+description  = "Shortcuts: warning toast after a preset loads but some entries referenced commands missing on this machine (uninstalled plugin, undefined custom command, or older build)."
+placeholders = [
+    "{0} = preset name",
+    "{1} = number of bindings that could not be applied",
+]
+
+[ScDeleteTitle]
+english     = "Delete Preset?"
+description = "Shortcuts: title of the delete-preset confirmation modal."
+
+[ScDeleteBody]
+english      = "Delete the preset \"{0}\"? This cannot be undone."
+description  = "Shortcuts: body of the delete-preset confirmation modal."
+placeholders = [
+    "{0} = preset name",
+]
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# Command group names (CmdGrp*)
+#
+# Categories every command is filed under; the visible header in the Shortcut Bindings window and
+# the prefix in the command palette. The canonical English name remains the grouping/sort key and
+# the stable "###grp_<name>" id — only the displayed text is localized. Plugin groups carry no key
+# and pass through untranslated.
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+
+[CmdGrpCore]
+english     = "Core"
+description = "Command group: core/global app actions (save, export, open windows)."
+
+[CmdGrpCustom]
+english     = "Custom"
+description = "Command group: user-defined custom commands created in the Shortcut window."
+
+[CmdGrpEdit]
+english     = "Edit"
+description = "Command group: editing actions on the active axis (add/remove/move actions, undo)."
+
+[CmdGrpMoving]
+english     = "Moving"
+description = "Command group: nudge/move-selection actions."
+
+[CmdGrpNavigation]
+english     = "Navigation"
+description = "Command group: playback/seek navigation actions."
+
+[CmdGrpSimulator]
+english     = "Simulator"
+description = "Command group: 3D simulator actions."
+
+[CmdGrpPlayer]
+english     = "Player"
+description = "Command group: video-player actions (play/pause, speed, volume)."
+
+[CmdGrpVideo]
+english     = "Video"
+description = "Command group: video/media operations (optimize the video for seeking)."
+
+[CmdGrpAxis]
+english     = "Axis"
+description = "Command group: axis-management actions (add scratch axis)."
+
+[CmdGrpView]
+english     = "View"
+description = "Command group: window/view actions (toggle fullscreen)."
+
+[CmdGrpSelectAxis]
+english     = "Select Axis"
+description = "Command group: per-axis 'make this axis active' actions (palette only)."
+
+[CmdGrpGoToChapter]
+english     = "Go to Chapter"
+description = "Command group: per-chapter seek actions (palette only)."
+
+[CmdGrpGoToBookmark]
+english     = "Go to Bookmark"
+description = "Command group: per-bookmark seek actions (palette only)."
+
+[CmdGrpTogglePanel]
+english     = "Toggle in Panel"
+description = "Command group: per-axis 'show/hide in panel' toggle actions (bindable)."
+
+[CmdGrpDeleteScratchAxis]
+english     = "Delete Scratch Axis"
+description = "Command group: per-axis 'delete scratch axis' actions (palette only)."
+
+[CmdGrpSwitchEditMode]
+english     = "Switch Edit Mode"
+description = "Command group: activate a registered edit mode (palette only; mirrors the footer selector)."
+
+[CmdGrpSwitchNavigator]
+english     = "Switch Navigator"
+description = "Command group: activate a registered step navigator (palette only; mirrors the footer selector)."
+
+[CmdGrpSwitchSelectionMode]
+english     = "Switch Selection Mode"
+description = "Command group: activate a registered selection mode (palette only; mirrors the footer selector)."
+
+[CmdGrpEditModeOptions]
+english     = "Edit Mode Options"
+description = "Command group: open the active edit mode's options modal (palette only; mirrors the footer's tool-options affordance)."
+
+[CmdGrpNavigatorOptions]
+english     = "Navigator Options"
+description = "Command group: open the active navigator's options modal (palette only; mirrors the footer's tool-options affordance)."
+
+[CmdGrpSelectionModeOptions]
+english     = "Selection Mode Options"
+description = "Command group: open the active selection mode's options modal (palette only; mirrors the footer's tool-options affordance)."
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# Command titles (Cmd*)
+#
+# Localized labels for every native command. Each native command holds its key in Command::title
+# (a TrString), which the Shortcut Bindings window and command palette resolve at render time.
+# Dynamic commands (chapters, bookmarks,
+# axes) are built per-frame with localized titles too: axis descriptors come from AxisDesc* via
+# localizedAxisName, and an unnamed chapter/bookmark falls back to the keys below. A user-typed
+# chapter/bookmark name is content, not UI text, so it stays verbatim.
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+
+[CmdDynChapterFallback]
+english      = "Chapter {0}"
+description  = "Dynamic 'Go to Chapter' command title for an unnamed chapter; {0} is its 1-based index."
+placeholders = [
+    "{0} = chapter number (1-based)",
+]
+
+[CmdDynBookmarkFallback]
+english      = "Bookmark {0}"
+description  = "Dynamic 'Go to Bookmark' command title for an unnamed bookmark; {0} is its 1-based index."
+placeholders = [
+    "{0} = bookmark number (1-based)",
+]
+
+[CmdPaletteOpen]
+english     = "Open Command Palette"
+description = "Command title: open the command palette (meta command)."
+
+[CmdCoreOpenPreferences]
+english     = "Open Preferences"
+description = "Command title: open the Preferences window."
+
+[CmdCoreOpenProjectSettings]
+english     = "Open Project Settings"
+description = "Command title: open the Project Settings window."
+
+[CmdCoreOpenKeybindings]
+english     = "Open Keyboard Shortcuts"
+description = "Command title: open the Shortcut Bindings window."
+
+[CmdCoreOpenAbout]
+english     = "About ofs-ng"
+description = "Command title: open the About window (build info and third-party attributions)."
+
+[CmdCoreSave]
+english     = "Save Project"
+description = "Command title: save the active project."
+
+[CmdCoreQuickExport]
+english     = "Quick Export"
+description = "Command title: export funscript(s) using the last-used settings."
+
+[CmdCoreSyncTimestamps]
+english     = "Sync Timestamps"
+description = "Command title: sync the playhead to the player's actual position."
+
+[CmdViewToggleFullscreen]
+english     = "Toggle Fullscreen"
+description = "Command title: toggle the application window between windowed and fullscreen."
+
+[CmdAxisAddScratch]
+english     = "Add Scratch Axis"
+description = "Command title: add the next free scratch axis (S0–S9)."
+
+[CmdEditRemoveAction]
+english     = "Remove Action"
+description = "Command title: delete the selected action(s) on the active axis."
+
+[CmdEditAddAction0]
+english     = "Add Action at 0"
+description = "Command title: insert an action at position 0 at the current playhead time."
+
+[CmdEditAddAction10]
+english     = "Add Action at 10"
+description = "Command title: insert an action at position 10 at the current playhead time."
+
+[CmdEditAddAction20]
+english     = "Add Action at 20"
+description = "Command title: insert an action at position 20 at the current playhead time."
+
+[CmdEditAddAction30]
+english     = "Add Action at 30"
+description = "Command title: insert an action at position 30 at the current playhead time."
+
+[CmdEditAddAction40]
+english     = "Add Action at 40"
+description = "Command title: insert an action at position 40 at the current playhead time."
+
+[CmdEditAddAction50]
+english     = "Add Action at 50"
+description = "Command title: insert an action at position 50 at the current playhead time."
+
+[CmdEditAddAction60]
+english     = "Add Action at 60"
+description = "Command title: insert an action at position 60 at the current playhead time."
+
+[CmdEditAddAction70]
+english     = "Add Action at 70"
+description = "Command title: insert an action at position 70 at the current playhead time."
+
+[CmdEditAddAction80]
+english     = "Add Action at 80"
+description = "Command title: insert an action at position 80 at the current playhead time."
+
+[CmdEditAddAction90]
+english     = "Add Action at 90"
+description = "Command title: insert an action at position 90 at the current playhead time."
+
+[CmdEditAddAction100]
+english     = "Add Action at 100"
+description = "Command title: insert an action at position 100 at the current playhead time."
+
+[CmdEditUndo]
+english     = "Undo"
+description = "Command title: undo the last action."
+
+[CmdEditRedo]
+english     = "Redo"
+description = "Command title: redo the last undone action."
+
+[CmdEditCopy]
+english     = "Copy"
+description = "Command title: copy the selected actions to the clipboard."
+
+[CmdEditPaste]
+english     = "Paste"
+description = "Command title: paste clipboard actions at the playhead."
+
+[CmdEditPasteExact]
+english     = "Paste Exact"
+description = "Command title: paste clipboard actions preserving their original timestamps."
+
+[CmdEditCut]
+english     = "Cut"
+description = "Command title: cut the selected actions to the clipboard."
+
+[CmdEditSelectAll]
+english     = "Select All"
+description = "Command title: select all actions on the active axis."
+
+[CmdEditDeselectAll]
+english     = "Deselect All"
+description = "Command title: deselect all actions on all axes in the edit set."
+
+[CmdEditSelectAllLeft]
+english     = "Select All Left"
+description = "Command title: select all actions to the left of the playhead on the active axis."
+
+[CmdEditSelectAllRight]
+english     = "Select All Right"
+description = "Command title: select all actions to the right of the playhead on the active axis."
+
+[CmdMoveActionsLeftSnapped]
+english     = "Move Actions Left (Snapped)"
+description = "Command title: move selected actions one step left, snapping to the overlay grid."
+
+[CmdMoveActionsRightSnapped]
+english     = "Move Actions Right (Snapped)"
+description = "Command title: move selected actions one step right, snapping to the overlay grid."
+
+[CmdMoveActionsLeft]
+english     = "Move Actions Left"
+description = "Command title: move selected actions one step left in time (free, no snap)."
+
+[CmdMoveActionsRight]
+english     = "Move Actions Right"
+description = "Command title: move selected actions one step right in time (free, no snap)."
+
+[CmdMoveActionsUp]
+english     = "Move Actions Up"
+description = "Command title: move selected actions up by 1 position unit."
+
+[CmdMoveActionsDown]
+english     = "Move Actions Down"
+description = "Command title: move selected actions down by 1 position unit."
+
+[CmdMoveActionToPlayhead]
+english     = "Move Action to Playhead"
+description = "Command title: move the selected action's timestamp to the current playhead position."
+
+[CmdNavPrevAction]
+english     = "Previous Action"
+description = "Command title: step to the previous action on the active axis (via the active navigator)."
+
+[CmdNavNextAction]
+english     = "Next Action"
+description = "Command title: step to the next action on the active axis (via the active navigator)."
+
+[CmdNavPrevActionMulti]
+english     = "Previous Action (All Scripts)"
+description = "Command title: step to the nearest previous action across all axes (via the active navigator)."
+
+[CmdNavNextActionMulti]
+english     = "Next Action (All Scripts)"
+description = "Command title: step to the nearest next action across all axes (via the active navigator)."
+
+[CmdNavCycleAxisForward]
+english     = "Cycle Axis Forward"
+description = "Command title: make the next axis in the panel strip the active axis."
+
+[CmdNavCycleAxisBackward]
+english     = "Cycle Axis Backward"
+description = "Command title: make the previous axis in the panel strip the active axis."
+
+[CmdNavPrevStep]
+english     = "Previous Step"
+description = "Command title: step the playhead back one step via the active navigator (overlay frame/beat grid by default)."
+
+[CmdNavNextStep]
+english     = "Next Step"
+description = "Command title: step the playhead forward one step via the active navigator (overlay frame/beat grid by default)."
+
+[CmdPlayerPlayPause]
+english     = "Play / Pause"
+description = "Command title: toggle video playback."
+
+[CmdPlayerToggleMute]
+english     = "Toggle Mute"
+description = "Command title: mute or unmute the video audio."
+
+[CmdPlayerVolumeUp]
+english     = "Volume Up"
+description = "Command title: increase the playback volume."
+
+[CmdPlayerVolumeDown]
+english     = "Volume Down"
+description = "Command title: decrease the playback volume."
+
+[CmdPlayerSpeedDown]
+english     = "Decrease Speed"
+description = "Command title: decrease the playback speed by 0.05×."
+
+[CmdPlayerSpeedUp]
+english     = "Increase Speed"
+description = "Command title: increase the playback speed by 0.05×."
+
+[CmdPlayerGotoStart]
+english     = "Go to Start"
+description = "Command title: seek to the beginning of the video."
+
+[CmdPlayerGotoEnd]
+english     = "Go to End"
+description = "Command title: seek to the end of the video."
+
+[CmdOptimizeIntra]
+english     = "Optimize Video for Seeking"
+description = "Command title: transcode the current video into an all-keyframe (intra-frame) copy for faster frame stepping/seeking."
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# Processing panel (src/UI/ProcessingPanel.cpp) — node-graph editor chrome
+#
+# The node-graph "vocabulary" is intentionally NOT keyed: pin labels (in/out/signal/A/B), the math
+# node formula labels ("Add  (A + B)", …), the add-node menu's node-type taxonomy (Math/Script and
+# the effect/plugin category & display names, which come from registry data), and unit symbols
+# ("Hz", "ms") stay English. Only the surrounding chrome, dialogs, buttons, tooltips, and status
+# prose below are keyed.
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+
+[ProcTitle]
+english     = "Processing"
+description = "Processing panel window title. Shares the Video Player's dock node (###video_player slug)."
+
+[ProcLockTip]
+english     = "Keep the panel open when focus is lost"
+description = "Processing: tooltip on the lock toggle in the header."
+
+[ProcShowActionsTip]
+english     = "Show the source actions behind the processed result"
+description = "Processing: tooltip on the show-source-actions (eye) toggle in the header."
+
+[ProcSaveGraph]
+english     = "Save Graph"
+description = "Processing: header button — save the region's node graph to a file."
+
+[ProcLoadGraph]
+english     = "Load Graph"
+description = "Processing: header button — load a node graph from a file into the region."
+
+[ProcBake]
+english     = "Bake"
+description = "Processing: footer button — bake the processed result into the region's actions."
+
+[ProcBakeTip]
+english     = "Write the processed result into the region's actions, then remove the graph. The bake is undoable."
+description = "Processing: tooltip on the Bake button."
+
+[ProcRecompute]
+english     = "Recompute"
+description = "Processing: footer button — force a re-evaluation of every axis the region drives."
+
+[ProcAuto]
+english     = "Auto"
+description = "Processing: footer checkbox — auto-recompute on edits."
+
+[ProcAutoTip]
+english     = "Auto-recompute on edits. Uncheck to halt; Recompute runs it manually."
+description = "Processing: tooltip on the Auto checkbox."
+
+[ProcHzTip]
+english     = "Sampling rate for any node that turns a continuous signal into discrete actions."
+description = "Processing: tooltip on the region Hz drag."
+
+[ProcEvalPrefix]
+english     = "eval: "
+description = "Processing: footer status label shown before the spinner while evaluating (note trailing space)."
+
+[ProcEvalMs]
+english      = "eval: {0} ms"
+description  = "Processing: footer status showing the last evaluation time in milliseconds."
+placeholders = [
+    "{0} = elapsed milliseconds (2 decimals)",
+]
+
+[ProcNotComputed]
+english     = "not computed"
+description = "Processing: footer status when auto-eval is off and no result has been computed yet."
+
+[ProcSaveToFolder]
+english     = "Fork script"
+description = "Processing: Script node button — promote an embedded script to an editable file in the scripts folder."
+
+[ProcLoadFromDisk]
+english     = "Load"
+description = "Processing: Script node button — replace the embedded script with one from disk."
+
+[ProcSelectCs]
+english     = "(select .cs)"
+description = "Processing: Script node file-picker combo placeholder when no script is chosen."
+
+[ProcEdit]
+english     = "Edit"
+description = "Processing: Script node button — open the script file in the default editor."
+
+[ProcReload]
+english     = "Reload"
+description = "Processing: Script node button — recompile the script file."
+
+[ProcFolder]
+english     = "Folder"
+description = "Processing: Script node button — open the scripts folder in the file browser."
+
+[ProcWatchTip]
+english     = "Recompile automatically when the file changes on disk"
+description = "Processing: tooltip on the Script node Watch checkbox."
+
+[ProcNoScriptSelected]
+english     = "no script selected"
+description = "Processing: Script node status when no file is chosen."
+
+[ProcCompiling]
+english     = "compiling…"
+description = "Processing: Script node status while the script is compiling."
+
+[ProcCompileOk]
+english     = "OK"
+description = "Processing: Script node status when the script compiled successfully."
+
+[ProcCompileError]
+english     = "compile error"
+description = "Processing: Script node status when compilation failed and no error text is available."
+
+[ProcCompileErrorTitle]
+english     = "Compile Error"
+description = "Processing: title of the modal that shows a script node's full compiler error text."
+
+[ProcViewError]
+english     = "View error"
+description = "Processing: tooltip on the Script node's error indicator button; opens the compile-error modal."
+
+[ProcClose]
+english     = "Close"
+description = "Processing: button that dismisses the compile-error modal."
+
+[ProcPluginDisabled]
+english     = "plugin disabled"
+description = "Processing: plugin node body text when the providing plugin is disabled."
+
+[ProcAddScriptTitle]
+english     = "Add Script"
+description = "Processing: title of the add-script modal (open an existing .cs or create a new one)."
+
+[ProcOpen]
+english     = "Open"
+description = "Processing: add-script modal label for the existing-script picker row."
+
+[ProcChooseExisting]
+english     = "(choose an existing script)"
+description = "Processing: add-script modal combo placeholder for opening an existing script."
+
+[ProcOrCreateNew]
+english     = "or create new"
+description = "Processing: add-script modal separator between opening an existing script and creating one."
+
+[ProcName]
+english     = "Name"
+description = "Processing: add-script / save-embedded modal label for the file-name field."
+
+[ProcDisplayName]
+english     = "Display name"
+description = "Processing: add-script modal label for the optional add-menu display name (// !ofs:name)."
+
+[ProcDisplayNameHint]
+english     = "defaults to the file name"
+description = "Processing: add-script modal placeholder hint for the optional display-name field."
+
+[ProcDescription]
+english     = "Description"
+description = "Processing: add-script modal label for the optional add-menu description (// !ofs:description)."
+
+[ProcDescriptionHint]
+english     = "shown as the node's menu tooltip"
+description = "Processing: add-script modal placeholder hint for the optional description field."
+
+[ProcSignal]
+english     = "Signal"
+description = "Processing: add-script modal label for the signal-kind radio group."
+
+[ProcFunctional]
+english     = "Functional"
+description = "Processing: add-script modal radio — functional (continuous) signal."
+
+[ProcDiscrete]
+english     = "Discrete"
+description = "Processing: add-script modal radio — discrete (point) signal."
+
+[ProcLibraryScript]
+english     = "Library script"
+description = "Processing: add-node tooltip suffix marking a first-party, read-only library script."
+
+[ProcScript]
+english     = "Script"
+description = "Processing: add-node tooltip suffix marking a user-folder (file-backed) script."
+
+[ProcEffectSmooth]
+english     = "Denoise"
+description = "Processing: display name of the built-in Denoise effect (add-node menu and node body). It is a moving average that removes high-frequency noise."
+
+[ProcEffectSmoothDesc]
+english     = "Averages each point with its neighbors to remove high-frequency noise. More passes remove more noise."
+description = "Processing: tooltip describing the built-in Denoise effect."
+
+[ProcEffectRdp]
+english     = "RDP Simplification"
+description = "Processing: display name of the built-in RDP Simplification effect. RDP = Ramer-Douglas-Peucker (keep the acronym)."
+
+[ProcEffectRdpDesc]
+english     = "Removes redundant points using the Ramer-Douglas-Peucker algorithm. Higher epsilon removes more points."
+description = "Processing: tooltip describing the built-in RDP Simplification effect."
+
+[ProcParamPasses]
+english     = "Passes"
+description = "Processing: label for the Smooth effect's pass-count parameter (how many smoothing iterations)."
+
+[ProcParamEpsilon]
+english     = "epsilon"
+description = "Processing: label for the RDP effect's epsilon parameter (the simplification tolerance)."
+
+[ProcInputs]
+english     = "Inputs"
+description = "Processing: add-script modal label for the input-count slider (number of input pins)."
+
+[ProcOutputs]
+english     = "Outputs"
+description = "Processing: add-script modal label for the output-count slider (number of output pins)."
+
+[ProcStubComments]
+english     = "Include guide comments"
+description = "Processing: add-script modal checkbox — seed the new .cs with the verbose inline documentation."
+
+[ProcEnterFileName]
+english     = "Enter a file name."
+description = "Processing: add-script / save-embedded modal hint when the name field is empty."
+
+[ProcInvalidChars]
+english     = "Name has invalid characters."
+description = "Processing: add-script / save-embedded modal error when the name has path-illegal characters."
+
+[ProcAlreadyExists]
+english      = "{0} already exists."
+description  = "Processing: add-script modal error when the chosen file name already exists."
+placeholders = [
+    "{0} = resolved file name",
+]
+
+[ProcCreates]
+english      = "Creates {0}"
+description  = "Processing: add-script modal hint showing the file that will be created."
+placeholders = [
+    "{0} = resolved file name",
+]
+
+[ProcCreate]
+english     = "Create"
+description = "Processing: add-script modal confirm button."
+
+[ProcCancel]
+english     = "Cancel"
+description = "Processing: cancel button shared by the panel's modals."
+
+[ProcSaveEmbeddedTitle]
+english     = "Save Embedded Script"
+description = "Processing: title of the modal that saves an embedded script to a file."
+
+[ProcSaveEmbeddedBody]
+english     = "Save this embedded script into your scripts folder. The node becomes a normal file node referencing it."
+description = "Processing: body text of the save-embedded-script modal."
+
+[ProcDifferentExists]
+english      = "A different {0} already exists — rename it."
+description  = "Processing: save-embedded modal error when a byte-different file of that name exists."
+placeholders = [
+    "{0} = resolved file name",
+]
+
+[ProcSaves]
+english      = "Saves {0}"
+description  = "Processing: save-embedded modal hint showing the file that will be written."
+placeholders = [
+    "{0} = resolved file name",
+]
+
+[ProcSave]
+english     = "Save"
+description = "Processing: save-embedded modal confirm button."
+
+[ProcTrustTitle]
+english     = "Trust Graph Scripts"
+description = "Processing: title of the modal warning that a loaded graph contains scripts that run code."
+
+[ProcTrustBody]
+english     = "This graph contains scripts that run code on your machine. Only load it if you trust the author."
+description = "Processing: body warning of the trust-graph-scripts modal."
+
+[ProcEmbeddedScript]
+english     = "embedded script"
+description = "Processing: trust modal bullet label for an embedded script that has no file name."
+
+[ProcTrustNote]
+english     = "These scripts stay embedded in the graph and run from there. Nothing is written to your scripts folder until you save a node to a file."
+description = "Processing: trust modal note explaining embedded scripts are not written to disk."
+
+[ProcReviewCode]
+english     = "Review code..."
+description = "Processing: trust modal button — open the embedded scripts in an editor before deciding."
+
+[ProcLoadAndRun]
+english     = "Load and run scripts"
+description = "Processing: trust modal button — accept and load the graph with its embedded scripts."
+
+[ProcRemapTitle]
+english     = "Remap Graph Axes"
+description = "Processing: title of the modal that maps a loaded graph's axes onto the region's axes."
+
+[ProcRemap]
+english     = "Remap"
+description = "Processing: header button — open the remap-axes dialog for the region's current graph."
+
+[ProcRemapTip]
+english     = "Remap this graph's axes onto different axes."
+description = "Processing: tooltip for the Remap header button."
+
+[ProcRemapBody]
+english     = "Map each of the graph's axes onto the axis it should write to:"
+description = "Processing: body of the remap-graph-axes modal."
+
+[ProcRemapDistinct]
+english     = "Each target axis must be distinct."
+description = "Processing: remap modal error when two saved axes map onto the same target."
+
+[ProcLoad]
+english     = "Load"
+description = "Processing: remap modal confirm button — load the graph with the chosen axis mapping."
+
+[ProcSelectScriptTitle]
+english     = "Select Script"
+description = "Processing: native file-dialog title when picking a .cs script for a Script node."
+
+[ProcCsFilterDesc]
+english     = "C# script (*.cs)"
+description = "Processing: native file-dialog filter description for C# script files."
+
+# --- Simulator window (src/UI/ScriptSimulator.cpp) ---
+# The on-video gizmo text is extracted too: the DOF axis words (Stroke/Surge/…), the ortho Top/Side
+# view captions, and the "(depth)" annotation. The axis vocabulary is already translated in the
+# Preferences window, so those translations are reused here. Axis-id symbols (L0/R0), "%" and "°"
+# stay literal like other unit symbols.
+
+[SimTitle]
+english     = "Simulator"
+description = "Simulator window title."
+
+[SimModelLoadFailed]
+english     = "3D model failed to load."
+description = "Simulator: shown in place of the 3D view when the simulator model asset can't be loaded."
+
+[SimRecenter]
+english     = "Recenter"
+description = "Simulator: header button that recenters the overlay anchor over the looked-at point."
+
+[SimLock]
+english     = "Lock"
+description = "Simulator: header checkbox that locks the overlay position so it can't be dragged."
+
+[Sim3D]
+english     = "3D"
+description = "Simulator: header checkbox that switches between the 2D bar and the 3D model overlay."
+
+[SimInvert]
+english     = "Invert"
+description = "Simulator: header checkbox that inverts the displayed axis values."
+
+[Sim3dLabels]
+english     = "3D Labels"
+description = "Simulator: 3D right-click menu — section header for the per-axis label toggles."
+
+[SimShowAll]
+english     = "Show all"
+description = "Simulator: 3D right-click menu — enable every per-axis label."
+
+[SimHideAll]
+english     = "Hide all"
+description = "Simulator: 3D right-click menu — disable every per-axis label."
+
+[SimRotationUnits]
+english     = "Rotation units"
+description = "Simulator: 3D right-click menu — section header choosing degrees vs percent for rotation labels."
+
+[SimDegrees]
+english     = "Degrees"
+description = "Simulator: 3D right-click menu — show rotation labels in degrees."
+
+[SimPercent]
+english     = "Percent"
+description = "Simulator: 3D right-click menu — show rotation labels as a percentage."
+
+[SimDisplay]
+english     = "Display"
+description = "Simulator: 2D right-click menu — submenu of overlay display toggles."
+
+[SimIndicators]
+english     = "Indicators"
+description = "Simulator: 2D right-click menu — toggle the previous/next action indicator lines."
+
+[SimPosition]
+english     = "Position"
+description = "Simulator: 2D right-click menu — toggle the current-position percentage label."
+
+[SimHeightLines]
+english     = "Height Lines"
+description = "Simulator: 2D right-click menu — toggle the 10%-interval height lines."
+
+[SimExtraLines]
+english     = "Extra Lines"
+description = "Simulator: 2D right-click menu — submenu setting how many extra lines to draw beyond 0–100%."
+
+[SimLocked]
+english     = "Locked"
+description = "Simulator: 2D right-click menu — toggle that locks/unlocks the overlay position."
+
+[SimViewTop]
+english     = "Top"
+description = "Simulator: caption of the top-down orthographic view panel."
+
+[SimViewSide]
+english     = "Side"
+description = "Simulator: caption of the side orthographic view panel."
+
+[SimDofStroke]
+english     = "Stroke"
+description = "Simulator: gizmo label for the L0 Stroke axis (up/down). Same word as the Preferences 'Stroke (L0)' range."
+
+[SimDofSurge]
+english     = "Surge"
+description = "Simulator: gizmo label for the L1 Surge axis (forward/back)."
+
+[SimDofSway]
+english     = "Sway"
+description = "Simulator: gizmo label for the L2 Sway axis (left/right)."
+
+[SimDofTwist]
+english     = "Twist"
+description = "Simulator: gizmo label for the R0 Twist axis."
+
+[SimDofRoll]
+english     = "Roll"
+description = "Simulator: gizmo label for the R1 Roll axis."
+
+[SimDofPitch]
+english     = "Pitch"
+description = "Simulator: gizmo label for the R2 Pitch axis."
+
+[SimDepth]
+english     = "(depth)"
+description = "Simulator: appended to the Surge gizmo label — Surge runs along the view axis, so it reads as a depth value rather than an on-screen line."
+
+# ── Timeline window (UI/ScriptTimeline.cpp) ──────────────────────────────────
+# Chrome only: window title, the curve right-click menu, and the region-bar right-click menu. The
+# axis short-name strip labels (L0/R1/…) are non-translatable symbols and stay literal; the snap
+# fractions (1/2, 1/4, …) likewise — only the "measure" word in the "1/1 (measure)" entry is keyed
+# (TlMeasure, shared with ProjectConfigWindow's identical Snap combo).
+
+[TlTitle]
+english     = "Timeline"
+description = "Timeline window title."
+
+[TlHideFromPanel]
+english     = "Hide from panel"
+description = "Timeline curve right-click menu — remove this axis from the timeline strip."
+
+[TlLock]
+english     = "Lock"
+description = "Timeline curve right-click menu — lock the axis so its points can't be edited."
+
+[TlUnlock]
+english     = "Unlock"
+description = "Timeline curve right-click menu — unlock a locked axis."
+
+[TlDelete]
+english     = "Delete"
+description = "Timeline right-click menus — delete the scratch axis (curve menu) or the region (region-bar menu)."
+
+[TlAddProcessingRegion]
+english     = "Add Processing Region"
+description = "Timeline curve right-click menu — create a processing region spanning the current selection."
+
+[TlShowPoints]
+english     = "Show points"
+description = "Timeline curve right-click menu — toggle rendering and editing of the source action points."
+
+[TlOverlay]
+english     = "Overlay"
+description = "Timeline curve right-click menu — submenu (and inner selector label) for the scripting overlay grid."
+
+[TlOverlayFrame]
+english     = "Frame"
+description = "Timeline overlay selector — frame-grid overlay mode."
+
+[TlOverlayTempo]
+english     = "Tempo"
+description = "Timeline overlay selector — musical-tempo (beat-grid) overlay mode."
+
+[TlVideoFps]
+english      = "Video FPS: {0}"
+description  = "Timeline overlay (Frame mode) — read-only display of the loaded video's frame rate."
+placeholders = [
+    "{0} = video frame rate, e.g. 29.970",
+]
+
+[TlScriptFps]
+english     = "Script FPS"
+description = "Timeline overlay (Frame mode) — label for the common-frame-rate preset selector."
+
+[TlCustomFps]
+english     = "Custom FPS"
+description = "Timeline overlay (Frame mode) — label for the free-entry frame-rate field."
+
+[TlBpm]
+english     = "BPM"
+description = "Timeline overlay (Tempo mode) — beats-per-minute field label."
+
+[TlOffsetSeconds]
+english     = "Offset (s)"
+description = "Timeline overlay (Tempo mode) — beat-grid phase offset in seconds."
+
+[TlSnap]
+english     = "Snap"
+description = "Timeline overlay (Tempo mode) — label for the beat-subdivision (grid spacing) selector."
+
+[TlMeasure]
+english     = "measure"
+description = "Timeline overlay (Tempo mode) — the word inside the '1/1 (measure)' snap entry; the rest is numeric. Shared with ProjectConfigWindow's Snap combo."
+
+[TlBake]
+english     = "Bake"
+description = "Timeline region-bar right-click menu — bake the region's processed result into the axis actions."
+
+[TlGrowLeft]
+english     = "Grow Left"
+description = "Timeline region-bar right-click menu — extend the region's start back to the previous region (or the timeline start)."
+
+[TlGrowRight]
+english     = "Grow Right"
+description = "Timeline region-bar right-click menu — extend the region's end forward to the next region (or the timeline end)."
+
+[TlGrowBoth]
+english     = "Grow Both Sides"
+description = "Timeline region-bar right-click menu — extend both edges to the neighboring regions (or the timeline bounds)."
+
+[TlAddRegionPlayhead]
+english     = "Add Region at Playhead"
+description = "Timeline region-bar right-click menu — create a region starting at the playhead."
+
+[TlAddRegionHere]
+english     = "Add Region Here"
+description = "Timeline region-bar right-click menu — create a region centered on the clicked time."
+
+[TlAddRegionSelection]
+english     = "Add Region over Selection"
+description = "Timeline region-bar right-click menu — create a region spanning the current point selection."
+
+[TlAddRegionDuration]
+english     = "Add Region over Entire Duration"
+description = "Timeline region-bar right-click menu — create one region spanning the whole timeline."
+
+# ── Video Controls window (UI/VideoPlayerControls.cpp) ───────────────────────
+# Chrome: window title, the seek-bar heatmap right-click menu + export dialog, the bookmark/chapter
+# right-click menu, the bookmark hover tooltip, and the Speed label. Transport buttons are icon-only;
+# time readouts and the volume/speed slider format specs stay literal.
+
+[VpcTitle]
+english     = "Video Controls"
+description = "Video Controls window title (transport, seek bar, bookmark/chapter strip)."
+
+[VpcHeatmapHeight]
+english     = "Height"
+description = "Seek-bar heatmap right-click menu — pixel height of the exported PNG."
+
+[VpcHeatmapFade]
+english     = "Fade"
+description = "Seek-bar heatmap right-click menu — toggle fading the exported heatmap toward the edges."
+
+[VpcExportPng]
+english     = "Export as PNG..."
+description = "Seek-bar heatmap right-click menu — open the save dialog to write the heatmap to a PNG."
+
+[VpcExportHeatmapTitle]
+english     = "Export heatmap"
+description = "Title of the native save dialog for the heatmap PNG export."
+
+[VpcPngImage]
+english     = "PNG image"
+description = "File-type filter label in the heatmap export save dialog."
+
+[VpcChapterNoRoom]
+english     = "No room for a chapter here — the timeline is full at this point."
+description = "Toast shown when a new chapter can't be placed because no free gap remains at that time."
+
+[VpcBookmarkTip]
+english      = "Bookmark: {0}"
+description  = "Hover tooltip over a bookmark dot; {0} is the bookmark name (or the '(unnamed)' fallback)."
+placeholders = [
+    "{0} = bookmark name",
+]
+
+[VpcUnnamed]
+english     = "(unnamed)"
+description = "Bookmark hover tooltip — placeholder shown when a bookmark has no name."
+
+[VpcAddBookmarkPlayhead]
+english     = "Add Bookmark at Playhead"
+description = "Bookmark strip right-click menu — add a bookmark at the current playhead time."
+
+[VpcAddChapterPlayhead]
+english     = "Add Chapter at Playhead"
+description = "Bookmark strip right-click menu — add a chapter starting at the current playhead time."
+
+[VpcAddBookmarkHere]
+english     = "Add Bookmark Here"
+description = "Bookmark strip right-click menu — add a bookmark at the clicked time."
+
+[VpcAddChapterHere]
+english     = "Add Chapter Here"
+description = "Bookmark strip right-click menu — add a chapter at the clicked time."
+
+[VpcSeekHere]
+english     = "Seek Here"
+description = "Bookmark right-click menu — seek the playhead to the bookmark."
+
+[VpcDelete]
+english     = "Delete"
+description = "Bookmark/chapter right-click menu — delete the bookmark or chapter."
+
+[VpcColor]
+english     = "Color"
+description = "Right-click menu — color swatch label for a chapter or processing-region band."
+
+[VpcSeekToStart]
+english     = "Seek to Start"
+description = "Chapter right-click menu — seek the playhead to the chapter's start."
+
+[VpcSeekToEnd]
+english     = "Seek to End"
+description = "Chapter right-click menu — seek the playhead to the chapter's end."
+
+[VpcSpeed]
+english     = "Speed"
+description = "Video Controls — label for the playback-speed slider."
+
+# ── Video Player window (UI/VideoPlayerWindow.cpp) ───────────────────────────
+# The video viewport. Chrome: window title, the two no-content placeholders, and the right-click
+# menu (Full/VR mode, the Resolution submenu + its tooltip, the Locked toggle). The "###video_player"
+# id slug stays fixed (shared with ProcessingPanel's dock node) and is independent of this title.
+
+[VpwTitle]
+english     = "Video Player"
+description = "Video Player window title (the video viewport)."
+
+[VpwNoVideo]
+english     = "No video loaded"
+description = "Video Player — placeholder shown when no media is loaded."
+
+[VpwAudioOnly]
+english     = "Audio only — no video"
+description = "Video Player — placeholder shown when the media has an audio track but no video."
+
+[VpwFullMode]
+english     = "Full Mode"
+description = "Video Player right-click menu — flat (non-VR) display mode."
+
+[VpwVrMode]
+english     = "VR Mode"
+description = "Video Player right-click menu — equirectangular VR (360°) display mode."
+
+[VpwResolution]
+english     = "Resolution"
+description = "Video Player right-click menu — submenu choosing the internal render resolution scale."
+
+[VpwResolutionTip]
+english     = "Changes the internal rendering resolution.\nmpv still decodes the full frame — for more performance, videos need to be re-encoded at a lower resolution."
+description = "Video Player right-click menu — tooltip on the Resolution submenu."
+
+[VpwResFull]
+english     = "Full"
+description = "Video Player Resolution submenu — render at full resolution (1x)."
+
+[VpwResHalf]
+english     = "Half"
+description = "Video Player Resolution submenu — render at half resolution."
+
+[VpwResThird]
+english     = "Third"
+description = "Video Player Resolution submenu — render at one-third resolution."
+
+[VpwResQuarter]
+english     = "Quarter"
+description = "Video Player Resolution submenu — render at quarter resolution."
+
+[VpwResEighth]
+english     = "Eighth"
+description = "Video Player Resolution submenu — render at one-eighth resolution."
+
+[VpwLocked]
+english     = "Locked"
+description = "Video Player right-click menu — toggle that locks the view (disables pan/zoom/rotate)."
+
+# ── Welcome screen (UI/WelcomeScreen.cpp) ────────────────────────────────────
+# The no-project landing page. The build-identity header (versionTitle) and the recent-project file
+# names are not translatable; everything else below is.
+
+[WelTitle]
+english     = "Welcome"
+description = "Welcome screen window title (the no-project landing page)."
+
+[WelOpenProject]
+english     = "Open / New Project..."
+description = "Welcome screen — primary button: open an existing project or start a new one (shows a picker)."
+
+[WelCreateEmpty]
+english     = "Create Empty Project"
+description = "Welcome screen — button: start a fresh media-less project immediately, no picker."
+
+[WelRecentProjects]
+english     = "Recent Projects"
+description = "Welcome screen — heading above the recently-opened project list."
+
+[WelClearRecentTip]
+english     = "Clear the recent-projects list"
+description = "Welcome screen — tooltip on the trash button that empties the recent list."
+
+[WelNoRecent]
+english     = "No recent projects"
+description = "Welcome screen — shown in place of the list when no projects have been opened yet."
+
+[WelTip]
+english     = "Tip: drag a video or .ofp file onto the window to open it."
+description = "Welcome screen — footer hint about drag-and-drop opening."
+
+[WelSecurityNote]
+english     = "Don't share .ofp files or open ones from others. They can hold identifying info like file paths containing usernames and run untrusted code."
+description = "Welcome screen security warning: .ofp projects can leak identifying info (e.g. file paths) and can carry untrusted code that executes on open."
+
+# ── App shell: menu bar + export/layout modals (App/OfsApp.cpp) ───────────────
+# The always-on main menu bar (File/Edit/View/Layout/Axes/Plugins), the right-aligned project-title
+# readout, the Export Funscript and New Layout modals, and the toasts OfsApp pushes (layout actions,
+# localization-tooling results, script-compile failures). Axis names ("L0 (Stroke)"), plugin display
+# names, version tags, and the funscript-format version identifiers stay literal (data / technical).
+
+[AppMenuFile]
+english     = "File"
+description = "Main menu bar — File menu."
+
+[AppMenuOpenNew]
+english     = "Open or New Project..."
+description = "File menu — open an existing project or start a new one (via the picker)."
+
+[AppMenuCloseProject]
+english     = "Close Project"
+description = "File menu — close the current project and return to the welcome screen."
+
+[AppMenuSaveProject]
+english     = "Save Project"
+description = "File menu — save the current project to its existing file."
+
+[AppMenuSaveProjectAs]
+english     = "Save Project As..."
+description = "File menu — save the current project to a new file (picker)."
+
+[AppMenuImport]
+english     = "Import"
+description = "File menu — submenu of import formats."
+
+[AppMenuImportFunscript]
+english     = "Funscript..."
+description = "File-Import submenu — import a .funscript file."
+
+[AppMenuExportFunscript]
+english     = "Export Funscript..."
+description = "File menu — open the Export Funscript dialog."
+
+[AppMenuExit]
+english     = "Exit"
+description = "File menu — quit the application (prompts to save if dirty)."
+
+[AppMenuEdit]
+english     = "Edit"
+description = "Main menu bar — Edit menu."
+
+[AppMenuPreferences]
+english     = "Preferences"
+description = "Edit menu — open the global Preferences window."
+
+[AppMenuProject]
+english     = "Project"
+description = "Edit menu — open the per-project configuration window."
+
+[AppMenuView]
+english     = "View"
+description = "Main menu bar — View menu."
+
+[AppMenuShortcuts]
+english     = "Keyboard Shortcuts"
+description = "View menu — toggle the Keyboard Shortcuts window."
+
+[AppMenuSimulator]
+english     = "Simulator"
+description = "View menu — toggle the Simulator window."
+
+[AppMenuStatistics]
+english     = "Statistics"
+description = "View menu — toggle the Statistics window."
+
+[AppMenuToolOptions]
+english     = "Tool Options"
+description = "View menu — toggle the Tool Options panel (the active edit/step/select modes' settings)."
+
+[AppMenuLog]
+english     = "Log"
+description = "View menu — toggle the Log window (live application log)."
+
+[AppMenuFullscreen]
+english     = "Fullscreen"
+description = "View menu — toggle borderless fullscreen for the app window."
+
+[AppMenuHelp]
+english     = "Help"
+description = "Main menu bar — Help menu."
+
+[AppMenuAbout]
+english     = "About ofs-ng"
+description = "Help menu — open the About window (build info and third-party attributions)."
+
+[AppMenuLayout]
+english     = "Layout"
+description = "Main menu bar — Layout (docking arrangement) menu."
+
+[AppMenuAxes]
+english     = "Axes"
+description = "Main menu bar — Axes menu (per-axis visibility and scratch axes)."
+
+[AppMenuPlugins]
+english     = "Plugins"
+description = "Main menu bar — Plugins menu."
+
+[AppLayoutSave]
+english     = "Save Layout"
+description = "Layout menu — overwrite the active user layout with the current docking arrangement."
+
+[AppLayoutSaveTip]
+english     = "The Default layout is read-only.\nUse \"+ New Layout...\" to save your changes."
+description = "Layout menu — tooltip on the disabled Save Layout item while the Default layout is active. Two lines."
+
+[AppLayoutDelete]
+english     = "Delete"
+description = "Layout menu — submenu listing user layouts to delete."
+
+[AppLayoutReset]
+english     = "Reset Layout"
+description = "Layout menu — reload the saved arrangement, discarding unsaved docking changes."
+
+[AppLayoutResetTipDefault]
+english     = "Rebuild the built-in Default arrangement."
+description = "Layout menu — Reset Layout tooltip while the Default layout is active."
+
+[AppLayoutResetTipUser]
+english     = "Discard unsaved changes and reload the saved layout."
+description = "Layout menu — Reset Layout tooltip while a user layout is active."
+
+[AppLayoutLock]
+english     = "Lock Layout"
+description = "Layout menu — toggle preventing windows from being undocked."
+
+[AppLayoutLockTip]
+english     = "Prevents undocking windows (resizing still works)."
+description = "Layout menu — tooltip on the Lock Layout toggle."
+
+[AppLayoutNew]
+english     = "New Layout..."
+description = "Layout menu — open the New Layout dialog to save the current arrangement under a new name."
+
+[AppLayoutDefault]
+english     = "Default"
+description = "Layout menu — the built-in read-only Default arrangement (selectable entry)."
+
+[AppLayoutSaved]
+english      = "Layout \"{0}\" saved."
+description  = "Toast confirming a user layout was overwritten with the current arrangement."
+placeholders = [
+    "{0} = layout name",
+]
+
+[AppLayoutDeleted]
+english      = "Layout \"{0}\" deleted."
+description  = "Toast confirming a user layout was removed."
+placeholders = [
+    "{0} = layout name",
+]
+
+[AppLayoutCreated]
+english      = "Layout \"{0}\" created."
+description  = "Toast confirming a new user layout was saved."
+placeholders = [
+    "{0} = layout name",
+]
+
+[AppNewLayoutTitle]
+english     = "New Layout"
+description = "Title of the New Layout dialog."
+
+[AppNewLayoutName]
+english     = "Name"
+description = "New Layout dialog — label for the layout-name input field."
+
+[AppNewLayoutEnterName]
+english     = "Enter a layout name."
+description = "New Layout dialog — hint shown while the name field is empty."
+
+[AppNewLayoutDuplicate]
+english     = "A layout with that name already exists."
+description = "New Layout dialog — error shown when the entered name collides with an existing layout."
+
+[AppNewLayoutCreate]
+english     = "Create"
+description = "New Layout dialog — confirm button that saves the new layout."
+
+[AppCancel]
+english     = "Cancel"
+description = "Modal dialog — dismiss without applying (shared by the Export Funscript and New Layout dialogs)."
+
+[AppAxesAddScratch]
+english     = "Add Scratch Axis"
+description = "Axes menu — add a user scratch axis (S0–S9)."
+
+[AppAxesMaxTip]
+english     = "Maximum of 10 scratch axes (S0–S9) reached."
+description = "Axes menu — tooltip on the disabled Add Scratch Axis item once all ten scratch slots are used."
+
+[AppAxesMultiAxis]
+english     = "Show Main Axes"
+description = "Axes menu — convenience shortcut that reveals the six main TCode axes (L0–R2) in one click."
+
+[AppAxesMultiAxisTip]
+english     = "Shortcut to show all six main axes (L0–R2) at once. Axes always exist; this just reveals them."
+description = "Axes menu — tooltip on the Multi-Axis item clarifying it's a convenience shortcut that shows the six main axes, not a required step for multi-axis editing."
+
+[AppAxesL0Only]
+english     = "Show L0 Only"
+description = "Axes menu — convenience shortcut that hides the other main axes from the strip in one click, leaving L0 (scratch axes are kept)."
+
+[AppAxesL0OnlyTip]
+english     = "Shortcut to show only L0 in the strip, hiding every other axis. Scratch axes with data stay in the Axes menu."
+description = "Axes menu — tooltip on the Show L0 Only item explaining it hides every axis but L0 from the strip; a scratch axis with data isn't deleted (it stays in the Axes menu)."
+
+[AppAxesShowTimeline]
+english     = "Show in Timeline"
+description = "Axes menu (per-axis submenu) — toggle the axis visibility in the timeline."
+
+[AppAxesShowPanel]
+english     = "Show in Panel"
+description = "Axes menu (per-axis submenu) — toggle the axis strip in the timeline panel."
+
+[AppAxesRemove]
+english     = "Remove"
+description = "Axes menu (per-axis submenu) — delete an empty scratch axis (only shown while the scratch axis has no actions)."
+
+# --- Axis descriptors ---
+# The descriptive name shown in parentheses after an axis code in the Axes menu (and other axis
+# pickers), e.g. "L0 (Stroke)". The code ("L0") is a fixed TCode hardware identifier and is NOT
+# translated; only the descriptor below is. Scratch axes (S0–S9) have no descriptor.
+
+[AxisDescL0]
+english     = "Stroke"
+description = "Axis descriptor for L0 — the main up/down stroke. Shown as \"L0 (Stroke)\"."
+
+[AxisDescL1]
+english     = "Surge"
+description = "Axis descriptor for L1 — forward/back linear motion. Shown as \"L1 (Surge)\"."
+
+[AxisDescL2]
+english     = "Sway"
+description = "Axis descriptor for L2 — left/right linear motion. Shown as \"L2 (Sway)\"."
+
+[AxisDescR0]
+english     = "Twist"
+description = "Axis descriptor for R0 — rotation about the stroke axis. Shown as \"R0 (Twist)\"."
+
+[AxisDescR1]
+english     = "Roll"
+description = "Axis descriptor for R1 — side-to-side tilt. Shown as \"R1 (Roll)\"."
+
+[AxisDescR2]
+english     = "Pitch"
+description = "Axis descriptor for R2 — forward/back tilt. Shown as \"R2 (Pitch)\"."
+
+[AxisDescV0]
+english     = "Vibe"
+description = "Axis descriptor for V0 — vibration channel. Shown as \"V0 (Vibe)\"."
+
+[AxisDescV1]
+english     = "Vibe2"
+description = "Axis descriptor for V1 — second vibration channel. Shown as \"V1 (Vibe2)\"."
+
+[AxisDescA0]
+english     = "Air"
+description = "Axis descriptor for A0 — air/suction channel. Shown as \"A0 (Air)\"."
+
+[AxisDescA1]
+english     = "Air2"
+description = "Axis descriptor for A1 — second air/suction channel. Shown as \"A1 (Air2)\"."
+
+[AppPluginsInstall]
+english     = "Install plugin from zip..."
+description = "Plugins menu — install a plugin from a .zip archive (picker)."
+
+[AppPluginHotReload]
+english     = "Hot reload (developer)"
+description = "Plugins menu (per-plugin submenu) — toggle auto-reloading this plugin when its DLL changes (a rebuild)."
+
+[AppPluginHotReloadHint]
+english     = "While on, this plugin reloads automatically when you rebuild it. Developer aid; not saved between sessions."
+description = "Plugins menu (per-plugin submenu) — tooltip explaining the Hot reload toggle."
+
+[AppPluginsNoneLoaded]
+english     = "No plugins loaded"
+description = "Plugins menu — shown when no plugins are present."
+
+[AppPluginEnabled]
+english     = "Enabled"
+description = "Plugins menu (per-plugin submenu) — toggle whether the plugin is active."
+
+[AppPluginShowWindow]
+english     = "Show Window"
+description = "Plugins menu (per-plugin submenu) — toggle the plugin UI window."
+
+[AppPluginUninstall]
+english     = "Uninstall..."
+description = "Plugins menu (per-plugin submenu) — remove a user-installed plugin."
+
+[AppNoProject]
+english     = "No Project"
+description = "Project-title readout (menu bar / title bar) shown when no project is open."
+
+[AppNoProjectOpen]
+english     = "No project open — open or create one to begin"
+description = "Footer status line shown on the welcome screen when no project is open."
+
+[AppUnsavedTip]
+english     = "Unsaved changes"
+description = "Menu-bar save-state indicator tooltip — shown when the project has unsaved edits."
+
+[AppSavedTip]
+english     = "All changes saved"
+description = "Menu-bar save-state indicator tooltip — shown when the project has no unsaved edits."
+
+[AppSavedSecsAgo]
+english      = "saved {0}s ago"
+description  = "Menu-bar save-time readout, seconds granularity."
+placeholders = [
+    "{0} = whole seconds since last save",
+]
+
+[AppSavedMinsAgo]
+english      = "saved {0}m ago"
+description  = "Menu-bar save-time readout, minutes granularity."
+placeholders = [
+    "{0} = whole minutes since last save",
+]
+
+[AppSavedHoursAgo]
+english      = "saved {0}h ago"
+description  = "Menu-bar save-time readout, hours granularity."
+placeholders = [
+    "{0} = whole hours since last save",
+]
+
+[AppExportTitle]
+english     = "Export Funscript"
+description = "Title of the Export Funscript dialog."
+
+[AppExportFormat]
+english     = "Format:"
+description = "Export Funscript dialog — heading above the format radio buttons."
+
+[AppExportFormat10]
+english     = "1.0 – one file per axis"
+description = "Export Funscript dialog — format option: legacy 1.0 (separate file per axis)."
+
+[AppExportFormat11]
+english     = "1.1 – single file (axes[])"
+description = "Export Funscript dialog — format option: 1.1, all axes in one file under an axes[] array. The axes[] token is technical and stays literal."
+
+[AppExportFormat20]
+english     = "2.0 – single file (channels{{}})"
+description = "Export Funscript dialog — format option: 2.0, one file with a channels{} object. The token is technical; the braces are fmt-escaped ({{}}) and the label is resolved via .fmt()."
+
+[AppExportAxesInclude]
+english     = "Axes to include:"
+description = "Export Funscript dialog — heading above the per-axis include checkboxes."
+
+[AppExportEmpty]
+english     = "(empty)"
+description = "Export Funscript dialog — marker next to an axis that has no actions."
+
+[AppExportButton]
+english     = "Export"
+description = "Export Funscript dialog — confirm button that writes the file(s)."
+
+[AppCatalogExported]
+english     = "Localization catalog exported."
+description = "Toast confirming the English string catalog was written to disk."
+
+[AppCatalogExportFailed]
+english     = "Failed to export localization catalog."
+description = "Toast shown when writing the string catalog failed."
+
+[AppTranslationRefreshed]
+english     = "Translation refreshed."
+description = "Toast confirming a translation file was reloaded from disk."
+
+[AppTranslationRefreshFailed]
+english     = "Failed to refresh translation."
+description = "Toast shown when reloading a translation file failed."
+
+[AppScriptCompileFailed]
+english      = "Script '{0}' failed to compile: {1}"
+description  = "Toast surfacing a C# script compile error from the script system."
+placeholders = [
+    "{0} = script file name",
+    "{1} = compiler error message",
+]
+
+# ── Modal shell: axis-import picker (UI/ModalManager.cpp) ─────────────────────
+# The generic modal shell's own chrome. Only the combined axis-import picker carries hardcoded text;
+# message-box button labels and the AxisPickSpec strings (title/prompt/row labels/option names) are
+# supplied by the flow that opens the modal and stay the caller's responsibility.
+
+[ModalDuplicateAxis]
+english     = "Each axis can be used only once — two rows point at the same axis."
+description = "Axis-import picker — error shown while two rows target the same axis (blocks Import)."
+
+[ModalImport]
+english     = "Import"
+description = "Axis-import picker — confirm button that imports the tracks with the chosen targets."
+
+[ModalCancel]
+english     = "Cancel"
+description = "Axis-import picker — dismiss button (leaves the import unperformed)."
+
+# ── Title bar: command palette (UI/TitleBar.cpp) ─────────────────────────────
+# The custom title bar's own chrome: the palette's query hint + empty-state. The centered box shows
+# the active project's name (draw-list text, no auto-clip — sized to the name and elided when a narrow
+# window shrinks it) and opens the command palette; command rows and the app/project titles are
+# caller-supplied, so they aren't keyed here.
+
+[TbTypeCommand]
+english     = "Type a command..."
+description = "Command palette — hint text in the empty query field."
+
+[TbNoMatch]
+english     = "No matching commands"
+description = "Command palette — shown when the query matches no command."
+
+# ── Footer bar: notification center + status (UI/FooterBar.cpp) ───────────────
+# The bell popup chrome, the app-status tooltips, the background-evaluation status line, and the
+# word-bearing telemetry readouts (points / selection / view-window, below) carry the abbreviations
+# "pts", "sel", "view" — abbreviated English words a translator needs to localize, so they are keys.
+# What stays literal: pure unit/format specifiers with no word ("{:.0f} fps", "{:.2f}x" — per the
+# CLAUDE.md "%.0f px" rule), axis short names, the "·" separator, and icon glyphs.
+
+[FtNotifications]
+english     = "Notifications"
+description = "Footer bell popup — heading above the notification log."
+
+[FtClearAll]
+english     = "Clear all"
+description = "Footer bell popup — button that empties the notification log."
+
+[FtNoNotifications]
+english     = "No notifications"
+description = "Footer bell popup — shown when the log is empty."
+
+[FtIdleTip]
+english     = "Idle — UI throttled to save power"
+description = "Footer app-status tooltip when the render loop is idle-throttled."
+
+[FtActiveTip]
+english     = "Active — UI running at full rate"
+description = "Footer app-status tooltip when the render loop runs at full frame rate."
+
+[FtEvaluating]
+english      = "Evaluating {0}"
+description  = "Footer status while one axis is being evaluated in the background."
+placeholders = [
+    "{0} = axis short name",
+]
+
+[FtEvaluatingMore]
+english      = "Evaluating {0} (+{1})"
+description  = "Footer status while several axes evaluate; {0} is the first, {1} the count of the rest."
+placeholders = [
+    "{0} = first axis short name",
+    "{1} = number of additional axes",
+]
+
+[FtAxisPoints]
+english      = "{0} · {1} pts"
+description  = "Footer center zone — active axis short name and its action ('points') count. 'pts' = points."
+placeholders = [
+    "{0} = axis short name (literal, e.g. L0)",
+    "{1} = number of actions on the axis",
+]
+
+[FtSelection]
+english      = "{0} sel"
+description  = "Footer center zone — count of selected points on the active axis. 'sel' = selected/selection."
+placeholders = [
+    "{0} = number of selected points",
+]
+
+[FtSelectionSpan]
+english      = "{0} sel · {1}"
+description  = "Footer center zone — selected-point count and the time span they cover (shown when ≥2 selected)."
+placeholders = [
+    "{0} = number of selected points",
+    "{1} = time span between first and last selected point (pre-formatted, e.g. 1:23.4)",
+]
+
+[FtView]
+english      = "Visible window"
+description  = "Footer center zone — tooltip for the eye icon that labels the timeline's visible (zoom) window; the window's duration is shown beside the icon."
+
+[FtSourceOptimizedTip]
+english     = "Playing the optimized (all-keyframe) copy — frame stepping and seeking are fast."
+description = "Footer tooltip on the Optimized source badge."
+
+[FtSourceOriginalTip]
+english     = "Playing the original video. Optimize it (Project ▸ Media) for faster stepping and seeking."
+description = "Footer tooltip on the Original source badge."
+
+[FtSourceOriginalClickTip]
+english     = "Playing the original video — click to optimize it for faster stepping and seeking."
+description = "Footer tooltip on the Original source badge when it is clickable (optimizing is possible) — clicking opens the optimize dialog."
+
+[FtManagedHeapTip]
+english     = "Managed (.NET) heap memory currently in use by plugins and script nodes."
+description = "Footer tooltip on the managed-heap readout (.NET GC heap size)."
+
+[FtWorkersTip]
+english     = "Background evaluation workers currently running."
+description = "Footer tooltip on the eval-worker readout (a cpu icon + count)."
+
+[FtWorkerStuckTip]
+english     = "A worker has been running for over a minute — a processing node may be stuck in an endless loop. If this persists, disable the offending node or restart the app."
+description = "Footer tooltip on the warning icon shown when a background eval worker has run far longer than evaluation ever should."
+
+[FtEditMode]
+english     = "Edit mode"
+description = "Footer tooltip on the edit-mode selector (a spark icon) — how timeline edit gestures are resolved."
+
+[FtEditModeNative]
+english     = "Native"
+description = "Footer edit-mode selector — the built-in (default) edit mode, applying edits unchanged."
+
+[FtStep]
+english     = "Step"
+description = "Footer tooltip on the step-navigator selector (a footprints icon) — what the prev/next-step keys do."
+
+[FtStepNative]
+english     = "Native"
+description = "Footer step-navigator selector — the built-in (default) navigator; stepping tracks the active overlay grid. Named 'Native' to match the edit-mode and selection-mode selectors."
+
+[FtSelect]
+english     = "Select"
+description = "Footer tooltip on the selection-mode selector (a box-select icon) — how box/all/point select gestures pick actions."
+
+[FtSelectNative]
+english     = "Native"
+description = "Footer selection-mode selector — the built-in (default) selection mode, selecting every action the gesture covers."
+
+[FtToolOptions]
+english     = "Tool options"
+description = "Footer tooltip on the sliders affordance beside an active mode that has options — opens the active tools' options as a click-away modal."
+
+[ToolOptionsTitle]
+english     = "Tool Options"
+description = "Title of the docked panel that shows the active edit/step/select modes' options (their plugin-drawn settings)."
+
+[ToolOptionsEmpty]
+english     = "The active tools have no options."
+description = "Placeholder shown in the Tool Options panel when none of the active edit/step/select modes provides settings."
+
+# ── Statistics window (UI/ScriptStatistics.cpp) ──────────────────────────────
+# Playhead-relative metrics + action counts. Labels are laid out in a 2-column table (no hand-padded
+# spaces). The numeric values are pre-formatted fixed-width in C++ (the catalog can't carry fmt specs
+# like {0:6.2f}) and fed into the unit format strings below as {0}. The direction diagram
+# ("↑ 50 (20 → 70)") is pure numbers/symbols and stays literal.
+
+[LogTitle]
+english     = "Log"
+description = "Log window title (live application log output)."
+
+[LogClear]
+english     = "Clear"
+description = "Log window — button that empties the in-memory log buffer."
+
+[LogCopy]
+english     = "Copy"
+description = "Log window — button that copies the visible log lines to the clipboard."
+
+[LogAutoScroll]
+english     = "Auto-scroll"
+description = "Log window — checkbox to keep the view pinned to the newest line."
+
+[LogFilter]
+english     = "Filter"
+description = "Log window — text box that filters visible lines by substring."
+
+[LogLevelAll]
+english     = "All"
+description = "Log window — severity filter: show every level."
+
+[LogLevelInfo]
+english     = "Info+"
+description = "Log window — severity filter: show info and above."
+
+[LogLevelWarn]
+english     = "Warnings+"
+description = "Log window — severity filter: show warnings and above."
+
+[LogLevelError]
+english     = "Errors+"
+description = "Log window — severity filter: show errors and above."
+
+[LogEmpty]
+english     = "No log messages."
+description = "Log window — shown when no lines match the current filter."
+
+[StatTitle]
+english     = "Statistics"
+description = "Statistics window title (playhead metrics + action counts for the active axis)."
+
+[StatNoAxis]
+english     = "No axis selected."
+description = "Statistics window — shown when no axis is active."
+
+[StatNoActions]
+english     = "No actions."
+description = "Statistics window — shown when the active axis has no actions."
+
+[StatInterval]
+english     = "Interval:"
+description = "Statistics — time from the previous action to the playhead (value shown in ms)."
+
+[StatSpeed]
+english     = "Speed:"
+description = "Statistics — rate between the surrounding actions (value shown in units/s)."
+
+[StatDuration]
+english     = "Duration:"
+description = "Statistics — time span between the surrounding actions (value shown in ms)."
+
+[StatDelta]
+english     = "Delta:"
+description = "Statistics — position change between the surrounding actions (value is the magnitude and from→to, the row icon shows direction)."
+
+[StatActionsAxis]
+english     = "Actions (this axis):"
+description = "Statistics — count of actions on the active axis (value is the count)."
+
+[StatActionsAll]
+english     = "Actions (all axes):"
+description = "Statistics — total action count across all present axes (value is the count)."
+
+[StatMs]
+english      = "{0} ms"
+description  = "Statistics — a millisecond value (Interval/Duration). {0} is the pre-formatted number."
+placeholders = [
+    "{0} = fixed-width number (e.g. ' 12.34')",
+]
+
+[StatUnitsPerSec]
+english      = "{0} units/s"
+description  = "Statistics — the Speed value in position-units per second. {0} is the pre-formatted number."
+placeholders = [
+    "{0} = fixed-width number (e.g. ' 12.34')",
+]
+
+# ── Modal shell: shared single-OK button (UI/Modals.h) ───────────────────────
+
+[ModalOk]
+english     = "OK"
+description = "Single dismiss button on the convenience info/warning/error message popups."
+
+# ── Band bar: chapter/region drag tooltips (UI/BandBar.cpp) ───────────────────
+
+[BandDragResize]
+english     = "Drag to resize"
+description = "Tooltip when hovering a chapter/region band's edge — dragging changes its start or end."
+
+[BandDragMove]
+english     = "Drag to move"
+description = "Tooltip when hovering a chapter/region band's body — dragging shifts it in time."
+
+# ── Processing panel: discretize-node option (UI/ProcessingPanel.cpp) ─────────
+
+[ProcKeepActionTimes]
+english     = "Keep the input's own action times so peaks aren't lost to grid aliasing"
+description = "Tooltip for the discretize node's 'keep actions' checkbox — preserves source action timing instead of snapping to the output grid."
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# Project manager: file dialogs, modals, notifications (Services/ProjectManager.cpp)
+#
+# Service-originated user-visible text (file-dialog titles + filter descriptions, confirm/error
+# modals, and notification toasts). Captured into the dialog/modal/notify payload at push time.
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+
+[PmDlgOpenProject]
+english     = "Open or New Project"
+description = "File-open dialog title for picking a project, script, or media file (or cancelling to start fresh)."
+
+[PmDlgSaveProject]
+english     = "Save Project"
+description = "File-save dialog title for writing the .ofp project file."
+
+[PmDlgImportFunscript]
+english     = "Import Funscript"
+description = "File-open dialog title for importing a .funscript into the current project."
+
+[PmDlgExportFolder]
+english     = "Export Funscript 1.0 — Choose Output Folder"
+description = "Folder-select dialog title for the Funscript 1.0 multi-axis export (the '1.0' is a format version, literal)."
+
+[PmDlgExport20]
+english     = "Export Funscript 2.0"
+description = "File-save dialog title for the Funscript 2.0 (multi-channel) export (the '2.0' is a format version, literal)."
+
+[PmDlgExport11]
+english     = "Export Funscript 1.1"
+description = "File-save dialog title for the Funscript 1.1 (single-axis) export (the '1.1' is a format version, literal)."
+
+[PmDlgRelocateMedia]
+english     = "Relocate Media"
+description = "File-open dialog title for pointing the project at a moved media file."
+
+[PmDlgSaveGraph]
+english     = "Save Graph"
+description = "File-save dialog title for exporting a processing node graph to a .json file."
+
+[PmDlgLoadGraph]
+english     = "Load Graph"
+description = "File-open dialog title for importing a processing node graph from a .json file."
+
+[PmFilterProjectsMedia]
+english     = "Projects, scripts & media"
+description = "File-dialog filter label for the combined project/script/media open picker."
+
+[PmFilterProject]
+english     = "OFS Project files"
+description = "File-dialog filter label for .ofp project files."
+
+[PmFilterFunscript]
+english     = "Funscript files"
+description = "File-dialog filter label for .funscript files."
+
+[PmFilterMedia]
+english     = "Media files"
+description = "File-dialog filter label for video/audio media files."
+
+[PmFilterGraph]
+english     = "Graph files"
+description = "File-dialog filter label for processing-graph .json files."
+
+[PmUnsavedTitle]
+english     = "Unsaved Changes"
+description = "Title of the confirm modal raised when closing/replacing a project that has unsaved edits."
+
+[PmUnsavedBody]
+english     = "The current project has unsaved changes. Do you want to save them?"
+description = "Body of the unsaved-changes confirm modal."
+
+[PmBtnSave]
+english     = "Save"
+description = "Unsaved-changes modal: save the project, then continue."
+
+[PmBtnDontSave]
+english     = "Don't Save"
+description = "Unsaved-changes modal: discard the edits and continue."
+
+[PmBtnCancel]
+english     = "Cancel"
+description = "Unsaved-changes modal: abort the close/replace and keep editing."
+
+[PmNewProjectTitle]
+english     = "New Project"
+description = "Title of the confirm modal offered when the open dialog was cancelled with no file chosen."
+
+[PmNewProjectBody]
+english     = "No file selected. Create an empty project?\nYou can load a video later via Project Configuration."
+description = "Body of the new-empty-project confirm modal."
+
+[PmBtnYes]
+english     = "Yes"
+description = "New-empty-project modal: create the empty project."
+
+[PmBtnNo]
+english     = "No"
+description = "New-empty-project modal: decline (do nothing)."
+
+[PmConfirmImportTitle]
+english     = "Set Up Funscripts"
+description = "Title of the import picker shown while creating a new project, to confirm where each discovered funscript goes."
+
+[PmConfirmImportPrompt]
+english     = "These funscripts will be added to your new project. Choose where each one goes — add or remove files as needed. Each axis can be used once."
+description = "Prompt above the per-track axis pickers in the new-project funscript import picker."
+
+[PmImportPickTitle]
+english     = "Import Funscripts"
+description = "Title of the import picker shown when importing funscripts into the current open project."
+
+[PmImportPickPrompt]
+english     = "Choose where each funscript goes. You can add or remove files; each axis can be used once. Importing onto an axis that already has data replaces it."
+description = "Prompt above the per-track axis pickers when importing funscripts into an existing project."
+
+[PmImportAddFile]
+english     = "Add File"
+description = "Button in the funscript import picker that opens a file dialog to add another funscript to the list."
+
+[PmImportRemoveRow]
+english     = "Remove"
+description = "Tooltip on the per-row trash button in the funscript import picker; removes that track from the import."
+
+[PmMediaNotFoundTitle]
+english     = "Media Not Found"
+description = "Title of the confirm modal raised when a project's referenced media file is missing on load."
+
+[PmMediaNotFoundBody]
+english      = "Could not find media file:\n{0}\n\nWould you like to relocate it?"
+description  = "Body of the media-not-found confirm modal. {0} is the missing media path."
+placeholders = [
+    "{0} = the missing media file path",
+]
+
+[PmBtnRelocate]
+english     = "Relocate"
+description = "Media-not-found modal: open a dialog to point at the moved file."
+
+[PmBtnSkip]
+english     = "Skip"
+description = "Media-not-found modal: load the project without media."
+
+[PmErrorTitle]
+english     = "Error"
+description = "Generic title for ProjectManager error popups (load/save/graph/script failures)."
+
+[PmErrLoadFailed]
+english     = "Failed to load project file."
+description = "Error popup body when a project file could not be read/parsed."
+
+[PmErrSaveFailed]
+english     = "Failed to save project file."
+description = "Error popup body when writing the project file failed."
+
+[PmErrSaveGraphFailed]
+english     = "Failed to save graph file."
+description = "Error popup body when writing an exported node graph failed."
+
+[PmErrLoadGraph]
+english      = "Could not load graph.\n{0}"
+description  = "Error popup body when a node-graph file could not be loaded. {0} is the loader's error detail."
+placeholders = [
+    "{0} = loader error detail",
+]
+
+[PmErrGraphNoAxes]
+english     = "Graph file has no input/output axes."
+description = "Error popup body when a loaded graph defines no Input/Output axis nodes."
+
+[PmErrDuplicateTarget]
+english     = "Two source axes map to the same target axis."
+description = "Error popup body when an axis-remap would collide two sources onto one target."
+
+[PmErrForkRead]
+english     = "Could not read the source script to fork."
+description = "Error popup body when forking a script node fails because its source can't be read."
+
+[PmErrScriptNameExists]
+english     = "A different script with that name already exists. Choose another name."
+description = "Error popup body when forking would overwrite an unrelated script of the same name."
+
+[PmErrWriteScript]
+english     = "Could not write the script file."
+description = "Error popup body when writing a forked script file failed."
+
+[PmMissingDepsTitle]
+english     = "Missing dependencies"
+description = "Title of the warning popup shown when a loaded graph references effects/plugins that aren't installed."
+
+[PmMissingDepsHeader]
+english     = "Loaded, but this graph needs effects/plugins that are not installed:\n"
+description = "Lead line of the missing-dependencies warning, above the bulleted list of missing node types."
+
+[PmMissingDepsFooter]
+english     = "\n\nThose nodes will be inactive."
+description = "Trailing line of the missing-dependencies warning, after the list."
+
+[PmProjectSaved]
+english     = "Project saved."
+description = "Success toast after a project file is written."
+
+[PmNoRoomRegion]
+english     = "No room for a region here — the timeline is full at this point."
+description = "Warning toast when a new processing region can't be created because adjacent regions leave no gap."
+
+[PmImportReadFailed]
+english      = "Import failed: couldn't read {0}"
+description  = "Error toast when an imported funscript file can't be read. {0} is the file name."
+placeholders = [
+    "{0} = imported file name",
+]
+
+[PmImportNoActions]
+english      = "Import failed: {0} contains no actions."
+description  = "Error toast when an imported funscript has no actions. {0} is the file name."
+placeholders = [
+    "{0} = imported file name",
+]
+
+[PmImportOverwriteTitle]
+english     = "Overwrite Existing Scripts?"
+description = "Title of the confirm shown when an import would replace actions already on one or more axes."
+
+[PmImportOverwriteBody]
+english      = "These axes already contain actions that will be replaced: {0}. This can be undone."
+description  = "Body of the import-overwrite confirm. {0} is a comma-separated list of axis names (e.g. L0, R1)."
+placeholders = [
+    "{0} = comma-separated axis names being overwritten",
+]
+
+[PmImportDropped]
+english      = "Import incomplete: {0} axis(es) dropped — no free scratch axis (S0–S9 all in use)."
+description  = "Error toast when imported tracks couldn't be placed because all scratch axes are taken. {0} is the dropped count."
+placeholders = [
+    "{0} = number of dropped axes",
+]
+
+[PmImported]
+english      = "Imported {0} axis(es)."
+description  = "Success toast after a funscript import. {0} is the number of placed axes."
+placeholders = [
+    "{0} = number of imported axes",
+]
+
+[PmExportPartial]
+english      = "Exported {0} file(s), {1} failed."
+description  = "Warning toast after a multi-file export with failures. {0} written, {1} failed."
+placeholders = [
+    "{0} = number of files written",
+    "{1} = number of files that failed",
+]
+
+[PmExportDone]
+english      = "Exported {0} funscript file(s)."
+description  = "Success toast after a multi-file export. {0} is the number written."
+placeholders = [
+    "{0} = number of files written",
+]
+
+[PmExportedOne]
+english      = "Exported {0}"
+description  = "Success toast after a single-file export. {0} is the file name."
+placeholders = [
+    "{0} = exported file name",
+]
+
+[PmExportFailedOne]
+english      = "Export failed: {0}"
+description  = "Error toast after a failed single-file export. {0} is the file name."
+placeholders = [
+    "{0} = exported file name",
+]
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# About window (src/UI/AboutWindow.cpp)
+#
+# Only the window chrome is keyed. The attribution list itself — third-party component names,
+# license identifiers (MIT, OFL-1.1, …), copyright lines and the verbatim license bodies — is
+# legal/proper-noun data and is intentionally NOT localized (same rationale as the Theme swatch
+# labels noted at the top of this file).
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+
+[AboutTitle]
+english     = "About ofs-ng"
+description = "About window — title bar."
+
+[AboutBuildInfo]
+english     = "Build Information"
+description = "About window — section header above the version / commit / build-date rows."
+
+[AboutCommit]
+english     = "Commit"
+description = "About window — build info row label: the git commit the build was made from."
+
+[AboutBuilt]
+english     = "Built"
+description = "About window — build info row label: the build date/time."
+
+[AboutPlatform]
+english     = "Platform"
+description = "About window — build info row label: OS and compiler the build targets."
+
+[AboutThirdParty]
+english     = "Third-Party Software"
+description = "About window — section header above the bundled-component attribution list."
+
+[AboutLicenseNote]
+english     = "ofs-ng is free software, licensed under the GNU General Public License v3. It includes the third-party software listed below — select an entry to read its full license."
+description = "About window — explanatory paragraph above the attribution list."
+
+[AboutColComponent]
+english     = "Component"
+description = "About window — attribution table column header: the component name."
+
+[AboutColLicense]
+english     = "License"
+description = "About window — attribution table column header: the component's license identifier."
+
+[AboutSelectPrompt]
+english     = "Select a component to view its license."
+description = "About window — placeholder shown in the license pane before any component is selected."
+
+[AboutCopyLicense]
+english     = "Copy"
+description = "About window — button that copies the currently displayed license text to the clipboard."

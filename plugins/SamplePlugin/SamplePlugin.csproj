@@ -1,0 +1,16 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Ofs.Api\Ofs.Api.csproj" Private="false" ExcludeAssets="runtime" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <!-- Shown next to the name in the plugin list (OfsPlugin.Version reads this). -->
+    <Version>1.0.0</Version>
+  </PropertyGroup>
+
+</Project>

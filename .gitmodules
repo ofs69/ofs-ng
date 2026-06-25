@@ -1,0 +1,39 @@
+[submodule "lib/SDL3"]
+	path = lib/SDL3
+	url = https://github.com/libsdl-org/SDL.git
+[submodule "lib/imgui"]
+	path = lib/imgui
+	url = https://github.com/ocornut/imgui.git
+[submodule "lib/json"]
+	path = lib/json
+	url = https://github.com/nlohmann/json.git
+[submodule "lib/glm"]
+	path = lib/glm
+	url = https://github.com/g-truc/glm.git
+[submodule "lib/spdlog"]
+	path = lib/spdlog
+	url = https://github.com/gabime/spdlog.git
+[submodule "lib/imnodes"]
+	path = lib/imnodes
+	url = https://github.com/Nelarius/imnodes.git
+[submodule "lib/miniz"]
+	path = lib/miniz
+	url = https://github.com/richgel999/miniz.git
+[submodule "lib/concurrentqueue"]
+	path = lib/concurrentqueue
+	url = https://github.com/cameron314/concurrentqueue.git
+[submodule "lib/thread-pool"]
+	path = lib/thread-pool
+	url = https://github.com/bshoshany/thread-pool.git
+[submodule "lib/tomlplusplus"]
+	path = lib/tomlplusplus
+	url = https://github.com/marzer/tomlplusplus.git
+[submodule "lib/imgui_test_engine"]
+	path = lib/imgui_test_engine
+	url = https://github.com/ocornut/imgui_test_engine.git
+[submodule "lib/doctest"]
+	path = lib/doctest
+	url = https://github.com/doctest/doctest.git
+[submodule "lib/bitsery"]
+	path = lib/bitsery
+	url = https://github.com/fraillt/bitsery.git

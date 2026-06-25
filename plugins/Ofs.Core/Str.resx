@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!--
+    Neutral (English) fallback catalog for the Ofs.Core plugin. Each Strings.<culture>.resx must
+    carry the same <data> keys, translated. The build generates a strongly-typed accessor (class Str,
+    via StronglyTypedClassName in Ofs.Core.csproj); reference each entry as Str.<Key> in code. OfsPlugin
+    keeps Str in ofs-ng's active language automatically — no culture wiring.
+  -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="StrokeMoveModeLabel" xml:space="preserve">
+    <value>Move mode</value>
+    <comment>Combo label: how moving a point carries the rest of its stroke.</comment>
+  </data>
+  <data name="StrokeModeRigid" xml:space="preserve">
+    <value>Rigid</value>
+    <comment>Stroke move mode: the whole stroke slides by the full delta, keeping its exact shape.</comment>
+  </data>
+  <data name="StrokeModeTaper" xml:space="preserve">
+    <value>Taper</value>
+    <comment>Stroke move mode: influence fades linearly to zero at the stroke's start (turning point pinned).</comment>
+  </data>
+  <data name="StrokeModeSmooth" xml:space="preserve">
+    <value>Smooth</value>
+    <comment>Stroke move mode: influence fades with easing at both ends for the most organic bend.</comment>
+  </data>
+  <data name="ModeLabel" xml:space="preserve">
+    <value>Mode</value>
+  </data>
+  <data name="ModeNone" xml:space="preserve">
+    <value>None</value>
+  </data>
+  <data name="ModeAlternating" xml:space="preserve">
+    <value>Alternating</value>
+  </data>
+  <data name="ModeShapedApproach" xml:space="preserve">
+    <value>Shaped Approach</value>
+  </data>
+  <data name="SectionAlternating" xml:space="preserve">
+    <value>Alternating</value>
+  </data>
+  <data name="SectionShapedApproach" xml:space="preserve">
+    <value>Shaped Approach</value>
+  </data>
+  <data name="FixedRange" xml:space="preserve">
+    <value>Fixed Range</value>
+  </data>
+  <data name="Top" xml:space="preserve">
+    <value>Top</value>
+  </data>
+  <data name="Bottom" xml:space="preserve">
+    <value>Bottom</value>
+  </data>
+  <data name="ApproachShape" xml:space="preserve">
+    <value>Shape</value>
+    <comment>Label for the shaped-approach easing preset dropdown.</comment>
+  </data>
+  <data name="ShapeSnapEarly" xml:space="preserve">
+    <value>Snap Early</value>
+    <comment>Shaped Approach preset: jump most of the way to the target, then settle.</comment>
+  </data>
+  <data name="ShapeEaseOut" xml:space="preserve">
+    <value>Ease Out</value>
+    <comment>Shaped Approach preset: move quickly, then decelerate onto the target.</comment>
+  </data>
+  <data name="ShapeLinear" xml:space="preserve">
+    <value>Linear</value>
+    <comment>Shaped Approach preset: a straight ramp to the target.</comment>
+  </data>
+  <data name="ShapeEaseIn" xml:space="preserve">
+    <value>Ease In</value>
+    <comment>Shaped Approach preset: start slow, then accelerate toward the target.</comment>
+  </data>
+  <data name="ShapeSnapLate" xml:space="preserve">
+    <value>Snap Late</value>
+    <comment>Shaped Approach preset: linger near the start, then jump late to the target.</comment>
+  </data>
+  <data name="ApproachSteps" xml:space="preserve">
+    <value>Steps</value>
+    <comment>How many points are injected to form the approach curve.</comment>
+  </data>
+  <data name="CmdEqualize" xml:space="preserve">
+    <value>Equalize</value>
+  </data>
+  <data name="CmdInvert" xml:space="preserve">
+    <value>Invert</value>
+  </data>
+  <data name="CmdIsolate" xml:space="preserve">
+    <value>Isolate</value>
+  </data>
+  <data name="CmdRepeatStroke" xml:space="preserve">
+    <value>Repeat Stroke</value>
+  </data>
+  <data name="PluginName" xml:space="preserve">
+    <value>Core Plugin</value>
+    <comment>The plugin's display name (window title / plugin list).</comment>
+  </data>
+  <data name="NodeShapeCurve" xml:space="preserve">
+    <value>Shape Curve</value>
+    <comment>Display name of the Shape Curve processing node.</comment>
+  </data>
+  <data name="ParamGamma" xml:space="preserve">
+    <value>Gamma</value>
+    <comment>Shape Curve node: gamma slider label.</comment>
+  </data>
+  <data name="ParamInvert" xml:space="preserve">
+    <value>Invert</value>
+    <comment>Shape Curve node: invert checkbox label.</comment>
+  </data>
+  <data name="ShapeModeName" xml:space="preserve">
+    <value>Stroke Shaping</value>
+    <comment>Footer edit-mode selector entry: applies the panel's Alternating / Shaped Approach behavior.</comment>
+  </data>
+  <data name="SelectModeDisclaimer" xml:space="preserve">
+    <value>Select "{0}" as the edit mode in the footer to use these settings.</value>
+    <comment>Shown above the (greyed-out) panel when the plugin's edit mode is not active. {0} is the mode name (ShapeModeName).</comment>
+  </data>
+  <data name="SelectModePeaksName" xml:space="preserve">
+    <value>Peak Select</value>
+    <comment>Footer Select selector entry: a box selection keeps only the stroke's turning points (peaks).</comment>
+  </data>
+  <data name="SectionPeaks" xml:space="preserve">
+    <value>Peaks</value>
+    <comment>Panel section title for the shared peak setting (used by both the Peaks-only selection mode and the Peak navigator).</comment>
+  </data>
+  <data name="PeaksDisclaimer" xml:space="preserve">
+    <value>Activate the "Peaks only" Select mode or the Peaks navigator in the footer to use this setting.</value>
+    <comment>Shown above the (greyed-out) peak setting when neither the Peaks-only selection mode nor the Peak navigator is active.</comment>
+  </data>
+  <data name="NavPeaksName" xml:space="preserve">
+    <value>Peak Step</value>
+    <comment>Footer Step selector entry: the prev/next-action keys step between the stroke's turning points (peaks).</comment>
+  </data>
+  <data name="PeakSelectLabel" xml:space="preserve">
+    <value>Select</value>
+    <comment>Peaks panel: combo label for which extrema the peak features keep / step between.</comment>
+  </data>
+  <data name="PeakKindBoth" xml:space="preserve">
+    <value>Tops &amp; bottoms</value>
+    <comment>Peaks-only Select combo: keep every turning point (both maxima and minima).</comment>
+  </data>
+  <data name="PeakKindTops" xml:space="preserve">
+    <value>Tops only</value>
+    <comment>Peaks-only Select combo: keep only the upper turning points (local maxima).</comment>
+  </data>
+  <data name="PeakKindBottoms" xml:space="preserve">
+    <value>Bottoms only</value>
+    <comment>Peaks-only Select combo: keep only the lower turning points (local minima).</comment>
+  </data>
+</root>

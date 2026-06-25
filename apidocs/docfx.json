@@ -1,0 +1,48 @@
+{
+  "$schema": "https://raw.githubusercontent.com/dotnet/docfx/main/schemas/docfx.schema.json",
+
+  "//": "Metadata step: compile plugins/Ofs.Api and extract its /// XML comments into api/*.yml.",
+  "metadata": [
+    {
+      "src": [
+        {
+          "src": "../plugins/Ofs.Api",
+          "files": [ "Ofs.Api.csproj" ]
+        }
+      ],
+      "dest": "api",
+      "outputFormat": "mref",
+      "//enumSortOrder": "Keep enum members in source order so value-carrying enums (e.g. NodeIcon, StandardAxis) render in ABI order, not alphabetized.",
+      "enumSortOrder": "declaringOrder",
+      "//filter": "Strip inherited System.Object/ValueType members (Equals/GetHashCode/ToString/…) from every type page.",
+      "filter": "filterConfig.yml",
+      "properties": {
+        "TargetFramework": "net10.0",
+        "Configuration": "Release"
+      }
+    }
+  ],
+
+  "//build": "Build step: render the generated api/ reference plus the hand-written landing page.",
+  "build": {
+    "content": [
+      { "files": [ "**/*.{md,yml}" ], "exclude": [ "_site/**", "obj/**", "includes/**", "filterConfig.yml" ] }
+    ],
+    "resource": [
+      { "files": [ "images/**" ] },
+      { "//": "Pull the app logo straight from data/icons into the site root — no committed duplicate.",
+        "src": "../data/icons", "files": [ "logomark256.png", "logo32.png" ], "dest": "." }
+    ],
+    "output": "_site",
+    "template": [ "default", "modern", "template" ],
+    "globalMetadata": {
+      "_appName": "ofs-ng Plugin API",
+      "_appTitle": "ofs-ng Plugin API",
+      "_appFooter": "ofs-ng plugin & script-node API reference",
+      "_appLogoPath": "logomark256.png",
+      "_appFaviconPath": "logo32.png",
+      "_enableSearch": true,
+      "_disableContribution": true
+    }
+  }
+}

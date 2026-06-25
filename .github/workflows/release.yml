@@ -1,0 +1,183 @@
+name: Release
+
+# Manual, tag-driven release. Builds Release × {Windows, Linux} × {AVX, non-AVX} = 4
+# artifacts, runs the CMake `dist` target on each, and attaches every zip (Windows
+# …-pdb.zip included) to a GitHub Release for the chosen tag.
+#
+# Two ways to run it:
+#  - Artifacts only (no Release): leave `publish` unchecked. Builds the 4 variants and uploads each as
+#    a downloadable run artifact (run page -> Artifacts -> dist-*). `tag` may be left blank — it then
+#    builds the branch/ref you dispatch from, and the archive is named off `git describe` (commit hash
+#    when there is no tag). Nothing is pushed and no Release is created.
+#  - Full release: tick `publish` AND pass an existing `tag`. The tag must already exist in the repo
+#    (push it first: `git tag v1.2.0 && git push --tags`). The publish job attaches every zip to the
+#    GitHub Release for that tag. To trigger automatically on tag push instead, replace the
+#    `workflow_dispatch` block with:  on: { push: { tags: ['v*'] } }
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Existing git tag to build (required only when publishing; blank = build the dispatched ref)'
+        required: false
+        type: string
+      publish:
+        description: 'Attach the artifacts to a GitHub Release for the tag (off = artifacts only)'
+        required: false
+        type: boolean
+        default: false
+      prerelease:
+        description: 'Mark the GitHub release as a pre-release'
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: write # create the release and upload assets
+
+concurrency:
+  group: release-${{ inputs.tag || github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build ${{ matrix.os }} (${{ matrix.label }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: windows-latest, avx: 'ON',  label: 'avx' }
+          - { os: windows-latest, avx: 'OFF', label: 'no-avx' }
+          - { os: ubuntu-latest,  avx: 'ON',  label: 'avx' }
+          - { os: ubuntu-latest,  avx: 'OFF', label: 'no-avx' }
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          ref: ${{ inputs.tag || github.ref }} # blank tag -> build the dispatched branch/ref
+          fetch-depth: 0
+          fetch-tags: true # MakeDist runs `git describe --tags` to name the archive
+          submodules: recursive # lib/* (SDL3, imgui, json, …) are submodules the build needs
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # No ccache here by design: release artifacts ship to users, so the build is from a
+      # clean cache every time — no chance of a stale object in a published binary. (Release
+      # is infrequent and tag-unique, so the cache would barely hit anyway.)
+
+      # --- Linux: SDL3 build deps (no libmpv at build time; runtime-loaded) ---
+      - name: Install Linux dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            ninja-build clang python3 \
+            libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev \
+            libxi-dev libxss-dev libxtst-dev libxkbcommon-dev libwayland-dev wayland-protocols \
+            libdecor-0-dev libgl1-mesa-dev libegl1-mesa-dev libudev-dev libdbus-1-dev
+
+      # --- Windows: MSVC + Ninja. Release single-config makes the project static-link
+      #     SDL3 and nethost (/MT), so the zip ships no SDL3.dll/nethost.dll; libmpv-2.dll
+      #     is auto-downloaded by the build and bundled. ---
+      - name: Set up MSVC
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+      - name: Set up Ninja (Windows)
+        if: runner.os == 'Windows'
+        uses: seanmiddleditch/gha-setup-ninja@v5
+
+      # Cache the libmpv + ffmpeg downloads (Windows only — Linux loads the system libmpv at runtime and
+      # invokes the system ffmpeg, so the build downloads nothing). This caches downloads, not build
+      # output, so it can never put a stale object into a published binary. The archive filenames are
+      # fixed (mpv-dev-{avx,noavx}.7z, ffmpeg-git-essentials.7z) and do NOT encode a version, so the key
+      # hashes src/CMakeLists.txt — the file that holds both URLs — to force a re-download when it changes.
+      # ffmpeg-git-essentials.7z is a rolling build, so the cache effectively pins whatever was first fetched
+      # under a given key (good for reproducibility). No restore-keys on purpose: a loose fallback could
+      # resurrect a stale archive under the same name. On a hit, the configure step's file(DOWNLOAD) sees
+      # each .7z already present and skips the fetch.
+      - name: Cache libmpv + ffmpeg downloads (Windows)
+        if: runner.os == 'Windows'
+        uses: actions/cache@v4
+        with:
+          path: |
+            build/mpv-dev-*.7z
+            build/ffmpeg-git-essentials.7z
+            build/7zr.exe
+          key: deps-${{ runner.os }}-${{ matrix.label }}-${{ hashFiles('src/CMakeLists.txt') }}
+
+      # OFS_CLANG_TIDY=OFF: linting is the nightly job's (and PR CI's) responsibility, never the
+      # artifact build's — running it here only adds (uncached, slow) wall time. It also keeps the
+      # precompiled header active: tidy parses with clang and rejects a PCH built by another compiler,
+      # so the build skips the PCH whenever tidy is on (see ofs_target_pch in the root CMakeLists).
+      - name: Configure (Windows)
+        if: runner.os == 'Windows'
+        run: >
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl
+          -DOFS_AVX=${{ matrix.avx }}
+          -DOFS_BUILD_TESTS=OFF
+          -DOFS_CLANG_TIDY=OFF
+
+      # Build with clang, not the runner's default GCC: GCC 13/14 ICEs compiling our co::Fire
+      # coroutine flows (build_special_member_call, cp/call.cc) under -O3. CI already builds the
+      # whole tree on Linux with clang, so this just matches it for the shipping artifact.
+      - name: Configure (Linux)
+        if: runner.os == 'Linux'
+        run: >
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Release
+          -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+          -DOFS_AVX=${{ matrix.avx }}
+          -DOFS_BUILD_TESTS=OFF
+          -DOFS_CLANG_TIDY=OFF
+
+      - name: Build
+        run: cmake --build build -j
+
+      - name: Package (dist)
+        # Emits bin/dist/<variant>-<plat>-release-<tag>[<hash>].zip and, where the toolchain
+        # produces separate symbols, a sibling …-pdb.zip (Windows native .pdb + managed .pdb).
+        run: cmake --build build --target dist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: dist-${{ matrix.os }}-${{ matrix.label }}
+          path: bin/dist/*.zip
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub Release
+    needs: build
+    # Opt-in: only when `publish` is ticked. Left off, the run stops after the build job and you just
+    # download the dist-* artifacts — no Release, nothing pushed.
+    if: ${{ inputs.publish }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist # each build job's artifact lands in dist/<artifact-name>/
+
+      - name: Create release and upload assets
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          if [ -z "${{ inputs.tag }}" ]; then
+            echo "::error::publish=true requires a tag (the GitHub Release is created for it). Re-run with an existing tag, or leave publish off to get artifacts only."
+            exit 1
+          fi
+          shopt -s globstar nullglob
+          files=(dist/**/*.zip)
+          if [ ${#files[@]} -eq 0 ]; then echo "No artifacts to publish"; exit 1; fi
+          echo "Uploading ${#files[@]} archives:"
+          printf '  %s\n' "${files[@]}"
+          flags=()
+          if [ "${{ inputs.prerelease }}" = "true" ]; then flags+=(--prerelease); fi
+          # Create the release for the tag; if it already exists, upload assets into it instead.
+          gh release create "${{ inputs.tag }}" "${files[@]}" \
+            --title "${{ inputs.tag }}" \
+            --generate-notes \
+            "${flags[@]}" \
+          || gh release upload "${{ inputs.tag }}" "${files[@]}" --clobber

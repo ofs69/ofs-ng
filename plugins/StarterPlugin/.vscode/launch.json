@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            // Attaches the .NET debugger to a running ofs-ng so you can debug this
+            // plugin (it is loaded into the ofs-ng process, not run on its own).
+            // preLaunchTask builds + auto-deploys a fresh Debug build first; then
+            // launch ofs-ng, start this config, and pick the ofs-ng process. If the
+            // build can't find Ofs.Api.dll, set <OfsDir> in StarterPlugin.csproj (see
+            // the README). Requires the C# Dev Kit extension.
+            "name": "Attach to ofs-ng",
+            "type": "coreclr",
+            "request": "attach",
+            "preLaunchTask": "build",
+            "processId": "${command:pickProcess}"
+        }
+    ]
+}

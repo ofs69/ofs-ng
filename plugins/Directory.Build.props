@@ -1,0 +1,17 @@
+<Project>
+
+  <!-- Stricter compile rules shared by every C# project, the managed-side parallel to the C++ build's
+       /WX. Centralized here so all projects under plugins/ inherit one policy; the separate
+       tests/plugins/ tree imports this same file.
+         - TreatWarningsAsErrors: any compiler, nullable, or analyzer warning fails the build (like /WX).
+         - AnalysisMode=Recommended: promotes the curated mid-tier CA code-quality rules to warnings.
+         - EnforceCodeStyleInBuild: also runs the IDExxxx style analyzers at build time, not just in-IDE.
+       Per-rule opt-outs that conflict with a deliberate design (e.g. CA1051 vs the ref-bound plugin
+       Settings pattern) live in the repo-root .editorconfig, next to their rationale. -->
+  <PropertyGroup>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <AnalysisMode>Recommended</AnalysisMode>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+  </PropertyGroup>
+
+</Project>

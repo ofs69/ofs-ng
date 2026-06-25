@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <!-- Emit the XML doc file so DocFX (apidocs/) can build the plugin-author API reference from the
+         /// comments on this assembly's public surface. CS1591 (missing XML on a public member) is not
+         an error here — the reference is generated from whatever is documented; gaps are not a build gate. -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <!-- Plugin-compatibility version. Every plugin records the version of Ofs.Api it was
+         built against; the plugin host (PluginBootstrapper) reads that from the plugin's
+         metadata and rejects it unless the MAJOR matches and the plugin was not built
+         against a newer Ofs.Api than the host provides. This is the ONLY check that gates
+         plugin-vs-host compatibility — the AbiVersion / OFS_ABI_VERSION constants only
+         guard the native↔managed struct layout within a single build.
+         Bump MAJOR on any breaking API change, MINOR for additive (back-compatible) ones,
+         and keep MAJOR in step with AbiVersion in PluginAbi.cs. -->
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The C ABI plumbing is internal; the bootstrapper reaches it via this. -->
+    <InternalsVisibleTo Include="Ofs.PluginHost" />
+    <!-- The Roslyn script host reaches the slot tables / trampolines + the C ABI types. -->
+    <InternalsVisibleTo Include="Ofs.ScriptHost" />
+  </ItemGroup>
+
+</Project>

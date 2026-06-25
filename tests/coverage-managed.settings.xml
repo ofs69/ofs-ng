@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  dotnet-coverage settings for the `coverage-managed` target. OpenCppCoverage is a native PDB
+  profiler and cannot see managed IL, so the C# host assemblies are a blind spot in the native
+  `coverage` report. This restricts managed instrumentation to the three host assemblies whose
+  coverage we track — Ofs.Api, Ofs.PluginHost, Ofs.ScriptHost — excluding Roslyn, the BCL, the
+  Ofs.Core node library (a separately-loaded plugin), and the test-fixture plugins.
+-->
+<configuration>
+    <codecoverage>
+        <modulepaths>
+            <include>
+                <modulepath>.*[/\\]ofs\.(api|pluginhost|scripthost)\.dll$</modulepath>
+            </include>
+        </modulepaths>
+    </codecoverage>
+</configuration>

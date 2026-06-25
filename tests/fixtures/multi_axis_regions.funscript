@@ -1,0 +1,19 @@
+{
+    "actions": [
+        { "at": 1000, "pos": 20 },
+        { "at": 2000, "pos": 80 }
+    ],
+    "axes": [
+        {
+            "id": "R0",
+            "actions": [
+                { "at": 1000, "pos": 30 },
+                { "at": 2000, "pos": 70 }
+            ]
+        }
+    ],
+    "metadata": {
+        "type": "basic",
+        "title": "multi_axis_regions fixture"
+    }
+}

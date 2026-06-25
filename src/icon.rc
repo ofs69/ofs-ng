@@ -1,0 +1,2 @@
+#include "IconResource.h"
+ICON_OFS ICON "../data/icons/ofs.ico"

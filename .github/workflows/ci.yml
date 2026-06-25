@@ -1,0 +1,177 @@
+name: CI
+
+# Pull-request feedback. These jobs report status on every push/PR but are advisory only —
+# there is no branch protection, so a red run does not block merging to `main`. Release
+# packaging lives in release.yml and never runs here; the (slow, uncached) clang-tidy pass
+# lives in nightly.yml. Linux-only by choice: the shipping Windows build is exercised at
+# release time.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# A new push to the same ref cancels the in-flight run for it.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # --- Formatting --------------------------------------------------------------
+  # The blocking gate: fail the run on any style diff so unformatted code can't merge. The
+  # file set mirrors the CMake `format` target exactly: src/ only, never lib/, and excluding
+  # the vendored Dear ImGui backends (imgui_impl_*) — same exclusion the test CMake makes.
+  # --Werror turns any reformatting into a non-zero exit. The format-suggest job below turns
+  # the same diff into one-click PR suggestions; this job is what actually blocks.
+  format:
+    name: clang-format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install clang-format
+        run: sudo apt-get update && sudo apt-get install -y clang-format
+      - name: Check formatting
+        run: |
+          mapfile -t files < <(find src -type f \( -name '*.cpp' -o -name '*.h' \) -not -name 'imgui_impl*')
+          clang-format --dry-run --Werror "${files[@]}"
+
+  # Convenience companion to the gate: on PRs, reformat in place and post the diff as one-click
+  # committable review suggestions. PR-only (no diff to suggest against on a push to main) and
+  # non-blocking — the `format` job is the gate; this just makes fixing it a click. Same file set.
+  format-suggest:
+    name: clang-format suggestions
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    permissions:
+      contents: read
+      pull-requests: write # reviewdog posts the formatting diff as review suggestions
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install clang-format
+        run: sudo apt-get update && sudo apt-get install -y clang-format
+      - name: Reformat in place
+        run: |
+          mapfile -t files < <(find src -type f \( -name '*.cpp' -o -name '*.h' \) -not -name 'imgui_impl*')
+          clang-format -i "${files[@]}"
+      - name: Suggest formatting
+        uses: reviewdog/action-suggester@v1
+        with:
+          tool_name: clang-format
+          fail_level: none # this job only suggests; the `format` job is the gate
+
+  # --- Build + tests -----------------------------------------------------------
+  # clang-tidy is not run here: it re-analyses every TU and is never cached, so it would dominate
+  # this job's wall time. It runs on a nightly cron in nightly.yml instead. Configuring with
+  # -DOFS_CLANG_TIDY=OFF keeps this job's build to cached compilation only.
+  build-test:
+    name: Build + test (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0 # GenBuildInfo.cmake reads `git describe` for the build identity
+          submodules: recursive # lib/* (SDL3, imgui, json, …) are submodules the build needs
+
+      - name: Install build dependencies
+        # No libmpv at build time — it is SDL_LoadObject'd at runtime and its headers are vendored
+        # (lib/libmpv/include). SDL3 is built from source, but with OFS_SDL_HEADLESS=ON (below) it builds
+        # the dummy video driver ONLY — no X11/Wayland/GL backend — so none of those dev packages are
+        # needed to compile it, and the app loads GL at runtime via gl3w (no link-time GL either). The
+        # tests run that dummy driver + null ImGui backend, so there is no X server / Mesa runtime to
+        # install. Kept: udev + dbus for SDL's joystick/dbus subsystems, which still build.
+        # clang-tidy is intentionally absent (runs nightly).
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            ninja-build clang python3 \
+            libudev-dev libdbus-1-dev
+          # libmpv is optional for the tests (video degrades gracefully if absent).
+          sudo apt-get install -y libmpv2 || echo "libmpv2 unavailable; video disabled in tests"
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x' # plugins target net10.0; absent → plugin build self-skips
+
+      - name: ccache
+        uses: hendrikmuhs/ccache-action@v1
+        with:
+          key: ci-linux
+          max-size: 500M
+          save: ${{ github.ref == 'refs/heads/main' }} # PRs read the cache; only main writes it
+
+      - name: Configure
+        # OFS_CLANG_TIDY=OFF keeps this gate to cached compilation only: tidy is uncached and slow, so
+        # it runs nightly (nightly.yml), not on every PR. OFS_UI_TESTS_GL=OFF skips the real-GL UI test
+        # binaries entirely — only the headless null-backend binary (ofs-ui-tests-headless) is built and
+        # registered, so the whole suite runs with no GL/window-system at all. OFS_SDL_HEADLESS=ON builds
+        # SDL with the dummy video driver only, so no X11/Wayland/GL dev packages are needed to compile it.
+        run: >
+          cmake -S . -B build -G Ninja
+          -DCMAKE_BUILD_TYPE=Debug
+          -DOFS_CLANG_TIDY=OFF
+          -DOFS_UI_TESTS_GL=OFF
+          -DOFS_SDL_HEADLESS=ON
+          -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
+          -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+
+      - name: Build
+        run: cmake --build build -j
+
+      - name: Test
+        # The whole suite is headless: unit/plugins open no window, and ui-smoke-headless(-loc) use the
+        # null backend (SDL "dummy" video driver, no GL context). So there is no Xvfb, no software GL
+        # stack, and no EGL vendor games — just run ctest directly. Run serially (no -j): ui-smoke-headless
+        # and its -loc twin are the SAME binary, so they bake the SAME OFS_TEST_PREF_SUBDIR and share one
+        # pref dir (layouts.json, settings.json, imgui.ini). Run concurrently they clobber each other's
+        # persisted state, which flaked the layout round-trip tests. ctest sets each test's working dir;
+        # -LE needs-gl is belt-and-suspenders (the real-GL tests aren't registered when OFS_UI_TESTS_GL=OFF,
+        # but this also covers a default local configure).
+        #
+        # On a crash ctest only prints "SegFault"/"Subprocess aborted" with no stack. Enable core dumps
+        # (routed to an absolute path so they survive ctest's per-test working dir) and tee the ctest
+        # output, so the "Crash backtraces" step below can symbolize them into a downloadable artifact.
+        # DOTNET_DbgEnableMiniDump=0 stops the CoreCLR host from intercepting the fault with its own
+        # managed dump, so the OS writes a plain native core instead.
+        env:
+          DOTNET_DbgEnableMiniDump: '0'
+        run: |
+          mkdir -p ci-logs
+          ulimit -c unlimited
+          echo "$PWD/ci-logs/core.%e.%p" | sudo tee /proc/sys/kernel/core_pattern
+          set -o pipefail
+          ctest --test-dir build --output-on-failure -LE needs-gl 2>&1 | tee ci-logs/ctest.txt
+
+      - name: Crash backtraces
+        # Only on a test failure: post-mortem every core the run produced into one text file. bt full +
+        # all-threads gives the crashing frame and locals — enough to localize the segfault / heap abort.
+        if: failure()
+        run: |
+          sudo apt-get install -y gdb
+          shopt -s nullglob
+          bin=bin/test/ui-tests-headless/ofs-ui-tests-headless
+          for core in ci-logs/core.*; do
+            {
+              echo "################ $core ################"
+              gdb -batch -nx \
+                -ex "set pagination off" \
+                -ex "thread apply all bt full" \
+                "$bin" "$core"
+              echo
+            } >> ci-logs/backtraces.txt 2>&1 || true
+          done
+          if [ ! -f ci-logs/backtraces.txt ]; then
+            {
+              echo "No core files were written to ci-logs/."
+              echo "core_pattern: $(cat /proc/sys/kernel/core_pattern)"
+              echo "ulimit -c:   $(ulimit -c)"
+            } > ci-logs/backtraces.txt
+          fi
+
+      - name: Upload test logs
+        # always(): keep the gate red on failure but still publish the ctest log + any backtraces as a
+        # downloadable artifact (run page -> Artifacts -> headless-test-logs).
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: headless-test-logs
+          path: ci-logs/
+          if-no-files-found: warn
