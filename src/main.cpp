@@ -2,9 +2,12 @@
 #include "Core/EventQueue.h"
 #include "Core/ScriptProject.h"
 #include "Util/CrashHandler.h"
+#include "Util/InstanceLock.h"
 #include "Util/Log.h"
+#include "Util/PathUtil.h"
 #include <OfsBuildInfo.h> // generated: git commit (long/short) + tag baked into the binary
 #include <SDL3/SDL_main.h>
+#include <SDL3/SDL_messagebox.h>
 #include <algorithm>
 #include <string>
 #include <string_view>
@@ -15,6 +18,18 @@
 
 int main(int argc, char *argv[]) {
     ofs::installCrashHandler();
+
+    // Single-instance guard: refuse to start if another copy is already running. This MUST precede
+    // Log::init() — the file sink rotates (renames/reopens) ofs.log on open, which throws while a
+    // first instance holds the log, so a second launch would crash in logging before ever reaching a
+    // guard placed later. Held for the whole process lifetime; the OS releases the lock on exit
+    // (including a crash), so it never self-strands.
+    ofs::InstanceLock instanceLock(ofs::util::getPrefPath() / "instance.lock");
+    if (!instanceLock.acquired()) {
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, "ofs-ng", "ofs-ng is already running.", nullptr);
+        return 0;
+    }
+
     ofs::Log::init();
 
     std::vector<std::string> args;
