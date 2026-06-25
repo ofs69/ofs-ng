@@ -196,7 +196,7 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
                 framingChanged = true;
             }
 
-            if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Middle)) {
+            if (windowHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Middle)) {
                 vrZoom = 0.5f;
                 targetVrZoom = 0.5f;
                 vrRotation = {0.5f, 0.5f};
@@ -287,7 +287,7 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
                 framingChanged = true;
             }
 
-            if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Middle)) {
+            if (windowHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Middle)) {
                 zoomFactor = 1.0f;
                 targetZoomFactor = 1.0f;
                 translation = {0.0f, 0.0f};
@@ -329,9 +329,11 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
     }
 
     // Don't open the window's context menu over the simulator overlay — it shows its own menu there.
-    // Gate only the *open* request; an already-open popup still renders via BeginPopup.
-    if (!overlayHovered)
-        ImGui::OpenPopupOnItemClick("VideoPlayerPopup", ImGuiPopupFlags_MouseButtonRight);
+    // Gate only the *open* request; an already-open popup still renders via BeginPopup. Open on a
+    // right-click anywhere in the pane (windowHovered), not just over the image, so the menu stays
+    // reachable when the video has been panned out of view.
+    if (!overlayHovered && windowHovered && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
+        ImGui::OpenPopup("VideoPlayerPopup");
     if (ImGui::BeginPopup("VideoPlayerPopup")) {
         if (ImGui::MenuItem(Str::VpwFullMode.id("vpw_full_mode"), nullptr, state.activeMode == VideoMode::Full))
             eq.push(VideoModeChangedEvent{VideoMode::Full});
