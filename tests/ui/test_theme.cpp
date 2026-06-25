@@ -109,6 +109,30 @@ TEST_CASE("Theme load is forward-tolerant: missing keys keep base default, unkno
     ofs::theme::remove("forward");
 }
 
+TEST_CASE("Theme load refuses a file newer than kThemeSchemaVersion") {
+    ofs::theme::Theme in;
+    ofs::theme::makeDarkTheme(&in);
+    REQUIRE(ofs::theme::saveAs(in, "newer"));
+
+    // Bump the on-disk version past what this build supports.
+    const auto file = ofs::util::getPrefPath() / "themes" / "newer.json";
+    nlohmann::json j;
+    {
+        std::ifstream f(file);
+        f >> j;
+    }
+    j["version"] = ofs::theme::kThemeSchemaVersion + 1;
+    {
+        std::ofstream f(file, std::ios::trunc);
+        f << j.dump(2);
+    }
+
+    ofs::theme::Theme out;
+    CHECK_FALSE(ofs::theme::load("newer", &out));
+
+    ofs::theme::remove("newer");
+}
+
 TEST_CASE("Embedded dark theme parses with the C++ loader (key names match the generator)") {
     // dark.json ships in the assets archive (read via ofs::res), so makeDarkTheme always overlays
     // it — no data/themes staging needed. The seed is present only in the generated JSON; the

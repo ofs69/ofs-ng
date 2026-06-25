@@ -100,6 +100,35 @@ TEST_CASE("AppSettings from_json throws on a wrong-typed key (resilience lives i
     CHECK_THROWS_AS(from_json(j, out), nlohmann::json::exception);
 }
 
+TEST_CASE("AppSettings::to_json stamps the schema version") {
+    AppSettings in;
+    nlohmann::json j;
+    to_json(j, in);
+    REQUIRE(j.contains("version"));
+    CHECK(j["version"].get<int>() == ofs::kAppSettingsVersion);
+}
+
+TEST_CASE("AppSettings::load refuses a file newer than kAppSettingsVersion") {
+    const auto dir = ofs::util::getPrefPath();
+    std::filesystem::create_directories(dir);
+    const auto settingsPath = dir / "settings.json";
+
+    AppSettings in;
+    in.volume = 0.25f; // a non-default value the guard must NOT surface
+    nlohmann::json j;
+    to_json(j, in);
+    j["version"] = ofs::kAppSettingsVersion + 1;
+    {
+        std::ofstream f(settingsPath, std::ios::trunc);
+        f << j.dump();
+    }
+
+    AppSettings loaded = AppSettings::load();
+    CHECK(loaded.volume == doctest::Approx(1.0f)); // defaults, not the newer file's 0.25
+
+    std::filesystem::remove(settingsPath);
+}
+
 TEST_CASE("AppSettings::load swallows a malformed settings file and returns defaults") {
     // load() is the real resilience boundary: it wraps from_json in try/catch, so a
     // corrupt settings.json on disk yields documented defaults instead of crashing.

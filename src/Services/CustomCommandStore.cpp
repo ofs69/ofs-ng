@@ -19,6 +19,10 @@ static std::filesystem::path getCustomCommandsPath() {
     return ofs::util::getPrefPath() / "custom_commands.json";
 }
 
+// On-disk schema version for custom_commands.json. Bump on an incompatible change; load() refuses
+// a file newer than this rather than misreading it.
+static constexpr int kCustomCommandsVersion = 1;
+
 // The numeric suffix of a "custom.<n>" id, or -1 if it doesn't fit the pattern (hand-edited / foreign).
 static int idNumber(const std::string &id) {
     constexpr std::string_view kPrefix = "custom.";
@@ -53,6 +57,12 @@ void CustomCommandStore::load() {
 
     try {
         nlohmann::json j = nlohmann::json::parse(*text);
+        if (j.value("version", kCustomCommandsVersion) > kCustomCommandsVersion) {
+            OFS_CORE_ERROR("custom_commands.json version {} is newer than supported version {}; ignoring.",
+                           j.value("version", 0), kCustomCommandsVersion);
+            reregisterAll();
+            return;
+        }
         nextId_ = j.value("nextId", 0);
         if (j.contains("commands")) {
             for (const auto &entry : j["commands"]) {
@@ -130,7 +140,7 @@ void CustomCommandStore::save() const {
             arr.push_back(std::move(e));
         }
         nlohmann::json j;
-        j["version"] = 1;
+        j["version"] = kCustomCommandsVersion;
         j["nextId"] = nextId_;
         j["commands"] = std::move(arr);
         ofs::util::writeFile(getCustomCommandsPath(), j.dump(4));

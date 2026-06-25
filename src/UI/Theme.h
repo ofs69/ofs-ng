@@ -11,8 +11,9 @@
 #include <vector>
 
 namespace ofs::theme {
-// Schema version stamped into theme files. Bumped on incompatible schema changes;
-// recorded for future-proofing only — there is no migration path to maintain.
+// Schema version stamped into theme files. Bumped on incompatible schema changes; load()/
+// importFromFile() refuse a file newer than this rather than misreading it. There is no
+// migration path for older versions — omitted keys simply fall back to base defaults.
 inline constexpr int kThemeSchemaVersion = 2;
 } // namespace ofs::theme
 

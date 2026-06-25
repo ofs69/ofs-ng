@@ -8,6 +8,10 @@
 
 namespace ofs {
 
+// On-disk schema version for settings.json. Bump on an incompatible change; AppSettings::load
+// refuses a file newer than this rather than silently misreading fields.
+inline constexpr int kAppSettingsVersion = 1;
+
 struct MetadataPreset {
     std::string name;
     FunscriptMetadata metadata;

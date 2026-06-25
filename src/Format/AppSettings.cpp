@@ -59,7 +59,15 @@ AppSettings AppSettings::load() {
     try {
         auto text = ofs::util::readFile(path);
         if (text) {
-            from_json(nlohmann::json::parse(*text), settings);
+            const nlohmann::json j = nlohmann::json::parse(*text);
+            // Refuse a file written by a newer, incompatible build rather than misreading fields.
+            const int version = j.value("version", kAppSettingsVersion);
+            if (version > kAppSettingsVersion) {
+                OFS_CORE_ERROR("settings.json version {} is newer than supported version {}; using defaults.", version,
+                               kAppSettingsVersion);
+                return settings;
+            }
+            from_json(j, settings);
         }
     } catch (const std::exception &e) {
         OFS_CORE_ERROR("Failed to load settings: {}", e.what());
@@ -123,7 +131,8 @@ void from_json(const nlohmann::json &j, MetadataPreset &p) {
 }
 
 void to_json(nlohmann::json &j, const AppSettings &s) {
-    j = nlohmann::json::object({{"lastProjectPaths", s.lastProjectPaths},
+    j = nlohmann::json::object({{"version", kAppSettingsVersion},
+                                {"lastProjectPaths", s.lastProjectPaths},
                                 {"reopenLastProject", s.reopenLastProject},
                                 {"simulatorVisuals", s.simulator},
                                 {"input", s.input},

@@ -62,6 +62,32 @@ TEST_CASE("CustomCommandStore: Add allocates a stable id and registers a rebind-
     CHECK(c->holdable());
 }
 
+TEST_CASE("CustomCommandStore::load ignores a file newer than the supported version") {
+    removeStoreFile();
+    // A file whose schema version exceeds this build's must not have its commands loaded.
+    const std::string json = R"({
+        "version": 999999,
+        "nextId": 1,
+        "commands": [{"id": "custom.0", "name": "From The Future", "kind": "step",
+                      "direction": 1, "reps": 5, "granularity": "frame"}]
+    })";
+    REQUIRE(ofs::util::writeFile(ofs::util::getPrefPath() / "custom_commands.json", json));
+
+    TestProject tp;
+    ofs::AppSettings settings;
+    ofs::CustomCommandTemplateRegistry templates;
+    ofs::registerBuiltinCommandTemplates(templates, tp.project, settings);
+    ofs::CommandRegistry registry{tp.eq};
+    ofs::CustomCommandStore store{tp.eq, registry, templates};
+    store.load();
+    tp.eq.freeze();
+
+    CHECK(store.commands().empty());
+    CHECK(registry.find("custom.0") == nullptr);
+
+    removeStoreFile();
+}
+
 TEST_CASE("CustomCommandStore: Update keeps the id so existing bindings stay attached") {
     removeStoreFile();
     TestProject tp;

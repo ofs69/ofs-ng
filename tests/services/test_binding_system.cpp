@@ -730,6 +730,32 @@ TEST_CASE("BindingSystem load drops a keyboard (KeyMod) modifier from an older f
     CHECK(std::holds_alternative<std::monostate>(bs2.bindings().front().modifier));
 }
 
+TEST_CASE("BindingSystem load refuses a bindings.json newer than the supported version, falling back to defaults") {
+    const std::string json = R"({
+        "version": 999999,
+        "bindings": [
+            {"command": "test.newer", "input": {"type": "key", "key": "Right"}}
+        ]
+    })";
+    const auto path = ofs::util::getPrefPath() / "bindings.json";
+    std::error_code ec;
+    std::filesystem::create_directories(ofs::util::getPrefPath(), ec);
+    REQUIRE(ofs::util::writeFile(path, json));
+
+    TestProject tp2;
+    ofs::CommandRegistry reg2(tp2.eq);
+    reg2.add({.id = "test.newer", .group = "Test", .title = "Newer", .run = [](ofs::EventQueue &) {}});
+    ofs::RebindState rebind2;
+    ofs::BindingSystem bs2(tp2.eq, reg2, rebind2);
+    bs2.loadBindings();
+    tp2.eq.freeze();
+
+    // The newer file's binding must not be applied; the system holds its code defaults instead.
+    CHECK(std::ranges::none_of(bs2.bindings(), [](const ofs::Binding &b) { return b.commandId == "test.newer"; }));
+
+    std::filesystem::remove(path, ec);
+}
+
 TEST_CASE("BindingSystem: a Hold binding starts no run on press, ticks while held, stops on key-up") {
     Fixture f;
     int runs = 0;

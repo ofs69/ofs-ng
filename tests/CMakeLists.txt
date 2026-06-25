@@ -219,6 +219,7 @@ add_executable(ofs-unit-tests
 
         # Phase 5 — format / settings serialization tests
         format/test_app_settings.cpp
+        format/test_layout_store.cpp
         ui/test_theme.cpp
 
         # Round 2 - ProjectManager mutation handlers, format, util, localization
@@ -262,6 +263,7 @@ add_executable(ofs-unit-tests
         ${CMAKE_SOURCE_DIR}/src/Services/CustomCommandTemplate.cpp
         ${CMAKE_SOURCE_DIR}/src/Format/Funscript.cpp
         ${CMAKE_SOURCE_DIR}/src/Format/AppSettings.cpp
+        ${CMAKE_SOURCE_DIR}/src/Format/LayoutStore.cpp
         ${CMAKE_SOURCE_DIR}/src/Format/Project.cpp
         ${CMAKE_SOURCE_DIR}/src/UI/Theme.cpp
         ${CMAKE_SOURCE_DIR}/src/UI/ProcessingGraphOps.cpp

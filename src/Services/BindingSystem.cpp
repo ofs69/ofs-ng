@@ -32,6 +32,10 @@ static std::filesystem::path userPresetDir() {
     return ofs::util::getPrefPath() / "binding_presets";
 }
 
+// On-disk schema version for bindings.json and binding_presets/*.json (same shape). Bump on an
+// incompatible change; load refuses a file newer than this rather than misreading it.
+static constexpr int kBindingsFileVersion = 1;
+
 // Filename-safe slug from a display name: lowercase ASCII alphanumerics, runs of anything else
 // collapsed to a single '-'. Non-ASCII is dropped (the display name keeps the original); an empty
 // result falls back to "preset" so a name like "日本語" still yields a valid filename.
@@ -718,6 +722,12 @@ void BindingSystem::loadBindings() {
             bindings_ = defaults_;
             return;
         }
+        if (j.value("version", kBindingsFileVersion) > kBindingsFileVersion) {
+            OFS_CORE_ERROR("bindings.json version {} is newer than supported version {}; using defaults.",
+                           j.value("version", 0), kBindingsFileVersion);
+            bindings_ = defaults_;
+            return;
+        }
 
         // Parse all entries into loadedOverrides_; apply them to commands currently in the registry.
         for (const auto &entry : j["bindings"]) {
@@ -751,7 +761,7 @@ void BindingSystem::saveBindings() const {
             if (auto entry = bindingToEntry(b))
                 arr.push_back(std::move(*entry));
         nlohmann::json j;
-        j["version"] = 1;
+        j["version"] = kBindingsFileVersion;
         j["bindings"] = arr;
         ofs::util::writeFile(getBindingsPath(), j.dump(4));
     } catch (const std::exception &e) {
@@ -814,6 +824,11 @@ int BindingSystem::loadPreset(const std::string &slug) {
         nlohmann::json j = nlohmann::json::parse(*text);
         if (!j.contains("bindings"))
             return 0;
+        if (j.value("version", kBindingsFileVersion) > kBindingsFileVersion) {
+            OFS_CORE_ERROR("Binding preset '{}' version {} is newer than supported version {}.", slug,
+                           j.value("version", 0), kBindingsFileVersion);
+            return 0;
+        }
 
         bindings_.clear();
         loadedOverrides_.clear();
@@ -855,7 +870,7 @@ void BindingSystem::saveActiveAsPreset(const std::string &name) {
             arr.push_back(nlohmann::json::parse(raw));
 
         nlohmann::json j;
-        j["version"] = 1;
+        j["version"] = kBindingsFileVersion;
         j["name"] = name;
         j["bindings"] = arr;
 

@@ -744,6 +744,12 @@ bool load(std::string_view name, Theme *dst) {
         if (!text)
             return false;
         nlohmann::json j = nlohmann::json::parse(*text);
+        const int version = j.value("version", kThemeSchemaVersion);
+        if (version > kThemeSchemaVersion) {
+            OFS_CORE_ERROR("Theme '{}' version {} is newer than supported version {}.", std::string(name), version,
+                           kThemeSchemaVersion);
+            return false;
+        }
         if (j.value("isDark", true))
             makeDarkTheme(dst);
         else
@@ -792,6 +798,12 @@ std::optional<std::string> importFromFile(const std::filesystem::path &src) {
         if (!text)
             return std::nullopt;
         nlohmann::json j = nlohmann::json::parse(*text);
+        const int version = j.value("version", kThemeSchemaVersion);
+        if (version > kThemeSchemaVersion) {
+            OFS_CORE_ERROR("Theme file '{}' version {} is newer than supported version {}.", ofs::util::toUtf8(src),
+                           version, kThemeSchemaVersion);
+            return std::nullopt;
+        }
 
         // Start from the matching base so any keys the file omits keep sane defaults,
         // exactly like load() does for the per-name user files.

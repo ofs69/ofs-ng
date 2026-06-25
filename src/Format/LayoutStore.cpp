@@ -18,8 +18,10 @@ void from_json(const nlohmann::json &j, DockLayoutPreset &p) {
 }
 
 void to_json(nlohmann::json &j, const LayoutStore &s) {
-    j = nlohmann::json::object(
-        {{"layouts", s.layouts}, {"activeLayoutName", s.activeLayoutName}, {"locked", s.locked}});
+    j = nlohmann::json::object({{"version", kLayoutStoreVersion},
+                                {"layouts", s.layouts},
+                                {"activeLayoutName", s.activeLayoutName},
+                                {"locked", s.locked}});
 }
 
 void from_json(const nlohmann::json &j, LayoutStore &s) {
@@ -34,7 +36,15 @@ LayoutStore LayoutStore::load() {
     try {
         auto text = ofs::util::readFile(path);
         if (text) {
-            from_json(nlohmann::json::parse(*text), store);
+            const nlohmann::json j = nlohmann::json::parse(*text);
+            // Refuse a file written by a newer, incompatible build rather than misreading fields.
+            const int version = j.value("version", kLayoutStoreVersion);
+            if (version > kLayoutStoreVersion) {
+                OFS_CORE_ERROR("layouts.json version {} is newer than supported version {}; using defaults.", version,
+                               kLayoutStoreVersion);
+                return store;
+            }
+            from_json(j, store);
         }
     } catch (const std::exception &e) {
         OFS_CORE_ERROR("Failed to load layouts: {}", e.what());

@@ -5,6 +5,10 @@
 
 namespace ofs {
 
+// On-disk schema version for layouts.json. Bump on an incompatible change; LayoutStore::load
+// refuses a file newer than this rather than silently misreading fields.
+inline constexpr int kLayoutStoreVersion = 1;
+
 // A named docking-layout snapshot. `ini` is the verbatim string from
 // ImGui::SaveIniSettingsToMemory (window positions + dock arrangement).
 struct DockLayoutPreset {
