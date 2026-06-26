@@ -425,7 +425,7 @@ placeholders = [
 ]
 
 [PrefMaxFpsHint]
-english     = "Caps the interface frame rate to save power on high-refresh displays. Video playback always runs at full smoothness."
+english     = "Caps the interface frame rate to save power on high-refresh displays. The cap applies during video playback too."
 description = "Preferences › Application › Performance: help-marker tooltip on the Max Frame Rate selector."
 
 [PrefUndoMemory]

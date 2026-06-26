@@ -322,9 +322,9 @@ void Application::updateSwapInterval() {
         appliedSwapInterval = 0;
     return;
 #else
-    int desired = 1; // full refresh (vsync) — also the playback and unlimited case
+    int desired = 1; // full refresh (vsync) — also the unlimited case
     const int cap = frameCapFps();
-    if (cap > 0 && !isVideoPlaybackActive() && !multiVblankUnsupported) {
+    if (cap > 0 && !multiVblankUnsupported) {
         float refresh = 0.f;
         if (const SDL_DisplayMode *mode = SDL_GetCurrentDisplayMode(SDL_GetDisplayForWindow(window->getNativeWindow())))
             refresh = mode->refresh_rate;

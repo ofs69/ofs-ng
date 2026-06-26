@@ -86,7 +86,6 @@ class OfsApp : public ofs::Application {
     bool shouldDropAmbientEvent(const SDL_Event &event) const override;
     float fontSizeBase() const override;
     int frameCapFps() const override;
-    bool isVideoPlaybackActive() const override;
 
     // Frame-loop hook (see Application): supplies the title and routes the caption-button actions to
     // the window. All window mechanics live in Window; this only translates UI intent.

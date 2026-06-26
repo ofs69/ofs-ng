@@ -67,10 +67,6 @@ class Application {
     // swap-interval divisor of the display refresh in updateSwapInterval().
     virtual int frameCapFps() const { return 0; }
 
-    // True while a video is actively playing, so the cap is lifted and playback runs at full refresh
-    // (a capped loop would drop video frames — see updateSwapInterval / MpvVideoPlayer's single FBO).
-    virtual bool isVideoPlaybackActive() const { return false; }
-
     // Merge the CJK glyph font into the default font. Split out of loadFonts() because inflating it from
     // the asset archive (~68 ms) is pure waste for a Latin-script UI. Idempotent: OfsApp calls it eagerly
     // when the UI language is CJK, otherwise from onStartupComplete() once the window is on screen.
@@ -101,7 +97,7 @@ class Application {
 
     // Re-derive the present pacing from the frame cap each frame and apply it only on change. The cap
     // (frameCapFps) is a divisor of the current display's refresh, so a non-zero cap maps to an integer
-    // divisor N≥2; during playback or with no cap it stays 1 (full refresh). On Windows we present with
+    // divisor N≥2; with no cap it stays 1 (full refresh). On Windows we present with
     // swap interval 0 and block on DwmFlush instead of the driver's vsync — the latter busy-waits a core
     // under NVIDIA "Threaded Optimization". Other platforms (the #ifdef _WIN32 block below is absent
     // there) use driver vsync (swap interval N).

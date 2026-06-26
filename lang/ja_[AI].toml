@@ -405,8 +405,8 @@ placeholders = [
 translation  = "{0} FPS"
 
 [PrefMaxFpsHint]
-english     = "Caps the interface frame rate to save power on high-refresh displays. Video playback always runs at full smoothness."
-translation = "高リフレッシュレートのディスプレイで電力を節約するため、インターフェースのフレームレートを制限します。ビデオ再生は常に最高の滑らかさで動作します。"
+english     = "Caps the interface frame rate to save power on high-refresh displays. The cap applies during video playback too."
+translation = "高リフレッシュレートのディスプレイで電力を節約するため、インターフェースのフレームレートを制限します。この制限はビデオ再生中にも適用されます。"
 
 [PrefUndoMemory]
 english     = "Undo Memory"

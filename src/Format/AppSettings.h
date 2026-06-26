@@ -80,8 +80,7 @@ struct AppSettings {
     bool hwdecEnabled = true;
     bool showTimelinePreview = false; // hover-scrub frame preview on the player seek bar
     // UI frame-rate cap (0 = unlimited / full refresh). Realized as an integer swap-interval divisor
-    // of the display refresh, so it stays tear-free; lifted automatically during video playback so
-    // high-fps footage is never throttled (see Application::updateSwapInterval).
+    // of the display refresh, so it stays tear-free (see Application::updateSwapInterval).
     int maxFps = 0;
     bool autoBackupEnabled = true;
     // Memory budget (MB) for the undo/redo history. Snapshots are packed + compressed (SnapshotCodec) and

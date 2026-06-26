@@ -964,12 +964,6 @@ int OfsApp::frameCapFps() const {
     return appSettings.maxFps;
 }
 
-bool OfsApp::isVideoPlaybackActive() const {
-    // A loaded, unpaused player is "playing": the cap is lifted so every decoded frame is presented.
-    // (No media → isPaused() is true, so this stays false and the cap applies.)
-    return player && !player->isPaused();
-}
-
 bool OfsApp::canAppIdle() const {
 #ifdef OFS_TEST_ENGINE
     // Under the imgui_test_engine harness (ui-tests) frames are driven programmatically with
