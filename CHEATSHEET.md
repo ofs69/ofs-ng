@@ -117,7 +117,7 @@ in the key-binding editor; this page covers the pointer.
 | Gesture | 2D mode | VR mode |
 |---------|---------|---------|
 | Drag | Pan | Rotate (yaw + pitch) |
-| Middle-click | Reset pan & zoom | Reset view |
+| Middle double-click | Reset pan & zoom + recenter overlay | Reset view + recenter overlay |
 | Scroll | Zoom | Zoom |
 | Right-click | Context menu | Context menu |
 
@@ -135,7 +135,8 @@ in the key-binding editor; this page covers the pointer.
 | Drag resize grip (bottom-right) | Resize overlay |
 | Drag bar endpoint (2D) | Adjust range |
 | Alt+drag | Cancel drag, snap back |
-| Right-click | Context menu |
+| Middle double-click (on video) | Recenter overlay |
+| Right-click | Context menu (lock, 2D/3D, invert, …) |
 
 ---
 

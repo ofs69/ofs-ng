@@ -6,6 +6,7 @@
 #include "helpers/TestState.h"
 #include <cmath>
 #include <imgui.h>
+#include <imgui_internal.h> // ImGuiWindow::Active — not in the public API
 #include <imgui_te_context.h>
 #include <imgui_te_engine.h>
 
@@ -79,39 +80,46 @@ void setTwoChapters(ofs::EventQueue &eq) {
 } // namespace
 
 void RegisterSimulatorTests(ImGuiTestEngine *e) {
-    IM_REGISTER_TEST(e, "simulator", "renders_2d")->TestFunc = [](ImGuiTestContext *ctx) {
-        loadFixture(ctx);
-        IM_CHECK(!getTestState().project->simulator.use3dSimulator); // default 2D
-        ctx->Yield(3);
-        IM_CHECK(ctx->WindowInfo("Simulator###Simulator").Window != nullptr);
-    };
-
-    IM_REGISTER_TEST(e, "simulator", "toggle_3d_switches_mode_and_renders")->TestFunc = [](ImGuiTestContext *ctx) {
+    // The Simulator window exists only to host the 3D simulator's two extra orthographic views: it is
+    // hidden in 2D mode (where the bar lives entirely on the video overlay) and shown in 3D mode.
+    IM_REGISTER_TEST(e, "simulator", "window_hidden_in_2d_shown_in_3d")->TestFunc = [](ImGuiTestContext *ctx) {
         loadFixture(ctx);
         auto &proj = *getTestState().project;
-        ctx->ItemClick("Simulator###Simulator/3D###sim_3d");
+        auto &eq = *getTestState().eventQueue;
+        // Force 2D (simulator mode is app-global and may leak in from a prior test). FindWindowByName
+        // (not ctx->WindowInfo) so a missing/inactive window is just a null pointer, not a logged error.
+        eq.push(ofs::ModifyEvent<ofs::SimulatorState>{[](ofs::SimulatorState &s) { s.use3dSimulator = false; }});
         ctx->Yield(3);
-        IM_CHECK(proj.simulator.use3dSimulator);                              // event applied
-        IM_CHECK(ctx->WindowInfo("Simulator###Simulator").Window != nullptr); // 3D scene rendered, no crash
-        ctx->ItemClick("Simulator###Simulator/3D###sim_3d");
+        IM_CHECK(!proj.simulator.use3dSimulator);
+        ImGuiWindow *win = ImGui::FindWindowByName("Simulator###Simulator");
+        IM_CHECK(win == nullptr || !win->Active); // hidden in 2D mode
+
+        // Switching to 3D shows the window (the 3D scene + extra views render, no crash).
+        eq.push(ofs::ModifyEvent<ofs::SimulatorState>{[](ofs::SimulatorState &s) { s.use3dSimulator = true; }});
         ctx->Yield(3);
-        IM_CHECK(!proj.simulator.use3dSimulator); // back to 2D
+        IM_CHECK(proj.simulator.use3dSimulator);
+        win = ImGui::FindWindowByName("Simulator###Simulator");
+        IM_CHECK(win != nullptr);
+        IM_CHECK(win->Active);
+
+        // Back to 2D hides it again.
+        eq.push(ofs::ModifyEvent<ofs::SimulatorState>{[](ofs::SimulatorState &s) { s.use3dSimulator = false; }});
+        ctx->Yield(3);
+        IM_CHECK(!proj.simulator.use3dSimulator);
+        win = ImGui::FindWindowByName("Simulator###Simulator");
+        IM_CHECK(win == nullptr || !win->Active);
     };
 
     IM_REGISTER_TEST(e, "simulator", "toggle_invert")->TestFunc = [](ImGuiTestContext *ctx) {
         loadFixture(ctx);
         auto &proj = *getTestState().project;
+        auto &eq = *getTestState().eventQueue;
         const bool before = proj.activeSceneView.inverted;
-        ctx->ItemClick("Simulator###Simulator/Invert###sim_invert");
+        // Invert moved to the overlay's right-click menu (needs a live video to open), so drive the
+        // underlying half-event directly — the same event the menu item pushes.
+        eq.push(ofs::CaptureSimInvertedEvent{!before});
         ctx->Yield(3);
         IM_CHECK_EQ(proj.activeSceneView.inverted, !before);
-    };
-
-    IM_REGISTER_TEST(e, "simulator", "recenter_no_crash")->TestFunc = [](ImGuiTestContext *ctx) {
-        loadFixture(ctx);
-        ctx->ItemClick("Simulator###Simulator/Recenter");
-        ctx->Yield(2);
-        IM_CHECK(ctx->WindowInfo("Simulator###Simulator").Window != nullptr);
     };
 
     // The core per-chapter scene-memory contract: each chapter remembers its own video framing

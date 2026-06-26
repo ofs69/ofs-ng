@@ -344,10 +344,10 @@ bool OfsApp::init() {
     modalManager = std::make_unique<ofs::ModalManager>(eventQueue);
 
     if (videoPlayerWindow && scriptSimulator) {
-        videoPlayerWindow->setOverlayCallback([this](ImDrawList *dl, const ofs::OverlayViewport &vp) {
+        videoPlayerWindow->setOverlayCallback([this](ImDrawList *dl, const ofs::OverlayViewport &vp, bool vpHovered) {
             if (!appSettings.showSimulator)
                 return false;
-            return scriptSimulator->renderOverlay(dl, scriptProject, vp);
+            return scriptSimulator->renderOverlay(dl, scriptProject, eventQueue, vp, vpHovered);
         });
     }
 
@@ -1054,7 +1054,17 @@ void OfsApp::renderMainMenuBar() {
 
         if (ImGui::BeginMenu(Str::AppMenuView.id("menu_view"))) {
             ImGui::MenuItem(Str::AppMenuShortcuts.id("menu_shortcuts"), nullptr, &appState.showShortcutWindow);
-            ImGui::MenuItem(Str::AppMenuSimulator.id("menu_view_simulator"), nullptr, &appSettings.showSimulator);
+            if (ImGui::BeginMenu(Str::AppMenuSimulator.id("menu_view_simulator"))) {
+                ImGui::MenuItem(Str::AppMenuSimulatorShow.id("menu_view_simulator_show"), nullptr,
+                                &appSettings.showSimulator);
+                // Lock lives on the project's SimulatorState (mutated via event, like the overlay's
+                // own right-click menu), so this is just another entry point to the same toggle.
+                const bool simLocked = scriptProject.simulator.lockedPosition;
+                if (ImGui::MenuItem(Str::SimLocked.id("menu_view_simulator_lock"), nullptr, simLocked))
+                    eventQueue.push(ofs::ModifyEvent<ofs::SimulatorState>{
+                        [](ofs::SimulatorState &s) { s.lockedPosition = !s.lockedPosition; }});
+                ImGui::EndMenu();
+            }
             ImGui::MenuItem(Str::AppMenuStatistics.id("menu_view_statistics"), nullptr, &appSettings.showStatistics);
             ImGui::MenuItem(Str::AppMenuToolOptions.id("menu_view_tooloptions"), nullptr, &appSettings.showToolOptions);
             ImGui::MenuItem(Str::AppMenuLog.id("menu_view_log"), nullptr, &appState.showLogWindow);

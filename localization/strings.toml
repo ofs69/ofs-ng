@@ -2221,14 +2221,6 @@ description = "Simulator window title."
 english     = "3D model failed to load."
 description = "Simulator: shown in place of the 3D view when the simulator model asset can't be loaded."
 
-[SimRecenter]
-english     = "Recenter"
-description = "Simulator: header button that recenters the overlay anchor over the looked-at point."
-
-[SimLock]
-english     = "Lock"
-description = "Simulator: header checkbox that locks the overlay position so it can't be dragged."
-
 [Sim3D]
 english     = "3D"
 description = "Simulator: header checkbox that switches between the 2D bar and the 3D model overlay."
@@ -2675,7 +2667,11 @@ description = "View menu — toggle the Keyboard Shortcuts window."
 
 [AppMenuSimulator]
 english     = "Simulator"
-description = "View menu — toggle the Simulator window."
+description = "View menu — Simulator submenu (show window, lock overlay)."
+
+[AppMenuSimulatorShow]
+english     = "Show window"
+description = "View menu, Simulator submenu — toggle the Simulator window's visibility."
 
 [AppMenuStatistics]
 english     = "Statistics"

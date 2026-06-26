@@ -2122,14 +2122,6 @@ translation = "シミュレーター"
 english     = "3D model failed to load."
 translation = "3Dモデルの読み込みに失敗しました。"
 
-[SimRecenter]
-english     = "Recenter"
-translation = "中央に戻す"
-
-[SimLock]
-english     = "Lock"
-translation = "ロック"
-
 [Sim3D]
 english     = "3D"
 translation = "3D"
@@ -2545,6 +2537,10 @@ translation = "キーボードショートカット"
 [AppMenuSimulator]
 english     = "Simulator"
 translation = "シミュレーター"
+
+[AppMenuSimulatorShow]
+english     = "Show window"
+translation = "ウィンドウを表示"
 
 [AppMenuStatistics]
 english     = "Statistics"

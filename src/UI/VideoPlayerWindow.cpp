@@ -79,7 +79,7 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
     if (!player.hasMedia()) {
         drawCenteredPlaceholder(Str::VpwNoVideo);
         if (overlayCallback)
-            overlayCallback(ImGui::GetWindowDrawList(), OverlayViewport{});
+            overlayCallback(ImGui::GetWindowDrawList(), OverlayViewport{}, windowHovered);
         ImGui::End();
         return;
     }
@@ -89,7 +89,7 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
     if (player.getWidth() <= 0 || player.getHeight() <= 0) {
         drawCenteredPlaceholder(Str::VpwAudioOnly);
         if (overlayCallback)
-            overlayCallback(ImGui::GetWindowDrawList(), OverlayViewport{});
+            overlayCallback(ImGui::GetWindowDrawList(), OverlayViewport{}, windowHovered);
         ImGui::End();
         return;
     }
@@ -97,7 +97,7 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
     const uint32_t textureId = player.getFrameTexture();
     if (textureId == 0) {
         if (overlayCallback)
-            overlayCallback(ImGui::GetWindowDrawList(), OverlayViewport{});
+            overlayCallback(ImGui::GetWindowDrawList(), OverlayViewport{}, windowHovered);
         ImGui::End();
         return;
     }
@@ -184,7 +184,8 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
                 return ImVec2{(m.x - contentScreenMin.x) / contentSize.x - 0.5f,
                               (m.y - contentScreenMin.y) / contentSize.y - 0.5f};
             };
-            if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left) && ImGui::GetActiveID() == 0) {
+            if (hovered && !overlayHoveredPrev && ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
+                ImGui::GetActiveID() == 0) {
                 dragging = true;
                 vrGrabDir = ofs::vrcam::unproject(cursorNdc(), vrRotation, vrZoom, contentAspect);
             }
@@ -196,7 +197,7 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
                 framingChanged = true;
             }
 
-            if (windowHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Middle)) {
+            if (windowHovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Middle)) {
                 vrZoom = 0.5f;
                 targetVrZoom = 0.5f;
                 vrRotation = {0.5f, 0.5f};
@@ -276,7 +277,8 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
             }
 
             // Handle 2D panning
-            if (hovered && ImGui::IsMouseClicked(ImGuiMouseButton_Left) && ImGui::GetActiveID() == 0) {
+            if (hovered && !overlayHoveredPrev && ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
+                ImGui::GetActiveID() == 0) {
                 dragging = true;
             }
             if (dragging && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
@@ -287,7 +289,7 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
                 framingChanged = true;
             }
 
-            if (windowHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Middle)) {
+            if (windowHovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Middle)) {
                 zoomFactor = 1.0f;
                 targetZoomFactor = 1.0f;
                 translation = {0.0f, 0.0f};
@@ -325,8 +327,9 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
                            .vrRotation = vrRotation,
                            .vrZoom = vrZoom,
                            .valid = true};
-        overlayHovered = overlayCallback(ImGui::GetWindowDrawList(), vp);
+        overlayHovered = overlayCallback(ImGui::GetWindowDrawList(), vp, windowHovered);
     }
+    overlayHoveredPrev = overlayHovered;
 
     // Don't open the window's context menu over the simulator overlay — it shows its own menu there.
     // Gate only the *open* request; an already-open popup still renders via BeginPopup. Open on a

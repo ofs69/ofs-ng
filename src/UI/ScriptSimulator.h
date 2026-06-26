@@ -20,10 +20,12 @@ class ScriptSimulator {
     ScriptSimulator();
 
     void render(const ScriptProject &project, EventQueue &eq, bool &open, bool vpHovered);
-    // Draws the overlay onto the video. Returns true when the cursor is over the overlay (3D model
-    // rect or 2D bar) so the Video Player can suppress its own right-click context menu there — the
-    // overlay's own menu (opened in render()/render3D) owns that click.
-    bool renderOverlay(ImDrawList *dl, const ScriptProject &project, const OverlayViewport &vp);
+    // Draws the overlay onto the video and runs the 2D bar interaction (which lives here, not in
+    // render(), so the bar stays interactive while the Simulator window is hidden in 2D mode). Returns
+    // true when the cursor is over the overlay (3D model rect or 2D bar) so the Video Player can
+    // suppress its own right-click context menu there — the overlay's own menu owns that click.
+    bool renderOverlay(ImDrawList *dl, const ScriptProject &project, EventQueue &eq, const OverlayViewport &vp,
+                       bool vpHovered);
 
   private:
     void render3D(const ScriptProject &project, EventQueue &eq, double currentTime, const SimulatorState &state,

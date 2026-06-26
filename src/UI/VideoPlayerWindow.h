@@ -23,9 +23,10 @@ class VideoPlayerWindow {
     ~VideoPlayerWindow();
 
     void onImGuiRender(const ScriptProject &project, EventQueue &eq, VideoPlayer &player);
-    // The callback returns true when the cursor is over the overlay, so the right-click context menu
-    // below is suppressed there (the overlay shows its own menu instead).
-    void setOverlayCallback(std::function<bool(ImDrawList *, const OverlayViewport &)> cb) {
+    // The callback runs the overlay's draw + interaction and returns true when the cursor is over the
+    // overlay (or actively dragging it), so the right-click context menu — and the left-drag pan — below
+    // are suppressed there (the overlay shows its own menu and owns the drag instead).
+    void setOverlayCallback(std::function<bool(ImDrawList *, const OverlayViewport &, bool vpHovered)> cb) {
         overlayCallback = std::move(cb);
     }
     bool isWindowHovered() const { return windowHovered; }
@@ -70,6 +71,11 @@ class VideoPlayerWindow {
     // project-level, not part of the framing, so it is not a parameter here.
     [[nodiscard]] VideoFraming currentFraming(const ImVec2 &contentSize) const;
 
-    std::function<bool(ImDrawList *, const OverlayViewport &)> overlayCallback;
+    std::function<bool(ImDrawList *, const OverlayViewport &, bool vpHovered)> overlayCallback;
+
+    // Whether the cursor was over the simulator overlay (or dragging it) last frame. The overlay runs
+    // its interaction after this window's pan-grab check, so we gate the pan on the previous frame's
+    // value to keep a bar/model drag from also panning the video underneath it.
+    bool overlayHoveredPrev = false;
 };
 } // namespace ofs

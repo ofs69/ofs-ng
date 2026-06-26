@@ -1,6 +1,7 @@
 #include "Core/BookmarkChapterState.h"
 #include "Core/Events.h"
 #include "Core/ScriptAxisAction.h"
+#include "Core/SimulatorSettings.h"
 #include "Core/StandardAxis.h"
 #include "Core/VectorSet.h"
 #include "UI/Heatmap.h"
@@ -29,7 +30,14 @@ void RegisterWindowTests(ImGuiTestEngine *e) {
 
     IM_REGISTER_TEST(e, "windows", "simulator_renders")->TestFunc = [](ImGuiTestContext *ctx) {
         loadFixture(ctx);
+        // The Simulator window only opens in 3D mode (in 2D the bar lives on the video overlay).
+        getTestState().eventQueue->push(
+            ofs::ModifyEvent<ofs::SimulatorState>{[](ofs::SimulatorState &s) { s.use3dSimulator = true; }});
         expectWindow(ctx, "Simulator###Simulator");
+        // Restore 2D so the app-global mode doesn't leak into later suites.
+        getTestState().eventQueue->push(
+            ofs::ModifyEvent<ofs::SimulatorState>{[](ofs::SimulatorState &s) { s.use3dSimulator = false; }});
+        ctx->Yield(2);
     };
 
     IM_REGISTER_TEST(e, "windows", "video_controls_render")->TestFunc = [](ImGuiTestContext *ctx) {

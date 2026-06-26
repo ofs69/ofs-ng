@@ -18,10 +18,10 @@ void RegisterMenusTests(ImGuiTestEngine *e) {
     IM_REGISTER_TEST(e, "menus", "view_toggle_simulator")->TestFunc = [](ImGuiTestContext *ctx) {
         loadFixture(ctx);
         const bool before = getTestState().appSettings->showSimulator;
-        ctx->MenuClick("//##MainMenuBar/###menu_view/###menu_view_simulator");
+        ctx->MenuClick("//##MainMenuBar/###menu_view/###menu_view_simulator/###menu_view_simulator_show");
         ctx->Yield();
         IM_CHECK_EQ(getTestState().appSettings->showSimulator, !before);
-        ctx->MenuClick("//##MainMenuBar/###menu_view/###menu_view_simulator"); // restore
+        ctx->MenuClick("//##MainMenuBar/###menu_view/###menu_view_simulator/###menu_view_simulator_show"); // restore
         ctx->Yield();
         IM_CHECK_EQ(getTestState().appSettings->showSimulator, before);
     };

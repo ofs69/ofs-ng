@@ -376,7 +376,7 @@ ScriptSimulator::ScriptSimulator() {
 }
 
 namespace {
-// A centered overlay anchor (used by the Recenter button). 2D bar: a short vertical bar at image
+// A centered overlay anchor (used by middle-click on the video). 2D bar: a short vertical bar at image
 // centre; 3D: centred. VR: pinned to the direction the user is currently looking (screen centre).
 ofs::OverlayAnchor centeredAnchor(const ofs::OverlayAnchor &cur, const ofs::OverlayViewport &vp) {
     ofs::OverlayAnchor a = cur;
@@ -751,6 +751,11 @@ void ScriptSimulator::render3D(const ScriptProject &project, EventQueue &eq, dou
         if (ImGui::MenuItem(Str::SimLocked.iconId(state.lockedPosition ? ICON_LOCK : ICON_LOCK_OPEN, "sim_locked_3d"),
                             nullptr, state.lockedPosition))
             eq.push(ModifyEvent<SimulatorState>{[](SimulatorState &s) { s.lockedPosition = !s.lockedPosition; }});
+        if (ImGui::MenuItem(Str::Sim3D.id("sim_3d_menu_3d"), nullptr, state.use3dSimulator))
+            eq.push(ModifyEvent<SimulatorState>{[](SimulatorState &s) { s.use3dSimulator = !s.use3dSimulator; }});
+        const bool inverted = project.activeSceneView.inverted;
+        if (ImGui::MenuItem(Str::SimInvert.id("sim_invert_menu_3d"), nullptr, inverted))
+            eq.push(CaptureSimInvertedEvent{!inverted});
         ImGui::EndPopup();
     }
 }
@@ -759,11 +764,17 @@ void ScriptSimulator::render(const ScriptProject &project, EventQueue &eq, bool 
     if (!open) {
         return;
     }
-    auto state = project.simulator;
+    const SimulatorState &state = project.simulator;
     const double currentTime = project.playback.cursorPos;
 
-    // Cleared each frame; render3D() or the 2D path below re-arms it while Shift-hovering the overlay.
+    // Cleared each frame; re-armed by render3D() below or the 2D overlay interaction in renderOverlay().
     preview_.active = false;
+
+    // The Simulator window exists only to host the two extra orthographic views the 3D simulator draws.
+    // In 2D mode the bar lives entirely on the video overlay (renderOverlay) and its controls are reached
+    // through the overlay's right-click menu, so no window is shown.
+    if (!state.use3dSimulator)
+        return;
 
     const float fs = ImGui::GetFontSize();
     ImGui::SetNextWindowSizeConstraints({fs * 22.f, fs * 18.f}, {FLT_MAX, FLT_MAX});
@@ -771,53 +782,6 @@ void ScriptSimulator::render(const ScriptProject &project, EventQueue &eq, bool 
     // focus, instead of being claimed by ImGui keyboard nav (see Application.cpp).
     ImGui::Begin(Str::SimTitle.id("Simulator"), &open,
                  ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoNavInputs);
-
-    bool headerVisualsChanged = false;
-
-    // Header labels are composed once so the Recenter button reserve measures the *actual* (translated)
-    // checkbox text, and the checkboxes render the same string — never an English literal.
-    const char *lockLabel = Str::SimLock.icon(state.lockedPosition ? ICON_LOCK : ICON_LOCK_OPEN);
-    const char *recenterLabel = Str::SimRecenter.icon(ICON_RECENTER);
-
-    {
-        const ImGuiStyle &style = ImGui::GetStyle();
-        const float frameH = ImGui::GetFrameHeight();
-        const float lockW = frameH + style.ItemInnerSpacing.x + ImGui::CalcTextSize(lockLabel).x;
-        const float threeDW = frameH + style.ItemInnerSpacing.x + ImGui::CalcTextSize(Str::Sim3D).x;
-        const float invertW = frameH + style.ItemInnerSpacing.x + ImGui::CalcTextSize(Str::SimInvert).x;
-        const float checkboxesTotal = lockW + style.ItemSpacing.x + threeDW + style.ItemSpacing.x + invertW;
-        const float btnWidth = ImGui::GetContentRegionAvail().x - checkboxesTotal - style.ItemSpacing.x;
-
-        // ###Recenter pins the ID so the icon prefix doesn't break ItemClick(".../Recenter") in tests.
-        if (ImGui::Button(
-                fmtScratch("{}###Recenter", recenterLabel),
-                {std::max(btnWidth, style.FramePadding.x * 2.f + ImGui::CalcTextSize(recenterLabel).x), 0.f})) {
-            eq.push(CaptureOverlayAnchorEvent{centeredAnchor(project.activeSceneView.anchor, overlayVp_)});
-        }
-    }
-
-    ImGui::SameLine();
-    ImGui::Checkbox(fmtScratch("{}###sim_lock", lockLabel), &state.lockedPosition);
-    headerVisualsChanged |= ImGui::IsItemDeactivatedAfterEdit();
-
-    ImGui::SameLine();
-    if (ImGui::Checkbox(Str::Sim3D.id("sim_3d"), &state.use3dSimulator)) {
-        headerVisualsChanged = true;
-    }
-
-    ImGui::SameLine();
-    // Invert is stored per-scene (in the active SceneView), not in the app-global SimulatorState,
-    // so it restores per chapter. Capture it on its own half-event rather than via SimulatorPositionChanged.
-    bool inverted = project.activeSceneView.inverted;
-    if (ImGui::Checkbox(Str::SimInvert.id("sim_invert"), &inverted)) {
-        eq.push(CaptureSimInvertedEvent{inverted});
-    }
-
-    if (headerVisualsChanged) {
-        // project.simulator is the live truth (updated via this event); AppSettings is mirrored
-        // from it on exit, so there is no settings write here.
-        eq.push(SimulatorPositionChangedEvent{state});
-    }
 
     // Don't run interaction or draw overlays while a modal popup is active.
     if (ImGui::GetTopMostPopupModal() != nullptr) {
@@ -827,276 +791,14 @@ void ScriptSimulator::render(const ScriptProject &project, EventQueue &eq, bool 
 
     const OverlayAnchor &anchor = project.activeSceneView.anchor;
 
-    if (state.use3dSimulator) {
-        render3D(project, eq, currentTime, state, anchor, vpHovered);
-        ImGui::End();
-        return;
-    }
-
-    // ---- 2D bar interaction ----
-    // The bar's screen endpoints come from the anchor projected through the last frame's video
-    // viewport (anchored-follow). Drags update the anchor (content space) and push a capture. With
-    // no video to anchor to, skip interaction.
-
-    const ImGuiID simId = ImGui::GetID("ActualSimulator");
-    ImGui::KeepAliveID(simId);
-
-    const bool vr = overlayVp_.mode == VideoMode::VrMode;
-    const BarScreen bar = barScreen(anchor, overlayVp_);
-
-    // Bar geometry — used for drag-handle hit-testing. Thickness is content-space (scales with zoom).
-    const float barWidth = bar.thickness;
-    const float borderWidth = barWidth * kBorderRatio;
-    const ImVec2 direction = simNormalize(bar.p1 - bar.p2);
-    const ImVec2 perp{-direction.y, direction.x};
-    const ImVec2 barP1 = bar.p1 - (direction * (borderWidth / 2.f));
-    const ImVec2 barP2 = bar.p2 + (direction * (borderWidth / 2.f));
-    const float barLen = simDistance(barP1, barP2);
-    const ImVec2 barCenter = barP2 + (direction * (barLen / 2.f));
-    // Width grip sits just outside the bar edge, perpendicular to it.
-    const float gripOffset = barWidth * 0.5f + 10.f;
-    const ImVec2 widthGrip = barCenter + perp * gripOffset;
-    // VR bar's angular length + on-screen length, used to convert a perpendicular pixel drag of the
-    // width grip into an angular width (keeps thickness ↔ widthAngle consistent with barScreen()).
-    const float vrAngLen = vr ? std::acos(std::clamp(glm::dot(vrcam::sphereDir(anchor.vrBarP1.x, anchor.vrBarP1.y),
-                                                              vrcam::sphereDir(anchor.vrBarP2.x, anchor.vrBarP2.y)),
-                                                     -1.0f, 1.0f))
-                              : 0.f;
-    const float vrScreenLen = simDistance(bar.p1, bar.p2);
-
-    OverlayAnchor a = anchor; // working copy; pushed as a capture on change
-
-    // Apply the live drag for `target` to the working anchor `a`. VR endpoints re-pin to the cursor
-    // direction; VR center rigid-rotates both endpoints by the cursor's spherical displacement; the
-    // width grip maps the cursor's perpendicular distance from the bar axis to the bar thickness.
-    const auto applyDrag = [&](DragTarget target, bool moveCenter) {
-        const ImVec2 mouse = ImGui::GetMousePos();
-        const float perpPx = std::abs((mouse.x - barCenter.x) * perp.x + (mouse.y - barCenter.y) * perp.y);
-        if (vr) {
-            if (target == DragTarget::Width) {
-                a.vrBarWidthAngle =
-                    std::max(0.01f, (vrScreenLen > 1.f) ? 2.f * perpPx * (vrAngLen / vrScreenLen) : 0.06f);
-            } else if (target == DragTarget::P1) {
-                vrcam::dirToYawPitch(vrScreenToDir(mouse, overlayVp_), a.vrBarP1.x, a.vrBarP1.y);
-            } else if (target == DragTarget::P2) {
-                vrcam::dirToYawPitch(vrScreenToDir(mouse, overlayVp_), a.vrBarP2.x, a.vrBarP2.y);
-            } else if (moveCenter) {
-                const glm::quat q = rotationBetween(dragStartMouseDir_, vrScreenToDir(mouse, overlayVp_));
-                const glm::vec3 n1 = q * vrcam::sphereDir(dragStartAnchor_.vrBarP1.x, dragStartAnchor_.vrBarP1.y);
-                const glm::vec3 n2 = q * vrcam::sphereDir(dragStartAnchor_.vrBarP2.x, dragStartAnchor_.vrBarP2.y);
-                vrcam::dirToYawPitch(n1, a.vrBarP1.x, a.vrBarP1.y);
-                vrcam::dirToYawPitch(n2, a.vrBarP2.x, a.vrBarP2.y);
-            }
-            return;
-        }
-        if (target == DragTarget::Width) {
-            a.widthNorm = std::max(0.01f, 2.f * perpPx / std::max(1.f, overlayVp_.imageSize.y));
-            return;
-        }
-        const ImVec2 deltaNorm = screenToNorm(mouse, overlayVp_) - dragStartMouseNorm_;
-        constexpr float kMinBarLenNorm = 0.05f; // min length so an endpoint can't cross the other and invert
-        if (moveCenter) {
-            a.p1Norm = dragStartAnchor_.p1Norm + deltaNorm;
-            a.p2Norm = dragStartAnchor_.p2Norm + deltaNorm;
-        } else if (target == DragTarget::P1) {
-            a.p1Norm = clampBarEndpoint(dragStartAnchor_.p1Norm + deltaNorm, a.p2Norm, dragStartAnchor_.p1Norm,
-                                        kMinBarLenNorm);
-        } else if (target == DragTarget::P2) {
-            a.p2Norm = clampBarEndpoint(dragStartAnchor_.p2Norm + deltaNorm, a.p1Norm, dragStartAnchor_.p2Norm,
-                                        kMinBarLenNorm);
-        }
-    };
-
-    // Shift-hover preview & place: project the cursor onto the bar axis to a 0..1 displayed value,
-    // show the bar at it (renderOverlay reads preview_), and place an action on the active axis on a
-    // left-click. Works even when locked; takes precedence over move/resize and is skipped mid-drag so
-    // pressing Shift during a drag can't hijack it.
-    const auto activeRole = project.state.activeAxis;
-    const bool activePresent = activeRole < StandardAxis::Count;
-    bool shiftPlace = false;
-    if (ImGui::GetIO().KeyShift && activePresent && overlayVp_.valid && bar.visible && vpHovered &&
-        dragTarget == DragTarget::None && !isMovingSimulator) {
-        const ImVec2 mouse = ImGui::GetMousePos();
-        // Generous grab band around the (thin) bar so the cursor needn't sit exactly on it.
-        if (pointToSegmentDist(mouse, barP1, barP2) <= std::max(barWidth, ImGui::GetFontSize() * 2.f)) {
-            shiftPlace = true;
-            const float t = std::clamp(((mouse.x - barP2.x) * direction.x + (mouse.y - barP2.y) * direction.y) /
-                                           std::max(1.f, barLen),
-                                       0.f, 1.f);
-            preview_.active = true;
-            preview_.axis = activeRole;
-            preview_.displayedValue = t;
-            ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-            ImGui::SetHoveredID(ImGui::GetCurrentWindowRead()->ID);
-            if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-                const bool inv = project.activeSceneView.inverted;
-                const float stored = inv ? 1.f - t : t;
-                eq.push(EditRequestEvent{
-                    .intent = {.kind = EditIntentKind::AddPoint,
-                               .axis = activeRole,
-                               .time = currentTime,
-                               .pos = std::clamp(static_cast<int>(std::lround(stored * 100.f)), 0, 100)}});
-                ImGui::GetIO().MouseClicked[ImGuiMouseButton_Left] = false;
-            }
-        }
-    }
-
-    if (shiftPlace) {
-        dragTarget = DragTarget::None;
-        isMovingSimulator = false;
-    } else if (!state.lockedPosition && overlayVp_.valid && bar.visible) {
-        const ImVec2 mouse = ImGui::GetMousePos();
-        const float p1Dist = simDistance(mouse, barP1);
-        const float p2Dist = simDistance(mouse, barP2);
-        const float centerDist = simDistance(mouse, barCenter);
-        const float widthDist = simDistance(mouse, widthGrip);
-        const float handleRadius = std::max(8.f, barWidth / 2.f);
-
-        ImGuiWindow *const simWindow = ImGui::GetCurrentWindowRead();
-
-        // Register the handles as addressable, non-interactive items so UI tests can anchor to them
-        // via ItemInfo. The actual hit-testing stays distance-based below; ItemAdd consumes no input.
-        const ImVec2 handleExtent{handleRadius, handleRadius};
-        ImGui::ItemAdd(ImRect(barP1 - handleExtent, barP1 + handleExtent), ImGui::GetID("##sim_p1"), nullptr,
-                       ImGuiItemFlags_NoNav);
-        ImGui::ItemAdd(ImRect(barP2 - handleExtent, barP2 + handleExtent), ImGui::GetID("##sim_p2"), nullptr,
-                       ImGuiItemFlags_NoNav);
-        ImGui::ItemAdd(ImRect(barCenter - handleExtent, barCenter + handleExtent), ImGui::GetID("##sim_center"),
-                       nullptr, ImGuiItemFlags_NoNav);
-        ImGui::ItemAdd(ImRect(widthGrip - handleExtent, widthGrip + handleExtent), ImGui::GetID("##sim_width"), nullptr,
-                       ImGuiItemFlags_NoNav);
-
-        if (dragTarget == DragTarget::Width) {
-            ImGui::SetMouseCursor(resizeCursorForAxis(perp));
-            ImGui::SetActiveID(simId, simWindow);
-        } else if (dragTarget != DragTarget::None) {
-            ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-            ImGui::SetActiveID(simId, simWindow);
-        } else if (isMovingSimulator) {
-            ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
-            ImGui::SetActiveID(simId, simWindow);
-        }
-
-        if (dragTarget == DragTarget::None && !isMovingSimulator) {
-            const auto beginDrag = [&]() {
-                ImGui::SetActiveID(simId, simWindow);
-                ImGui::GetIO().MouseClicked[ImGuiMouseButton_Left] = false;
-                dragStartAnchor_ = anchor;
-                dragStartMouseNorm_ = screenToNorm(mouse, overlayVp_);
-                dragStartMouseDir_ = vrScreenToDir(mouse, overlayVp_);
-            };
-            // Width grip first — it sits just outside the bar so it shouldn't be shadowed by it.
-            if (vpHovered && widthDist <= handleRadius) {
-                ImGui::SetMouseCursor(resizeCursorForAxis(perp));
-                ImGui::SetHoveredID(simWindow->ID);
-                if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-                    beginDrag();
-                    dragTarget = DragTarget::Width;
-                }
-            } else if (vpHovered && p1Dist <= handleRadius) {
-                ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-                ImGui::SetHoveredID(simWindow->ID);
-                if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-                    beginDrag();
-                    dragTarget = DragTarget::P1;
-                }
-            } else if (vpHovered && p2Dist <= handleRadius) {
-                ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-                ImGui::SetHoveredID(simWindow->ID);
-                if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-                    beginDrag();
-                    dragTarget = DragTarget::P2;
-                }
-            } else if (vpHovered && centerDist <= handleRadius) {
-                ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
-                ImGui::SetHoveredID(simWindow->ID);
-                if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-                    beginDrag();
-                    isMovingSimulator = true;
-                }
-            } else {
-                if (vpHovered && pointToSegmentDist(mouse, barP1, barP2) <= handleRadius &&
-                    ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-                    ImGui::GetIO().MouseClicked[ImGuiMouseButton_Left] = false;
-                }
-                if (ImGui::GetActiveID() == simId) {
-                    ImGui::ClearActiveID();
-                }
-            }
-        }
-
-        if (dragTarget != DragTarget::None) {
-            if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
-                applyDrag(dragTarget, false);
-                eq.push(CaptureOverlayAnchorEvent{a});
-            }
-            if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-                dragTarget = DragTarget::None;
-                ImGui::ClearActiveID();
-            }
-        } else if (isMovingSimulator) {
-            if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
-                applyDrag(DragTarget::None, true);
-                eq.push(CaptureOverlayAnchorEvent{a});
-            }
-            if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
-                isMovingSimulator = false;
-                ImGui::ClearActiveID();
-            }
-        }
-    } else {
-        dragTarget = DragTarget::None;
-        isMovingSimulator = false;
-        if (ImGui::GetActiveID() == simId) {
-            ImGui::ClearActiveID();
-        }
-    }
-
-    // Right-click context menu for quick access to the 2D bar settings. The Video Player suppresses
-    // its own menu over the bar (renderOverlay reports the hover), so this is the only menu there.
-    // Kept outside the move/resize block above so it works even when the overlay is locked.
-    if (overlayVp_.valid && bar.visible && vpHovered) {
-        const ImVec2 m = ImGui::GetMousePos();
-        if (pointToSegmentDist(m, barP1, barP2) <= std::max(8.f, barWidth / 2.f) &&
-            ImGui::IsMouseClicked(ImGuiMouseButton_Right))
-            ImGui::OpenPopup("Sim2DContext");
-    }
-    if (ImGui::BeginPopup("Sim2DContext")) {
-        // Menu items push events like every other UI write — never mutate ScriptProject directly.
-        if (ImGui::BeginMenu(Str::SimDisplay.id("sim_display"))) {
-            if (ImGui::MenuItem(Str::SimIndicators.id("sim_indicators"), nullptr, state.enableIndicators))
-                eq.push(
-                    ModifyEvent<SimulatorState>{[](SimulatorState &s) { s.enableIndicators = !s.enableIndicators; }});
-            if (ImGui::MenuItem(Str::SimPosition.id("sim_position"), nullptr, state.enablePosition))
-                eq.push(ModifyEvent<SimulatorState>{[](SimulatorState &s) { s.enablePosition = !s.enablePosition; }});
-            if (ImGui::MenuItem(Str::SimHeightLines.id("sim_height_lines"), nullptr, state.enableHeightLines))
-                eq.push(
-                    ModifyEvent<SimulatorState>{[](SimulatorState &s) { s.enableHeightLines = !s.enableHeightLines; }});
-            ImGui::EndMenu();
-        }
-        if (ImGui::BeginMenu(Str::SimExtraLines.id("sim_extra_lines"))) {
-            int extra = state.extraLinesCount;
-            ImGui::SetNextItemWidth(ImGui::GetFontSize() * 9.f);
-            if (ImGui::SliderInt("##extralines", &extra, 0, 20))
-                eq.push(ModifyEvent<SimulatorState>{[extra](SimulatorState &s) { s.extraLinesCount = extra; }});
-            ImGui::EndMenu();
-        }
-        ImGui::Separator();
-        if (ImGui::MenuItem(Str::SimLocked.iconId(state.lockedPosition ? ICON_LOCK : ICON_LOCK_OPEN, "sim_locked"),
-                            nullptr, state.lockedPosition))
-            eq.push(ModifyEvent<SimulatorState>{[](SimulatorState &s) { s.lockedPosition = !s.lockedPosition; }});
-        const bool inverted = project.activeSceneView.inverted;
-        if (ImGui::MenuItem(Str::SimInvert.id("sim_invert_menu"), nullptr, inverted))
-            eq.push(CaptureSimInvertedEvent{!inverted});
-        ImGui::EndPopup();
-    }
-
+    render3D(project, eq, currentTime, state, anchor, vpHovered);
     ImGui::End();
 }
 
-bool ScriptSimulator::renderOverlay(ImDrawList *dl, const ScriptProject &project, const OverlayViewport &vp) {
-    // Stash the viewport for render()'s interaction (which runs earlier in the frame, in the
-    // Simulator window, and has no other way to reach the live video geometry).
+bool ScriptSimulator::renderOverlay(ImDrawList *dl, const ScriptProject &project, EventQueue &eq,
+                                    const OverlayViewport &vp, bool vpHovered) {
+    // Stash the viewport for render3D()'s perspective-overlay interaction, which runs earlier in the
+    // frame (in the Simulator window) and has no other way to reach the live video geometry.
     overlayVp_ = vp;
 
     if (ImGui::GetTopMostPopupModal() != nullptr)
@@ -1107,6 +809,12 @@ bool ScriptSimulator::renderOverlay(ImDrawList *dl, const ScriptProject &project
 
     const auto &state = project.simulator;
     const OverlayAnchor &anchor = project.activeSceneView.anchor;
+
+    // Middle double-click anywhere on the video recenters the overlay (2D bar or 3D model), alongside
+    // the video player's own middle double-click reset of pan/zoom — one "reset view" gesture. A locked
+    // overlay stays put (same as drag), so the video reset doesn't drag the overlay out from under it.
+    if (vpHovered && !state.lockedPosition && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Middle))
+        eq.push(CaptureOverlayAnchorEvent{centeredAnchor(anchor, vp)});
 
     if (state.use3dSimulator) {
         if (strokerNode == nullptr)
@@ -1286,6 +994,269 @@ bool ScriptSimulator::renderOverlay(ImDrawList *dl, const ScriptProject &project
     if (!bar.visible) // bar anchored off-screen (VR) — hide it
         return false;
 
+    // ---- 2D bar interaction ----
+    // Runs here (inside the video player window) rather than in render(), so the bar stays draggable
+    // even though the Simulator window is hidden in 2D mode. Scoped so its hit-test geometry doesn't
+    // collide with the drawing geometry below. Drags update the anchor (content space) and push a
+    // capture; preview_ is set here and consumed by the drawing pass below in the same frame.
+    {
+        const double currentTime = project.playback.cursorPos;
+        const ImGuiID simId = ImGui::GetID("ActualSimulator");
+        ImGui::KeepAliveID(simId);
+
+        const bool vr = vp.mode == VideoMode::VrMode;
+
+        // Bar geometry — used for drag-handle hit-testing. Thickness is content-space (scales with zoom).
+        const float barWidth = bar.thickness;
+        const float borderWidth = barWidth * kBorderRatio;
+        const ImVec2 direction = simNormalize(bar.p1 - bar.p2);
+        const ImVec2 perp{-direction.y, direction.x};
+        const ImVec2 barP1 = bar.p1 - (direction * (borderWidth / 2.f));
+        const ImVec2 barP2 = bar.p2 + (direction * (borderWidth / 2.f));
+        const float barLen = simDistance(barP1, barP2);
+        const ImVec2 barCenter = barP2 + (direction * (barLen / 2.f));
+        // Width grip sits just outside the bar edge, perpendicular to it.
+        const float gripOffset = barWidth * 0.5f + 10.f;
+        const ImVec2 widthGrip = barCenter + perp * gripOffset;
+        // VR bar's angular length + on-screen length, used to convert a perpendicular pixel drag of the
+        // width grip into an angular width (keeps thickness ↔ widthAngle consistent with barScreen()).
+        const float vrAngLen = vr ? std::acos(std::clamp(glm::dot(vrcam::sphereDir(anchor.vrBarP1.x, anchor.vrBarP1.y),
+                                                                  vrcam::sphereDir(anchor.vrBarP2.x, anchor.vrBarP2.y)),
+                                                         -1.0f, 1.0f))
+                                  : 0.f;
+        const float vrScreenLen = simDistance(bar.p1, bar.p2);
+
+        OverlayAnchor a = anchor; // working copy; pushed as a capture on change
+
+        // Apply the live drag for `target` to the working anchor `a`. VR endpoints re-pin to the cursor
+        // direction; VR center rigid-rotates both endpoints by the cursor's spherical displacement; the
+        // width grip maps the cursor's perpendicular distance from the bar axis to the bar thickness.
+        const auto applyDrag = [&](DragTarget target, bool moveCenter) {
+            const ImVec2 mouse = ImGui::GetMousePos();
+            const float perpPx = std::abs((mouse.x - barCenter.x) * perp.x + (mouse.y - barCenter.y) * perp.y);
+            if (vr) {
+                if (target == DragTarget::Width) {
+                    a.vrBarWidthAngle =
+                        std::max(0.01f, (vrScreenLen > 1.f) ? 2.f * perpPx * (vrAngLen / vrScreenLen) : 0.06f);
+                } else if (target == DragTarget::P1) {
+                    vrcam::dirToYawPitch(vrScreenToDir(mouse, vp), a.vrBarP1.x, a.vrBarP1.y);
+                } else if (target == DragTarget::P2) {
+                    vrcam::dirToYawPitch(vrScreenToDir(mouse, vp), a.vrBarP2.x, a.vrBarP2.y);
+                } else if (moveCenter) {
+                    const glm::quat q = rotationBetween(dragStartMouseDir_, vrScreenToDir(mouse, vp));
+                    const glm::vec3 n1 = q * vrcam::sphereDir(dragStartAnchor_.vrBarP1.x, dragStartAnchor_.vrBarP1.y);
+                    const glm::vec3 n2 = q * vrcam::sphereDir(dragStartAnchor_.vrBarP2.x, dragStartAnchor_.vrBarP2.y);
+                    vrcam::dirToYawPitch(n1, a.vrBarP1.x, a.vrBarP1.y);
+                    vrcam::dirToYawPitch(n2, a.vrBarP2.x, a.vrBarP2.y);
+                }
+                return;
+            }
+            if (target == DragTarget::Width) {
+                a.widthNorm = std::max(0.01f, 2.f * perpPx / std::max(1.f, vp.imageSize.y));
+                return;
+            }
+            const ImVec2 deltaNorm = screenToNorm(mouse, vp) - dragStartMouseNorm_;
+            constexpr float kMinBarLenNorm = 0.05f; // min length so an endpoint can't cross the other and invert
+            if (moveCenter) {
+                a.p1Norm = dragStartAnchor_.p1Norm + deltaNorm;
+                a.p2Norm = dragStartAnchor_.p2Norm + deltaNorm;
+            } else if (target == DragTarget::P1) {
+                a.p1Norm = clampBarEndpoint(dragStartAnchor_.p1Norm + deltaNorm, a.p2Norm, dragStartAnchor_.p1Norm,
+                                            kMinBarLenNorm);
+            } else if (target == DragTarget::P2) {
+                a.p2Norm = clampBarEndpoint(dragStartAnchor_.p2Norm + deltaNorm, a.p1Norm, dragStartAnchor_.p2Norm,
+                                            kMinBarLenNorm);
+            }
+        };
+
+        // Shift-hover preview & place: project the cursor onto the bar axis to a 0..1 displayed value,
+        // show the bar at it (the drawing pass reads preview_), and place an action on the active axis on
+        // a left-click. Works even when locked; takes precedence over move/resize and is skipped mid-drag
+        // so pressing Shift during a drag can't hijack it.
+        const auto activeRole = project.state.activeAxis;
+        const bool activePresent = activeRole < StandardAxis::Count;
+        bool shiftPlace = false;
+        if (ImGui::GetIO().KeyShift && activePresent && vpHovered && dragTarget == DragTarget::None &&
+            !isMovingSimulator) {
+            const ImVec2 mouse = ImGui::GetMousePos();
+            // Generous grab band around the (thin) bar so the cursor needn't sit exactly on it.
+            if (pointToSegmentDist(mouse, barP1, barP2) <= std::max(barWidth, ImGui::GetFontSize() * 2.f)) {
+                shiftPlace = true;
+                const float t = std::clamp(((mouse.x - barP2.x) * direction.x + (mouse.y - barP2.y) * direction.y) /
+                                               std::max(1.f, barLen),
+                                           0.f, 1.f);
+                preview_.active = true;
+                preview_.axis = activeRole;
+                preview_.displayedValue = t;
+                ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+                ImGui::SetHoveredID(ImGui::GetCurrentWindowRead()->ID);
+                if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+                    const bool inv = project.activeSceneView.inverted;
+                    const float stored = inv ? 1.f - t : t;
+                    eq.push(EditRequestEvent{
+                        .intent = {.kind = EditIntentKind::AddPoint,
+                                   .axis = activeRole,
+                                   .time = currentTime,
+                                   .pos = std::clamp(static_cast<int>(std::lround(stored * 100.f)), 0, 100)}});
+                    ImGui::GetIO().MouseClicked[ImGuiMouseButton_Left] = false;
+                }
+            }
+        }
+
+        if (shiftPlace) {
+            dragTarget = DragTarget::None;
+            isMovingSimulator = false;
+        } else if (!state.lockedPosition) {
+            const ImVec2 mouse = ImGui::GetMousePos();
+            const float p1Dist = simDistance(mouse, barP1);
+            const float p2Dist = simDistance(mouse, barP2);
+            const float centerDist = simDistance(mouse, barCenter);
+            const float widthDist = simDistance(mouse, widthGrip);
+            const float handleRadius = std::max(8.f, barWidth / 2.f);
+
+            ImGuiWindow *const simWindow = ImGui::GetCurrentWindowRead();
+
+            // Register the handles as addressable, non-interactive items so UI tests can anchor to them
+            // via ItemInfo. The actual hit-testing stays distance-based below; ItemAdd consumes no input.
+            const ImVec2 handleExtent{handleRadius, handleRadius};
+            ImGui::ItemAdd(ImRect(barP1 - handleExtent, barP1 + handleExtent), ImGui::GetID("##sim_p1"), nullptr,
+                           ImGuiItemFlags_NoNav);
+            ImGui::ItemAdd(ImRect(barP2 - handleExtent, barP2 + handleExtent), ImGui::GetID("##sim_p2"), nullptr,
+                           ImGuiItemFlags_NoNav);
+            ImGui::ItemAdd(ImRect(barCenter - handleExtent, barCenter + handleExtent), ImGui::GetID("##sim_center"),
+                           nullptr, ImGuiItemFlags_NoNav);
+            ImGui::ItemAdd(ImRect(widthGrip - handleExtent, widthGrip + handleExtent), ImGui::GetID("##sim_width"),
+                           nullptr, ImGuiItemFlags_NoNav);
+
+            if (dragTarget == DragTarget::Width) {
+                ImGui::SetMouseCursor(resizeCursorForAxis(perp));
+                ImGui::SetActiveID(simId, simWindow);
+            } else if (dragTarget != DragTarget::None) {
+                ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+                ImGui::SetActiveID(simId, simWindow);
+            } else if (isMovingSimulator) {
+                ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
+                ImGui::SetActiveID(simId, simWindow);
+            }
+
+            if (dragTarget == DragTarget::None && !isMovingSimulator) {
+                const auto beginDrag = [&]() {
+                    ImGui::SetActiveID(simId, simWindow);
+                    ImGui::GetIO().MouseClicked[ImGuiMouseButton_Left] = false;
+                    dragStartAnchor_ = anchor;
+                    dragStartMouseNorm_ = screenToNorm(mouse, vp);
+                    dragStartMouseDir_ = vrScreenToDir(mouse, vp);
+                };
+                // Width grip first — it sits just outside the bar so it shouldn't be shadowed by it.
+                if (vpHovered && widthDist <= handleRadius) {
+                    ImGui::SetMouseCursor(resizeCursorForAxis(perp));
+                    ImGui::SetHoveredID(simWindow->ID);
+                    if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+                        beginDrag();
+                        dragTarget = DragTarget::Width;
+                    }
+                } else if (vpHovered && p1Dist <= handleRadius) {
+                    ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+                    ImGui::SetHoveredID(simWindow->ID);
+                    if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+                        beginDrag();
+                        dragTarget = DragTarget::P1;
+                    }
+                } else if (vpHovered && p2Dist <= handleRadius) {
+                    ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+                    ImGui::SetHoveredID(simWindow->ID);
+                    if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+                        beginDrag();
+                        dragTarget = DragTarget::P2;
+                    }
+                } else if (vpHovered && centerDist <= handleRadius) {
+                    ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
+                    ImGui::SetHoveredID(simWindow->ID);
+                    if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+                        beginDrag();
+                        isMovingSimulator = true;
+                    }
+                } else {
+                    if (vpHovered && pointToSegmentDist(mouse, barP1, barP2) <= handleRadius &&
+                        ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+                        ImGui::GetIO().MouseClicked[ImGuiMouseButton_Left] = false;
+                    }
+                    if (ImGui::GetActiveID() == simId) {
+                        ImGui::ClearActiveID();
+                    }
+                }
+            }
+
+            if (dragTarget != DragTarget::None) {
+                if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+                    applyDrag(dragTarget, false);
+                    eq.push(CaptureOverlayAnchorEvent{a});
+                }
+                if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+                    dragTarget = DragTarget::None;
+                    ImGui::ClearActiveID();
+                }
+            } else if (isMovingSimulator) {
+                if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
+                    applyDrag(DragTarget::None, true);
+                    eq.push(CaptureOverlayAnchorEvent{a});
+                }
+                if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
+                    isMovingSimulator = false;
+                    ImGui::ClearActiveID();
+                }
+            }
+        } else {
+            dragTarget = DragTarget::None;
+            isMovingSimulator = false;
+            if (ImGui::GetActiveID() == simId) {
+                ImGui::ClearActiveID();
+            }
+        }
+
+        // Right-click context menu for quick access to the 2D bar settings. The Video Player suppresses
+        // its own menu over the bar (this function reports the hover), so this is the only menu there.
+        // Kept outside the move/resize block above so it works even when the overlay is locked.
+        if (vpHovered) {
+            const ImVec2 m = ImGui::GetMousePos();
+            if (pointToSegmentDist(m, barP1, barP2) <= std::max(8.f, barWidth / 2.f) &&
+                ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+                ImGui::OpenPopup("Sim2DContext");
+        }
+        if (ImGui::BeginPopup("Sim2DContext")) {
+            // Menu items push events like every other UI write — never mutate ScriptProject directly.
+            if (ImGui::BeginMenu(Str::SimDisplay.id("sim_display"))) {
+                if (ImGui::MenuItem(Str::SimIndicators.id("sim_indicators"), nullptr, state.enableIndicators))
+                    eq.push(ModifyEvent<SimulatorState>{
+                        [](SimulatorState &s) { s.enableIndicators = !s.enableIndicators; }});
+                if (ImGui::MenuItem(Str::SimPosition.id("sim_position"), nullptr, state.enablePosition))
+                    eq.push(
+                        ModifyEvent<SimulatorState>{[](SimulatorState &s) { s.enablePosition = !s.enablePosition; }});
+                if (ImGui::MenuItem(Str::SimHeightLines.id("sim_height_lines"), nullptr, state.enableHeightLines))
+                    eq.push(ModifyEvent<SimulatorState>{
+                        [](SimulatorState &s) { s.enableHeightLines = !s.enableHeightLines; }});
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu(Str::SimExtraLines.id("sim_extra_lines"))) {
+                int extra = state.extraLinesCount;
+                ImGui::SetNextItemWidth(ImGui::GetFontSize() * 9.f);
+                if (ImGui::SliderInt("##extralines", &extra, 0, 20))
+                    eq.push(ModifyEvent<SimulatorState>{[extra](SimulatorState &s) { s.extraLinesCount = extra; }});
+                ImGui::EndMenu();
+            }
+            ImGui::Separator();
+            if (ImGui::MenuItem(Str::SimLocked.iconId(state.lockedPosition ? ICON_LOCK : ICON_LOCK_OPEN, "sim_locked"),
+                                nullptr, state.lockedPosition))
+                eq.push(ModifyEvent<SimulatorState>{[](SimulatorState &s) { s.lockedPosition = !s.lockedPosition; }});
+            if (ImGui::MenuItem(Str::Sim3D.id("sim_3d_menu_2d"), nullptr, state.use3dSimulator))
+                eq.push(ModifyEvent<SimulatorState>{[](SimulatorState &s) { s.use3dSimulator = !s.use3dSimulator; }});
+            const bool inverted = project.activeSceneView.inverted;
+            if (ImGui::MenuItem(Str::SimInvert.id("sim_invert_menu"), nullptr, inverted))
+                eq.push(CaptureSimInvertedEvent{!inverted});
+            ImGui::EndPopup();
+        }
+    }
+
     const ofs::theme::Theme &theme = ofs::theme::getActive();
     // Thickness is content-space (scales with zoom); border/line widths derive from it.
     const float barWidth = bar.thickness;
@@ -1439,8 +1410,11 @@ bool ScriptSimulator::renderOverlay(ImDrawList *dl, const ScriptProject &project
     }
 
     dl->PopClipRect();
-    // Report hover so the Video Player suppresses its context menu over the bar.
-    return pointToSegmentDist(ImGui::GetMousePos(), barP1, barP2) <= std::max(8.f, barWidth / 2.f);
+    // Report hover so the Video Player suppresses its context menu — and its pan grab — over the bar.
+    // A live drag/resize counts too: the width grip sits just outside the bar band, so a grip drag
+    // would otherwise read as "not over the bar" and let the video start panning underneath it.
+    return dragTarget != DragTarget::None || isMovingSimulator ||
+           pointToSegmentDist(ImGui::GetMousePos(), barP1, barP2) <= std::max(8.f, barWidth / 2.f);
 }
 
 } // namespace ofs
