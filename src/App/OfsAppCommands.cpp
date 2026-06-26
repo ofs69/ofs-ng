@@ -519,14 +519,14 @@ void OfsApp::initCommands() {
         "player.speed-down", "Player", Str::CmdPlayerSpeedDown,
         [this](ofs::EventQueue &eq) {
             if (player)
-                eq.push(ofs::PlaybackSpeedEvent{player->getPlaybackSpeed() - 0.05f});
+                eq.push(ofs::PlaybackSpeedEvent{player->getPlaybackSpeed() - 0.1f});
         },
         SDLK_KP_MINUS, SDL_KMOD_NONE);
     regHold(
         "player.speed-up", "Player", Str::CmdPlayerSpeedUp,
         [this](ofs::EventQueue &eq) {
             if (player)
-                eq.push(ofs::PlaybackSpeedEvent{player->getPlaybackSpeed() + 0.05f});
+                eq.push(ofs::PlaybackSpeedEvent{player->getPlaybackSpeed() + 0.1f});
         },
         SDLK_KP_PLUS, SDL_KMOD_NONE);
     // Palette-visible (reg, not regBind): these ship with no default key, so without a palette slot

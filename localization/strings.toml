@@ -1856,11 +1856,11 @@ description = "Command title: decrease the playback volume."
 
 [CmdPlayerSpeedDown]
 english     = "Decrease Speed"
-description = "Command title: decrease the playback speed by 0.05×."
+description = "Command title: decrease the playback speed by 0.1×."
 
 [CmdPlayerSpeedUp]
 english     = "Increase Speed"
-description = "Command title: increase the playback speed by 0.05×."
+description = "Command title: increase the playback speed by 0.1×."
 
 [CmdPlayerGotoStart]
 english     = "Go to Start"
