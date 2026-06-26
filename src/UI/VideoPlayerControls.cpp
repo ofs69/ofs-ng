@@ -718,12 +718,25 @@ void VideoControlsWindow::render(const ScriptProject &project, EventQueue &eq, V
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted(Str::VpcSpeed);
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(-FLT_MIN);
         float currentSpeed = videoPlayer.getPlaybackSpeed();
-        if (ImGui::SliderFloat("##Speed", &currentSpeed, 0.1f, 2.0f, "%.2fx", ImGuiSliderFlags_AlwaysClamp)) {
-            currentSpeed = std::round(currentSpeed / 0.1f) * 0.1f;
-            eq.push(PlaybackSpeedEvent{currentSpeed});
+        if (ImGui::Button(ICON_CHEVRON_UP "##speed_presets"))
+            ImGui::OpenPopup("##speed_ctx");
+        // Controls live at the bottom of the screen, so anchor the popup's lower-left to the
+        // button's top-left (pivot y=1) to force it to grow upward.
+        const ImVec2 btnTopLeft = ImGui::GetItemRectMin();
+        ImGui::SetNextWindowPos(btnTopLeft, ImGuiCond_Always, ImVec2(0.0f, 1.0f));
+        if (ImGui::BeginPopup("##speed_ctx")) {
+            static constexpr float kSpeedPresets[] = {0.1f, 0.25f, 0.5f, 0.75f, 1.0f, 2.0f};
+            for (float preset : kSpeedPresets) {
+                if (ImGui::Selectable(fmtScratch("{:g}x", preset), currentSpeed == preset))
+                    eq.push(PlaybackSpeedEvent{preset});
+            }
+            ImGui::EndPopup();
         }
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(-FLT_MIN);
+        if (ImGui::SliderFloat("##Speed", &currentSpeed, 0.1f, 2.0f, "%.2fx", ImGuiSliderFlags_AlwaysClamp))
+            eq.push(PlaybackSpeedEvent{currentSpeed});
 
         ImGui::EndTable();
     }
