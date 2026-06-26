@@ -328,25 +328,29 @@ description = "Optimize-prompt modal: button that opens the optimize options dia
 english     = "Not now"
 description = "Optimize-prompt modal: button that dismisses the prompt without optimizing."
 
-[TranscodeProgressTitle]
-english     = "Optimizing Video"
-description = "Intra-frame optimize progress modal: window title."
+[TranscodeTaskLabel]
+english     = "Optimizing video"
+description = "Background-task indicator: title of the running video-optimize (transcode) entry in the footer."
+
+[TranscodeDone]
+english     = "Video optimization complete"
+description = "Notification shown when an intra-frame video optimization finishes successfully."
 
 [TranscodePhaseProbing]
 english     = "Analyzing…"
-description = "Intra-frame optimize progress modal: phase label while probing the source."
+description = "Background-task indicator: detail line while probing the source video."
 
 [TranscodePhaseEncoding]
 english     = "Encoding…"
-description = "Intra-frame optimize progress modal: phase label while encoding the all-keyframe copy."
+description = "Background-task indicator: detail line while encoding the all-keyframe copy (until a speed is known)."
 
 [TranscodePhaseVerifying]
 english     = "Verifying…"
-description = "Intra-frame optimize progress modal: phase label while verifying the output duration."
+description = "Background-task indicator: detail line while verifying the output duration."
 
 [TranscodeStats]
 english      = "{0}× · {1} remaining"
-description  = "Intra-frame optimize progress modal: encode speed and estimated time remaining."
+description  = "Background-task indicator: encode speed and estimated time remaining, as the task's detail line."
 placeholders = [
     "{0} = encode speed multiple, e.g. 2.4",
     "{1} = estimated time remaining, M:SS, e.g. 1:23",
@@ -354,50 +358,42 @@ placeholders = [
 
 [TranscodeFailed]
 english     = "Optimization failed"
-description = "Intra-frame optimize progress modal: heading shown when the transcode failed."
+description = "Notification heading shown when a video optimization fails (the ffmpeg detail follows)."
 
-[TranscodeCancelled]
-english     = "Optimization cancelled"
-description = "Intra-frame optimize progress modal: heading shown when the transcode was cancelled."
-
-[TranscodeClose]
-english     = "Close"
-description = "Intra-frame optimize progress modal: button to dismiss the modal after a failure/cancel."
-
-[WaveformProgressTitle]
-english     = "Processing Audio Waveform"
-description = "Audio-waveform extraction progress modal: window title."
+[WaveformTaskLabel]
+english     = "Audio waveform"
+description = "Background-task indicator: title of the running audio-waveform extraction entry in the footer."
 
 [WaveformProbing]
 english     = "Analyzing audio…"
-description = "Audio-waveform extraction progress modal: phase label while probing the media duration."
+description = "Background-task indicator: detail line while probing the media duration."
 
 [WaveformExtracting]
 english     = "Extracting waveform…"
-description = "Audio-waveform extraction progress modal: phase label while decoding audio into the waveform."
+description = "Background-task indicator: detail line while decoding audio (shown until an ETA is known)."
 
 [WaveformEta]
 english      = "About {0} remaining"
-description  = "Audio-waveform extraction progress modal: estimated time remaining, below the progress bar."
+description  = "Background-task indicator: estimated time remaining, shown as the task's detail line."
 placeholders = [
     "{0} = formatted time remaining, e.g. 1:23",
 ]
 
 [WaveformFailed]
 english     = "Could not extract audio — the media may have no audio track."
-description = "Audio-waveform extraction progress modal: message shown when extraction fails."
+description = "Notification shown when audio-waveform extraction fails."
 
-[WaveformCancelled]
-english     = "Cancelled"
-description = "Audio-waveform extraction progress modal: heading shown when the user cancelled extraction."
-
-[WaveformCancel]
+[TaskCancel]
 english     = "Cancel"
-description = "Audio-waveform extraction progress modal: button to abort the running extraction."
+description = "Background-task indicator: label of the button that aborts a running task."
 
-[WaveformClose]
-english     = "Close"
-description = "Audio-waveform extraction progress modal: button to dismiss the modal after a failure/cancel."
+[TaskHide]
+english     = "Hide"
+description = "Background-task indicator: tooltip on the button that minimizes a running task into the footer bell."
+
+[TaskShow]
+english     = "Show"
+description = "Footer bell popup: tooltip on the button that restores a minimized task to a floating panel."
 
 [TlpDelta]
 english      = "Δ {0}"
@@ -3045,6 +3041,10 @@ description = "Command palette — shown when the query matches no command."
 [FtNotifications]
 english     = "Notifications"
 description = "Footer bell popup — heading above the notification log."
+
+[FtRunningTasks]
+english     = "Running tasks"
+description = "Footer bell popup — section heading above the list of background tasks minimized into the bell."
 
 [FtClearAll]
 english     = "Clear all"

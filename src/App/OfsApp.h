@@ -125,19 +125,17 @@ class OfsApp : public ofs::Application {
         }
         return fn(editModeRegistry, scriptProject.activeEditMode); // unreachable; keeps a defined return path
     }
-    bool renderExportFunscriptBody();  // interior of the Export modal; returns true to close
-    void openExportFunscriptModal();   // populate axis options + show the Export modal
-    void onQuickExport();              // replay the project's last export, or open the modal if none yet
-    void openTranscodeOptionsModal();  // build + show the intra-frame optimize options modal
-    void promptForMissingIntraDir();   // alert + force re-pick when the configured output folder is gone
-    void pickIntraOutputDir();         // open the folder picker, persist the choice, re-open the options modal
-    void openTranscodeProgressModal(); // show the blocking progress modal that mirrors ScriptProject::transcode
-    void openWaveformProgressModal();  // show the blocking progress modal that mirrors ScriptProject::waveform
-    void maybeOfferOptimize();         // consume optimizePromptPending once media is ready; offer the prompt
-    bool renderNewLayoutBody();        // interior of the New Layout modal; returns true to close
-    void saveActiveLayout();           // snapshot current dock arrangement into the active preset
-    void revertToActiveLayout();       // reload the active layout's saved state, discarding live tweaks
-    void initCommands();               // registers all Commands + default KeyChord bindings
+    bool renderExportFunscriptBody(); // interior of the Export modal; returns true to close
+    void openExportFunscriptModal();  // populate axis options + show the Export modal
+    void onQuickExport();             // replay the project's last export, or open the modal if none yet
+    void openTranscodeOptionsModal(); // build + show the intra-frame optimize options modal
+    void promptForMissingIntraDir();  // alert + force re-pick when the configured output folder is gone
+    void pickIntraOutputDir();        // open the folder picker, persist the choice, re-open the options modal
+    void maybeOfferOptimize();        // consume optimizePromptPending once media is ready; offer the prompt
+    bool renderNewLayoutBody();       // interior of the New Layout modal; returns true to close
+    void saveActiveLayout();          // snapshot current dock arrangement into the active preset
+    void revertToActiveLayout();      // reload the active layout's saved state, discarding live tweaks
+    void initCommands();              // registers all Commands + default KeyChord bindings
     void onSeekEvent(const ofs::SeekEvent &event);
 
     // Live global hold-repeat cadence, read fresh each tick so Shortcut-window edits apply instantly.
@@ -206,11 +204,6 @@ class OfsApp : public ofs::Application {
     // Latched on LoadProjectEvent; consumed once the opened project's video is actually loaded, to offer
     // optimizing an unoptimized source. Deferred (not handled at load) because the video loads async.
     bool optimizePromptPending = false;
-
-    // True while the waveform-extraction progress modal is up. Set on the rising edge of
-    // ScriptProject::waveform.active (onUpdate); cleared by the modal body when it closes, so a later
-    // extraction re-raises exactly one modal (no FIFO stacking).
-    bool waveformModalShown_ = false;
 
     // Which mode's options to open, latched by OpenToolOptionsEvent (footer affordance or palette command)
     // and consumed in onImGuiRender to raise the click-away modal (showCustomModal). Latched (not raised

@@ -3,6 +3,7 @@
 #include "Core/Events.h"
 #include "Core/IntentEvents.h"
 #include "Core/StandardAxis.h"
+#include "Core/TaskEvents.h"
 #include "Format/AppSettings.h"
 #include "Localization/AxisNames.h"
 #include "Localization/Translator.h"
@@ -195,6 +196,13 @@ bool OfsApp::init() {
     // Footer notification center. NotifyEvent is the generic push channel; script-compile failures
     // are wired here too so Roslyn errors surface in the UI instead of only the log.
     eventQueue.on<ofs::NotifyEvent>([this](const ofs::NotifyEvent &e) { notifications.push(e.level, e.message); });
+    // Generic non-blocking background-task indicators (waveform extraction, …): services push these to
+    // surface a footer progress entry instead of a blocking modal. The handlers only touch UI state.
+    eventQueue.on<ofs::TaskStartedEvent>(
+        [this](const ofs::TaskStartedEvent &e) { notifications.startTask(e.id, e.label, e.cancellable); });
+    eventQueue.on<ofs::TaskProgressEvent>(
+        [this](const ofs::TaskProgressEvent &e) { notifications.updateTask(e.id, e.detail, e.progress); });
+    eventQueue.on<ofs::TaskEndedEvent>([this](const ofs::TaskEndedEvent &e) { notifications.endTask(e.id); });
     // Footer affordance / palette command → latch which mode's options to open; onImGuiRender raises the
     // click-away modal inside a live frame (so its width is font-relative, like every showCustomModal).
     eventQueue.on<ofs::OpenToolOptionsEvent>(
@@ -416,6 +424,13 @@ OfsApp::~OfsApp() {
     // members destruct after this body (and jobSystem, declared first, destructs last), a job still running
     // here would otherwise outlive those services and a faulting node would report through a freed HostApi —
     // an intermittent AccessViolation seen at headless-test shutdown. Quiescing first closes that window.
+    // First signal the fire-and-forget workers (ffmpeg-backed extraction/encode) to abort: shutdown()
+    // blocks on pool->wait(), and these tasks only stop when their cancel flag is set — without this a
+    // long decode/encode stalls close until it finishes on its own.
+    if (waveformService)
+        waveformService->cancelInFlight();
+    if (videoTranscoder)
+        videoTranscoder->cancelInFlight();
     jobSystem.shutdown();
 
     for (auto &[id, gpad] : gamepads_)
@@ -460,15 +475,6 @@ void OfsApp::onUpdate(float dt) {
     // the update phase so resumed business logic / ScriptProject mutations stay out of render.
     if (modalManager)
         modalManager->pump();
-
-    // Raise the waveform-extraction progress modal on the rising edge of an active extraction (the
-    // WaveformService set waveform.active during the drain above). The latch is cleared by the modal body
-    // when it closes, so a subsequent extraction re-raises it; a cache hit never sets active, so no modal
-    // flashes for it.
-    if (scriptProject.waveform.active && !waveformModalShown_) {
-        waveformModalShown_ = true;
-        openWaveformProgressModal();
-    }
 
     // Keep the registry-resident provider commands in step with the mode set / scratch-axis existence / UI
     // language (all can change via events just drained — plugin load/unload, scratch create/delete, language
@@ -883,9 +889,10 @@ void OfsApp::onImGuiRender() {
     else
         welcomeScreen->render(eventQueue, appSettings);
 
-    // Cross-cutting overlays render after the body on both screens: toasts above all docked windows,
-    // then modals last so a blocking dialog (e.g. the New/Open picker reached from the welcome screen)
-    // stacks above everything.
+    // Cross-cutting overlays render after the body on both screens: the background-task stack and toasts
+    // above all docked windows (tasks first so renderToasts can float above them), then modals last so a
+    // blocking dialog (e.g. the New/Open picker reached from the welcome screen) stacks above everything.
+    ofs::ui::renderTasks(notifications, eventQueue);
     ofs::ui::renderToasts(notifications);
     if (modalManager)
         modalManager->render();
@@ -1443,7 +1450,6 @@ void OfsApp::openTranscodeOptionsModal() {
              if (*pendingReuse >= 0) {
                  cfg->reuseIfExists = *pendingReuse == 1;
                  eventQueue.push(ofs::TranscodeRequestEvent{*cfg});
-                 openTranscodeProgressModal();
                  return true;
              }
 
@@ -1553,12 +1559,11 @@ void OfsApp::openTranscodeOptionsModal() {
              if (exists)
                  ImGui::TextColored(ofs::theme::GetStyleColorVec4(AppCol_Warning), "%s", Str::TranscodeExists.c_str());
 
-             // Helper to kick off a run with the current config (outputPath was resolved at open) and
-             // hand over to the progress modal.
+             // Kick off a run with the current config (outputPath was resolved at open). Progress shows in
+             // the footer task indicator — no modal.
              auto start = [&](bool reuse) {
                  cfg->reuseIfExists = reuse;
                  eventQueue.push(ofs::TranscodeRequestEvent{*cfg});
-                 openTranscodeProgressModal();
              };
 
              // Gate a re-encode whose output is still beyond 4K after the chosen scale: an all-intra copy
@@ -1642,102 +1647,6 @@ void OfsApp::promptForMissingIntraDir() {
                           if (idx == 0) // 0 = Choose Folder; 1 = Cancel, -1 = dismissed
                               pickIntraOutputDir();
                       });
-}
-
-void OfsApp::openTranscodeProgressModal() {
-    // Blocking modal: reads the transient ScriptProject::transcode mirror each frame (one-frame latency,
-    // like the rest of the app) and never talks to the service except a Cancel push.
-    ofs::showCustomModal(
-        eventQueue,
-        {.title = Str::TranscodeProgressTitle.c_str(),
-         .width = ImGui::GetFontSize() * 26.0f,
-         .body = [proj = &scriptProject, eqp = &eventQueue]() -> bool {
-             const auto &t = proj->transcode;
-
-             if (t.phase == ofs::TranscodePhase::Done)
-                 return true; // media already switched by the service
-
-             if (t.phase == ofs::TranscodePhase::Failed || t.phase == ofs::TranscodePhase::Cancelled) {
-                 const bool cancelled = t.phase == ofs::TranscodePhase::Cancelled;
-                 ImGui::TextColored(ofs::theme::GetStyleColorVec4(AppCol_Error), "%s",
-                                    cancelled ? Str::TranscodeCancelled.c_str() : Str::TranscodeFailed.c_str());
-                 if (!t.error.empty()) {
-                     ImGui::PushTextWrapPos(0.0f);
-                     ImGui::TextUnformatted(t.error.c_str());
-                     ImGui::PopTextWrapPos();
-                 }
-                 ImGui::Separator();
-                 return ImGui::Button(Str::TranscodeClose.id("intra_prog_close"));
-             }
-
-             const char *phaseLabel = Str::TranscodePhaseEncoding.c_str();
-             if (t.phase == ofs::TranscodePhase::Probing)
-                 phaseLabel = Str::TranscodePhaseProbing.c_str();
-             else if (t.phase == ofs::TranscodePhase::Verifying)
-                 phaseLabel = Str::TranscodePhaseVerifying.c_str();
-             ImGui::TextUnformatted(phaseLabel);
-
-             // Output basename without a per-frame std::string (substring of the UTF-8 path c_str).
-             if (!t.outputPath.empty()) {
-                 const size_t slash = t.outputPath.find_last_of("/\\");
-                 ImGui::TextDisabled("%s", t.outputPath.c_str() + (slash == std::string::npos ? 0 : slash + 1));
-             }
-
-             ImGui::ProgressBar(static_cast<float>(t.progress), ImVec2(-FLT_MIN, 0.0f));
-
-             if (t.phase == ofs::TranscodePhase::Encoding && t.speed > 0.0) {
-                 const int etaS = static_cast<int>(std::llround(t.etaSeconds));
-                 ImGui::TextDisabled("%s", Str::TranscodeStats.fmt(fmtScratch("{:.1f}", t.speed),
-                                                                   fmtScratch("{}:{:02d}", etaS / 60, etaS % 60)));
-             }
-
-             ImGui::Separator();
-             if (ImGui::Button(Str::TranscodeCancel.id("intra_prog_cancel")))
-                 eqp->push(ofs::CancelTranscodeEvent{});
-             return false; // stays up until the worker reports done/failed/cancelled
-         }});
-}
-
-void OfsApp::openWaveformProgressModal() {
-    // Blocking modal that mirrors ScriptProject::waveform (set by WaveformService each frame). `shownFlag`
-    // is OfsApp::waveformModalShown_: cleared when this modal closes so a later extraction re-raises it.
-    ofs::showCustomModal(
-        eventQueue,
-        {.title = Str::WaveformProgressTitle.c_str(),
-         .width = ImGui::GetFontSize() * 22.0f,
-         .body = [proj = &scriptProject, eqp = &eventQueue, shownFlag = &waveformModalShown_]() -> bool {
-             const auto &w = proj->waveform;
-
-             if (w.phase == ofs::WaveformPhase::Done || w.phase == ofs::WaveformPhase::Idle) {
-                 *shownFlag = false;
-                 return true; // finished (or cleared by a toggle-off / media close): close
-             }
-
-             if (w.phase == ofs::WaveformPhase::Failed || w.phase == ofs::WaveformPhase::Cancelled) {
-                 const bool cancelled = w.phase == ofs::WaveformPhase::Cancelled;
-                 ImGui::TextColored(ofs::theme::GetStyleColorVec4(AppCol_Error), "%s",
-                                    cancelled ? Str::WaveformCancelled.c_str() : Str::WaveformFailed.c_str());
-                 ImGui::Separator();
-                 if (ImGui::Button(Str::WaveformClose.id("wf_prog_close"))) {
-                     *shownFlag = false;
-                     return true;
-                 }
-                 return false;
-             }
-
-             ImGui::TextUnformatted(w.phase == ofs::WaveformPhase::Probing ? Str::WaveformProbing.c_str()
-                                                                           : Str::WaveformExtracting.c_str());
-             ImGui::ProgressBar(static_cast<float>(w.progress), ImVec2(-FLT_MIN, 0.0f));
-             if (w.phase == ofs::WaveformPhase::Extracting && w.etaSeconds >= 0.0) {
-                 const auto secs = static_cast<int>(std::lround(w.etaSeconds));
-                 ImGui::TextUnformatted(Str::WaveformEta.fmt(fmtScratch("{}:{:02}", secs / 60, secs % 60)));
-             }
-
-             ImGui::Separator();
-             if (ImGui::Button(Str::WaveformCancel.id("wf_prog_cancel")))
-                 eqp->push(ofs::CancelWaveformEvent{});
-             return false; // stays up until the worker reports done/failed/cancelled
-         }});
 }
 
 void OfsApp::maybeOfferOptimize() {

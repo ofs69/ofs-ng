@@ -311,9 +311,13 @@ translation = "最適化…"
 english     = "Not now"
 translation = "後で"
 
-[TranscodeProgressTitle]
-english     = "Optimizing Video"
+[TranscodeTaskLabel]
+english     = "Optimizing video"
 translation = "動画を最適化中"
+
+[TranscodeDone]
+english     = "Video optimization complete"
+translation = "動画の最適化が完了しました"
 
 [TranscodePhaseProbing]
 english     = "Analyzing…"
@@ -339,17 +343,9 @@ translation  = "{0}× · 残り {1}"
 english     = "Optimization failed"
 translation = "最適化に失敗しました"
 
-[TranscodeCancelled]
-english     = "Optimization cancelled"
-translation = "最適化をキャンセルしました"
-
-[TranscodeClose]
-english     = "Close"
-translation = "閉じる"
-
-[WaveformProgressTitle]
-english     = "Processing Audio Waveform"
-translation = "音声波形を処理中"
+[WaveformTaskLabel]
+english     = "Audio waveform"
+translation = "音声波形"
 
 [WaveformProbing]
 english     = "Analyzing audio…"
@@ -367,17 +363,17 @@ translation = "残り約 {0}"
 english     = "Could not extract audio — the media may have no audio track."
 translation = "音声を抽出できませんでした — メディアに音声トラックがない可能性があります。"
 
-[WaveformCancelled]
-english     = "Cancelled"
-translation = "キャンセルしました"
-
-[WaveformCancel]
+[TaskCancel]
 english     = "Cancel"
 translation = "キャンセル"
 
-[WaveformClose]
-english     = "Close"
-translation = "閉じる"
+[TaskHide]
+english     = "Hide"
+translation = "非表示"
+
+[TaskShow]
+english     = "Show"
+translation = "表示"
 
 [TlpDelta]
 english      = "Δ {0}"
@@ -2891,6 +2887,10 @@ translation = "一致するコマンドがありません"
 [FtNotifications]
 english     = "Notifications"
 translation = "通知"
+
+[FtRunningTasks]
+english     = "Running tasks"
+translation = "実行中のタスク"
 
 [FtClearAll]
 english     = "Clear all"

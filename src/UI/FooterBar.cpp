@@ -2,6 +2,7 @@
 #include "Core/EventQueue.h"
 #include "Core/IntentEvents.h" // SetActiveEditModeEvent / SetActiveNavigatorEvent / SetActiveSelectionModeEvent (selector write path)
 #include "Core/StandardAxis.h"      // standardAxisShortName / standardAxisColor (active-axis zone lookups)
+#include "Core/TaskEvents.h"        // CancelTaskEvent (task abort button)
 #include "Core/TranscodeEvents.h"   // OpenTranscodeDialogEvent (original-source badge click → optimize dialog)
 #include "Localization/AxisNames.h" // localizedAxisName (axis hover tooltip)
 #include "Localization/Translator.h"
@@ -39,15 +40,18 @@ void dot(float d, ImU32 col) {
     ImGui::Dummy(ImVec2(d, d));
 }
 
-// Small rotating arc, consuming a square item of side `h`. Uses ImGui time (not wall-clock) so the
-// renderer stays free of any platform clock.
-void spinner(float h, ImU32 col) {
-    ImDrawList *dl = ImGui::GetWindowDrawList();
-    const ImVec2 p = ImGui::GetCursorScreenPos();
-    const ImVec2 c(p.x + h * 0.5f, p.y + h * 0.5f);
+// Rotating-arc spinner centered at `c`. Open arc (flags default to 0, not Closed) so the gap reads as
+// motion. Uses ImGui time (not wall-clock) so the renderer stays free of any platform clock.
+void drawSpinner(ImDrawList *dl, ImVec2 c, float radius, float thickness, ImU32 col) {
     const float a0 = static_cast<float>(ImGui::GetTime()) * 6.0f;
-    dl->PathArcTo(c, h * 0.30f, a0, a0 + IM_PI * 1.5f, 16);
-    dl->PathStroke(col, 1.6f); // open arc (flags default to 0, not Closed) so it reads as a spinner
+    dl->PathArcTo(c, radius, a0, a0 + IM_PI * 1.5f, 16);
+    dl->PathStroke(col, thickness);
+}
+
+// Spinner consuming a square layout item of side `h`.
+void spinner(float h, ImU32 col) {
+    const ImVec2 p = ImGui::GetCursorScreenPos();
+    drawSpinner(ImGui::GetWindowDrawList(), ImVec2(p.x + h * 0.5f, p.y + h * 0.5f), h * 0.30f, 1.6f, col);
     ImGui::Dummy(ImVec2(h, h));
 }
 
@@ -214,15 +218,35 @@ const char *footerSelect(const char *idtag, const char *icon, const char *toolti
     return picked;
 }
 
+// One task's progress bar. Empty overlay both ways: the percentage is noise here, and a negative fraction
+// (indeterminate) would otherwise format a nonsensical value — < 0 makes ImGui animate an indeterminate bar.
+void taskProgressBar(const TaskItem &item, float height) {
+    if (item.progress < 0.0f)
+        ImGui::ProgressBar(-1.0f * static_cast<float>(ImGui::GetTime()), ImVec2(-FLT_MIN, height), "");
+    else
+        ImGui::ProgressBar(item.progress, ImVec2(-FLT_MIN, height), "");
+}
+
 const char *kNotifPopupId = "##notifications";
 
-// Renders the bell glyph in the far-right of the bar plus its unread badge, and the popup (opening
-// upward from the bell). Mutates `state`: clicking the bell opens the popup and clears `unread`;
-// "Clear all" empties the log. Returns nothing — the bell owns its own popup, like the palette.
-void renderBell(NotificationState &state, float lineH) {
+// Renders the bell glyph in the far-right of the bar plus its unread badge and a running-task spinner,
+// and the popup (opening upward from the bell). Mutates `state`: clicking the bell opens the popup and
+// clears `unread`; "Clear all" empties the log; the popup's task rows toggle TaskItem::hidden and push
+// CancelTaskEvent. Returns nothing — the bell owns its own popup, like the palette.
+void renderBell(NotificationState &state, EventQueue &eq, float lineH) {
     const char *bell = ICON_BELL;
     const float pad = 4.0f;
-    const float zoneW = ImGui::CalcTextSize(bell).x + pad * 2.0f;
+    const float fs = ImGui::GetFontSize();
+
+    // Count tasks minimized into the bell: they drive a spinner cue (so the user can find them) and a
+    // section in the popup. Visible (floating) tasks render their own panel and don't appear here.
+    int hiddenTasks = 0;
+    for (const TaskItem &t : state.tasks)
+        if (t.hidden)
+            ++hiddenTasks;
+
+    const float bellW = ImGui::CalcTextSize(bell).x;
+    const float zoneW = bellW + pad * 2.0f;
     const float rightEdge = ImGui::GetWindowWidth() - ImGui::GetStyle().WindowPadding.x;
 
     ImGui::SameLine(std::max(0.0f, rightEdge - zoneW));
@@ -233,21 +257,27 @@ void renderBell(NotificationState &state, float lineH) {
         ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
 
     ImDrawList *dl = ImGui::GetWindowDrawList();
-    const ImU32 bellCol = (state.unread > 0 || hovered) ? ofs::theme::GetColorU32(ImGuiCol_Text)
-                                                        : ofs::theme::GetColorU32(ImGuiCol_TextDisabled);
-    dl->AddText(ImVec2(tl.x + pad, tl.y), bellCol, bell);
+    const float bellX = tl.x + pad;
+    const bool active = state.unread > 0 || hiddenTasks > 0 || hovered;
+    const ImU32 bellCol =
+        active ? ofs::theme::GetColorU32(ImGuiCol_Text) : ofs::theme::GetColorU32(ImGuiCol_TextDisabled);
+    dl->AddText(ImVec2(bellX, tl.y), bellCol, bell);
+
+    // Running-task cue: an animated spinner ringing the bell whenever work is minimized into it.
+    if (hiddenTasks > 0)
+        drawSpinner(dl, ImVec2(bellX + bellW * 0.5f, tl.y + lineH * 0.5f), fs * 0.62f, fs * 0.11f,
+                    ofs::theme::GetColorU32(ImGuiCol_CheckMark));
 
     // Unread badge: a small accent dot at the bell glyph's top-right, VSCode-style, capped at "9+".
     // Every metric scales off GetFontSize() (font/DPI-safe). The disc is a FIXED size regardless of
     // the count — sized off the glyph cap height, never the text width — so "9+" matches a single digit.
     if (state.unread > 0) {
         const char *count = state.unread > 9 ? "9+" : fmtScratch("{}", state.unread);
-        const float badgeFont = ImGui::GetFontSize() * 0.74f;
+        const float badgeFont = fs * 0.74f;
         const ImVec2 ts = ImGui::GetFont()->CalcTextSizeA(badgeFont, FLT_MAX, 0.0f, count);
         const float r = badgeFont * 0.62f; // fixed radius; cap height + a little pad
-        const float glyphW = ImGui::CalcTextSize(bell).x;
         // Hug the bell glyph's top-right corner.
-        const ImVec2 c(tl.x + pad + glyphW - r * 0.2f, tl.y + r * 0.35f);
+        const ImVec2 c(bellX + bellW - r * 0.2f, tl.y + r * 0.35f);
         // WindowBg text on the accent fill: accents are designed to pop on the window, so this pair
         // stays legible in both light and dark schemes without a hardcoded on-accent color.
         dl->AddCircleFilled(c, r, ofs::theme::GetColorU32(ImGuiCol_CheckMark));
@@ -267,13 +297,47 @@ void renderBell(NotificationState &state, float lineH) {
     // Anchor the popup so its bottom-right corner sits at the bell's top-right: it grows up and left
     // out of the bar instead of off the bottom of the screen.
     ImGui::SetNextWindowPos(ImVec2(tl.x + zoneW, tl.y), ImGuiCond_Always, ImVec2(1.0f, 1.0f));
-    const float fs = ImGui::GetFontSize();
     ImGui::SetNextWindowSizeConstraints(ImVec2(fs * 18.75f, 0.0f), ImVec2(fs * 26.25f, fs * 22.5f));
     if (!ImGui::BeginPopup(kNotifPopupId))
         return;
 
     state.panelOpen = true; // suppress toasts while the full list is open
     state.unread = 0;       // stay cleared while the panel is open
+
+    // Minimized running tasks sit at the top of the popup: each shows its progress, a Show button to pop
+    // it back out as a floating panel, and a Cancel button. They live above the log, not in it.
+    if (hiddenTasks > 0) {
+        ImGui::SeparatorText(Str::FtRunningTasks);
+        const float padX = ImGui::GetStyle().FramePadding.x;
+        for (TaskItem &t : state.tasks) {
+            if (!t.hidden)
+                continue;
+            ImGui::PushID(static_cast<int>(t.id));
+            ImGui::TextUnformatted(t.label.c_str());
+            const float showW = ImGui::CalcTextSize(ICON_CHEVRON_UP).x + padX * 2.0f;
+            const float cancelW = t.cancellable ? ImGui::CalcTextSize(ICON_CIRCLE_STOP).x + padX * 2.0f : 0.0f;
+            const float spacing = ImGui::GetStyle().ItemSpacing.x;
+            ImGui::SameLine();
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - showW -
+                                 (t.cancellable ? spacing + cancelW : 0.0f));
+            if (ImGui::SmallButton(ICON_CHEVRON_UP "###taskshow")) {
+                t.hidden = false;
+                ImGui::CloseCurrentPopup(); // the task reappears as a floating panel; dismiss the bell
+            }
+            ImGui::SetItemTooltip("%s", Str::TaskShow.c_str());
+            if (t.cancellable) {
+                ImGui::SameLine();
+                if (ImGui::SmallButton(ICON_CIRCLE_STOP "###taskcancel"))
+                    eq.push(CancelTaskEvent{.id = t.id});
+                ImGui::SetItemTooltip("%s", Str::TaskCancel.c_str());
+            }
+            taskProgressBar(t, ImGui::GetTextLineHeight() * 0.5f);
+            if (!t.detail.empty())
+                ImGui::TextDisabled("%s", t.detail.c_str());
+            ImGui::PopID();
+        }
+        ImGui::Spacing();
+    }
 
     ImGui::TextUnformatted(Str::FtNotifications);
     ImGui::SameLine();
@@ -394,10 +458,14 @@ void renderToasts(NotificationState &state) {
                                    ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing |
                                    ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoDocking |
                                    ImGuiWindowFlags_AlwaysAutoResize;
-    // Bottom-right pinned just above the bell; the window grows upward as toasts stack.
-    ImGui::SetNextWindowPos(ImVec2(state.bellAnchorX, state.bellAnchorY - 6.0f), ImGuiCond_Always, ImVec2(1.0f, 1.0f));
-    ImGui::PushStyleColor(ImGuiCol_WindowBg, 0); // transparent shell; each toast paints its own panel
+    // Bottom-right pinned just above the bell (and above the task stack, if any); grows up as toasts stack.
+    ImGui::SetNextWindowPos(ImVec2(state.bellAnchorX, state.bellAnchorY - state.taskStackHeight - 6.0f),
+                            ImGuiCond_Always, ImVec2(1.0f, 1.0f));
+    // Transparent, border-less shell — each toast paints its own panel + border; without the border
+    // override the theme's WindowBorderSize would draw a second box around the whole stack.
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, 0);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
     if (ImGui::Begin("##toaststack", nullptr, flags)) {
         // Render oldest-first so the newest sits at the bottom, nearest the bell.
         for (int i = shownN - 1; i >= 0; --i) {
@@ -412,7 +480,92 @@ void renderToasts(NotificationState &state) {
         }
     }
     ImGui::End();
-    ImGui::PopStyleVar();
+    ImGui::PopStyleVar(2);
+    ImGui::PopStyleColor();
+}
+
+void renderTasks(NotificationState &state, EventQueue &eq) {
+    int visible = 0;
+    for (const TaskItem &t : state.tasks)
+        if (!t.hidden)
+            ++visible;
+    if (visible == 0) { // all tasks minimized into the bell (or none) → no floating stack
+        state.taskStackHeight = 0.0f;
+        return;
+    }
+
+    const ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
+                                   ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse |
+                                   ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing |
+                                   ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoDocking |
+                                   ImGuiWindowFlags_AlwaysAutoResize;
+    // Pinned bottom-right just above the bell; the window grows upward as tasks stack. renderToasts then
+    // floats its own stack above this one using the taskStackHeight published below.
+    ImGui::SetNextWindowPos(ImVec2(state.bellAnchorX, state.bellAnchorY - 6.0f), ImGuiCond_Always, ImVec2(1.0f, 1.0f));
+    // Transparent, border-less shell — each task paints its own panel + border; the border override stops
+    // the theme's WindowBorderSize from drawing a second box around the whole stack.
+    ImGui::PushStyleColor(ImGuiCol_WindowBg, 0);
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    if (ImGui::Begin("##taskstack", nullptr, flags)) {
+        const float panelW = ImGui::GetFontSize() * 20.0f;
+        const float sideIndent = ImGui::GetFontSize() * 0.6f;
+        const float barH = ImGui::GetTextLineHeight() * 0.6f;
+        const float padX = ImGui::GetStyle().FramePadding.x;
+        bool first = true;
+        for (TaskItem &item : state.tasks) {
+            if (item.hidden)
+                continue; // minimized into the bell — rendered there, not as a floating panel
+            if (!first)
+                ImGui::Spacing();
+            first = false;
+
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, ofs::theme::GetColorU32(ImGuiCol_PopupBg));
+            // Symmetric inner padding via WindowPadding (child has Borders, so it's honored) — a left-only
+            // Indent would leave the right edge flush against the border.
+            ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,
+                                ImVec2(sideIndent, ImGui::GetStyle().FramePadding.y + 2.0f));
+            ImGui::BeginChild(fmtScratch("##task{}", item.id), ImVec2(panelW, 0.0f),
+                              ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders);
+
+            ImDrawList *dl = ImGui::GetWindowDrawList();
+            const ImVec2 mn = ImGui::GetWindowPos();
+            const ImVec2 mx = mn + ImGui::GetWindowSize();
+            dl->AddRectFilled(mn, ImVec2(mn.x + 3.0f, mx.y), ofs::theme::GetColorU32(ImGuiCol_CheckMark)); // accent
+
+            ImGui::TextUnformatted(item.label.c_str());
+
+            // Right-aligned icon controls: minimize (collapses into the bell, work keeps running) and a
+            // stop button to abort. A stop glyph, not an ✕, since ✕ reads as "dismiss the notice".
+            const float hideW = ImGui::CalcTextSize(ICON_CHEVRON_DOWN).x + padX * 2.0f;
+            const float cancelW = item.cancellable ? ImGui::CalcTextSize(ICON_CIRCLE_STOP).x + padX * 2.0f : 0.0f;
+            const float spacing = ImGui::GetStyle().ItemSpacing.x;
+            ImGui::SameLine();
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - hideW -
+                                 (item.cancellable ? spacing + cancelW : 0.0f));
+            if (ImGui::SmallButton(fmtScratch("{}###taskhide{}", ICON_CHEVRON_DOWN, item.id)))
+                item.hidden = true;
+            ImGui::SetItemTooltip("%s", Str::TaskHide.c_str());
+            if (item.cancellable) {
+                ImGui::SameLine();
+                if (ImGui::SmallButton(fmtScratch("{}###taskcancel{}", ICON_CIRCLE_STOP, item.id)))
+                    eq.push(CancelTaskEvent{.id = item.id});
+                ImGui::SetItemTooltip("%s", Str::TaskCancel.c_str());
+            }
+
+            taskProgressBar(item, barH);
+            if (!item.detail.empty())
+                ImGui::TextDisabled("%s", item.detail.c_str());
+
+            ImGui::EndChild();
+            ImGui::PopStyleVar();
+            ImGui::PopStyleColor();
+        }
+        // +6 leaves a gap so renderToasts' stack clears the task window's own gap above the bell.
+        state.taskStackHeight = ImGui::GetWindowSize().y + 6.0f;
+    }
+    ImGui::End();
+    ImGui::PopStyleVar(2);
     ImGui::PopStyleColor();
 }
 
@@ -439,7 +592,7 @@ float renderFooterBar(const FooterBarInfo &info, NotificationState &notification
         // No project: a single status line stands in for the transport/axis/eval zones; app status + bell follow.
         ImGui::TextDisabled("%s", info.idleMessage);
         renderAppStatus(info);
-        renderBell(notifications, lineH);
+        renderBell(notifications, eq, lineH);
     } else if (open) {
         const ImU32 dimCol = ofs::theme::GetColorU32(ImGuiCol_TextDisabled);
 
@@ -574,7 +727,7 @@ float renderFooterBar(const FooterBarInfo &info, NotificationState &notification
         // ── Right zone: eval spinner + worker count + managed heap + loop status (idle icon + UI fps),
         // then the notification bell ─
         renderAppStatus(info);
-        renderBell(notifications, lineH);
+        renderBell(notifications, eq, lineH);
     }
     ImGui::End();
     ImGui::PopStyleColor();

@@ -1,8 +1,11 @@
 #include "Services/VideoTranscoder.h"
 #include "Core/EventQueue.h"
-#include "Core/Events.h" // ChangeMediaPathEvent
+#include "Core/Events.h" // ChangeMediaPathEvent, NotifyEvent
 #include "Core/ScriptProject.h"
+#include "Core/TaskEvents.h"
+#include "Localization/Translator.h"
 #include "Services/JobSystem.h"
+#include "Util/FrameAllocator.h" // fmtScratch
 #include "Util/PathUtil.h"
 #include "Util/Subprocess.h"
 #include <algorithm>
@@ -314,15 +317,19 @@ VideoTranscoder::VideoTranscoder(ScriptProject &project, EventQueue &eq, JobSyst
     eq.on<TranscodeProgressEvent>([this](const TranscodeProgressEvent &e) { onProgress(e); });
     eq.on<TranscodeCompleteEvent>([this](const TranscodeCompleteEvent &e) { onComplete(e); });
     eq.on<TranscodeFailedEvent>([this](const TranscodeFailedEvent &e) { onFailed(e); });
-    eq.on<CancelTranscodeEvent>([this](const CancelTranscodeEvent &e) { onCancel(e); });
+    eq.on<CancelTaskEvent>([this](const CancelTaskEvent &e) { onCancelTask(e); });
     eq.on<RequestMediaInfoEvent>([this](const RequestMediaInfoEvent &e) { onRequestMediaInfo(e); });
 }
 
-VideoTranscoder::~VideoTranscoder() {
-    // Destroyed before JobSystem (which waits for running tasks): signal cancel so a long encode aborts
-    // promptly. The worker holds its own shared_ptr copy of the flag, so this is safe even mid-run.
+void VideoTranscoder::cancelInFlight() {
+    // The worker holds its own shared_ptr copy of the flag, so this is safe even mid-run.
     if (cancel_)
         cancel_->store(true, std::memory_order_release);
+}
+
+VideoTranscoder::~VideoTranscoder() {
+    // Backstop in case cancelInFlight() wasn't called before teardown.
+    cancelInFlight();
 }
 
 void VideoTranscoder::onRequest(const TranscodeRequestEvent &ev) {
@@ -338,6 +345,11 @@ void VideoTranscoder::onRequest(const TranscodeRequestEvent &ev) {
     project.transcode.sourcePath = cfg.sourcePath;
     project.transcode.outputPath = cfg.outputPath;
 
+    // Raise the footer task indicator for the run (replaces the old blocking progress modal).
+    taskId_ = ++taskSeq_;
+    eq.push(
+        TaskStartedEvent{.id = taskId_, .label = std::string(Str::TranscodeTaskLabel.c_str()), .cancellable = true});
+
     // Resolve the binaries on the main thread (getBasePath is cached here) and hand UTF-8 strings to the
     // worker, so the worker never reaches back into shared resolution state.
     const std::string ffmpegBin = ofs::util::resolveTool("ffmpeg");
@@ -347,6 +359,13 @@ void VideoTranscoder::onRequest(const TranscodeRequestEvent &ev) {
     });
 }
 
+void VideoTranscoder::endTask() {
+    if (taskId_ != 0) {
+        eq.push(TaskEndedEvent{.id = taskId_});
+        taskId_ = 0;
+    }
+}
+
 void VideoTranscoder::onProgress(const TranscodeProgressEvent &ev) {
     if (!project.transcode.active)
         return;
@@ -354,6 +373,28 @@ void VideoTranscoder::onProgress(const TranscodeProgressEvent &ev) {
     project.transcode.progress = ev.progress;
     project.transcode.etaSeconds = ev.etaSeconds;
     project.transcode.speed = ev.speed;
+    if (taskId_ == 0)
+        return;
+
+    // Probing/Verifying are short and have no meaningful fraction → indeterminate bar; Encoding shows the
+    // real progress with a speed·ETA detail line (falling back to a plain label until ffmpeg reports speed).
+    std::string detail;
+    float progress = -1.0f;
+    if (ev.phase == TranscodePhase::Probing) {
+        detail = Str::TranscodePhaseProbing.c_str();
+    } else if (ev.phase == TranscodePhase::Verifying) {
+        detail = Str::TranscodePhaseVerifying.c_str();
+    } else { // Encoding
+        progress = static_cast<float>(ev.progress);
+        if (ev.speed > 0.0) {
+            const int etaS = static_cast<int>(std::llround(ev.etaSeconds));
+            detail =
+                Str::TranscodeStats.fmt(fmtScratch("{:.1f}", ev.speed), fmtScratch("{}:{:02d}", etaS / 60, etaS % 60));
+        } else {
+            detail = Str::TranscodePhaseEncoding.c_str();
+        }
+    }
+    eq.push(TaskProgressEvent{.id = taskId_, .detail = std::move(detail), .progress = progress});
 }
 
 void VideoTranscoder::onComplete(const TranscodeCompleteEvent &ev) {
@@ -362,6 +403,8 @@ void VideoTranscoder::onComplete(const TranscodeCompleteEvent &ev) {
     project.transcode.phase = TranscodePhase::Done;
     project.transcode.progress = 1.0;
     project.transcode.error.clear();
+    endTask();
+    eq.push(NotifyEvent{.level = NotifyLevel::Success, .message = std::string(Str::TranscodeDone.c_str())});
     // Switch the player to the optimized copy. ProjectManager's ChangeMediaPath handler sees the path is
     // the (just-set) intra source, flips activeSource = Intra, and loads it — single source of truth.
     if (switchAfter_)
@@ -374,11 +417,18 @@ void VideoTranscoder::onFailed(const TranscodeFailedEvent &ev) {
     project.transcode.phase = ev.cancelled ? TranscodePhase::Cancelled : TranscodePhase::Failed;
     project.transcode.error = ev.message;
     project.transcode.progress = 0.0;
+    endTask();
+    if (!ev.cancelled) { // a user cancel is self-explanatory; a genuine failure earns a toast + bell entry
+        std::string msg = ev.message.empty() ? std::string(Str::TranscodeFailed.c_str())
+                                             : fmt::format("{}: {}", Str::TranscodeFailed.c_str(), ev.message);
+        eq.push(NotifyEvent{.level = NotifyLevel::Error, .message = std::move(msg)});
+    }
 }
 
-void VideoTranscoder::onCancel(const CancelTranscodeEvent &) {
-    // The worker polls this, kills ffmpeg, and pushes TranscodeFailedEvent{cancelled=true}.
-    if (cancel_)
+void VideoTranscoder::onCancelTask(const CancelTaskEvent &ev) {
+    // The user hit the abort button on our task entry. Flip the flag the worker polls; it kills ffmpeg
+    // and pushes TranscodeFailedEvent{cancelled=true}, which clears the indicator via onFailed.
+    if (taskId_ != 0 && ev.id == taskId_ && cancel_)
         cancel_->store(true, std::memory_order_release);
 }
 

@@ -21,7 +21,7 @@ struct SetTimelineShowWaveformEvent;
 struct WaveformReadyEvent;
 struct WaveformProgressEvent;
 struct WaveformFailedEvent;
-struct CancelWaveformEvent;
+struct CancelTaskEvent;
 
 // Extracts the loaded media's audio waveform (via bundled ffmpeg on a JobSystem worker), caches the
 // peak summary to disk by content fingerprint, and owns the GL texture the timeline renders behind its
@@ -34,6 +34,10 @@ class WaveformService {
 
     WaveformService(const WaveformService &) = delete;
     WaveformService &operator=(const WaveformService &) = delete;
+
+    // Signal any in-flight extraction to abort. Must run before JobSystem::shutdown() (which blocks on
+    // pool->wait()), or a long ffmpeg decode stalls app close until it finishes on its own.
+    void cancelInFlight();
 
     // Read-only handle the renderer samples each frame. Passive accessor (no behavior), so the UI may
     // read it without violating the no-service-calls rule — mirrors VideoPreview::getFrameTexture().
@@ -55,7 +59,10 @@ class WaveformService {
     void onProgress(const WaveformProgressEvent &e);
     void onReady(const WaveformReadyEvent &e);
     void onFailed(const WaveformFailedEvent &e);
-    void onCancel(const CancelWaveformEvent &e);
+    void onCancelTask(const CancelTaskEvent &e);
+
+    // End the footer task indicator (if one is showing) for the current extraction. Idempotent.
+    void endTask();
 
     // Kick off extraction for `sourceUtf8` (the original media with audio). No-op if it's already the
     // current source (loaded, in-flight, or known to have failed) — only a genuine media change retries.
@@ -73,6 +80,11 @@ class WaveformService {
     std::shared_ptr<std::atomic<bool>> cancel_;
     std::future<bool> worker_;
     std::string currentSource_; // UTF-8 path the in-flight / loaded waveform belongs to
+
+    // Footer background-task indicator for the running extraction. `taskId_` is non-zero while an entry is
+    // showing; `taskSeq_` mints a fresh id per extraction so a superseded task and its replacement differ.
+    uint32_t taskId_ = 0;
+    uint32_t taskSeq_ = 0;
 
     GpuView view_;
     uint32_t texture_ = 0;

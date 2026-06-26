@@ -3,7 +3,8 @@
 #include "Core/TranscodeEvents.h"
 #include "Format/AppSettings.h"
 #include "Services/CommandRegistry.h"
-#include "UI/ModalManager.h" // setNativeDialogOverrideForTesting / FileDialogSpec — drive the folder picker
+#include "UI/ModalManager.h"  // setNativeDialogOverrideForTesting / FileDialogSpec — drive the folder picker
+#include "UI/Notifications.h" // NotificationState — assert the task entry + failure notification
 #include "Util/PathUtil.h"
 #include "helpers/TestState.h"
 #include <filesystem>
@@ -17,10 +18,10 @@
 using namespace ofs;
 
 // Drives the intra-frame optimize UI in the live app: the gated command, the options modal, and the
-// blocking progress modal. The worker spawns real ffmpeg/ffprobe, which are NOT staged next to the test
-// binary (they ship beside the app, not bin/test/ui-tests) — and even if present, the bogus temp source
-// below can't be decoded. Either way the worker ends in Failed, which is exactly the progress-modal
-// path this exercises: no ffmpeg run and no production "runner seam" stub are needed for it.
+// non-blocking footer task the run surfaces as. The worker spawns real ffmpeg/ffprobe, which are NOT
+// staged next to the test binary (they ship beside the app, not bin/test/ui-tests) — and even if present,
+// the bogus temp source below can't be decoded. Either way the worker ends in Failed, which is exactly the
+// background-task path this exercises: no ffmpeg run and no production "runner seam" stub are needed for it.
 
 namespace {
 bool anyModalOpen() {
@@ -194,10 +195,11 @@ void RegisterTranscodeTests(ImGuiTestEngine *e) {
         std::filesystem::remove_all(ofs::util::fromUtf8(outDir), ec);
     };
 
-    // ── Start → request → worker → progress modal → (failure) → Close closes it ──────────
-    IM_REGISTER_TEST(e, "transcode", "start_drives_progress_modal_to_close")->TestFunc = [](ImGuiTestContext *ctx) {
+    // ── Start → request → worker → (failure) surfaces as a footer task, NOT a blocking modal ──────
+    IM_REGISTER_TEST(e, "transcode", "start_runs_as_background_task")->TestFunc = [](ImGuiTestContext *ctx) {
         loadFixture(ctx);
         auto &proj = *getTestState().project;
+        auto &notes = *getTestState().notifications;
 
         // Configure a resolvable (but non-encodable) source so Start is enabled.
         const std::string outDir = ofs::util::toUtf8(std::filesystem::temp_directory_path() / "ofs_intra_out");
@@ -212,19 +214,23 @@ void RegisterTranscodeTests(ImGuiTestEngine *e) {
         getTestState().eventQueue->push(OpenTranscodeDialogEvent{});
         IM_CHECK(yieldUntil(ctx, [&] { return anyModalOpen() && ctx->ItemExists("**/intra_start"); }));
 
-        ctx->ItemClick("**/intra_start"); // pushes TranscodeRequestEvent + opens the progress modal
+        const size_t logBefore = notes.log.size();
+        ctx->ItemClick(
+            "**/intra_start"); // pushes TranscodeRequestEvent; the options modal closes, no modal replaces it
+        IM_CHECK(yieldUntil(ctx, [&] { return !anyModalOpen(); }));
 
-        // The worker can't produce a valid output, so it lands in a terminal non-Done phase.
+        // The worker can't produce a valid output, so it lands in a terminal non-Done phase — all without a modal.
         IM_CHECK(yieldUntil(ctx, [&] {
             return proj.transcode.phase == TranscodePhase::Failed || proj.transcode.phase == TranscodePhase::Cancelled;
         }));
         IM_CHECK(!proj.transcode.active);
         IM_CHECK(proj.state.intraMediaPath.empty()); // a failed run never adopts an output
+        IM_CHECK(!anyModalOpen());                   // the migration: progress is a footer task, never a blocking modal
 
-        // The progress modal shows the failure with a Close button; clicking it dismisses the modal.
-        IM_CHECK(yieldUntil(ctx, [&] { return anyModalOpen() && ctx->ItemExists("**/intra_prog_close"); }));
-        ctx->ItemClick("**/intra_prog_close");
-        IM_CHECK(yieldUntil(ctx, [&] { return !anyModalOpen(); }));
+        // The task entry is removed when the run ends, and the failure surfaces as a bell/toast notification.
+        IM_CHECK(yieldUntil(ctx, [&] { return notes.tasks.empty(); }));
+        if (proj.transcode.phase == TranscodePhase::Failed)
+            IM_CHECK(notes.log.size() > logBefore);
 
         // Restore app-global settings so later suites see a clean slate (the project is reloaded by their
         // own loadFixture, but appSettings persists across the run).

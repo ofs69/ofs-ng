@@ -57,7 +57,8 @@ struct TranscodeRequestEvent {
     TranscodeConfig config;
 };
 
-// Worker → VideoTranscoder (main thread): periodic progress, coalesced to a few per second.
+// Worker → VideoTranscoder (main thread): periodic progress, coalesced to a few per second. The service
+// mirrors it into TranscodeState and translates it into the footer task indicator (see Core/TaskEvents.h).
 struct TranscodeProgressEvent {
     double progress = 0.0; // 0..1
     double etaSeconds = 0.0;
@@ -76,9 +77,6 @@ struct TranscodeFailedEvent {
     std::string message;
     bool cancelled = false;
 };
-
-// UI → VideoTranscoder: abort the running transcode (kills the ffmpeg process).
-struct CancelTranscodeEvent {};
 
 // Source video properties read by ffprobe, used to preview the optimize dialog (resolution + the
 // dimensions the chosen scale factor will produce) and to seed timing without touching the player.

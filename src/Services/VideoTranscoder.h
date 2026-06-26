@@ -2,6 +2,7 @@
 
 #include "Core/TranscodeEvents.h"
 #include <atomic>
+#include <cstdint>
 #include <future>
 #include <memory>
 #include <string>
@@ -14,6 +15,7 @@ namespace ofs {
 class EventQueue;
 class JobSystem;
 struct ScriptProject;
+struct CancelTaskEvent;
 
 // Pure, SDL-free helpers for building the ffmpeg/ffprobe command lines and parsing ffmpeg's
 // machine-readable `-progress` output. Exposed (not file-static) so they can be unit-tested without
@@ -58,28 +60,37 @@ void applyProgressLine(std::string_view line, ProgressAccum &acc);
 class VideoTranscoder {
   public:
     VideoTranscoder(ScriptProject &project, EventQueue &eq, JobSystem &jobSystem);
-    // Signals any in-flight transcode to cancel so JobSystem's destructor (which waits for running
-    // tasks) doesn't stall shutdown for the length of a minutes-long encode.
     ~VideoTranscoder();
+
+    // Signal any in-flight transcode to abort. Must run before JobSystem::shutdown() (which blocks on
+    // pool->wait()), or a minutes-long encode stalls app close until it finishes on its own.
+    void cancelInFlight();
 
   private:
     void onRequest(const TranscodeRequestEvent &ev);
     void onProgress(const TranscodeProgressEvent &ev);
     void onComplete(const TranscodeCompleteEvent &ev);
     void onFailed(const TranscodeFailedEvent &ev);
-    void onCancel(const CancelTranscodeEvent &ev);
+    void onCancelTask(const CancelTaskEvent &ev);
     void onRequestMediaInfo(const RequestMediaInfoEvent &ev);
+
+    // End the footer task indicator (if showing) for the current transcode. Idempotent.
+    void endTask();
 
     ScriptProject &project;
     EventQueue &eq;
     JobSystem &jobSystem;
 
-    // Set by onCancel (main thread), polled by the worker — the cross-thread cancel channel. A
+    // Set by onCancelTask (main thread), polled by the worker — the cross-thread cancel channel. A
     // shared_ptr (not a member atomic) so the flag survives even if the service is torn down while a
     // transcode is still running: the worker holds its own copy. Recreated per request.
     std::shared_ptr<std::atomic<bool>> cancel_;
-    bool switchAfter_ = true;     // remembered from the running config, applied in onComplete
-    std::future<bool> worker_;    // kept so the task handle isn't dropped while the transcode runs
+    bool switchAfter_ = true;  // remembered from the running config, applied in onComplete
+    std::future<bool> worker_; // kept so the task handle isn't dropped while the transcode runs
+    // Footer background-task indicator for the running transcode. `taskId_` is non-zero while an entry is
+    // showing; `taskSeq_` mints a fresh id per run so a superseded task and its replacement differ.
+    uint32_t taskId_ = 0;
+    uint32_t taskSeq_ = 0;
     std::future<bool> infoProbe_; // ffprobe-for-the-modal task handle; runs independently of a transcode
 };
 

@@ -116,4 +116,10 @@ float renderFooterBar(const FooterBarInfo &info, NotificationState &notification
 // shown item's transient toast timer (NotificationItem::shownAt) but never the log itself.
 void renderToasts(NotificationState &state);
 
+// Renders the persistent background-task stack just above the bell (below the toast stack), one panel
+// per running task: label, progress bar, optional detail line, and an abort button (→ CancelTaskEvent).
+// Call once near the END of the frame, BEFORE renderToasts — it publishes state.taskStackHeight so the
+// toast stack can float above it. Reads the bell anchor renderFooterBar published this frame.
+void renderTasks(NotificationState &state, EventQueue &eq);
+
 } // namespace ofs::ui

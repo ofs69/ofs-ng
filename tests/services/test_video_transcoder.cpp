@@ -1,5 +1,6 @@
 #include "Core/EventQueue.h"
 #include "Core/ScriptProject.h"
+#include "Core/TaskEvents.h"
 #include "Core/TranscodeEvents.h"
 #include "Services/JobSystem.h"
 #include "Services/VideoTranscoder.h"
@@ -297,7 +298,7 @@ TEST_CASE("VideoTranscoder: a cancel with no running transcode is a harmless no-
     TranscoderFixture f;
     f.eq.freeze();
     // cancel_ is null until a request arms it; the handler must null-check rather than deref.
-    f.eq.push(CancelTranscodeEvent{});
+    f.eq.push(CancelTaskEvent{});
     f.eq.drain();
     CHECK_FALSE(f.project.transcode.active);
 }

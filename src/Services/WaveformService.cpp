@@ -2,16 +2,20 @@
 #include "Core/EventQueue.h"
 #include "Core/Events.h" // MediaChangedEvent, LoadVideoEvent, CloseVideoEvent
 #include "Core/ScriptProject.h"
+#include "Core/TaskEvents.h"
 #include "Core/WaveformEvents.h"
+#include "Localization/Translator.h"
 #include "Platform/Headless.h"
 #include "Services/JobSystem.h"
 #include "Util/FileFingerprint.h"
+#include "Util/FrameAllocator.h"
 #include "Util/Log.h"
 #include "Util/PathUtil.h"
 #include "Util/Subprocess.h"
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cmath>
 #include <cstdlib>
 #include <cstring>
 #include <glad/gl.h>
@@ -100,8 +104,8 @@ bool runExtraction(EventQueue &eq, const std::string &ffmpegBin, const std::stri
     if (cancel.load(std::memory_order_acquire))
         return false;
 
-    // Cache miss: now the (visible) work begins. The Probing event flips waveform.active true and raises
-    // the progress modal on the main thread.
+    // Cache miss: now the (visible) work begins. The Probing event raises the footer task indicator on
+    // the main thread (WaveformService::onProgress translates it into the TaskStarted/Progress events).
     eq.push(WaveformProgressEvent{.mediaPath = source, .progress = 0.0, .phase = WaveformPhase::Probing});
     const double durationSec = probeDurationSeconds(ffprobeBin, source);
     const double expectedSamples = durationSec > 0.0 ? durationSec * waveform::kDecodeSampleRate : 0.0;
@@ -197,14 +201,18 @@ WaveformService::WaveformService(ScriptProject &project, EventQueue &eq, JobSyst
     eq.on<WaveformProgressEvent>([this](const WaveformProgressEvent &e) { onProgress(e); });
     eq.on<WaveformReadyEvent>([this](const WaveformReadyEvent &e) { onReady(e); });
     eq.on<WaveformFailedEvent>([this](const WaveformFailedEvent &e) { onFailed(e); });
-    eq.on<CancelWaveformEvent>([this](const CancelWaveformEvent &e) { onCancel(e); });
+    eq.on<CancelTaskEvent>([this](const CancelTaskEvent &e) { onCancelTask(e); });
 }
 
-WaveformService::~WaveformService() {
-    // Destroyed before JobSystem joins its workers: signal cancel so a long extraction aborts promptly.
+void WaveformService::cancelInFlight() {
     // The worker holds its own shared_ptr copy of the flag, so this is safe even mid-run.
     if (cancel_)
         cancel_->store(true, std::memory_order_release);
+}
+
+WaveformService::~WaveformService() {
+    // Backstop in case cancelInFlight() wasn't called before teardown.
+    cancelInFlight();
     if constexpr (!ofs::kHeadless) {
         if (texture_ != 0)
             glDeleteTextures(1, &texture_);
@@ -252,10 +260,10 @@ void WaveformService::requestFor(const std::string &sourceUtf8) {
 
     if (cancel_) // supersede any in-flight extraction
         cancel_->store(true, std::memory_order_release);
+    endTask(); // drop any indicator for the superseded extraction; the worker raises a new one on cache miss
     cancel_ = std::make_shared<std::atomic<bool>>(false);
     currentSource_ = sourceUtf8;
     view_.ready = false;
-    project.waveform = WaveformState{}; // a fresh request starts idle; the worker raises Probing on cache miss
 
     const std::string ffmpegBin = ofs::util::resolveTool("ffmpeg");
     const std::string ffprobeBin = ofs::util::resolveTool("ffprobe");
@@ -270,39 +278,65 @@ void WaveformService::requestFor(const std::string &sourceUtf8) {
 void WaveformService::clear() {
     if (cancel_)
         cancel_->store(true, std::memory_order_release);
+    endTask(); // remove the footer indicator if an extraction was in flight
     currentSource_.clear();
     view_.ready = false;
-    project.waveform = WaveformState{}; // idle: closes the progress modal if one is open
+}
+
+void WaveformService::endTask() {
+    if (taskId_ != 0) {
+        eq.push(TaskEndedEvent{.id = taskId_});
+        taskId_ = 0;
+    }
 }
 
 void WaveformService::onProgress(const WaveformProgressEvent &e) {
     if (e.mediaPath != currentSource_) // a newer request superseded this one
         return;
-    project.waveform.active = true;
-    project.waveform.phase = e.phase;
-    project.waveform.progress = e.progress;
-    project.waveform.etaSeconds = e.etaSeconds;
+
+    if (taskId_ == 0) { // rising edge of an extraction (a cache hit never sends progress) → raise the indicator
+        taskId_ = ++taskSeq_;
+        eq.push(
+            TaskStartedEvent{.id = taskId_, .label = std::string(Str::WaveformTaskLabel.c_str()), .cancellable = true});
+    }
+
+    std::string detail;
+    float progress = -1.0f; // indeterminate until we have a real fraction
+    if (e.phase == WaveformPhase::Probing) {
+        detail = Str::WaveformProbing.c_str();
+    } else { // Extracting
+        if (e.progress > 0.0)
+            progress = static_cast<float>(e.progress);
+        if (e.etaSeconds >= 0.0) {
+            const auto secs = static_cast<int>(std::lround(e.etaSeconds));
+            detail = Str::WaveformEta.fmt(fmtScratch("{}:{:02}", secs / 60, secs % 60));
+        } else {
+            detail = Str::WaveformExtracting.c_str();
+        }
+    }
+    eq.push(TaskProgressEvent{.id = taskId_, .detail = std::move(detail), .progress = progress});
 }
 
 void WaveformService::onReady(const WaveformReadyEvent &e) {
     if (e.mediaPath != currentSource_ || !e.peaks) // a newer media superseded this result
         return;
-    project.waveform.active = false;
-    project.waveform.phase = WaveformPhase::Done;
+    endTask();
     upload(e.bucketCount, e.durationSeconds, *e.peaks);
 }
 
 void WaveformService::onFailed(const WaveformFailedEvent &e) {
     if (e.mediaPath != currentSource_) // stale (e.g. a cancel from a since-superseded request)
         return;
-    project.waveform.active = false;
-    project.waveform.phase = e.cancelled ? WaveformPhase::Cancelled : WaveformPhase::Failed;
+    endTask();
     view_.ready = false; // currentSource_ stays set, so we don't re-run ffmpeg until the media changes
+    if (!e.cancelled)    // a genuine failure earns a toast + bell entry; a user cancel is self-explanatory
+        eq.push(NotifyEvent{.level = NotifyLevel::Warning, .message = std::string(Str::WaveformFailed.c_str())});
 }
 
-void WaveformService::onCancel(const CancelWaveformEvent &) {
-    // The worker polls this, kills ffmpeg, and pushes WaveformFailedEvent{cancelled=true}.
-    if (cancel_)
+void WaveformService::onCancelTask(const CancelTaskEvent &e) {
+    // The user hit the abort button on our task entry. Flip the flag the worker polls; it kills ffmpeg
+    // and pushes WaveformFailedEvent{cancelled=true}, which clears the indicator via onFailed.
+    if (taskId_ != 0 && e.id == taskId_ && cancel_)
         cancel_->store(true, std::memory_order_release);
 }
 

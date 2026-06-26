@@ -4,13 +4,13 @@
 
 namespace ofs {
 
-// Lifecycle of an intra-frame transcode, reported by the worker and mirrored into TranscodeState so
-// the blocking progress modal can render the right stage. Ordered: a run advances Idle → Probing →
-// Encoding → Verifying → Done, or lands in Failed / Cancelled.
+// Lifecycle of an intra-frame transcode, reported by the worker and mirrored into TranscodeState.
+// Ordered: a run advances Idle → Probing → Encoding → Verifying → Done, or lands in Failed / Cancelled.
 enum class TranscodePhase { Idle, Probing, Encoding, Verifying, Done, Failed, Cancelled };
 
 // Transient, main-thread mirror of the running transcode (if any). Updated from TranscodeProgress/
-// Complete/Failed events; read by the progress modal. NOT serialized — a transcode never spans a
+// Complete/Failed events; `active` gates the optimize command and gives the worker a staleness check.
+// The footer task indicator is driven off the same events. NOT serialized — a transcode never spans a
 // save/load.
 struct TranscodeState {
     bool active = false;

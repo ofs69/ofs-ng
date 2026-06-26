@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Core/WaveformState.h"
+#include "Core/WaveformPhase.h"
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -19,8 +19,9 @@ struct WaveformReadyEvent {
     std::shared_ptr<std::vector<float>> peaks;
 };
 
-// In-flight progress, pushed from the worker (coalesced) so the modal can show a bar. The first one
-// (phase Probing) is also what flips ScriptProject::waveform.active true and raises the modal.
+// In-flight progress, pushed from the worker (coalesced). The WaveformService translates it into the
+// generic background-task indicator events (see Core/TaskEvents.h); the first one (phase Probing) raises
+// the footer entry. progress is 0 while Probing / when the duration is unknown.
 struct WaveformProgressEvent {
     std::string mediaPath;
     double progress = 0.0;    // 0..1 (0 while Probing / when the duration is unknown)
@@ -35,9 +36,5 @@ struct WaveformFailedEvent {
     std::string mediaPath;
     bool cancelled = false;
 };
-
-// User aborted the extraction from the progress modal. The service flips its cancel flag; the worker
-// then kills ffmpeg and reports WaveformFailedEvent{cancelled=true}.
-struct CancelWaveformEvent {};
 
 } // namespace ofs
