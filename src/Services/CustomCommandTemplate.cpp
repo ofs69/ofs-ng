@@ -56,7 +56,8 @@ template <class Emit> Command holdCommand(const CustomCommand &def, const AppSet
     c.tick = [step, &appSettings](EventQueue &eq, const HoldTickInfo &info) {
         const HoldRepeatParams hp{.initialDelay = appSettings.holdRepeat.initialDelay,
                                   .interval = appSettings.holdRepeat.interval,
-                                  .accel = appSettings.holdRepeat.accel};
+                                  .accel = appSettings.holdRepeat.accel,
+                                  .maxRateHz = appSettings.holdRepeat.maxRateHz};
         const int burst = holdRepeats(info.elapsed, info.dt, hp);
         if (burst > 0)
             step(eq, burst, info.first);

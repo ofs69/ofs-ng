@@ -1129,6 +1129,14 @@ translation = "加速"
 english     = "How much repeats speed up the longer you hold. 0% keeps a steady cadence; higher ramps up toward the maximum rate."
 translation = "押し続けるほどリピートがどれだけ速くなるか。0% は一定のリズムを保ち、大きいほど最大速度まで加速します。"
 
+[ScMaxSpeed]
+english     = "Maximum speed"
+translation = "最大速度"
+
+[ScMaxSpeedTip]
+english     = "The fastest a held key can repeat once acceleration ramps up, in repeats per second. Higher is faster."
+translation = "加速しきったときにキーを押し続けてリピートできる最高速度（回/秒）。大きいほど速くなります。"
+
 [ScHoldRepeatPreview]
 english     = "Holding ramps ~{0} → {1} /s over ~{2}s"
 translation = "押し続けると約{2}秒かけて約{0}→{1}回/秒まで加速します"

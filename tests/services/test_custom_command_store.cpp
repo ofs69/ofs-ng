@@ -352,7 +352,8 @@ TEST_CASE("CustomCommandStore: a present-but-unknown granularity skips just that
 TEST_CASE("CustomCommandTemplate: a held Step scales the authored reps by the frame's burst count") {
     TestProject tp;
     ofs::AppSettings settings;
-    settings.holdRepeat = {.initialDelay = 0.0f, .interval = 0.01f, .accel = 1.0f}; // many fires per frame
+    settings.holdRepeat = {
+        .initialDelay = 0.0f, .interval = 0.01f, .accel = 1.0f, .maxRateHz = 250.0f}; // many fires per frame
     ofs::CustomCommandTemplateRegistry templates;
     ofs::registerBuiltinCommandTemplates(templates, tp.project, settings);
     EventCapture<ofs::StepRequestEvent> cap;
@@ -364,7 +365,7 @@ TEST_CASE("CustomCommandTemplate: a held Step scales the authored reps by the fr
     ofs::Command c = t->build(stepDef("Burst", 1, 3));
     REQUIRE(c.tick);
 
-    const ofs::HoldRepeatParams hp{.initialDelay = 0.0f, .interval = 0.01f, .accel = 1.0f};
+    const ofs::HoldRepeatParams hp{.initialDelay = 0.0f, .interval = 0.01f, .accel = 1.0f, .maxRateHz = 250.0f};
     const int burst = ofs::holdRepeats(1.0f, 0.1f, hp); // ~10 catch-up fires over a 0.1s frame
     REQUIRE(burst > 1);
     c.tick(tp.eq, ofs::HoldTickInfo{.dt = 0.1f, .elapsed = 1.0f, .first = false});
@@ -494,7 +495,7 @@ TEST_CASE("CustomCommandTemplate: a MovePosition command is a no-op with no acti
 TEST_CASE("CustomCommandTemplate: a held MovePosition scales delta and continues one undo step") {
     TestProject tp;
     ofs::AppSettings settings;
-    settings.holdRepeat = {.initialDelay = 0.0f, .interval = 0.01f, .accel = 1.0f};
+    settings.holdRepeat = {.initialDelay = 0.0f, .interval = 0.01f, .accel = 1.0f, .maxRateHz = 250.0f};
     ofs::CustomCommandTemplateRegistry templates;
     ofs::registerBuiltinCommandTemplates(templates, tp.project, settings);
     tp.project.state.activeAxis = ofs::StandardAxis::L0;
@@ -504,7 +505,7 @@ TEST_CASE("CustomCommandTemplate: a held MovePosition scales delta and continues
 
     ofs::Command c = templates.find("move-position")
                          ->build(ofs::CustomCommand{.name = "Nudge", .templateKey = "move-position", .delta = 5});
-    const ofs::HoldRepeatParams hp{.initialDelay = 0.0f, .interval = 0.01f, .accel = 1.0f};
+    const ofs::HoldRepeatParams hp{.initialDelay = 0.0f, .interval = 0.01f, .accel = 1.0f, .maxRateHz = 250.0f};
     const int burst = ofs::holdRepeats(1.0f, 0.1f, hp);
     REQUIRE(burst > 1);
     c.tick(tp.eq, ofs::HoldTickInfo{.dt = 0.1f, .elapsed = 1.0f, .first = false}); // a later hold tick

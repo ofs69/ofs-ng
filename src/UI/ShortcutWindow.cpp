@@ -250,17 +250,19 @@ void ShortcutWindow::render(bool &open, EventQueue &eq, const AppSettings &appSe
         float delay = appSettings.holdRepeat.initialDelay;
         float interval = appSettings.holdRepeat.interval;
         float accel = appSettings.holdRepeat.accel;
+        float maxRate = appSettings.holdRepeat.maxRateHz;
         bool changed = false;
 
+        // Min 0 allows "no delay" — a held key starts repeating immediately. "%.2f s" shows 0.00 s there.
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.5f);
-        if (ImGui::SliderFloat(Str::ScInitialDelay.id("hold_delay"), &delay, 0.10f, 1.00f, "%.2f s"))
+        if (ImGui::SliderFloat(Str::ScInitialDelay.id("hold_delay"), &delay, 0.00f, 1.00f, "%.2f s"))
             changed = true;
         ImGui::SetItemTooltip("%s", Str::ScInitialDelayTip.c_str());
 
         // Present the inter-fire gap as a starting rate (repeats/sec) — users think in speed, not gap.
         float rate = interval > 0.0f ? 1.0f / interval : 0.0f;
         ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.5f);
-        if (ImGui::SliderFloat(Str::ScRepeatSpeed.id("hold_speed"), &rate, 3.0f, 50.0f, "%.0f /s")) {
+        if (ImGui::SliderFloat(Str::ScRepeatSpeed.id("hold_speed"), &rate, 1.0f, 100.0f, "%.0f /s")) {
             interval = 1.0f / rate;
             changed = true;
         }
@@ -277,14 +279,26 @@ void ShortcutWindow::render(bool &open, EventQueue &eq, const AppSettings &appSe
         }
         ImGui::SetItemTooltip("%s", Str::ScAccelerationTip.c_str());
 
+        // The accel target, clamped to the hard burst-safety ceiling (kHoldRepeatMaxRateHz).
+        const auto maxRateCap = static_cast<float>(ofs::kHoldRepeatMaxRateHz);
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.5f);
+        if (ImGui::SliderFloat(Str::ScMaxSpeed.id("hold_maxspeed"), &maxRate, 5.0f, maxRateCap, "%.0f /s")) {
+            maxRate = std::min(maxRate, maxRateCap);
+            changed = true;
+        }
+        ImGui::SetItemTooltip("%s", Str::ScMaxSpeedTip.c_str());
+
         // Live one-line preview of the resulting feel. With no acceleration the cadence is constant;
-        // otherwise it ramps from the starting rate to the shared ceiling, reached after `ramp` seconds.
+        // otherwise it ramps from the starting rate to the configured maximum, reached after `ramp` seconds.
+        const float effMaxRate = std::min(maxRate, maxRateCap);
+        const float floorGap = 1.0f / effMaxRate;
         const int startHz = static_cast<int>(std::lround(interval > 0.0f ? 1.0f / interval : 0.0f));
-        if (accel >= 1.0f) {
-            ImGui::TextDisabled("%s", Str::ScHoldRepeatPreviewSteady.fmt(startHz));
+        const auto topHz = static_cast<int>(std::lround(effMaxRate));
+        // No ramp when steady, or when the starting rate already meets/exceeds the ceiling. The sustained
+        // cadence is then the smaller of the two (holdRepeats clamps the gap to the floor).
+        if (accel >= 1.0f || interval <= floorGap) {
+            ImGui::TextDisabled("%s", Str::ScHoldRepeatPreviewSteady.fmt(std::min(startHz, topHz)));
         } else {
-            const auto topHz = static_cast<int>(std::lround(ofs::kHoldRepeatMaxRateHz));
-            const auto floorGap = static_cast<float>(1.0 / ofs::kHoldRepeatMaxRateHz);
             // Gaps until interval·accel^m reaches the floor, then summed: delay + interval·(1−accel^m)/(1−accel).
             const float m = std::log(floorGap / interval) / std::log(accel);
             const float ramp = delay + interval * (1.0f - std::pow(accel, m)) / (1.0f - accel);
@@ -293,10 +307,11 @@ void ShortcutWindow::render(bool &open, EventQueue &eq, const AppSettings &appSe
         }
 
         if (changed)
-            eq.push(ofs::ModifyEvent<ofs::AppSettings>{[delay, interval, accel](ofs::AppSettings &s) {
+            eq.push(ofs::ModifyEvent<ofs::AppSettings>{[delay, interval, accel, maxRate](ofs::AppSettings &s) {
                 s.holdRepeat.initialDelay = delay;
                 s.holdRepeat.interval = interval;
                 s.holdRepeat.accel = accel;
+                s.holdRepeat.maxRateHz = maxRate;
             }});
     }
 

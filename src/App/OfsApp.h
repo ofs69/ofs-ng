@@ -144,7 +144,8 @@ class OfsApp : public ofs::Application {
     [[nodiscard]] ofs::HoldRepeatParams holdRepeatParams() const {
         return {.initialDelay = appSettings.holdRepeat.initialDelay,
                 .interval = appSettings.holdRepeat.interval,
-                .accel = appSettings.holdRepeat.accel};
+                .accel = appSettings.holdRepeat.accel,
+                .maxRateHz = appSettings.holdRepeat.maxRateHz};
     }
 
     struct ExportFunscriptDialog {

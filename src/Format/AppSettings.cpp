@@ -97,7 +97,8 @@ void from_json(const nlohmann::json &j, InputSettings &s) {
 }
 
 void to_json(nlohmann::json &j, const HoldRepeatSettings &s) {
-    j = nlohmann::json::object({{"initialDelay", s.initialDelay}, {"interval", s.interval}, {"accel", s.accel}});
+    j = nlohmann::json::object(
+        {{"initialDelay", s.initialDelay}, {"interval", s.interval}, {"accel", s.accel}, {"maxRateHz", s.maxRateHz}});
 }
 
 void from_json(const nlohmann::json &j, HoldRepeatSettings &s) {
@@ -105,6 +106,7 @@ void from_json(const nlohmann::json &j, HoldRepeatSettings &s) {
     s.initialDelay = j.value("initialDelay", d.initialDelay);
     s.interval = j.value("interval", d.interval);
     s.accel = j.value("accel", d.accel);
+    s.maxRateHz = j.value("maxRateHz", d.maxRateHz);
 }
 
 void to_json(nlohmann::json &j, const WindowGeometry &g) {

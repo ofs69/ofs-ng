@@ -36,9 +36,10 @@ void from_json(const nlohmann::json &j, InputSettings &s);
 // stays free of BindingSystem.h, like InputSettings ↔ AnalogConfig). `accel < 1` makes repeats speed up
 // the longer a key is held (the gap shrinks toward holdRepeats' floor); `accel == 1` is a steady cadence.
 struct HoldRepeatSettings {
-    float initialDelay = 0.40f; // seconds before the second fire
+    float initialDelay = 0.30f; // seconds before the second fire
     float interval = 0.06f;     // seconds between repeats after the delay
-    float accel = 0.92f;        // <1 shrinks the interval each repeat (acceleration); 1 = steady
+    float accel = 0.88f;        // <1 shrinks the interval each repeat (acceleration); 1 = steady
+    float maxRateHz = 60.0f;    // ceiling an accelerating hold ramps to (repeats/sec); capped to the hard limit
 };
 
 void to_json(nlohmann::json &j, const HoldRepeatSettings &s);

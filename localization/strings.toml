@@ -1181,6 +1181,14 @@ description = "Shortcuts > Hold Repeat: slider — how much repeats speed up the
 english     = "How much repeats speed up the longer you hold. 0% keeps a steady cadence; higher ramps up toward the maximum rate."
 description = "Shortcuts: tooltip on the Acceleration slider."
 
+[ScMaxSpeed]
+english     = "Maximum speed"
+description = "Shortcuts > Hold Repeat: slider — the top repeat rate an accelerating hold ramps to, in repeats per second."
+
+[ScMaxSpeedTip]
+english     = "The fastest a held key can repeat once acceleration ramps up, in repeats per second. Higher is faster."
+description = "Shortcuts: tooltip on the Maximum speed slider."
+
 [ScHoldRepeatPreview]
 english      = "Holding ramps ~{0} → {1} /s over ~{2}s"
 description  = "Shortcuts > Hold Repeat: live one-line preview of the resulting cadence while acceleration is on."

@@ -100,19 +100,20 @@ struct PresetInfo {
 
 // ── Discrete hold cadence ─────────────────────────────────────────────────────
 
+// Absolute hard ceiling on sustained hold-repeat cadence (Hz), independent of user params. Stays below
+// the per-frame burst clamp at any sane frame rate (<16 fires/frame down to ~16 fps), keeping the
+// cadence frame-rate independent. The user-configurable HoldRepeatParams::maxRateHz is clamped to this.
+inline constexpr double kHoldRepeatMaxRateHz = 250.0;
+
 // Parameters for holdRepeats(): every former OS-repeat command wants the same feel — fire
 // immediately, brief delay, then a steady (optionally accelerating) cadence the app owns.
 struct HoldRepeatParams {
     float initialDelay = 0.40f; // seconds before the second fire
     float interval = 0.06f;     // seconds between repeats after the delay
     float accel = 1.0f;         // <1 shrinks interval over time (e.g. 0.9 per repeat); 1 = steady
+    float maxRateHz =
+        static_cast<float>(kHoldRepeatMaxRateHz); // ceiling an accelerating hold ramps to; capped to the hard limit
 };
-
-// Maximum sustained hold-repeat cadence (Hz): an accelerating (accel<1) hold's gap floors here, and
-// it's the absolute rate ceiling regardless of params. Stays below the per-frame burst clamp at any
-// sane frame rate (<16 fires/frame down to ~16 fps), keeping the cadence frame-rate independent.
-// Shared with the Shortcut-window cadence preview so the displayed ceiling can't drift from the floor.
-inline constexpr double kHoldRepeatMaxRateHz = 250.0;
 
 // Number of discrete fires whose scheduled time falls in (elapsed-dt, elapsed]. Schedule: a fire at
 // t=0 (immediate), then at initialDelay, initialDelay+interval, … with interval scaled by accel^k.

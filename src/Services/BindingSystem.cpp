@@ -541,9 +541,10 @@ int holdRepeats(float elapsed, float dt, const HoldRepeatParams &p) {
     // `elapsed`, and the function silently returned 0. That stalled every held frame-step (and any other
     // accelerating Hold) after ~1.5 s, on keyboard and gamepad alike.
     constexpr int kMaxBurst = 16; // ceiling on fires coalesced into one frame — caps the peak burst speed
-    // Terminal gap an accelerating (accel<1) hold shrinks toward, and the absolute min gap overall.
-    // Derived from the shared rate ceiling (see kHoldRepeatMaxRateHz for the frame-rate rationale).
-    constexpr double kFloor = 1.0 / kHoldRepeatMaxRateHz;
+    // Terminal gap an accelerating (accel<1) hold shrinks toward, and the absolute min gap overall. Set by
+    // the user's maxRateHz but clamped to the hard ceiling (see kHoldRepeatMaxRateHz for the rationale).
+    const double maxRate = std::min(static_cast<double>(p.maxRateHz), kHoldRepeatMaxRateHz);
+    const double kFloor = 1.0 / std::max(1.0, maxRate);
     const double lo = static_cast<double>(elapsed) - static_cast<double>(dt);
     const auto hi = static_cast<double>(elapsed);
     const double base = std::max(kFloor, static_cast<double>(p.interval));
