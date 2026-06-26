@@ -18,6 +18,7 @@
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
+#include <fstream>
 #include <glad/gl.h>
 #include <thread>
 #include <vector>
@@ -26,9 +27,10 @@ namespace ofs {
 
 namespace {
 
-// Convert a freshly-read byte run into mono float samples and feed them to the builder; returns the
-// number of samples consumed. `carry` holds the <4 trailing bytes of an incomplete float between reads.
-// The common path (empty carry) parses the chunk in place; only a straddling sample needs the concat.
+// Convert a freshly-read byte run of s16le PCM into mono float samples in [-1, 1) and feed them to the
+// builder; returns the number of samples consumed. `carry` holds the trailing odd byte of an incomplete
+// sample between reads. The common path (empty carry) parses the chunk in place; only a straddling
+// sample needs the concat.
 size_t feedSamples(waveform::PeakBuilder &builder, std::string &carry, const std::string &bytes) {
     const char *data = nullptr;
     size_t len = 0;
@@ -42,13 +44,13 @@ size_t feedSamples(waveform::PeakBuilder &builder, std::string &carry, const std
         data = joined.data();
         len = joined.size();
     }
-    const size_t full = len / 4;
+    const size_t full = len / 2;
     for (size_t i = 0; i < full; ++i) {
-        float s = 0.0f;
-        std::memcpy(&s, data + i * 4, sizeof(float)); // ffmpeg f32le == host little-endian on our targets
-        builder.add(s);
+        int16_t s = 0;
+        std::memcpy(&s, data + i * 2, sizeof(int16_t)); // ffmpeg s16le == host little-endian on our targets
+        builder.add(static_cast<float>(s) / 32768.0f);
     }
-    carry.assign(data + full * 4, len - full * 4);
+    carry.assign(data + full * 2, len - full * 2);
     return full;
 }
 
@@ -114,8 +116,30 @@ bool runExtraction(EventQueue &eq, const std::string &ffmpegBin, const std::stri
         return false;
     }
 
+    // Decode audio to a temp file rather than streaming it back through ffmpeg's stdout pipe. Reading the
+    // pipe throttled the decode to our read cadence — the pipe buffer fills and ffmpeg blocks until we
+    // drain it — so a long file took far longer than the decode itself. Writing to disk lets ffmpeg run
+    // flat-out; we then read the file in one fast pass. s16le (not f32le) halves the temp file: a
+    // waveform envelope doesn't need 32-bit samples.
+    std::error_code ec;
+    std::filesystem::create_directories(cacheDir, ec);
+    static std::atomic<uint64_t> tmpSeq{0};
+    const std::filesystem::path tmpPath =
+        cacheDir / ofs::util::fromUtf8(fmt::format("{}.{}.pcm.tmp", fp.empty() ? "wf" : fp,
+                                                   tmpSeq.fetch_add(1, std::memory_order_relaxed)));
+    const std::string tmpPathUtf8 = ofs::util::toUtf8(tmpPath);
+
+    // Remove the temp file on every exit path (success, failure, cancel).
+    struct TempGuard {
+        const std::filesystem::path &path;
+        ~TempGuard() {
+            std::error_code rmEc;
+            std::filesystem::remove(path, rmEc);
+        }
+    } tempGuard{tmpPath};
+
     const std::vector<std::string> args = {ffmpegBin, "-hide_banner", "-nostdin", "-i", source,  "-vn", "-ac",
-                                           "1",       "-ar",          "16000",    "-f", "f32le", "-"};
+                                           "1",       "-ar",          "16000",    "-f", "s16le", "-y",  tmpPathUtf8};
     const auto argv = toArgv(args);
     ofs::util::Process proc = ofs::util::Process::spawn(argv.data());
     if (!proc.valid()) {
@@ -123,57 +147,78 @@ bool runExtraction(EventQueue &eq, const std::string &ffmpegBin, const std::stri
         return false;
     }
 
-    waveform::PeakBuilder builder;
-    std::string carry;
-    uint64_t samplesDecoded = 0;
+    // ffmpeg writes the PCM file unattended; we only poll for exit, cancellation, and progress. Progress
+    // tracks the growing file size (bytes / 2 == s16 samples written), not bytes we have consumed.
     const auto startTime = steady_clock::now();
     auto lastPush = startTime;
+    int exitCode = 0;
     for (;;) {
         if (cancel.load(std::memory_order_acquire))
             proc.kill(); // exit is detected below; reported as cancelled
 
-        std::string chunk;
-        const size_t n = proc.readSome(chunk, 1u << 16);
-        if (n > 0) {
-            samplesDecoded += feedSamples(builder, carry, chunk);
-            if (const auto now = steady_clock::now(); duration_cast<milliseconds>(now - lastPush).count() >= 150) {
-                const double progress =
-                    expectedSamples > 0.0 ? std::clamp(static_cast<double>(samplesDecoded) / expectedSamples, 0.0, 1.0)
-                                          : 0.0;
-                // ETA from the average decode rate so far (samples/s). Smoother than an instantaneous rate
-                // and good enough for a "time remaining" hint; unknown until duration and some work exist.
-                double etaSeconds = -1.0;
-                if (const double elapsed = duration_cast<duration<double>>(now - startTime).count();
-                    expectedSamples > 0.0 && samplesDecoded > 0 && elapsed > 0.0) {
-                    const double rate = static_cast<double>(samplesDecoded) / elapsed;
-                    etaSeconds = std::max(0.0, (expectedSamples - static_cast<double>(samplesDecoded)) / rate);
-                }
-                eq.push(WaveformProgressEvent{.mediaPath = source,
-                                              .progress = progress,
-                                              .etaSeconds = etaSeconds,
-                                              .phase = WaveformPhase::Extracting});
-                lastPush = now;
+        const bool done = proc.exited(&exitCode);
+
+        if (const auto now = steady_clock::now(); duration_cast<milliseconds>(now - lastPush).count() >= 150) {
+            std::error_code sizeEc;
+            const auto bytes = std::filesystem::file_size(tmpPath, sizeEc);
+            const uint64_t samplesDecoded = sizeEc ? 0 : static_cast<uint64_t>(bytes) / sizeof(int16_t);
+            const double progress = expectedSamples > 0.0
+                                        ? std::clamp(static_cast<double>(samplesDecoded) / expectedSamples, 0.0, 1.0)
+                                        : 0.0;
+            // ETA from the average decode rate so far (samples/s). Smoother than an instantaneous rate
+            // and good enough for a "time remaining" hint; unknown until duration and some work exist.
+            double etaSeconds = -1.0;
+            if (const double elapsed = duration_cast<duration<double>>(now - startTime).count();
+                expectedSamples > 0.0 && samplesDecoded > 0 && elapsed > 0.0) {
+                const double rate = static_cast<double>(samplesDecoded) / elapsed;
+                etaSeconds = std::max(0.0, (expectedSamples - static_cast<double>(samplesDecoded)) / rate);
             }
+            eq.push(WaveformProgressEvent{.mediaPath = source,
+                                          .progress = progress,
+                                          .etaSeconds = etaSeconds,
+                                          .phase = WaveformPhase::Extracting});
+            lastPush = now;
         }
 
-        int code = 0;
-        if (proc.exited(&code)) {
-            std::string tail;
-            while (proc.readSome(tail) > 0) { // drain whatever is buffered after exit
-            }
-            feedSamples(builder, carry, tail);
+        if (done) {
             if (cancel.load(std::memory_order_acquire)) {
                 eq.push(WaveformFailedEvent{.mediaPath = source, .cancelled = true});
                 return false;
             }
-            if (code != 0) { // ffmpeg failed — most commonly: the media has no audio stream
+            if (exitCode != 0) { // ffmpeg failed — most commonly: the media has no audio stream
                 eq.push(WaveformFailedEvent{.mediaPath = source});
                 return false;
             }
             break;
         }
-        if (n == 0)
-            std::this_thread::sleep_for(20ms); // nothing ready yet — don't busy-spin
+        std::this_thread::sleep_for(20ms); // poll cadence; ffmpeg decodes to disk independently
+    }
+
+    std::error_code finalSizeEc;
+    const auto tmpBytes = std::filesystem::file_size(tmpPath, finalSizeEc);
+    OFS_CORE_INFO("Waveform temp file {}: {} bytes ({:.1f} MiB)", tmpPathUtf8, finalSizeEc ? 0 : tmpBytes,
+                  (finalSizeEc ? 0.0 : static_cast<double>(tmpBytes)) / (1024.0 * 1024.0));
+
+    // Decode complete: stream the temp file through the bucket builder in fixed chunks (O(buckets)
+    // memory — the PCM is never held whole).
+    waveform::PeakBuilder builder;
+    {
+        std::ifstream in(tmpPath, std::ios::binary);
+        if (!in) {
+            eq.push(WaveformFailedEvent{.mediaPath = source});
+            return false;
+        }
+        std::string carry;
+        std::string chunk;
+        for (;;) {
+            chunk.resize(1u << 16);
+            in.read(chunk.data(), static_cast<std::streamsize>(chunk.size()));
+            const auto got = in.gcount();
+            if (got <= 0)
+                break;
+            chunk.resize(static_cast<size_t>(got));
+            feedSamples(builder, carry, chunk);
+        }
     }
 
     waveform::WaveformData data = builder.finish();
