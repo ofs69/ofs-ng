@@ -257,15 +257,19 @@ static const char *waveformFragBody = R"(
             return groupMinMax(floor(bAbs / uStep));
         }
 
-        // Coverage of vertical position v by the envelope's [min,max] band at bAbs, with a >= ~1px feather
-        // so the edge is anti-aliased and silence stays a visible centre hairline.
-        float bandCoverage(float bAbs, float v, float aa) {
-            vec2 mm = sampleEnvelope(bAbs);
+        // Coverage of vertical position v by an already-resolved [min,max] band, with a >= ~1px feather so
+        // the edge is anti-aliased and silence stays a visible centre hairline.
+        float bandCoverageMM(vec2 mm, float v, float aa) {
             float mid = (mm.x + mm.y) * 0.5;
             float halfBand = max((mm.y - mm.x) * 0.5, aa);
             float lo = mid - halfBand;
             float hi = mid + halfBand;
             return smoothstep(hi + aa, hi - aa, v) * smoothstep(lo - aa, lo + aa, v);
+        }
+
+        // Same, fetching the envelope at fractional bucket bAbs (the zoomed-in interpolation path).
+        float bandCoverage(float bAbs, float v, float aa) {
+            return bandCoverageMM(sampleEnvelope(bAbs), v, aa);
         }
 
         void main() {
@@ -283,10 +287,30 @@ static const char *waveformFragBody = R"(
             // unit. No height interpolation, so columns never show invented in-between heights.
             const int kSuperX = 8;
             float bCenter = mix(uStartBucket, uEndBucket, Frag_UV.x);
+
             float cover = 0.0;
-            for (int s = 0; s < kSuperX; ++s) {
-                float subOff = (float(s) + 0.5) / float(kSuperX) - 0.5; // -0.5..+0.5 across the pixel
-                cover += bandCoverage(bCenter + subOff * uBucketsPerPixel, v, aa);
+            if (uStep < 1.5) {
+                // Zoomed in past the data: per-sub interpolation (sampleEnvelope is cheap here, no scan).
+                for (int s = 0; s < kSuperX; ++s) {
+                    float subOff = (float(s) + 0.5) / float(kSuperX) - 0.5; // -0.5..+0.5 across the pixel
+                    cover += bandCoverage(bCenter + subOff * uBucketsPerPixel, v, aa);
+                }
+            } else {
+                // Zoomed out: the pixel's bucket span (uBucketsPerPixel) is <= one ladder group (uStep), so
+                // every sub-position lands in one of at most two adjacent groups. groupMinMax is the hot
+                // cost (a kMaxScan-iteration min/max scan), so resolve each distinct group ONCE here rather
+                // than re-scanning it per sub-position — identical result, up to ~kSuperX/2 fewer scans.
+                float halfSpan = 0.5 * uBucketsPerPixel;
+                float gL = floor((bCenter - halfSpan) / uStep);
+                float gR = floor((bCenter + halfSpan) / uStep);
+                vec2 envL = groupMinMax(gL);
+                vec2 envR = (gR == gL) ? envL : groupMinMax(gR);
+                float boundary = (gL + 1.0) * uStep; // first absolute bucket of the right group
+                for (int s = 0; s < kSuperX; ++s) {
+                    float subOff = (float(s) + 0.5) / float(kSuperX) - 0.5;
+                    float b = bCenter + subOff * uBucketsPerPixel;
+                    cover += bandCoverageMM(b < boundary ? envL : envR, v, aa);
+                }
             }
             cover /= float(kSuperX);
             Out_Color = vec4(uColor.rgb, uColor.a * cover);
