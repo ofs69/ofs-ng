@@ -391,6 +391,10 @@ bool renderOneToast(ToastItem &item, float alpha) {
     const float toastWidth = ImGui::GetFontSize() * 20.0f;
     const float sideIndent = ImGui::GetFontSize() * 0.6f;
     ImGui::PushStyleVar(ImGuiStyleVar_Alpha, alpha);
+    // Tight vertical inner padding so a one-line toast is a compact bar rather than a tall block; keep the
+    // theme's horizontal padding. This replaces the old Dummy(0,1) top/bottom spacers.
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,
+                        ImVec2(ImGui::GetStyle().WindowPadding.x, ImGui::GetFontSize() * 0.2f));
     ImGui::PushStyleColor(ImGuiCol_ChildBg, ofs::theme::GetColorU32(ImGuiCol_PopupBg));
     ImGui::BeginChild(fmtScratch("##toast{}", static_cast<const void *>(&item)), ImVec2(toastWidth, 0.0f),
                       ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders);
@@ -401,7 +405,6 @@ bool renderOneToast(ToastItem &item, float alpha) {
     dl->AddRectFilled(mn, ImVec2(mn.x + 3.0f, mx.y), ls.color); // left accent stripe
 
     ImGui::Indent(sideIndent);
-    ImGui::Dummy(ImVec2(0.0f, 1.0f));
     ImGui::PushStyleColor(ImGuiCol_Text, ls.color);
     ImGui::TextUnformatted(ls.icon);
     ImGui::PopStyleColor();
@@ -409,13 +412,12 @@ bool renderOneToast(ToastItem &item, float alpha) {
     ImGui::PushTextWrapPos(toastWidth - ImGui::GetFontSize() * 1.1f);
     ImGui::TextUnformatted(item.text.c_str());
     ImGui::PopTextWrapPos();
-    ImGui::Dummy(ImVec2(0.0f, 1.0f));
     ImGui::Unindent(sideIndent);
 
     const bool hovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows);
     ImGui::EndChild();
     ImGui::PopStyleColor();
-    ImGui::PopStyleVar();
+    ImGui::PopStyleVar(2);
     return hovered;
 }
 
