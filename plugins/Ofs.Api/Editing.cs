@@ -219,27 +219,13 @@ namespace Ofs
             public Ui? Ui; // built once at registration over the host api; drawn only while the mode is active
         }
 
-        private static readonly object s_lock = new();
-        private static readonly List<ModeSlot?> s_slots = new();
-        private readonly List<int> _ownedSlots = new();
-
-        private static ModeSlot? GetSlot(int i)
-        {
-            lock (s_lock) { return (i >= 0 && i < s_slots.Count) ? s_slots[i] : null; }
-        }
+        // Slot bookkeeping (static table + per-plugin ownership) lives in SlotTable/OwnedSlots; the static
+        // trampolines reach the table via SlotTable<ModeSlot>.Get.
+        private readonly OwnedSlots<ModeSlot> _slots = new();
 
         // Null this plugin's slots on unload so its delegates (and thus its collectible ALC) are released;
         // the native registry entries are dropped in parallel by UnregisterEditModesEvent.
-        internal void ReleaseOwnedSlots()
-        {
-            lock (s_lock)
-            {
-                foreach (int i in _ownedSlots)
-                    if (i >= 0 && i < s_slots.Count)
-                        s_slots[i] = null;
-                _ownedSlots.Clear();
-            }
-        }
+        internal void ReleaseOwnedSlots() => _slots.Release();
 
         /// <summary>
         /// Publishes an edit mode the user can select in the footer. Call from OnLoad.
@@ -261,20 +247,14 @@ namespace Ofs
             if (string.IsNullOrEmpty(id)) throw new ArgumentException("Edit mode id must be non-empty.", nameof(id));
             ArgumentNullException.ThrowIfNull(onIntent);
 
-            int slot;
-            lock (s_lock)
+            int slot = _slots.Add(new ModeSlot
             {
-                slot = s_slots.Count;
-                s_slots.Add(new ModeSlot
-                {
-                    OnIntent = onIntent,
-                    OnEnter = onEnter,
-                    OnExit = onExit,
-                    OnUi = onUi,
-                    Ui = onUi != null ? new Ui(_api) : null,
-                });
-                _ownedSlots.Add(slot);
-            }
+                OnIntent = onIntent,
+                OnEnter = onEnter,
+                OnExit = onExit,
+                OnUi = onUi,
+                Ui = onUi != null ? new Ui(_api) : null,
+            });
 
             var hId = GCHandle.Alloc(Encoding.UTF8.GetBytes(id + "\0"), GCHandleType.Pinned);
             var hName = GCHandle.Alloc(Encoding.UTF8.GetBytes((displayName ?? string.Empty) + "\0"), GCHandleType.Pinned);
@@ -344,7 +324,7 @@ namespace Ofs
         private static int IntentTrampoline(void* ud, OfsEditIntent* inp,
             delegate* unmanaged[Cdecl]<void*, OfsEditIntent*, void> emit, void* sink)
         {
-            var slot = GetSlot((int)(nint)ud);
+            var slot = SlotTable<ModeSlot>.Get((int)(nint)ud);
             if (slot?.OnIntent == null || inp == null) return (int)OfsEditDisposition.Pass; // released → native
             EditIntent intent = FromAbi(*inp);
             EditResult result = PluginGuard.Run("editmode:onIntent", () => slot.OnIntent(intent), EditResult.Pass);
@@ -362,21 +342,21 @@ namespace Ofs
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
         private static void EnterTrampoline(void* ud)
         {
-            var slot = GetSlot((int)(nint)ud);
+            var slot = SlotTable<ModeSlot>.Get((int)(nint)ud);
             if (slot?.OnEnter != null) PluginGuard.Run("editmode:onEnter", slot.OnEnter);
         }
 
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
         private static void ExitTrampoline(void* ud)
         {
-            var slot = GetSlot((int)(nint)ud);
+            var slot = SlotTable<ModeSlot>.Get((int)(nint)ud);
             if (slot?.OnExit != null) PluginGuard.Run("editmode:onExit", slot.OnExit);
         }
 
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
         private static void UiTrampoline(void* ud)
         {
-            var slot = GetSlot((int)(nint)ud);
+            var slot = SlotTable<ModeSlot>.Get((int)(nint)ud);
             if (slot?.OnUi == null || slot.Ui == null) return; // released → nothing to draw
             Action<Ui> onUi = slot.OnUi;
             Ui ui = slot.Ui;

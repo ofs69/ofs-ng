@@ -18,15 +18,6 @@ Line numbers are approximate — several files moved during the cleanup. Locate 
 
 ## Router / registry templating
 
-- **Triplicated mode-registry infrastructure (C#)** — `plugins/Ofs.Api/Editing.cs`, `Navigation.cs`,
-  `Selection.cs` (~150 lines each: slot record, lock/list, `GetSlot`/`ReleaseOwnedSlots`, `RegisterMode`
-  preamble, trampolines). Extract a generic `ModeRegistry<TSlot>` base for the slot bookkeeping. Note:
-  `[UnmanagedCallersOnly]` trampolines can't move into a generic — leave those per-registry.
-
-- **`ReleaseOwnedSlots` slot-nulling loop duplicated in 4 registries (C#)** — `Nodes.cs`, `Editing.cs`,
-  `Navigation.cs`, `Selection.cs`. A shared base / static `OwnedSlots` helper. Folds into the
-  `ModeRegistry<TSlot>` work above.
-
 > C# changes need a managed rebuild and are higher-risk (the public `Ofs.Api` surface is the plugin
 > stabilization contract — keep these internal/non-breaking).
 

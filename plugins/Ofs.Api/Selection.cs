@@ -108,27 +108,13 @@ namespace Ofs
             public Ui? Ui; // built once at registration; drawn only while this mode is active
         }
 
-        private static readonly object s_lock = new();
-        private static readonly List<SelSlot?> s_slots = new();
-        private readonly List<int> _ownedSlots = new();
-
-        private static SelSlot? GetSlot(int i)
-        {
-            lock (s_lock) { return (i >= 0 && i < s_slots.Count) ? s_slots[i] : null; }
-        }
+        // Slot bookkeeping (static table + per-plugin ownership) lives in SlotTable/OwnedSlots; the static
+        // trampolines reach the table via SlotTable<SelSlot>.Get.
+        private readonly OwnedSlots<SelSlot> _slots = new();
 
         // Null this plugin's slots on unload so its delegates (and thus its collectible ALC) are released;
         // the native registry entries are dropped in parallel by UnregisterSelectionModesEvent.
-        internal void ReleaseOwnedSlots()
-        {
-            lock (s_lock)
-            {
-                foreach (int i in _ownedSlots)
-                    if (i >= 0 && i < s_slots.Count)
-                        s_slots[i] = null;
-                _ownedSlots.Clear();
-            }
-        }
+        internal void ReleaseOwnedSlots() => _slots.Release();
 
         /// <summary>
         /// Publishes a selection mode the user can select in the footer's Select selector. Call from OnLoad.
@@ -149,20 +135,14 @@ namespace Ofs
             if (string.IsNullOrEmpty(id)) throw new ArgumentException("Selection mode id must be non-empty.", nameof(id));
             ArgumentNullException.ThrowIfNull(onSelect);
 
-            int slot;
-            lock (s_lock)
+            int slot = _slots.Add(new SelSlot
             {
-                slot = s_slots.Count;
-                s_slots.Add(new SelSlot
-                {
-                    OnSelect = onSelect,
-                    OnEnter = onEnter,
-                    OnExit = onExit,
-                    OnUi = onUi,
-                    Ui = onUi != null ? new Ui(_api) : null,
-                });
-                _ownedSlots.Add(slot);
-            }
+                OnSelect = onSelect,
+                OnEnter = onEnter,
+                OnExit = onExit,
+                OnUi = onUi,
+                Ui = onUi != null ? new Ui(_api) : null,
+            });
 
             var hId = GCHandle.Alloc(Encoding.UTF8.GetBytes(id + "\0"), GCHandleType.Pinned);
             var hName = GCHandle.Alloc(Encoding.UTF8.GetBytes((displayName ?? string.Empty) + "\0"), GCHandleType.Pinned);
@@ -208,7 +188,7 @@ namespace Ofs
         private static int SelectTrampoline(void* ud, OfsSelectRequest* inp,
             delegate* unmanaged[Cdecl]<void*, ScriptAction, void> emit, void* sink)
         {
-            var slot = GetSlot((int)(nint)ud);
+            var slot = SlotTable<SelSlot>.Get((int)(nint)ud);
             if (slot?.OnSelect == null || inp == null) return (int)OfsSelectDisposition.Pass; // released → native
             var axis = (inp->Axis >= 0 && inp->Axis < (int)StandardAxis.Count) ? (StandardAxis)inp->Axis : StandardAxis.L0;
             var req = new SelectRequest((SelectGesture)inp->Gesture, axis, inp->StartTime, inp->EndTime,
@@ -223,21 +203,21 @@ namespace Ofs
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
         private static void EnterTrampoline(void* ud)
         {
-            var slot = GetSlot((int)(nint)ud);
+            var slot = SlotTable<SelSlot>.Get((int)(nint)ud);
             if (slot?.OnEnter != null) PluginGuard.Run("selectmode:onEnter", slot.OnEnter);
         }
 
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
         private static void ExitTrampoline(void* ud)
         {
-            var slot = GetSlot((int)(nint)ud);
+            var slot = SlotTable<SelSlot>.Get((int)(nint)ud);
             if (slot?.OnExit != null) PluginGuard.Run("selectmode:onExit", slot.OnExit);
         }
 
         [UnmanagedCallersOnly(CallConvs = new[] { typeof(CallConvCdecl) })]
         private static void UiTrampoline(void* ud)
         {
-            var slot = GetSlot((int)(nint)ud);
+            var slot = SlotTable<SelSlot>.Get((int)(nint)ud);
             if (slot?.OnUi == null || slot.Ui == null) return; // released → nothing to draw
             Action<Ui> onUi = slot.OnUi;
             Ui ui = slot.Ui;

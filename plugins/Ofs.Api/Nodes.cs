@@ -288,12 +288,12 @@ namespace Ofs
         private readonly OfsHost _host;
         private readonly HostApi* _api;
 
-        // State slot indices THIS plugin instance registered, so ReleaseOwnedSlots() can clear them when the
-        // plugin unloads. Without this the static slot table below would hold the plugin's delegates — and
-        // thus its AssemblyLoadContext — for the entire process lifetime, so the plugin would never truly
-        // unload and its DLL would stay locked. Script nodes (the Append* path) are not tracked here; they
-        // are released separately via ReleaseScript.
-        private readonly List<int> _ownedSlots = new();
+        // State slots THIS plugin instance registered, tracked so ReleaseOwnedSlots() can clear them when the
+        // plugin unloads. Without this the shared slot table (SlotTable<StateSlot>) would hold the plugin's
+        // delegates — and thus its AssemblyLoadContext — for the entire process lifetime, so the plugin would
+        // never truly unload and its DLL would stay locked. Script nodes (the Append* path) are not tracked
+        // here; they are released separately via ReleaseScript.
+        private readonly OwnedSlots<StateSlot> _slots = new();
 
         internal Nodes(OfsHost host, HostApi* api)
         {
@@ -302,18 +302,9 @@ namespace Ofs
         }
 
         // Clear every slot this plugin registered (null the delegate) so its assembly can be collected.
-        // Done under s_slotLock so it doesn't race the script-node Append* path that grows the list; the
-        // eval trampolines read slots without the lock and null-check, so a released slot is a safe no-op.
-        internal void ReleaseOwnedSlots()
-        {
-            lock (s_slotLock)
-            {
-                foreach (int i in _ownedSlots)
-                    if (i >= 0 && i < _stateSlots.Count)
-                        _stateSlots[i] = null;
-                _ownedSlots.Clear();
-            }
-        }
+        // OwnedSlots locks the shared table so this doesn't race the script-node Append* path that grows it;
+        // the eval trampolines read slots without the lock and null-check, so a released slot is a safe no-op.
+        internal void ReleaseOwnedSlots() => _slots.Release();
 
         // ── Registration ───────────────────
         // The node's parameters are the fields of TState (a struct). eval reads a private value copy by
@@ -518,7 +509,7 @@ namespace Ofs
         private static void FunctionalTrampoline(double t, float* ins, int inCount, OfsEvalCtx* ctx, float* outs,
                                                  int outCount, void* ud)
         {
-            var slot = _stateSlots[(int)(nint)ud];
+            var slot = SlotTable<StateSlot>.Slots[(int)(nint)ud];
             if (slot == null) { Passthrough(ins, inCount, outs, outCount); return; } // released by plugin unload
             if (slot.Prep != null) // factory node: build once per eval, then sample the cached closure
             {
@@ -540,7 +531,7 @@ namespace Ofs
         private static void DiscreteTrampoline(void** ins, int inCount, OfsEvalCtx* ctx, void** outs, int outCount,
                                                void* ud)
         {
-            var slot = _stateSlots[(int)(nint)ud];
+            var slot = SlotTable<StateSlot>.Slots[(int)(nint)ud];
             if (slot?.Disc == null) return; // released by plugin unload — emit nothing
             int gen = BeginEval(ctx);
             var c = new NodeContext(ctx->RegionStart, ctx->RegionEnd, BorrowParams(ctx), ctx->ParamCount, gen);
@@ -616,9 +607,9 @@ namespace Ofs
             };
         }
 
-        // The single slot table, shared by plugin nodes (tracked in _ownedSlots) and script nodes (released
-        // via ReleaseScript). A released slot is nulled in place; the trampolines null-check. Grows only.
-        private static readonly List<StateSlot?> _stateSlots = new();
+        // The single slot table lives in SlotTable<StateSlot>, shared by plugin nodes (tracked per-instance
+        // in _slots) and script nodes (released via ReleaseScript). A released slot is nulled in place; the
+        // trampolines null-check. Grows only.
 
         // Deferred Node.Update mutations, keyed by the host's packed node identity. Enqueued from any thread
         // (an async continuation may resume off the main thread); drained on the main thread in
@@ -671,16 +662,7 @@ namespace Ofs
             return (decode, encode);
         }
 
-        private int AddStateSlot(StateSlot entry)
-        {
-            lock (s_slotLock)
-            {
-                int slot = _stateSlots.Count;
-                _stateSlots.Add(entry);
-                _ownedSlots.Add(slot);
-                return slot;
-            }
-        }
+        private int AddStateSlot(StateSlot entry) => _slots.Add(entry);
 
         // Node eval (and a factory `prepare`) runs on worker threads, so it must read all its data from the
         // TState value and never capture plugin state — a captured `this`/local read off-thread is a data
@@ -897,7 +879,7 @@ namespace Ofs
         private static int NodeUiTrampoline(void* ctx, void* ud)
         {
             StateSlot? slot;
-            lock (s_slotLock) { int i = (int)(nint)ud; slot = (i >= 0 && i < _stateSlots.Count) ? _stateSlots[i] : null; }
+            lock (SlotTable<StateSlot>.Lock) { int i = (int)(nint)ud; slot = (i >= 0 && i < SlotTable<StateSlot>.Slots.Count) ? SlotTable<StateSlot>.Slots[i] : null; }
             if (slot?.UiCallback == null || slot.Decode == null || slot.Encode == null || s_discApi == null) return 0;
             try
             {
@@ -932,7 +914,7 @@ namespace Ofs
         internal static int CaptureState(int slot, string json, int generation)
         {
             StateSlot? s;
-            lock (s_slotLock) { s = (slot >= 0 && slot < _stateSlots.Count) ? _stateSlots[slot] : null; }
+            lock (SlotTable<StateSlot>.Lock) { s = (slot >= 0 && slot < SlotTable<StateSlot>.Slots.Count) ? SlotTable<StateSlot>.Slots[slot] : null; }
             if (s?.Decode == null) return -1;
             object box = s.Decode(json);     // best-effort decode → boxed TState (never throws)
             int h = _nextStateHandle++;
@@ -959,16 +941,15 @@ namespace Ofs
         // registered with the host (it never enters effectReg.pluginNodes) and carries no TState (box stays
         // null, stateHandle -1). Ofs.ScriptHost compiles the source, binds the delegate, and calls one of
         // these to append it and get back { trampoline, slot } — handed to native as a CompiledScriptRef.
-        // The append happens at runtime (a recompile), possibly on a worker thread, so it is serialized.
-
-        private static readonly object s_slotLock = new();
+        // The append happens at runtime (a recompile), possibly on a worker thread, so it is serialized
+        // (SlotTable<StateSlot>.Lock).
 
         // Make the discrete I/O accessors available to the trampolines even when no plugin has registered a
         // discrete node (e.g. script nodes). Refreshes to the caller's live api rather than latching the
         // first — a prior provider's HostApi struct may already be freed (see s_discApi).
         internal static void EnsureHostApi(HostApi* api)
         {
-            lock (s_slotLock)
+            lock (SlotTable<StateSlot>.Lock)
             {
                 s_discApi = api;
             }
@@ -980,7 +961,7 @@ namespace Ofs
         // before the first plugin registers.
         internal static void SetScriptHostApi(HostApi* api)
         {
-            lock (s_slotLock)
+            lock (SlotTable<StateSlot>.Lock)
             {
                 s_stableDiscApi = api;
                 s_discApi = api;
@@ -999,10 +980,10 @@ namespace Ofs
         internal static (IntPtr trampoline, IntPtr userData) AppendFunctional(ScriptFunctionalEval fn,
             AssemblyLoadContext alc)
         {
-            lock (s_slotLock)
+            lock (SlotTable<StateSlot>.Lock)
             {
-                int slot = _stateSlots.Count;
-                _stateSlots.Add(new StateSlot
+                int slot = SlotTable<StateSlot>.Slots.Count;
+                SlotTable<StateSlot>.Slots.Add(new StateSlot
                 {
                     Func = (double t, ReadOnlySpan<float> ins, object? _, NodeContext ctx, Span<float> outs) =>
                         fn(t, ins, ctx, outs),
@@ -1018,10 +999,10 @@ namespace Ofs
         internal static (IntPtr trampoline, IntPtr userData) AppendDiscrete(ScriptDiscreteEval fn,
             AssemblyLoadContext alc)
         {
-            lock (s_slotLock)
+            lock (SlotTable<StateSlot>.Lock)
             {
-                int slot = _stateSlots.Count;
-                _stateSlots.Add(new StateSlot
+                int slot = SlotTable<StateSlot>.Slots.Count;
+                SlotTable<StateSlot>.Slots.Add(new StateSlot
                 {
                     Disc = (ReadOnlySpan<DiscreteReader> ins, object? _, NodeContext ctx,
                             ReadOnlySpan<DiscreteWriter> outs) => fn(ins, ctx, outs),
@@ -1039,10 +1020,10 @@ namespace Ofs
         // unload is deferred until no frame executes in it), and any later eval reads the now-null slot.
         internal static void ReleaseScript(int slot)
         {
-            lock (s_slotLock)
+            lock (SlotTable<StateSlot>.Lock)
             {
-                if (slot >= 0 && slot < _stateSlots.Count)
-                    _stateSlots[slot] = null;
+                if (slot >= 0 && slot < SlotTable<StateSlot>.Slots.Count)
+                    SlotTable<StateSlot>.Slots[slot] = null;
             }
             if (s_scriptAlcs.TryRemove(slot, out var alc))
                 alc.Unload();
