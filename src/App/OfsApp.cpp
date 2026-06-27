@@ -10,12 +10,14 @@
 #include "Services/BindingSystem.h"
 #include "Services/EditIntentRouter.h"
 #include "Services/EffectRegistry.h"
+#include "Services/ManagedHttp.h"
 #include "Services/NavigatorRouter.h"
 #include "Services/ProcessingSystem.h"
 #include "Services/ProjectManager.h"
 #include "Services/ScriptSystem.h"
 #include "Services/SelectIntentRouter.h"
 #include "Services/UndoSystem.h"
+#include "Services/UpdateChecker.h"
 #include "Services/VideoTranscoder.h"
 #include "Services/WaveformService.h"
 #include "UI/AboutWindow.h"
@@ -340,6 +342,26 @@ bool OfsApp::init() {
     configWindow = std::make_unique<ofs::ConfigurationWindow>(appSettings);
     projectConfigWindow = std::make_unique<ofs::ProjectConfigWindow>(appSettings);
     processingPanel = std::make_unique<ofs::ProcessingPanel>();
+    // Registers its CheckForUpdatesEvent / result handlers here, before freeze().
+    updateChecker = std::make_unique<ofs::UpdateChecker>(eventQueue, jobSystem);
+    // Surface the update-check outcome as a footer notification: always for an available update (the
+    // discovery path for the silent startup check), and — only for a user-initiated check — a confirming
+    // "up to date" / failure toast so a command-palette run isn't silent. The UpdateChecker itself owns
+    // the About-window status; these handlers add the transient toast on top.
+    eventQueue.on<ofs::UpdateAvailableEvent>([this](const ofs::UpdateAvailableEvent &e) {
+        eventQueue.push(
+            ofs::NotifyEvent{.level = ofs::NotifyLevel::Info, .message = Str::AboutUpdateAvailable.fmt(e.version)});
+    });
+    eventQueue.on<ofs::UpdateUpToDateEvent>([this](const ofs::UpdateUpToDateEvent &e) {
+        if (e.userInitiated)
+            eventQueue.push(
+                ofs::NotifyEvent{.level = ofs::NotifyLevel::Success, .message = Str::AboutUpToDate.c_str()});
+    });
+    eventQueue.on<ofs::UpdateCheckFailedEvent>([this](const ofs::UpdateCheckFailedEvent &e) {
+        if (e.userInitiated)
+            eventQueue.push(
+                ofs::NotifyEvent{.level = ofs::NotifyLevel::Warning, .message = Str::AboutUpdateFailed.c_str()});
+    });
     // Registers on<ShowModalEvent> in its ctor — must happen before freeze() below.
     modalManager = std::make_unique<ofs::ModalManager>(eventQueue);
 
@@ -416,6 +438,15 @@ void OfsApp::onStartupComplete() {
     // commands and re-resolve bindings so a saved binding to a plugin command takes effect now.
     refreshProviderCommands();
     bindingSystem->loadBindings();
+
+    // Bring up the .NET-backed HTTP backend (its own CoreCLR load of Ofs.HostServices) so the update
+    // checker has a network path. Non-fatal if it fails — the checker then just reports no network.
+    ofs::initManagedHttp();
+
+    // Silent update check (opt-out): fired here, not in init(), so it overlaps the rest of startup and
+    // never delays the first frame. The result surfaces only if a newer release exists (userInitiated=false).
+    if (appSettings.checkForUpdatesOnStartup)
+        eventQueue.push(ofs::CheckForUpdatesEvent{.userInitiated = false});
 }
 
 OfsApp::~OfsApp() {
@@ -878,7 +909,7 @@ void OfsApp::onImGuiRender() {
     if (configWindow)
         configWindow->render(scriptProject, eventQueue, appState.showConfigWindow);
     if (aboutWindow)
-        aboutWindow->render(appState.showAboutWindow);
+        aboutWindow->render(appState.showAboutWindow, updateChecker->status(), eventQueue);
 
     // One top-level branch: the editor (dockspace + windows) only renders with an active project;
     // otherwise the welcome screen takes the body. Every editor window may therefore assume a project

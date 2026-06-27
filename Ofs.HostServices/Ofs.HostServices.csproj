@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- App-internal managed services for the native host. Deliberately STANDALONE: it does NOT reference
+       Ofs.Api and is never loaded through PluginLoadContext, so it has nothing to do with the plugin or
+       script ABI. The native host loads it through its own DotNetHost and calls its [UnmanagedCallersOnly]
+       entry points directly. It exists so we can lean on the already-mandatory .NET runtime for things that
+       would otherwise need a vendored native library (today: one HTTPS GET, via HttpClient + the OS trust
+       store — which is why no libcurl ships). EnableDynamicLoading emits the .runtimeconfig.json that
+       DotNetHost::loadAssembly requires. -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <EnableDynamicLoading>true</EnableDynamicLoading>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+</Project>

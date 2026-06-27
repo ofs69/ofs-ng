@@ -26,6 +26,7 @@ void RegisterMenusTests(ImGuiTestEngine *);
 void RegisterShortcutTests(ImGuiTestEngine *);
 void RegisterMultiAxisTests(ImGuiTestEngine *);
 void RegisterTranscodeTests(ImGuiTestEngine *);
+void RegisterUpdatesTests(ImGuiTestEngine *);
 void RegisterPluginUiTests(ImGuiTestEngine *);
 
 void RegisterAllTests(ImGuiTestEngine *engine) {
@@ -55,6 +56,7 @@ void RegisterAllTests(ImGuiTestEngine *engine) {
     RegisterShortcutTests(engine);
     RegisterMultiAxisTests(engine);
     RegisterTranscodeTests(engine);
+    RegisterUpdatesTests(engine);
     // Registered last: loads the real C# plugin into the live app; keeping it after the other suites
     // means no other suite runs with the plugin loaded.
     RegisterPluginUiTests(engine);

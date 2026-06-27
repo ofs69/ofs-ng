@@ -239,6 +239,7 @@ add_executable(ofs-unit-tests
         util/test_file_fingerprint.cpp
         util/test_json_util.cpp
         util/test_fuzzy_match.cpp
+        util/test_semver.cpp
         services/test_command_registry.cpp
         services/test_video_transcoder.cpp
         services/test_waveform_peaks.cpp
@@ -340,6 +341,7 @@ add_executable(ofs-plugin-tests
         plugins/test_script_compile.cpp
         plugins/test_host_api.cpp
         plugins/test_dotnet_host.cpp
+        plugins/test_managed_http.cpp
         helpers/PluginManagerTestAccess.cpp
 
         # Plugin-only src (the shared plain-imgui core comes from ofs-obj-base, linked
@@ -355,8 +357,14 @@ add_executable(ofs-plugin-tests
         ${CMAKE_SOURCE_DIR}/src/Services/NavigatorRouter.cpp
         ${CMAKE_SOURCE_DIR}/src/Services/SelectIntentRouter.cpp
         ${CMAKE_SOURCE_DIR}/src/Platform/DotNetHost.cpp
+        ${CMAKE_SOURCE_DIR}/src/Services/ManagedHttp.cpp
+        ${CMAKE_SOURCE_DIR}/src/Util/Http.cpp
         ${CMAKE_SOURCE_DIR}/src/Util/PathUtil.cpp
 )
+# ManagedHttp's loopback seam test (test_managed_http.cpp) needs the sockets API.
+if (WIN32)
+    target_link_libraries(ofs-plugin-tests PRIVATE ws2_32)
+endif ()
 
 target_include_directories(ofs-plugin-tests PRIVATE
         ${CMAKE_SOURCE_DIR}/src
@@ -504,7 +512,8 @@ set(OFS_UI_TEST_SUITE_SRC
         ui/suite_menus.cpp
         ui/suite_shortcuts.cpp
         ui/suite_multiaxis.cpp
-        ui/suite_transcode.cpp)
+        ui/suite_transcode.cpp
+        ui/suite_updates.cpp)
 
 # Link libs shared by both UI test binaries (the imgui_te flavor + the app's third-party deps).
 set(OFS_UI_TEST_LIBS

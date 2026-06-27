@@ -63,6 +63,7 @@ class ModalManager;
 class WelcomeScreen;
 class WaveformService;
 class WaveformRenderer;
+class UpdateChecker;
 } // namespace ofs
 
 class OfsApp : public ofs::Application {
@@ -268,6 +269,9 @@ class OfsApp : public ofs::Application {
     std::unique_ptr<ofs::VideoTranscoder> videoTranscoder;
     std::unique_ptr<ofs::ProcessingPanel> processingPanel;
     std::unique_ptr<ofs::WelcomeScreen> welcomeScreen;
+    // Polls the GitHub releases feed and compares it to this build's version. Registers its event
+    // handlers in its ctor (before freeze); the actual GET runs on a JobSystem worker.
+    std::unique_ptr<ofs::UpdateChecker> updateChecker;
 
     // Audio waveform behind the timeline: the service extracts/caches peaks and owns the GL texture; the
     // renderer (declared after, so it destructs first — it holds a reference to the service) owns the

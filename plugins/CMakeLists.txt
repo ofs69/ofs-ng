@@ -39,6 +39,12 @@ add_cs_project(Ofs.ScriptHost "${CMAKE_CURRENT_SOURCE_DIR}/Ofs.ScriptHost/Ofs.Sc
 add_dependencies(Ofs.ScriptHost Ofs.Api)
 add_dependencies(Ofs.ScriptHost Ofs.PluginHost)
 
+# 2c. Build Ofs.HostServices (app-internal managed services; put in managed folder). It lives OUTSIDE
+# plugins/ on purpose — it references neither Ofs.Api nor any plugin, so it shares no build state with the
+# linear Ofs.Api → … chain below and can build concurrently. Built here only because this file already
+# owns the managed-build + hash-baking pipeline.
+add_cs_project(Ofs.HostServices "${CMAKE_SOURCE_DIR}/Ofs.HostServices/Ofs.HostServices.csproj" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/managed")
+
 # 3. Build plugins
 # Pass DEBUG_ONLY as the optional third argument to keep a plugin out of release
 # builds (e.g. sample/demo plugins that must not ship). The target is still
@@ -154,7 +160,8 @@ add_custom_command(
         "${OFS_MANAGED_OUTPUT_ROOT}/Ofs.Api.dll"
         "${OFS_MANAGED_OUTPUT_ROOT}/Ofs.PluginHost.dll"
         "${OFS_MANAGED_OUTPUT_ROOT}/Ofs.ScriptHost.dll"
-        Ofs.Core Ofs.Api Ofs.PluginHost Ofs.ScriptHost
+        "${OFS_MANAGED_OUTPUT_ROOT}/Ofs.HostServices.dll"
+        Ofs.Core Ofs.Api Ofs.PluginHost Ofs.ScriptHost Ofs.HostServices
         COMMENT "Baking plugin + managed-assembly SHA-256 into OfsBakedHashes.h"
         VERBATIM)
 add_custom_target(ofs_baked_hashes DEPENDS "${OFS_BAKED_HASHES_HEADER}")

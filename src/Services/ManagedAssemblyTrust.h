@@ -12,8 +12,9 @@
 namespace ofs {
 
 // Verify a managed host assembly on disk matches the SHA-256 baked into the binary at build time.
-// Ofs.Api / Ofs.PluginHost / Ofs.ScriptHost run all plugin and script code with full privileges, so
-// a mismatch (tampering or a corrupt/partial install) must block loading rather than prompt.
+// Ofs.Api / Ofs.PluginHost / Ofs.ScriptHost run all plugin and script code with full privileges, and
+// Ofs.HostServices performs network I/O in-process, so a mismatch (tampering or a corrupt/partial
+// install) must block loading rather than prompt.
 //
 // Returns true when the on-disk bytes match the baked hash. Returns false on a real mismatch or an
 // unreadable file — callers refuse to load. If no hash was baked for `name` (empty, e.g. a

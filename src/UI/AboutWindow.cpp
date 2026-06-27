@@ -1,5 +1,7 @@
 #include "UI/AboutWindow.h"
 
+#include "Core/EventQueue.h"
+#include "Core/UpdateEvents.h"
 #include "Localization/Translator.h"
 #include "UI/Icons.h"
 #include "UI/ImGuiHelpers.h"
@@ -8,7 +10,8 @@
 #include "Util/Version.h"        // ofs::versionTitle
 
 #include "imgui.h"
-#include <OfsBuildInfo.h> // generated: git identity
+#include <OfsBuildInfo.h>  // generated: git identity
+#include <SDL3/SDL_misc.h> // SDL_OpenURL (release page)
 #include <SDL3/SDL_version.h>
 #include <iterator> // std::size
 
@@ -136,7 +139,7 @@ void AboutWindow::selectComponent(int index) {
         licenseText_ = fmtScratch("Could not load license text: {}", asset);
 }
 
-void AboutWindow::render(bool &open) {
+void AboutWindow::render(bool &open, const UpdateChecker::Status &update, EventQueue &eq) {
     if (!open)
         return;
 
@@ -177,6 +180,34 @@ void AboutWindow::render(bool &open) {
         ImGui::TextDisabled("%s", toolchainLine());
         ofs::ui::endForm();
     }
+
+    // ── Updates ───────────────────────────────────────────────────────────────────────────────
+    ImGui::SeparatorText(Str::AboutUpdates);
+    switch (update.state) {
+    case UpdateChecker::State::Checking:
+        ImGui::TextDisabled("%s", Str::AboutChecking.c_str());
+        break;
+    case UpdateChecker::State::Available:
+        ImGui::TextUnformatted(Str::AboutUpdateAvailable.fmt(update.latestVersion));
+        if (!update.releaseUrl.empty()) {
+            ImGui::SameLine();
+            if (ImGui::SmallButton(Str::AboutOpenRelease.id("about_open_release")))
+                SDL_OpenURL(update.releaseUrl.c_str());
+        }
+        break;
+    case UpdateChecker::State::UpToDate:
+        ImGui::TextDisabled("%s", Str::AboutUpToDate.c_str());
+        break;
+    case UpdateChecker::State::Failed:
+        ImGui::TextDisabled("%s", Str::AboutUpdateFailed.c_str());
+        break;
+    case UpdateChecker::State::Idle:
+        break;
+    }
+    ImGui::BeginDisabled(update.state == UpdateChecker::State::Checking);
+    if (ImGui::Button(Str::AboutCheckNow.id("about_check_now")))
+        eq.push(CheckForUpdatesEvent{.userInitiated = true});
+    ImGui::EndDisabled();
 
     // ── Third-party attributions ──────────────────────────────────────────────────────────────
     ImGui::SeparatorText(Str::AboutThirdParty);

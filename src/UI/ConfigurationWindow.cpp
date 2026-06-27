@@ -440,6 +440,17 @@ void ConfigurationWindow::renderApplicationTab(EventQueue &eq) {
         if (ImGui::Button(Str::PrefOpenBackupFolder.icon(ICON_FOLDER_OPEN), {btnW, 0.f}))
             ofs::util::openInFileBrowser(ofs::util::getPrefPath() / "backup");
     }
+
+    ImGui::Spacing();
+
+    // --- Updates ---
+    ImGui::SeparatorText(Str::AboutUpdates);
+    {
+        bool checkUpdates = appSettings.checkForUpdatesOnStartup;
+        if (ImGui::Checkbox(Str::PrefCheckUpdates.id("check_updates"), &checkUpdates))
+            eq.push(ModifyEvent<AppSettings>{
+                [checkUpdates](AppSettings &s) { s.checkForUpdatesOnStartup = checkUpdates; }});
+    }
 }
 
 namespace {

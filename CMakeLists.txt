@@ -173,7 +173,7 @@ enable_testing()
 # Shared here so the generator (plugins/), the consumer (src/) and the tests all agree on the lists,
 # paths and roots.
 set(OFS_FIRST_PARTY_PLUGINS "Ofs.Core")
-set(OFS_MANAGED_ASSEMBLIES "Ofs.Api;Ofs.PluginHost;Ofs.ScriptHost")
+set(OFS_MANAGED_ASSEMBLIES "Ofs.Api;Ofs.PluginHost;Ofs.ScriptHost;Ofs.HostServices")
 set(OFS_GENERATED_DIR "${CMAKE_BINARY_DIR}/generated")
 set(OFS_BAKED_HASHES_HEADER "${OFS_GENERATED_DIR}/OfsBakedHashes.h")
 # Generated localization sources. Emitted from localization/strings.toml by localization_gen into

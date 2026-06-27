@@ -428,6 +428,10 @@ translation = "バックアップ"
 english     = "Auto Backup"
 translation = "自動バックアップ"
 
+[PrefCheckUpdates]
+english     = "Check for updates on startup"
+translation = "起動時に更新を確認"
+
 [PrefOpenAppDataFolder]
 english     = "Open App Data Folder"
 translation = "アプリデータフォルダを開く"
@@ -1594,6 +1598,10 @@ translation = "キーボードショートカットを開く"
 [CmdCoreOpenAbout]
 english     = "About ofs-ng"
 translation = "ofs-ng について"
+
+[CmdCoreCheckUpdates]
+english     = "Check for Updates"
+translation = "更新を確認"
 
 [CmdCoreSave]
 english     = "Save Project"
@@ -3403,6 +3411,34 @@ translation = "ofs-ng について"
 [AboutBuildInfo]
 english     = "Build Information"
 translation = "ビルド情報"
+
+[AboutUpdates]
+english     = "Updates"
+translation = "更新"
+
+[AboutCheckNow]
+english     = "Check Now"
+translation = "今すぐ確認"
+
+[AboutChecking]
+english     = "Checking for updates…"
+translation = "更新を確認しています…"
+
+[AboutUpToDate]
+english     = "ofs-ng is up to date."
+translation = "ofs-ng は最新です。"
+
+[AboutUpdateAvailable]
+english     = "Version {0} is available."
+translation = "バージョン {0} が利用可能です。"
+
+[AboutUpdateFailed]
+english     = "Could not check for updates."
+translation = "更新を確認できませんでした。"
+
+[AboutOpenRelease]
+english     = "Open Release Page"
+translation = "リリースページを開く"
 
 [AboutCommit]
 english     = "Commit"

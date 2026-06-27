@@ -10,6 +10,7 @@
 #include "Core/ScriptProject.h"
 #include "Core/StandardAxis.h"
 #include "Core/TranscodeEvents.h"
+#include "Core/UpdateEvents.h"
 #include "Localization/Translator.h"
 #include "Services/BindingSystem.h"
 #include "Services/CommandRegistry.h"
@@ -192,6 +193,15 @@ void OfsApp::initCommands() {
         .keywords = "about credits attributions licenses version build", // synonyms for the About window
         .requiresProject = false,
         .run = [this](ofs::EventQueue &) { appState.showAboutWindow = true; },
+    });
+    commandRegistry.add(ofs::Command{
+        .id = "core.check-for-updates",
+        .group = "Core",
+        .title = Str::CmdCoreCheckUpdates,
+        .inRebindList = false,
+        .keywords = "update upgrade version release new", // synonyms for the update check
+        .requiresProject = false,
+        .run = [](ofs::EventQueue &eq) { eq.push(ofs::CheckForUpdatesEvent{.userInitiated = true}); },
     });
     reg(
         "core.save", "Core", Str::CmdCoreSave, [](ofs::EventQueue &eq) { eq.push(ofs::SaveProjectEvent{false}); },

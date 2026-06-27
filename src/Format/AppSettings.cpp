@@ -150,6 +150,7 @@ void to_json(nlohmann::json &j, const AppSettings &s) {
                                 {"showTimelinePreview", s.showTimelinePreview},
                                 {"maxFps", s.maxFps},
                                 {"autoBackupEnabled", s.autoBackupEnabled},
+                                {"checkForUpdatesOnStartup", s.checkForUpdatesOnStartup},
                                 {"undoMemoryLimitMb", s.undoMemoryLimitMb},
                                 {"language", s.language},
                                 {"liveReloadTranslations", s.liveReloadTranslations},
@@ -174,6 +175,7 @@ void from_json(const nlohmann::json &j, AppSettings &s) {
     s.showTimelinePreview = j.value("showTimelinePreview", false);
     s.maxFps = j.value("maxFps", 0);
     s.autoBackupEnabled = j.value("autoBackupEnabled", true);
+    s.checkForUpdatesOnStartup = j.value("checkForUpdatesOnStartup", true);
     s.undoMemoryLimitMb = j.value("undoMemoryLimitMb", 256);
     s.language = j.value("language", std::string{});
     s.liveReloadTranslations = j.value("liveReloadTranslations", false);

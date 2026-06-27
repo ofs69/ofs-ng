@@ -2,6 +2,7 @@
 #include "Core/EventQueue.h"
 #include "Core/ScriptProject.h"
 #include "Localization/Translator.h"
+#include "Services/UpdateChecker.h"
 #include "Util/CrashHandler.h"
 #include "Util/Log.h"
 #include "Util/PathUtil.h"
@@ -15,6 +16,7 @@
 #include <imgui_te_coroutine.h>
 #include <imgui_te_engine.h>
 #include <imgui_te_exporters.h>
+#include <optional>
 #include <string_view>
 
 void RegisterAllTests(ImGuiTestEngine *engine);
@@ -58,6 +60,11 @@ class OfsTestApp : public OfsApp {
         g_testState.videoPlayer = OfsAppTestAccess::videoPlayer(*this);
         g_testState.appSettings = &OfsAppTestAccess::appSettings(*this);
         g_testState.processingPanel = &OfsAppTestAccess::processingPanel(*this);
+
+        // Keep the update checker off the real network for the whole suite: the silent startup check
+        // (and any test that doesn't install its own override) resolves through this stub, which reports
+        // an empty feed instead of reaching api.github.com. The updates suite installs its own override.
+        ofs::setUpdateFetchOverrideForTesting([] { return std::optional<std::string>{}; });
 
         testEngine_ = ImGuiTestEngine_CreateContext();
         ImGuiTestEngineIO &io = ImGuiTestEngine_GetIO(testEngine_);

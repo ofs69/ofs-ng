@@ -451,6 +451,10 @@ description = "Preferences › Application: section header for automatic backup 
 english     = "Auto Backup"
 description = "Preferences › Application: toggle for periodic automatic project backups."
 
+[PrefCheckUpdates]
+english     = "Check for updates on startup"
+description = "Preferences › Application: toggle for the silent update check shortly after launch."
+
 [PrefOpenAppDataFolder]
 english     = "Open App Data Folder"
 description = "Preferences › Application: button that opens the app's data folder in the file browser."
@@ -1694,6 +1698,10 @@ description = "Command title: open the Shortcut Bindings window."
 [CmdCoreOpenAbout]
 english     = "About ofs-ng"
 description = "Command title: open the About window (build info and third-party attributions)."
+
+[CmdCoreCheckUpdates]
+english     = "Check for Updates"
+description = "Command title: manually check the GitHub releases feed for a newer version."
 
 [CmdCoreSave]
 english     = "Save Project"
@@ -3596,6 +3604,37 @@ description = "About window — title bar."
 [AboutBuildInfo]
 english     = "Build Information"
 description = "About window — section header above the version / commit / build-date rows."
+
+[AboutUpdates]
+english     = "Updates"
+description = "About window — section header above the update-check status row and button."
+
+[AboutCheckNow]
+english     = "Check Now"
+description = "About window — button that triggers a manual check for a newer release."
+
+[AboutChecking]
+english     = "Checking for updates…"
+description = "About window — status shown while an update check is in progress (trailing ellipsis)."
+
+[AboutUpToDate]
+english     = "ofs-ng is up to date."
+description = "About window — status shown when no newer release is available."
+
+[AboutUpdateAvailable]
+english      = "Version {0} is available."
+description  = "About window — status shown when a newer release exists. {0} is the release tag, e.g. v1.2.0."
+placeholders = [
+    "{0} = latest release version tag",
+]
+
+[AboutUpdateFailed]
+english     = "Could not check for updates."
+description = "About window — status shown when the update check failed (no network, bad response)."
+
+[AboutOpenRelease]
+english     = "Open Release Page"
+description = "About window — button that opens the newer release's page in the browser."
 
 [AboutCommit]
 english     = "Commit"

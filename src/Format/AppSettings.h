@@ -83,6 +83,9 @@ struct AppSettings {
     // of the display refresh, so it stays tear-free (see Application::updateSwapInterval).
     int maxFps = 0;
     bool autoBackupEnabled = true;
+    // Check the GitHub releases feed for a newer version shortly after launch. A manual "Check for
+    // updates" command is always available regardless; this only governs the silent startup check.
+    bool checkForUpdatesOnStartup = true;
     // Memory budget (MB) for the undo/redo history. Snapshots are packed + compressed (SnapshotCodec) and
     // kept in a single byte arena (SnapshotHistory); the history grows until it hits this cap, then evicts
     // the oldest steps. Bounds RAM rather than a fixed step count, so a deep history of small edits stays
