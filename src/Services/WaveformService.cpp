@@ -31,7 +31,7 @@ namespace {
 // builder; returns the number of samples consumed. `carry` holds the trailing odd byte of an incomplete
 // sample between reads. The common path (empty carry) parses the chunk in place; only a straddling
 // sample needs the concat.
-size_t feedSamples(waveform::PeakBuilder &builder, std::string &carry, const std::string &bytes) {
+void feedSamples(waveform::PeakBuilder &builder, std::string &carry, const std::string &bytes) {
     const char *data = nullptr;
     size_t len = 0;
     std::string joined;
@@ -51,16 +51,6 @@ size_t feedSamples(waveform::PeakBuilder &builder, std::string &carry, const std
         builder.add(static_cast<float>(s) / 32768.0f);
     }
     carry.assign(data + full * 2, len - full * 2);
-    return full;
-}
-
-std::vector<const char *> toArgv(const std::vector<std::string> &args) {
-    std::vector<const char *> v;
-    v.reserve(args.size() + 1);
-    for (const auto &a : args)
-        v.push_back(a.c_str());
-    v.push_back(nullptr);
-    return v;
 }
 
 // Best-effort source duration (seconds) via ffprobe, used only to drive the progress bar. Returns 0 if
@@ -68,7 +58,7 @@ std::vector<const char *> toArgv(const std::vector<std::string> &args) {
 double probeDurationSeconds(const std::string &ffprobeBin, const std::string &path) {
     const std::vector<std::string> args = {
         ffprobeBin, "-v", "error", "-show_entries", "format=duration", "-of", "default=nw=1:nk=1", path};
-    const auto argv = toArgv(args);
+    const auto argv = ofs::util::toArgv(args);
     std::string out;
     int code = 0;
     if (ofs::util::runCaptured(argv.data(), out, code) && code == 0)
@@ -140,7 +130,7 @@ bool runExtraction(EventQueue &eq, const std::string &ffmpegBin, const std::stri
 
     const std::vector<std::string> args = {ffmpegBin, "-hide_banner", "-nostdin", "-i", source,  "-vn", "-ac",
                                            "1",       "-ar",          "16000",    "-f", "s16le", "-y",  tmpPathUtf8};
-    const auto argv = toArgv(args);
+    const auto argv = ofs::util::toArgv(args);
     ofs::util::Process proc = ofs::util::Process::spawn(argv.data());
     if (!proc.valid()) {
         eq.push(WaveformFailedEvent{.mediaPath = source});

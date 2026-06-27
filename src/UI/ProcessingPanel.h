@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "Core/ProcessingRegion.h" // GraphNodeType (AddNodeRequest), ProcessingRegion (render helpers)
 #include "Core/StandardAxis.h"
 #include <cstdint>
 #include <string>
@@ -26,6 +27,7 @@ struct ScriptProject;
 class EventQueue;
 struct EffectRegistryState;
 struct ScriptRegistryState;
+struct ProcessingRegion;
 
 class ProcessingPanel {
   public:
@@ -44,13 +46,48 @@ class ProcessingPanel {
     [[nodiscard]] bool isLocked() const { return m_locked; }
 
   private:
+    // One node-creation request produced by the add-node popup and consumed by the node-create branches
+    // after EndNodeEditor (the two are separated by the imnodes editor scope, so the choice is carried
+    // across rather than acted on in place).
+    struct AddNodeRequest {
+        float posX = 0.0f; // screen-space drop position (popup-open mouse pos)
+        float posY = 0.0f;
+        GraphNodeType type = GraphNodeType::Input; // native math/discretize/constant node to add
+        bool addEffect = false;
+        std::string effectType;
+        bool addPlugin = false;
+        std::string pluginNodeId;
+        bool addScript = false; // a ready library/user script picked from the catalog
+        int scriptIndex = -1;   // index into m_scriptCatalog
+    };
+    AddNodeRequest renderAddNodeMenu(const EffectRegistryState &effectReg);
+
+    // Modal bodies raised from render(): each latches on a one-shot flag (New Script / Save embedded) or a
+    // pending-graph-load condition (Trust / Remap), then hands a deferred [this]-capturing body to the
+    // ModalManager. Split out of render() so the orchestrator stays readable; the bodies are unchanged.
+    void renderHeader(const ScriptProject &project, EventQueue &eq, int selId, const ProcessingRegion &region);
+    // Render one node's body (params / plugin UI) inside the imnodes editor. A member (not a free function)
+    // so its per-frame buffers — the plugin-node TState scratch and the script-file combo cache — are reused
+    // across frames rather than living in function statics.
+    void renderNode(const ProcessingGraphNode &node, const EffectRegistryState &effectReg,
+                    const ScriptRegistryState &scriptReg, EventQueue &eq, int regionId, const ProcessingRegion &region,
+                    bool hot, bool pending, int &outSaveReqNodeId, int &outLoadReqNodeId);
+    void renderFooter(const ScriptProject &project, EventQueue &eq, int selId, const ProcessingRegion &region,
+                      bool anyPending);
+    void maybeShowNewScriptModal(EventQueue &eq);
+    void maybeShowSaveScriptModal(EventQueue &eq);
+    void maybeShowTrustModal(const ScriptProject &project, EventQueue &eq, int selId);
+    void maybeShowRemapModal(const ScriptProject &project, EventQueue &eq, int selId, const ProcessingRegion &region);
+
     bool m_cursorInside = false; // cursor was over this panel (z-order aware) this frame; for click-away deselect
     bool m_graphFocused = false;
     bool m_locked = false; // when set, focus loss does not close the panel; transient, not persisted
     ImNodesEditorContext *m_editorCtx = nullptr;
     int m_loadedRegionId = -1;
-    StandardAxis m_loadedAxisId = StandardAxis::Count;
     std::string m_nameEdit;
+    std::string m_nodeUiBuffer;                 // reused in/out buffer for a plugin node's TState JSON (renderNode)
+    std::vector<std::string> m_scriptFileCache; // script-file combo entries; refreshed when the combo opens
+    int m_scriptFileCacheNode = -1;             // node id m_scriptFileCache was built for
     int m_pendingLinkPin = -1;
     bool m_openAddNodeMenuNextFrame = false;
     std::string m_nodeFilter; // add-node menu fuzzy filter; std::string so localized input isn't byte-capped

@@ -8,6 +8,7 @@
 #include "Core/ScriptProject.h"
 #include "Core/StandardAxis.h"
 #include "Localization/Translator.h"
+#include "UI/AxisColors.h"
 #include "UI/BandBar.h"
 #include "UI/Icons.h"
 #include "UI/ImGuiHelpers.h"
@@ -267,7 +268,10 @@ void ScriptTimelineWindow::renderTimeline(const ScriptProject &project, EventQue
         const float mX = ImGui::GetMousePos().x;
         const StandardAxis clickedRole = stripEntries[row].role;
         const auto &rowAx = project.axes[static_cast<size_t>(clickedRole)];
-        const bool eyeArea = mX >= stripPos.x + stripSize.x - 20.f;
+        // Match the eye-icon slot drawn above (rowMax.x - 6 - iconWidth) so the click target tracks the
+        // icon at any font size, instead of a fixed pixel band that drifts off it.
+        const char *eyeIcon = rowAx.isVisible ? ICON_EYE : ICON_EYE_OFF;
+        const bool eyeArea = mX >= stripPos.x + stripSize.x - 6.f - ImGui::CalcTextSize(eyeIcon).x;
         const bool ctrl = ImGui::GetIO().KeyCtrl;
 
         if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && !eyeArea) {
@@ -507,6 +511,21 @@ void ScriptTimelineWindow::renderTimeline(const ScriptProject &project, EventQue
                 if (dotAlpha > 0.1f) {
                     auto alpha = static_cast<ImU32>(255.0f * dotAlpha);
                     double timeBucketDuration = dotBucketDuration(viewState.visibleTime, curveSize.x);
+
+                    // Precompute this axis's hidden source-point intervals (regions that hide points)
+                    // overlapping the visible window, once — instead of rescanning every region per dot.
+                    const double winEnd = offsetTime + viewState.visibleTime;
+                    struct HiddenIv {
+                        double start, end;
+                    };
+                    auto *hidden = ofs::FrameAllocator::instance().allocArray<HiddenIv>(
+                        project.regions.empty() ? 1 : project.regions.size());
+                    size_t hiddenCount = 0;
+                    for (const auto &reg : project.regions)
+                        if (reg.axisRoles.test(static_cast<size_t>(ax.role)) && !reg.showSourceActions &&
+                            reg.endTime >= offsetTime && reg.startTime <= winEnd)
+                            hidden[hiddenCount++] = {.start = reg.startTime, .end = reg.endTime};
+
                     auto dotStart = ax.actions.lowerBound(ScriptAxisAction{offsetTime, 0});
                     if (dotStart != ax.actions.begin())
                         --dotStart;
@@ -523,15 +542,13 @@ void ScriptTimelineWindow::renderTimeline(const ScriptProject &project, EventQue
                         if (bucket == lastBucket)
                             continue;
                         lastBucket = bucket;
-                        // Suppress dots inside regions that hide source points
+                        // Suppress dots inside regions that hide source points (precomputed above).
                         bool inHiddenRegion = false;
-                        for (const auto &reg : project.regions) {
-                            if (reg.axisRoles.test(static_cast<size_t>(ax.role)) && !reg.showSourceActions &&
-                                it->at >= reg.startTime && it->at <= reg.endTime) {
+                        for (size_t h = 0; h < hiddenCount; ++h)
+                            if (it->at >= hidden[h].start && it->at <= hidden[h].end) {
                                 inHiddenRegion = true;
                                 break;
                             }
-                        }
                         if (inHiddenRegion)
                             continue;
 

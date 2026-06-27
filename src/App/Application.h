@@ -3,6 +3,7 @@
 #include <SDL3/SDL_events.h>
 #include <cstdint>
 #include <imgui.h>
+#include <imnodes.h>
 #include <memory>
 
 namespace ofs {
@@ -83,6 +84,10 @@ class Application {
     // current DPI. Invoked at the tail of every theme::apply() via the post-apply hook.
     void onThemeApplied();
 
+    // Re-scale the imnodes geometry that should scale from the unscaled themed base. Counterpart to
+    // ScaleAllSizes for ImGui; reads themedNodesUnscaled / hasThemedNodes.
+    void applyDpiToImNodes(float scale);
+
     static void loadFonts();
     bool cjkFontLoaded_ = false;
 
@@ -91,6 +96,8 @@ class Application {
     void beginFrame();
 
     ImGuiStyle defaultStyle;
+    ImNodesStyle themedNodesUnscaled; // the themed imnodes style at 1× DPI; base for DPI re-scaling
+    bool hasThemedNodes = false;      // set once onThemeApplied runs with an imnodes context
     float currentDpiScale = 0.f;
 
     void endFrame();

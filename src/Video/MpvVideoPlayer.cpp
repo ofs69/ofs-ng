@@ -1,5 +1,6 @@
 #include "MpvVideoPlayer.h"
 #include "MpvLoader.h"
+#include "MpvRenderTarget.h"
 #include "Platform/Headless.h"
 #include "Util/Log.h"
 #include <SDL3/SDL.h>
@@ -8,7 +9,8 @@
 #include <string>
 
 namespace ofs {
-enum MpvPropertyGet : uint64_t {
+// reply_userdata tags for the properties we observe; matched in the MPV_EVENT_PROPERTY_CHANGE switch.
+enum MpvObservedProp : uint64_t {
     MpvDuration,
     MpvPosition,
     MpvSpeed,
@@ -195,7 +197,7 @@ double MpvVideoPlayer::getDuration() const {
 void MpvVideoPlayer::setPlaybackSpeed(float speed) {
     if (this->playbackSpeed == speed)
         return;
-    speed = std::clamp(speed, 0.1f, 2.0f);
+    speed = std::clamp(speed, kMinPlaybackSpeed, kMaxPlaybackSpeed);
     // Record the new setpoint. The cursor advances at min(measured, setpoint), so a slow-down binds
     // immediately while a speed-up is tracked from the frame samples — see PlaybackCursor.
     cursor.onSpeedCommand(speed);
@@ -314,19 +316,12 @@ void MpvVideoPlayer::processEvents() {
 }
 
 void MpvVideoPlayer::renderFrame() {
-    if (!framebuffer || videoWidth <= 0 || videoHeight <= 0)
+    if (videoWidth <= 0 || videoHeight <= 0)
         return;
 
     int w = targetWidth > 0 ? targetWidth : videoWidth;
     int h = targetHeight > 0 ? targetHeight : videoHeight;
-
-    mpv_opengl_fbo fbo = {.fbo = static_cast<int>(framebuffer), .w = w, .h = h, .internal_format = GL_RGBA8};
-
-    uint32_t disable = 0;
-    mpv_render_param params[] = {{.type = MPV_RENDER_PARAM_OPENGL_FBO, .data = &fbo},
-                                 {.type = MPV_RENDER_PARAM_BLOCK_FOR_TARGET_TIME, .data = &disable},
-                                 {.type = MPV_RENDER_PARAM_INVALID, .data = nullptr}};
-    MpvLoader::mpv_render_context_render(mpvGl, params);
+    mpv::renderToFbo(mpvGl, framebuffer, w, h);
 }
 
 void MpvVideoPlayer::updateRenderTexture() {
@@ -339,29 +334,7 @@ void MpvVideoPlayer::updateRenderTexture() {
     int h = targetHeight > 0 ? targetHeight : videoHeight;
 
     OFS_CORE_TRACE("Updating render texture resolution to {}x{}", w, h);
-
-    if (!framebuffer) {
-        glGenFramebuffers(1, &framebuffer);
-    }
-    if (!frameTexture) {
-        glGenTextures(1, &frameTexture);
-    }
-
-    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-    glBindTexture(GL_TEXTURE_2D, frameTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, frameTexture, 0);
-
-    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-    if (status != GL_FRAMEBUFFER_COMPLETE) {
-        OFS_CORE_ERROR("Framebuffer is not complete: {:x}", status);
-    }
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    mpv::allocRenderTarget(framebuffer, frameTexture, w, h, "Framebuffer");
 }
 
 void MpvVideoPlayer::onMpvEvents(void *ctx) {

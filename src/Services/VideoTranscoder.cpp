@@ -190,19 +190,9 @@ void applyProgressLine(std::string_view line, ProgressAccum &acc) {
 
 namespace {
 
-// vector<string> → NULL-terminated argv. The backing strings must outlive the returned view.
-std::vector<const char *> toArgv(const std::vector<std::string> &args) {
-    std::vector<const char *> v;
-    v.reserve(args.size() + 1);
-    for (const auto &a : args)
-        v.push_back(a.c_str());
-    v.push_back(nullptr);
-    return v;
-}
-
 MediaInfo probeMediaInfo(const std::string &ffprobeBin, const std::string &path) {
     const auto args = transcode::buildFfprobeInfoArgs(ffprobeBin, path);
-    const auto argv = toArgv(args);
+    const auto argv = ofs::util::toArgv(args);
     std::string out;
     int code = 0;
     if (ofs::util::runCaptured(argv.data(), out, code) && code == 0)
@@ -235,11 +225,16 @@ bool runTranscode(EventQueue &eq, const std::string &ffmpegBin, const std::strin
     using namespace std::chrono;
     std::atomic<bool> &cancel = *cancelPtr;
 
-    auto fail = [&](std::string msg, bool cancelled) {
+    auto fail = [&](TranscodeFailReason reason, bool cancelled, int exitCode = 0, double outDur = 0.0,
+                    double srcDurSec = 0.0) {
         std::error_code ec;
         if (!cfg.outputPath.empty())
             std::filesystem::remove(ofs::util::fromUtf8(cfg.outputPath), ec); // drop any partial output
-        eq.push(TranscodeFailedEvent{.message = std::move(msg), .cancelled = cancelled});
+        eq.push(TranscodeFailedEvent{.reason = reason,
+                                     .cancelled = cancelled,
+                                     .exitCode = exitCode,
+                                     .outDurationSec = outDur,
+                                     .srcDurationSec = srcDurSec});
         return false;
     };
 
@@ -248,7 +243,7 @@ bool runTranscode(EventQueue &eq, const std::string &ffmpegBin, const std::strin
     double srcDur =
         cfg.sourceDuration > 0.0 ? cfg.sourceDuration : probeMediaInfo(ffprobeBin, cfg.sourcePath).durationSec;
     if (cancel.load(std::memory_order_acquire))
-        return fail("Cancelled", true);
+        return fail(TranscodeFailReason::Cancelled, true);
 
     // Phase 2 — encoding. Skipped entirely when the user chose to adopt an already-existing output:
     // there is nothing to encode, only the duration check below to confirm the file is sound.
@@ -256,10 +251,10 @@ bool runTranscode(EventQueue &eq, const std::string &ffmpegBin, const std::strin
     const bool reuse = cfg.reuseIfExists && std::filesystem::exists(ofs::util::fromUtf8(cfg.outputPath), reuseEc);
     if (!reuse) {
         const auto args = transcode::buildFfmpegArgs(ffmpegBin, cfg);
-        const auto argv = toArgv(args);
+        const auto argv = ofs::util::toArgv(args);
         ofs::util::Process proc = ofs::util::Process::spawn(argv.data());
         if (!proc.valid())
-            return fail("Could not start ffmpeg", false);
+            return fail(TranscodeFailReason::CouldNotStartFfmpeg, false);
         eq.push(TranscodeProgressEvent{
             .progress = 0.0, .etaSeconds = 0.0, .speed = 0.0, .phase = TranscodePhase::Encoding});
 
@@ -285,9 +280,9 @@ bool runTranscode(EventQueue &eq, const std::string &ffmpegBin, const std::strin
                 } // drain the tail
                 consumeLines(buf, acc);
                 if (cancel.load(std::memory_order_acquire))
-                    return fail("Cancelled", true);
+                    return fail(TranscodeFailReason::Cancelled, true);
                 if (code != 0)
-                    return fail(fmt::format("ffmpeg failed (exit code {})", code), false);
+                    return fail(TranscodeFailReason::FfmpegExitCode, false, code);
                 break;
             }
             if (n == 0)
@@ -302,7 +297,7 @@ bool runTranscode(EventQueue &eq, const std::string &ffmpegBin, const std::strin
     if (srcDur > 0.0) {
         const double outDur = probeMediaInfo(ffprobeBin, cfg.outputPath).durationSec;
         if (outDur > 0.0 && std::abs(outDur - srcDur) > std::max(0.5, srcDur * 0.01))
-            return fail(fmt::format("Output duration {:.2f}s differs from source {:.2f}s", outDur, srcDur), false);
+            return fail(TranscodeFailReason::OutputDurationMismatch, false, 0, outDur, srcDur);
     }
 
     eq.push(TranscodeCompleteEvent{cfg.outputPath});
@@ -415,14 +410,33 @@ void VideoTranscoder::onFailed(const TranscodeFailedEvent &ev) {
     // The worker already removed any partial output before pushing this.
     project.transcode.active = false;
     project.transcode.phase = ev.cancelled ? TranscodePhase::Cancelled : TranscodePhase::Failed;
-    project.transcode.error = ev.message;
     project.transcode.progress = 0.0;
     endTask();
-    if (!ev.cancelled) { // a user cancel is self-explanatory; a genuine failure earns a toast + bell entry
-        std::string msg = ev.message.empty() ? std::string(Str::TranscodeFailed.c_str())
-                                             : fmt::format("{}: {}", Str::TranscodeFailed.c_str(), ev.message);
-        eq.push(NotifyEvent{.level = NotifyLevel::Error, .message = std::move(msg)});
+    if (ev.cancelled) { // a user cancel is self-explanatory: no error text, no toast/bell entry
+        project.transcode.error.clear();
+        return;
     }
+
+    // Localize the reason on the main thread (the worker only knows the reason code + raw numbers).
+    std::string reason;
+    switch (ev.reason) {
+    case TranscodeFailReason::CouldNotStartFfmpeg:
+        reason = Str::TranscodeErrCantStart.c_str();
+        break;
+    case TranscodeFailReason::FfmpegExitCode:
+        reason = Str::TranscodeErrExitCode.fmt(ev.exitCode);
+        break;
+    case TranscodeFailReason::OutputDurationMismatch:
+        reason = Str::TranscodeErrDuration.fmt(fmtScratch("{:.2f}", ev.outDurationSec),
+                                               fmtScratch("{:.2f}", ev.srcDurationSec));
+        break;
+    case TranscodeFailReason::Cancelled:
+        break; // handled above
+    }
+    project.transcode.error = reason;
+    std::string msg = reason.empty() ? std::string(Str::TranscodeFailed.c_str())
+                                     : fmt::format("{}: {}", Str::TranscodeFailed.c_str(), reason);
+    eq.push(NotifyEvent{.level = NotifyLevel::Error, .message = std::move(msg)});
 }
 
 void VideoTranscoder::onCancelTask(const CancelTaskEvent &ev) {

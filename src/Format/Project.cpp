@@ -1,6 +1,7 @@
 ﻿#include "Project.h"
 #include "Core/StandardAxis.h"
 #include "Services/EffectRegistry.h"
+#include "UI/Theme.h" // AppCol_Bookmark default for chapter/bookmark colors lacking a stored value
 #include "Util/FileUtil.h"
 #include "Util/JsonImGui.h"
 #include "Util/JsonUtil.h"
@@ -368,7 +369,7 @@ void from_json(const nlohmann::json &j, ProcessingRegion &r) {
     r.name = j.value("name", std::string{});
     if (j.contains("color"))
         r.color = colorFromJsonArray(j["color"]);
-    r.hz = j.value("hz", 30);
+    r.hz = j.value("hz", kDefaultRegionHz);
     r.showSourceActions = j.value("showSourceActions", true);
     r.nodeGraph = j.contains("nodeGraph") ? j["nodeGraph"].get<ProcessingNodeGraph>() : buildDefaultGraph();
     r.axisRoleTags = j.value("axisRoles", std::vector<std::string>{});
@@ -527,22 +528,28 @@ static bool isMathNodeType(GraphNodeType t) {
            t == GraphNodeType::Divide;
 }
 
+// The registry param definitions for a node, or nullptr if it isn't a native Effect or its definition is
+// missing from the registry. Plugin nodes carry no scalar params (their state is the TState JSON in
+// nodeState), so only native Effect nodes resolve here.
+static const std::vector<EffectParamDef> *effectParamDefs(const ProcessingGraphNode &n,
+                                                          const EffectRegistryState &reg) {
+    if (n.type != GraphNodeType::Effect)
+        return nullptr;
+    auto it = reg.effects.find(n.effect.type);
+    return it == reg.effects.end() ? nullptr : &it->second.paramDefs;
+}
+
 // Param names (in definition order) for an Effect/PluginNode, or nullptr if its definition
 // isn't in the registry. Fills `scratch` and returns a pointer to it.
 static const std::vector<std::string> *paramNames(const ProcessingGraphNode &n, const EffectRegistryState &reg,
                                                   std::vector<std::string> &scratch) {
     scratch.clear();
-    if (n.type == GraphNodeType::Effect) {
-        auto it = reg.effects.find(n.effect.type);
-        if (it == reg.effects.end())
-            return nullptr;
-        for (const auto &pd : it->second.paramDefs)
-            scratch.push_back(pd.key);
-        return &scratch;
-    }
-    // Plugin nodes have no scalar params (their state is the TState JSON in nodeState); only native
-    // Effect nodes name their params here.
-    return nullptr;
+    const auto *defs = effectParamDefs(n, reg);
+    if (!defs)
+        return nullptr;
+    for (const auto &pd : *defs)
+        scratch.push_back(pd.key);
+    return &scratch;
 }
 
 // Serialize a node's params as a name->value object. If the definition is unavailable
@@ -569,13 +576,9 @@ static std::vector<float> reconcileNodeParams(const ProcessingGraphNode &n, cons
         float def;
     };
     std::vector<ParamDef> defs;
-    if (n.type == GraphNodeType::Effect) {
-        auto it = reg.effects.find(n.effect.type);
-        if (it != reg.effects.end())
-            for (const auto &pd : it->second.paramDefs)
-                defs.push_back({.key = pd.key, .def = pd.defaultValue});
-    }
-    // Plugin nodes carry no positional params — only native Effect nodes reconcile here.
+    if (const auto *pdefs = effectParamDefs(n, reg))
+        for (const auto &pd : *pdefs)
+            defs.push_back({.key = pd.key, .def = pd.defaultValue});
 
     if (defs.empty()) { // missing dependency — preserve whatever was saved
         std::vector<float> vals;
@@ -831,7 +834,7 @@ GraphLoadResult loadGraphPreset(const std::filesystem::path &path, const EffectR
         return result;
     }
     preset.axisRoleTags = j.value("axisRoles", std::vector<std::string>{});
-    preset.hz = j.value("hz", 30);
+    preset.hz = j.value("hz", kDefaultRegionHz);
     if (const auto *meta = jsonObjectIf(j, "meta"))
         preset.name = meta->value("name", std::string{});
 
@@ -868,11 +871,9 @@ bool sanitizeProjectGraph(ProcessingNodeGraph &g, const EffectRegistryState &reg
         // leaves an empty list → we skip the node (it is inactive in eval, so params are never read).
         // Plugin nodes have no scalar params (state lives in nodeState), so only Effect nodes apply.
         std::vector<float> defaults;
-        if (node.type == GraphNodeType::Effect) {
-            if (auto it = reg.effects.find(node.effect.type); it != reg.effects.end())
-                for (const auto &pd : it->second.paramDefs)
-                    defaults.push_back(pd.defaultValue);
-        }
+        if (const auto *pdefs = effectParamDefs(node, reg))
+            for (const auto &pd : *pdefs)
+                defaults.push_back(pd.defaultValue);
         if (defaults.empty())
             continue;
 

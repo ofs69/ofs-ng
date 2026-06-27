@@ -7,6 +7,7 @@
 #include "Services/PluginApi.h"
 #include "Services/ScriptRegistry.h"
 #include "Services/ScriptWatch.h"
+#include "Util/FaultThrottle.h"
 #include <chrono>
 #include <filesystem>
 #include <mutex>
@@ -118,14 +119,9 @@ class ScriptSystem {
     HostApi hostApi{}; // minimal: discrete I/O accessors + log/notify, kept alive for the trampolines
     bool ready = false;
 
-    // Throttles script-fault toasts (a script throwing every sample on a worker thread would flood the
-    // bell). Keyed by faulting entry point; guarded because hostReportFault may run off the main thread.
-    struct FaultNotifyState {
-        std::chrono::steady_clock::time_point lastEmit{};
-        int suppressed = 0;
-    };
-    std::mutex faultNotifyMutex;
-    std::unordered_map<std::string, FaultNotifyState> faultNotifyState;
+    // Throttles script-fault toasts (keyed by faulting entry point) so a script throwing every sample on a
+    // worker thread can't flood the bell.
+    ofs::util::FaultThrottle faultThrottle;
 
     // Param defs parsed on the main thread in compileFile, keyed by content hash, awaiting the
     // worker's ScriptCompiledEvent so onScriptCompiled can attach them to the CompiledScript.

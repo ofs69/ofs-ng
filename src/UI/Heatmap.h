@@ -15,6 +15,10 @@ class Heatmap {
 
     static void init();
 
+    // Release the shared GL LUT texture + shader program. MUST be called while the GL context is still
+    // current (during app teardown), so the program/texture aren't leaked or freed against a dead context.
+    static void shutdownShared();
+
     void draw(ImDrawList *drawList, const ImVec2 &min, const ImVec2 &max);
 
     void update(double totalDuration, const VectorSet<ScriptAxisAction> &actions) const;

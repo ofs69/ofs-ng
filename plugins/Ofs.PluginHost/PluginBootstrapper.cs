@@ -71,6 +71,7 @@ namespace Ofs.PluginHost
         [UnmanagedCallersOnly]
         public static unsafe int LoadPluginNative(IntPtr pathPtr, IntPtr apiPtr, IntPtr hostApiPtr)
         {
+            PluginLoadContext? context = null;
             try
             {
                 // Managed-side ABI layout self-test (mirror of the static_asserts in PluginApi.h). Runs
@@ -82,7 +83,7 @@ namespace Ofs.PluginHost
                 string? path = Marshal.PtrToStringUTF8(pathPtr); // host sends UTF-8 path bytes
                 if (string.IsNullOrEmpty(path)) return -1;
 
-                var context = new PluginLoadContext(path);
+                context = new PluginLoadContext(path);
                 var assembly = context.LoadMainAssembly(path); // from bytes — leaves the DLL unlocked for hot-reload
 
                 // ── Plugin compatibility guard (Ofs.Api assembly version) ──────────
@@ -133,13 +134,18 @@ namespace Ofs.PluginHost
                     return -3;
                 }
 
-                if (hostApiPtr == IntPtr.Zero) return -6;
+                if (hostApiPtr == IntPtr.Zero)
+                {
+                    context.Unload();
+                    return -6;
+                }
                 var hostApiStruct = (HostApi*)hostApiPtr;
                 // Native↔managed ABI check: the native HostApi struct layout must match
                 // this Ofs.Api's mirror. (Plugin compatibility was checked above.)
                 if (hostApiStruct->Version > ApiVersions.AbiVersion)
                 {
                     Console.WriteLine($"[Ofs.PluginHost] HostApi ABI version too new: expected <= {ApiVersions.AbiVersion}, got {hostApiStruct->Version}");
+                    context.Unload();
                     return -7;
                 }
 
@@ -156,6 +162,7 @@ namespace Ofs.PluginHost
             catch (Exception ex)
             {
                 Console.WriteLine($"[Ofs.PluginHost] Error loading plugin: {ex.Message}");
+                context?.Unload(); // a partially-loaded collectible context would otherwise leak for the run
                 return -4;
             }
         }

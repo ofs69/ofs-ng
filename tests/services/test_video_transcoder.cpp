@@ -260,18 +260,38 @@ TEST_CASE("VideoTranscoder: a failure and a cancel land in distinct phases") {
 
     SUBCASE("genuine failure → Failed with the message") {
         f.project.transcode.active = true;
-        f.eq.push(TranscodeFailedEvent{.message = "ffmpeg failed (exit code 1)", .cancelled = false});
+        f.eq.push(
+            TranscodeFailedEvent{.reason = TranscodeFailReason::FfmpegExitCode, .cancelled = false, .exitCode = 1});
         f.eq.drain();
         CHECK_FALSE(f.project.transcode.active);
         CHECK(f.project.transcode.phase == TranscodePhase::Failed);
         CHECK(f.project.transcode.error == "ffmpeg failed (exit code 1)");
         CHECK(f.project.transcode.progress == doctest::Approx(0.0));
     }
+    SUBCASE("ffmpeg could not be launched → localized detail") {
+        f.project.transcode.active = true;
+        f.eq.push(TranscodeFailedEvent{.reason = TranscodeFailReason::CouldNotStartFfmpeg, .cancelled = false});
+        f.eq.drain();
+        CHECK(f.project.transcode.phase == TranscodePhase::Failed);
+        CHECK(f.project.transcode.error == "Could not start ffmpeg");
+    }
+    SUBCASE("output duration mismatch → detail formats both durations") {
+        f.project.transcode.active = true;
+        f.eq.push(TranscodeFailedEvent{.reason = TranscodeFailReason::OutputDurationMismatch,
+                                       .cancelled = false,
+                                       .outDurationSec = 12.0,
+                                       .srcDurationSec = 30.5});
+        f.eq.drain();
+        CHECK(f.project.transcode.phase == TranscodePhase::Failed);
+        CHECK(f.project.transcode.error == "Output duration 12.00s differs from source 30.50s");
+    }
     SUBCASE("user cancel → Cancelled, no error toast") {
         f.project.transcode.active = true;
-        f.eq.push(TranscodeFailedEvent{.message = "Cancelled", .cancelled = true});
+        f.project.transcode.error = "stale"; // a cancel must clear any prior error text
+        f.eq.push(TranscodeFailedEvent{.reason = TranscodeFailReason::Cancelled, .cancelled = true});
         f.eq.drain();
         CHECK(f.project.transcode.phase == TranscodePhase::Cancelled);
+        CHECK(f.project.transcode.error.empty());
     }
 }
 

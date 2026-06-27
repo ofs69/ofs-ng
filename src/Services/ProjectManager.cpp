@@ -1028,9 +1028,9 @@ std::filesystem::path ProjectManager::getCurrentProjectPath() const {
 
 const char *ProjectManager::getProjectTitle() const {
     if (!hasActiveProject())
-        return "No Project";
+        return Str::AppNoProject;
     if (project.state.filePath.empty())
-        return "Untitled Project";
+        return Str::AppUntitledProject;
     std::string_view pathView(project.state.filePath);
     auto slashPos = pathView.find_last_of("/\\");
     std::string_view filename = (slashPos != std::string_view::npos) ? pathView.substr(slashPos + 1) : pathView;
@@ -1764,11 +1764,15 @@ void ProjectManager::onPasteActions(const PasteActionsEvent &event) {
         } else {
             const double destStart = clipStart + offsetTime;
             const double destEnd = clipEnd + offsetTime;
+            // Widen the cleared range by a sub-millisecond epsilon so an existing action sitting exactly on
+            // a paste boundary is replaced, not left as a duplicate next to the pasted one (time keys are
+            // doubles and rarely compare exactly equal).
+            constexpr double kPasteTimeEpsilon = 0.0005;
             project.mutate(
                 clip.role,
                 [&](AxisState &a) {
-                    auto itStart = a.actions.lowerBound(ScriptAxisAction{destStart - 0.0005, 0});
-                    auto itEnd = a.actions.upperBound(ScriptAxisAction{destEnd + 0.0005, 0});
+                    auto itStart = a.actions.lowerBound(ScriptAxisAction{destStart - kPasteTimeEpsilon, 0});
+                    auto itEnd = a.actions.upperBound(ScriptAxisAction{destEnd + kPasteTimeEpsilon, 0});
                     auto clipView = clip.actions | std::views::transform([offsetTime](const auto &x) {
                                         return ScriptAxisAction{x.at + offsetTime, x.pos};
                                     });

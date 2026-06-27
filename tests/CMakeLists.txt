@@ -239,6 +239,7 @@ add_executable(ofs-unit-tests
         util/test_file_fingerprint.cpp
         util/test_json_util.cpp
         util/test_fuzzy_match.cpp
+        util/test_fault_throttle.cpp
         util/test_semver.cpp
         services/test_command_registry.cpp
         services/test_video_transcoder.cpp

@@ -6,29 +6,31 @@
 
 namespace ofs {
 
+namespace {
+// Keep only the entries of `src` that still exist in `actions`, mapped to their canonical stored value
+// (so an entry's position tracks the action it refers to). Reconciles a selection after the action set
+// changes or when a fresh selection is assigned.
+VectorSet<ScriptAxisAction> selectionWithinActions(const VectorSet<ScriptAxisAction> &src,
+                                                   const VectorSet<ScriptAxisAction> &actions) {
+    auto view = src | std::views::filter([&actions](const auto &e) { return actions.contains(e); }) |
+                std::views::transform([&actions](const auto &e) { return *actions.find(e); });
+    return {view.begin(), view.end()};
+}
+} // namespace
+
 void ScriptProject::mutate(StandardAxis role, const std::function<void(AxisState &)> &fn, EventQueue &eq) {
     auto &axis = axes[static_cast<size_t>(role)];
     fn(axis);
     // Sync selection: remove any selected actions that no longer exist in the axis.
-    if (!axis.selection.empty()) {
-        auto view = axis.selection |
-                    std::views::filter([&axis](const auto &entry) { return axis.actions.contains(entry); }) |
-                    std::views::transform([&axis](const auto &entry) { return *axis.actions.find(entry); });
-        axis.selection = VectorSet<ScriptAxisAction>(view.begin(), view.end());
-    }
+    if (!axis.selection.empty())
+        axis.selection = selectionWithinActions(axis.selection, axis.actions);
     axis.dirty = true;
     eq.push(AxisModifiedEvent{role});
 }
 
-void ScriptProject::setSelection(StandardAxis role, VectorSet<ScriptAxisAction> newSel, EventQueue &eq) {
+void ScriptProject::setSelection(StandardAxis role, const VectorSet<ScriptAxisAction> &newSel, EventQueue &eq) {
     auto &axis = axes[static_cast<size_t>(role)];
-    if (newSel.empty()) {
-        axis.selection.clear();
-    } else {
-        auto view = newSel | std::views::filter([&axis](const auto &e) { return axis.actions.contains(e); }) |
-                    std::views::transform([&axis](const auto &e) { return *axis.actions.find(e); });
-        axis.selection = VectorSet<ScriptAxisAction>(view.begin(), view.end());
-    }
+    axis.selection = newSel.empty() ? VectorSet<ScriptAxisAction>{} : selectionWithinActions(newSel, axis.actions);
     eq.push(SelectionChangedEvent{role});
 }
 
@@ -92,16 +94,10 @@ void ScriptProject::resetDocument() {
     defaultSceneView = SceneView{};
     activeSceneView = SceneView{};
 
-    // SimulatorState is split: the 3D ranges, feature toggles and transient posing fields are
-    // app-level (seeded from AppSettings at startup, persisted back at exit) and must survive a
-    // project close. Only the widget placement is per-project document state (saved/loaded as
-    // simP1/simP2/sim3dPos/sim3dSize), so reset just those — keep this in sync with
-    // ProjectManager::saveToProject / loadFromProject.
-    const SimulatorState defaults;
-    simulator.p1 = defaults.p1;
-    simulator.p2 = defaults.p2;
-    simulator.sim3dPos = defaults.sim3dPos;
-    simulator.sim3dSize = defaults.sim3dSize;
+    // SimulatorState is split: the 3D ranges, feature toggles and transient posing fields are app-level
+    // (seeded from AppSettings at startup, persisted back at exit) and must survive a project close. Only
+    // the widget placement is per-project document state, so reset just that.
+    simulator.resetPlacement();
 }
 
 void ScriptProject::restoreAxis(StandardAxis role, bool isVisible, bool showInStrip, bool isLocked, bool dirty,

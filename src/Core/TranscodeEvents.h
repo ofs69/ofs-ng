@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/TranscodeState.h" // TranscodePhase
+#include <cstdint>
 #include <string>
 
 namespace ofs {
@@ -71,11 +72,23 @@ struct TranscodeCompleteEvent {
     std::string outputPath; // UTF-8
 };
 
+// Why a transcode ended without a usable output. The worker runs off the main thread (no frame arena /
+// localization), so it reports a reason code + raw numbers and onFailed localizes on the main thread.
+enum class TranscodeFailReason : uint8_t {
+    Cancelled,              // user-requested abort (no toast)
+    CouldNotStartFfmpeg,    // the ffmpeg process failed to launch
+    FfmpegExitCode,         // ffmpeg exited non-zero — exitCode
+    OutputDurationMismatch, // encoded length differs from source — outDurationSec / srcDurationSec
+};
+
 // Worker → VideoTranscoder: the transcode ended without a usable output. `cancelled` distinguishes a
 // user-requested abort from a genuine failure (different phase + no error toast).
 struct TranscodeFailedEvent {
-    std::string message;
+    TranscodeFailReason reason = TranscodeFailReason::Cancelled;
     bool cancelled = false;
+    int exitCode = 0;            // FfmpegExitCode
+    double outDurationSec = 0.0; // OutputDurationMismatch
+    double srcDurationSec = 0.0; // OutputDurationMismatch
 };
 
 // Source video properties read by ffprobe, used to preview the optimize dialog (resolution + the

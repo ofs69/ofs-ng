@@ -710,6 +710,13 @@ void OfsApp::renderTitleBar() {
     }
 }
 
+bool OfsApp::canOptimizeIntra() const {
+    // hasMedia() (not isVideoLoaded(), which is true for the media-less dummy timeline) gates on a real
+    // decodable file loaded as the original source.
+    return player && player->hasMedia() && scriptProject.activeSource == ofs::MediaSource::Original &&
+           ofs::util::toolAvailable("ffmpeg") && ofs::util::toolAvailable("ffprobe") && !scriptProject.transcode.active;
+}
+
 void OfsApp::renderFooterBar() {
     ofs::ui::FooterBarInfo info;
 
@@ -739,9 +746,7 @@ void OfsApp::renderFooterBar() {
     // Whether the original-source badge offers a click-to-optimize affordance. Mirrors the optimize
     // command's gate minus the output dir (now auto-picked on demand): a real original is loaded, the
     // tools resolve, and nothing is already transcoding.
-    info.canOptimize = player && player->hasMedia() && scriptProject.activeSource == ofs::MediaSource::Original &&
-                       ofs::util::toolAvailable("ffmpeg") && ofs::util::toolAvailable("ffprobe") &&
-                       !scriptProject.transcode.active;
+    info.canOptimize = canOptimizeIntra();
 
     // Active axis + selection.
     const ofs::StandardAxis active = scriptProject.state.activeAxis;
@@ -866,7 +871,10 @@ void OfsApp::renderToolOptions() {
             ImGui::TextDisabled("%s", Str::ToolOptionsEmpty.c_str());
     }
     ImGui::End();
-    appSettings.showToolOptions = open;
+    if (appSettings.showToolOptions != open) { // closed via the window's [x] — persist like the menu toggle
+        appSettings.showToolOptions = open;
+        appSettingsDirty_ = true;
+    }
 }
 
 void OfsApp::onImGuiRender() {
@@ -1086,8 +1094,9 @@ void OfsApp::renderMainMenuBar() {
         if (ImGui::BeginMenu(Str::AppMenuView.id("menu_view"))) {
             ImGui::MenuItem(Str::AppMenuShortcuts.id("menu_shortcuts"), nullptr, &appState.showShortcutWindow);
             if (ImGui::BeginMenu(Str::AppMenuSimulator.id("menu_view_simulator"))) {
-                ImGui::MenuItem(Str::AppMenuSimulatorShow.id("menu_view_simulator_show"), nullptr,
-                                &appSettings.showSimulator);
+                if (ImGui::MenuItem(Str::AppMenuSimulatorShow.id("menu_view_simulator_show"), nullptr,
+                                    &appSettings.showSimulator))
+                    appSettingsDirty_ = true;
                 // Lock lives on the project's SimulatorState (mutated via event, like the overlay's
                 // own right-click menu), so this is just another entry point to the same toggle.
                 const bool simLocked = scriptProject.simulator.lockedPosition;
@@ -1096,8 +1105,12 @@ void OfsApp::renderMainMenuBar() {
                         [](ofs::SimulatorState &s) { s.lockedPosition = !s.lockedPosition; }});
                 ImGui::EndMenu();
             }
-            ImGui::MenuItem(Str::AppMenuStatistics.id("menu_view_statistics"), nullptr, &appSettings.showStatistics);
-            ImGui::MenuItem(Str::AppMenuToolOptions.id("menu_view_tooloptions"), nullptr, &appSettings.showToolOptions);
+            if (ImGui::MenuItem(Str::AppMenuStatistics.id("menu_view_statistics"), nullptr,
+                                &appSettings.showStatistics))
+                appSettingsDirty_ = true;
+            if (ImGui::MenuItem(Str::AppMenuToolOptions.id("menu_view_tooloptions"), nullptr,
+                                &appSettings.showToolOptions))
+                appSettingsDirty_ = true;
             ImGui::MenuItem(Str::AppMenuLog.id("menu_view_log"), nullptr, &appState.showLogWindow);
             ImGui::Separator();
             // Live checkmark reflects the actual window flag; dispatches directly (main-thread UI),
@@ -1700,10 +1713,8 @@ void OfsApp::maybeOfferOptimize() {
     // Offer only when optimizing is possible and worthwhile: not already declined for this project's
     // original, on the original source with no existing copy, an output dir + tools available, and nothing
     // already running. (Same gate as the command, minus hasMedia which we just confirmed.)
-    const bool canOffer =
-        !scriptProject.state.intraOptimizeDeclined && scriptProject.activeSource == ofs::MediaSource::Original &&
-        scriptProject.state.intraMediaPath.empty() && !appSettings.intraOutputDir.empty() &&
-        ofs::util::toolAvailable("ffmpeg") && ofs::util::toolAvailable("ffprobe") && !scriptProject.transcode.active;
+    const bool canOffer = canOptimizeIntra() && !scriptProject.state.intraOptimizeDeclined &&
+                          scriptProject.state.intraMediaPath.empty() && !appSettings.intraOutputDir.empty();
     if (!canOffer)
         return;
 

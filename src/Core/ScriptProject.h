@@ -187,7 +187,7 @@ struct ScriptProject {
 
     // Replace axis selection, sync against actions, push SelectionChangedEvent.
     // Does NOT set dirty. Main thread only.
-    void setSelection(StandardAxis role, VectorSet<ScriptAxisAction> newSel, EventQueue &eq);
+    void setSelection(StandardAxis role, const VectorSet<ScriptAxisAction> &newSel, EventQueue &eq);
 
     // The set of axes an activeAxis-targeted edit fans out to: axesGrouping when it has >1 member,
     // else just {activeAxis}. Always includes activeAxis. Edit handlers loop this and skip

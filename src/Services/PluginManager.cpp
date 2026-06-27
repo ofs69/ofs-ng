@@ -999,36 +999,6 @@ int hostIsSelectionModeActive(void *ctx, const char *localId) {
     return p->project->activeSelectionMode == fmt::format("{}.{}", p->currentPluginName, localId) ? 1 : 0;
 }
 
-// Discrete I/O — worker-thread-safe; operate on job-local buffers only
-int hostNodeInputCount(const OfsDiscreteInput *in) {
-    return in ? static_cast<int>(in->times.size()) : 0;
-}
-
-double hostNodeInputTime(const OfsDiscreteInput *in, int i) {
-    if (!in || i < 0 || i >= static_cast<int>(in->times.size()))
-        return 0.0;
-    return in->times[static_cast<size_t>(i)];
-}
-
-int hostNodeInputPosition(const OfsDiscreteInput *in, int i) {
-    if (!in || i < 0 || i >= static_cast<int>(in->positions.size()))
-        return 0;
-    return static_cast<int>(std::round(in->positions[static_cast<size_t>(i)]));
-}
-
-void hostNodeAddAction(OfsDiscreteOutput *out, double time, int position) {
-    if (!out)
-        return;
-    // A NaN/inf time would break the sorted-by-time invariant every downstream consumer relies on (and
-    // poison binary searches); a negative time falls before the start of the timeline. Drop either —
-    // mirroring the silent clamp already applied to position. Runs on a worker thread per-action, so we
-    // stay silent rather than logging into a hot eval loop.
-    if (!std::isfinite(time) || time < 0.0)
-        return;
-    out->times.push_back(time);
-    out->positions.push_back(static_cast<float>(std::clamp(position, 0, 100)));
-}
-
 // ── Plugin-node custom UI state ───────────────────────────────────────────────
 // Valid only inside an onNodeUi call, when the node-body renderer has set the current node on the ctx
 // (phase 4e). Outside that window currentNodeState is null and these are inert.
@@ -1512,10 +1482,10 @@ PluginManager::PluginManager(ScriptProject &project, EventQueue &eq, std::shared
     hostApi.uiPushRow = &hostUiPushRow;
     hostApi.uiPopRow = &hostUiPopRow;
     hostApi.registerNode = &hostRegisterNode;
-    hostApi.nodeInputCount = &hostNodeInputCount;
-    hostApi.nodeInputTime = &hostNodeInputTime;
-    hostApi.nodeInputPosition = &hostNodeInputPosition;
-    hostApi.nodeAddAction = &hostNodeAddAction;
+    hostApi.nodeInputCount = &nodeInputCount;
+    hostApi.nodeInputTime = &nodeInputTime;
+    hostApi.nodeInputPosition = &nodeInputPosition;
+    hostApi.nodeAddAction = &nodeAddAction;
     hostApi.hostLog = &hostLog;
     hostApi.hostReportFault = &hostReportFault;
     hostApi.hostNotify = &hostNotify;
@@ -1637,23 +1607,12 @@ void PluginManager::shutdown() {
 }
 
 void PluginManager::notifyPluginFault(const std::string &who, const std::string &ctx) {
-    constexpr auto kWindow = std::chrono::seconds(3);
-    const auto now = std::chrono::steady_clock::now();
-    std::string message;
-    {
-        std::lock_guard<std::mutex> lock(faultNotifyMutex_);
-        auto &st = faultNotifyState_[who];
-        // Suppress (but count) repeat faults inside the window so a per-sample throw can't flood the bell.
-        if (st.lastEmit.time_since_epoch().count() != 0 && now - st.lastEmit < kWindow) {
-            ++st.suppressed;
-            return;
-        }
-        const int suppressed = st.suppressed;
-        st.suppressed = 0;
-        st.lastEmit = now;
-        message = suppressed > 0 ? fmt::format("Plugin '{}' error in {} (+{} more) — see log", who, ctx, suppressed)
-                                 : fmt::format("Plugin '{}' error in {} — see log", who, ctx);
-    }
+    const auto suppressed = faultThrottle_.onFault(who);
+    if (!suppressed) // inside the coalescing window — counted, not emitted
+        return;
+    std::string message = *suppressed > 0
+                              ? fmt::format("Plugin '{}' error in {} (+{} more) — see log", who, ctx, *suppressed)
+                              : fmt::format("Plugin '{}' error in {} — see log", who, ctx);
     eventQueue_.push(NotifyEvent{.level = NotifyLevel::Error, .message = std::move(message)});
 }
 
@@ -2462,8 +2421,11 @@ void PluginManager::renderUI() {
             continue;
 
         bool wasOpen = plugin.windowOpen;
-        ImGui::SetNextWindowSize(ImVec2(360, 480), ImGuiCond_FirstUseEver);
-        ImGui::SetNextWindowSizeConstraints({200.f, 100.f}, {1200.f, 1200.f});
+        // Font-relative so the default size and bounds scale with DPI / font, and a longer translated
+        // plugin window title isn't clipped by a fixed pixel width.
+        const float fs = ImGui::GetFontSize();
+        ImGui::SetNextWindowSize(ImVec2(fs * 22.5f, fs * 30.0f), ImGuiCond_FirstUseEver);
+        ImGui::SetNextWindowSizeConstraints({fs * 12.5f, fs * 6.25f}, {fs * 75.0f, fs * 75.0f});
         // "###" (not "##") so the ImGui id hashes only the DLL stem (plugin.name) — a plugin that
         // localizes or changes its display name keeps the same window/dock id (DockLayout binds the
         // same "…###<name>" slug). With "##" the id would fold in the visible display name and break.

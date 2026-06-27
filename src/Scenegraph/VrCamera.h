@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Scenegraph/Shader.h" // VrShader::hfovDegrees — the single source for the equirect HFOV
 #include "imgui.h"
 #include <glm/glm.hpp>
 
@@ -11,7 +12,7 @@
 // the shader exactly so a drag round-trips. See Shader.cpp vrFragBody for the reference math.
 namespace ofs::vrcam {
 
-inline constexpr float kHfovDegrees = 75.0f; // must equal VrShader::hfovDegrees
+inline constexpr float kHfovDegrees = VrShader::hfovDegrees; // single source: the shader's HFOV
 
 // World ray direction for an equirect (yaw,pitch): yaw = longitude = atan2(z,x), pitch = asin(y).
 glm::vec3 sphereDir(float yaw, float pitch);

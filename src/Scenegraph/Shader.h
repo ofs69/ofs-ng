@@ -18,7 +18,9 @@ class Shader {
     [[nodiscard]] uint32_t getHandle() const { return program; }
 
   protected:
-    static void checkCompileErrors(uint32_t shader, const std::string &type);
+    // Log a compile (isProgram=false) or link (isProgram=true) failure. `label` names the stage in the
+    // message only — the branch is the explicit bool, not a string compare.
+    static void checkCompileErrors(uint32_t object, const char *label, bool isProgram);
 };
 
 class VrShader : public Shader {

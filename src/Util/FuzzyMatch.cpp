@@ -234,7 +234,9 @@ FuzzyResult matchImpl(std::string_view needle, std::string_view haystack, int *o
     }
 
     if (outCount)
-        *outCount = matchCount;
+        // Report only what we actually wrote: the loop above stops filling outOffsets at maxMatches, so a
+        // caller iterating *outCount entries would otherwise read past the offsets buffer.
+        *outCount = (outOffsets && matchCount > maxMatches) ? maxMatches : matchCount;
     return {.matched = true, .score = any ? score : 0};
 }
 

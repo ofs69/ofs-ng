@@ -22,6 +22,15 @@ inline constexpr float kRightGap = 6.f;
 // which auto-fit). Kept here as the one shared layout constant those node widgets reference.
 inline constexpr float kLabelW = 120.f;
 
+// Brighten an RGB color by `delta` per channel (clamped to 1), preserving alpha. Used for hover/active
+// highlight tints (axis chips, band bar, node chips) that all lighten a base color the same way.
+inline ImVec4 brighten(const ImVec4 &c, float delta) {
+    return {std::min(c.x + delta, 1.0f), std::min(c.y + delta, 1.0f), std::min(c.z + delta, 1.0f), c.w};
+}
+inline ImU32 brighten(ImU32 c, float delta) {
+    return ImColor(brighten(ImColor(c).Value, delta));
+}
+
 // Content width of a button sized to its label, so verb buttons fit their (translated) text instead
 // of a fixed px that clips a longer translation. `true` strips a trailing ###id before measuring, so
 // the label may be passed with or without its id. When reserving a right-pinned gap, add ItemSpacing.x.

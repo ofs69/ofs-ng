@@ -99,6 +99,14 @@ void Heatmap::rebuildColorLut() {
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
+void Heatmap::shutdownShared() {
+    if (sColorLutTexture) {
+        glDeleteTextures(1, &sColorLutTexture);
+        sColorLutTexture = 0;
+    }
+    sHeatmapShader.reset(); // free the program while the GL context is live, not at static destruction
+}
+
 void Heatmap::init() {
     if constexpr (ofs::kHeadless) // null backend: no GL texture/shader; sColorLutTexture stays 0 so
         return;                   // rebuildColorLut() and renderToBitmap() self-skip, draw() never runs

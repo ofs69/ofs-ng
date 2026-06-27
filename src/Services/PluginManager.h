@@ -9,6 +9,7 @@
 #include "Services/EffectRegistry.h"
 #include "Services/PluginApi.h"
 #include "Util/Coro.h"
+#include "Util/FaultThrottle.h"
 #include <bitset>
 #include <chrono>
 #include <filesystem>
@@ -284,14 +285,9 @@ class PluginManager {
     // update(), instead of one managed-boundary crossing per event.
     std::bitset<kStandardAxisCount> axisModifiedDirty_;
 
-    // Coalesces fault toasts so a node throwing every sample on a worker thread can't flood the
-    // notification center. Keyed by plugin name; guarded because hostNotify may run off the main thread.
-    struct FaultNotifyState {
-        std::chrono::steady_clock::time_point lastEmit{};
-        int suppressed = 0;
-    };
-    std::mutex faultNotifyMutex_;
-    std::unordered_map<std::string, FaultNotifyState> faultNotifyState_;
+    // Coalesces fault toasts (keyed by plugin name) so a node throwing every sample on a worker thread
+    // can't flood the notification center.
+    ofs::util::FaultThrottle faultThrottle_;
 
     // Per-plugin app-scoped settings: name → the plugin's whole settings object (the JSON written to
     // <pref>/plugin_settings/<name>.json). Loaded lazily on first access and kept across plugin

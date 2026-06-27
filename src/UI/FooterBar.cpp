@@ -6,6 +6,7 @@
 #include "Core/TranscodeEvents.h"   // OpenTranscodeDialogEvent (original-source badge click → optimize dialog)
 #include "Localization/AxisNames.h" // localizedAxisName (axis hover tooltip)
 #include "Localization/Translator.h"
+#include "UI/AxisColors.h" // standardAxisColor active-axis zone lookups
 #include "UI/Icons.h"
 #include "UI/Theme.h"            // ofs::theme::GetColorU32 + AppCol semantic status slots
 #include "Util/FrameAllocator.h" // fmtScratch

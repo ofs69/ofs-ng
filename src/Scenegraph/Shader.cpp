@@ -18,18 +18,18 @@ Shader::Shader(const char *vertexSource, const char *fragmentSource) {
     vertex = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertex, 1, &vertexSource, nullptr);
     glCompileShader(vertex);
-    checkCompileErrors(vertex, "VERTEX");
+    checkCompileErrors(vertex, "VERTEX", false);
 
     fragment = glCreateShader(GL_FRAGMENT_SHADER);
     glShaderSource(fragment, 1, &fragmentSource, nullptr);
     glCompileShader(fragment);
-    checkCompileErrors(fragment, "FRAGMENT");
+    checkCompileErrors(fragment, "FRAGMENT", false);
 
     program = glCreateProgram();
     glAttachShader(program, vertex);
     glAttachShader(program, fragment);
     glLinkProgram(program);
-    checkCompileErrors(program, "PROGRAM");
+    checkCompileErrors(program, "PROGRAM", true);
 
     glDeleteShader(vertex);
     glDeleteShader(fragment);
@@ -47,26 +47,22 @@ void Shader::use() const {
     glUseProgram(program);
 }
 
-void Shader::checkCompileErrors(uint32_t shader, const std::string &type) {
+void Shader::checkCompileErrors(uint32_t object, const char *label, bool isProgram) {
     int32_t success = 0;
+    if (isProgram)
+        glGetProgramiv(object, GL_LINK_STATUS, &success);
+    else
+        glGetShaderiv(object, GL_COMPILE_STATUS, &success);
+    if (success)
+        return;
+
     char infoLog[1024];
-    if (type != "PROGRAM") {
-        glGetShaderiv(shader, GL_COMPILE_STATUS, &success);
-        if (!success) {
-            glGetShaderInfoLog(shader, 1024, nullptr, infoLog);
-            OFS_CORE_ERROR(
-                "SHADER_COMPILATION_ERROR of type: {}\n{}\n-- --------------------------------------------------- --",
-                type, infoLog);
-        }
-    } else {
-        glGetProgramiv(shader, GL_LINK_STATUS, &success);
-        if (!success) {
-            glGetProgramInfoLog(shader, 1024, nullptr, infoLog);
-            OFS_CORE_ERROR(
-                "PROGRAM_LINKING_ERROR of type: {}\n{}\n-- --------------------------------------------------- --",
-                type, infoLog);
-        }
-    }
+    if (isProgram)
+        glGetProgramInfoLog(object, sizeof(infoLog), nullptr, infoLog);
+    else
+        glGetShaderInfoLog(object, sizeof(infoLog), nullptr, infoLog);
+    OFS_CORE_ERROR("{} of type: {}\n{}\n-- --------------------------------------------------- --",
+                   isProgram ? "PROGRAM_LINKING_ERROR" : "SHADER_COMPILATION_ERROR", label, infoLog);
 }
 
 // --- VrShader ---

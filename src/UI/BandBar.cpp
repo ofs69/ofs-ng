@@ -152,13 +152,8 @@ void drawBandBar(ImDrawList *dl, ImVec2 barMin, ImVec2 barMax, std::span<const B
             !isDragging && !dragState.hasDragCandidate && barHovered && ImGui::IsMouseHoveringRect(cMin, cMax);
 
         ImU32 col = bands[i].color;
-        if (isActive || hovered) {
-            ImColor cv(col);
-            cv.Value.x = std::min(cv.Value.x + 0.15f, 1.0f);
-            cv.Value.y = std::min(cv.Value.y + 0.15f, 1.0f);
-            cv.Value.z = std::min(cv.Value.z + 0.15f, 1.0f);
-            col = cv;
-        }
+        if (isActive || hovered)
+            col = ofs::ui::brighten(col, 0.15f);
         dl->AddRectFilled(cMin, cMax, col, 3.0f);
 
         // Diagonal hatch (region bands only): a brighter same-hue stripe pattern clipped to the band,
@@ -167,11 +162,7 @@ void drawBandBar(ImDrawList *dl, ImVec2 barMin, ImVec2 barMax, std::span<const B
         // primitive written into the draw list's pre-grown buffers — no per-frame heap allocation.
         if (bands[i].hatched) {
             dl->PushClipRect(cMin, cMax, true);
-            ImColor hc(bands[i].color);
-            hc.Value.x = std::min(hc.Value.x + 0.22f, 1.0f);
-            hc.Value.y = std::min(hc.Value.y + 0.22f, 1.0f);
-            hc.Value.z = std::min(hc.Value.z + 0.22f, 1.0f);
-            const ImU32 hatchCol = hc;
+            const ImU32 hatchCol = ofs::ui::brighten(bands[i].color, 0.22f);
             const float bandH = cMax.y - cMin.y;
             const float step = ImGui::GetFontSize() * 0.8f; // font-relative stripe pitch
             // 45° lines (bottom-left → top-right). Start one band-height left of the rect so the slanted

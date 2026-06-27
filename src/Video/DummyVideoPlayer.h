@@ -51,7 +51,7 @@ class DummyVideoPlayer : public VideoPlayer {
 
     void setPosition(double t) override { position = std::clamp(t, 0.0, duration); }
 
-    void setPlaybackSpeed(float s) override { speed = std::clamp(s, 0.1f, 2.0f); }
+    void setPlaybackSpeed(float s) override { speed = std::clamp(s, kMinPlaybackSpeed, kMaxPlaybackSpeed); }
 
     bool active = false;
     double duration = 0.0;

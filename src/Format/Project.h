@@ -97,10 +97,8 @@ inline constexpr int kGraphPresetVersion = 1;
 struct GraphPreset {
     ProcessingNodeGraph graph;
     std::vector<std::string> axisRoleTags;
-    int hz = 30;                              // region discretization rate (1–120)
-    std::string name;                         // meta.name — region name at save time
-    std::vector<std::string> requiredEffects; // meta.requires.effects (informational manifest)
-    std::vector<std::string> requiredPlugins; // meta.requires.plugins (informational manifest)
+    int hz = 30;      // region discretization rate (1–120)
+    std::string name; // meta.name — region name at save time
     // A shared preset is self-contained: every Script node carries its own source in
     // ProcessingGraphNode::scriptEmbeddedSource (file nodes get their .cs inlined at save time), so
     // the recipient needs none of the author's .cs files. Loading a preset that carries script code

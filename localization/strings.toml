@@ -360,6 +360,25 @@ placeholders = [
 english     = "Optimization failed"
 description = "Notification heading shown when a video optimization fails (the ffmpeg detail follows)."
 
+[TranscodeErrCantStart]
+english     = "Could not start ffmpeg"
+description = "Optimization failure detail: the ffmpeg process could not be launched."
+
+[TranscodeErrExitCode]
+english      = "ffmpeg failed (exit code {0})"
+description  = "Optimization failure detail: ffmpeg exited with a non-zero status. {0} is the exit code."
+placeholders = [
+    "{0} = ffmpeg process exit code",
+]
+
+[TranscodeErrDuration]
+english      = "Output duration {0}s differs from source {1}s"
+description  = "Optimization failure detail: the encoded output length does not match the source. {0}/{1} are seconds."
+placeholders = [
+    "{0} = output duration in seconds",
+    "{1} = source duration in seconds",
+]
+
 [WaveformTaskLabel]
 english     = "Audio waveform"
 description = "Background-task indicator: title of the running audio-waveform extraction entry in the footer."
@@ -2947,6 +2966,10 @@ description = "Project-title readout (menu bar / title bar) shown when no projec
 [AppNoProjectOpen]
 english     = "No project open — open or create one to begin"
 description = "Footer status line shown on the welcome screen when no project is open."
+
+[AppUntitledProject]
+english     = "Untitled Project"
+description = "Project-title readout (menu bar / title bar) shown for a new project not yet saved to a file."
 
 [AppUnsavedTip]
 english     = "Unsaved changes"

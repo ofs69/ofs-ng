@@ -270,22 +270,27 @@ void OfsApp::initCommands() {
             eq.push(ofs::EditRequestEvent{.intent = {.kind = ofs::EditIntentKind::AddPointAtPlayhead, .pos = pos}});
         };
     };
-    static constexpr std::pair<const char *, SDL_Keycode> kAddActionKeys[] = {
-        {"edit.add-action-0", SDLK_KP_0},  {"edit.add-action-10", SDLK_KP_1},       {"edit.add-action-20", SDLK_KP_2},
-        {"edit.add-action-30", SDLK_KP_3}, {"edit.add-action-40", SDLK_KP_4},       {"edit.add-action-50", SDLK_KP_5},
-        {"edit.add-action-60", SDLK_KP_6}, {"edit.add-action-70", SDLK_KP_7},       {"edit.add-action-80", SDLK_KP_8},
-        {"edit.add-action-90", SDLK_KP_9}, {"edit.add-action-100", SDLK_KP_DIVIDE},
+    struct AddActionCmd {
+        const char *id;
+        SDL_Keycode key;
+        int pos;
+        TrKey title;
     };
-    static constexpr int kAddActionValues[] = {0, 10, 20, 30, 40, 50, 60, 70, 80, 90, 100};
-    static const TrKey kAddActionTitles[] = {
-        Str::CmdEditAddAction0,  Str::CmdEditAddAction10, Str::CmdEditAddAction20,  Str::CmdEditAddAction30,
-        Str::CmdEditAddAction40, Str::CmdEditAddAction50, Str::CmdEditAddAction60,  Str::CmdEditAddAction70,
-        Str::CmdEditAddAction80, Str::CmdEditAddAction90, Str::CmdEditAddAction100,
+    static const AddActionCmd kAddActions[] = {
+        {.id = "edit.add-action-0", .key = SDLK_KP_0, .pos = 0, .title = Str::CmdEditAddAction0},
+        {.id = "edit.add-action-10", .key = SDLK_KP_1, .pos = 10, .title = Str::CmdEditAddAction10},
+        {.id = "edit.add-action-20", .key = SDLK_KP_2, .pos = 20, .title = Str::CmdEditAddAction20},
+        {.id = "edit.add-action-30", .key = SDLK_KP_3, .pos = 30, .title = Str::CmdEditAddAction30},
+        {.id = "edit.add-action-40", .key = SDLK_KP_4, .pos = 40, .title = Str::CmdEditAddAction40},
+        {.id = "edit.add-action-50", .key = SDLK_KP_5, .pos = 50, .title = Str::CmdEditAddAction50},
+        {.id = "edit.add-action-60", .key = SDLK_KP_6, .pos = 60, .title = Str::CmdEditAddAction60},
+        {.id = "edit.add-action-70", .key = SDLK_KP_7, .pos = 70, .title = Str::CmdEditAddAction70},
+        {.id = "edit.add-action-80", .key = SDLK_KP_8, .pos = 80, .title = Str::CmdEditAddAction80},
+        {.id = "edit.add-action-90", .key = SDLK_KP_9, .pos = 90, .title = Str::CmdEditAddAction90},
+        {.id = "edit.add-action-100", .key = SDLK_KP_DIVIDE, .pos = 100, .title = Str::CmdEditAddAction100},
     };
-    for (int i = 0; i < 11; ++i) {
-        regBind(kAddActionKeys[i].first, "Edit", kAddActionTitles[i], makeAddAction(kAddActionValues[i]),
-                kAddActionKeys[i].second, SDL_KMOD_NONE);
-    }
+    for (const auto &c : kAddActions)
+        regBind(c.id, "Edit", c.title, makeAddAction(c.pos), c.key, SDL_KMOD_NONE);
 
     regHold(
         "edit.undo", "Edit", Str::CmdEditUndo, [](ofs::EventQueue &eq) { eq.push(ofs::UndoEvent{}); }, SDLK_Z,
@@ -564,13 +569,6 @@ void OfsApp::initCommands() {
         .title = Str::CmdOptimizeIntra,
         .keywords = "transcode convert", // "Optimize for Seeking" — reach it by what it does under the hood
         .run = [](ofs::EventQueue &eq) { eq.push(ofs::OpenTranscodeDialogEvent{}); },
-        .isEnabled =
-            [this] {
-                // hasMedia() (not isVideoLoaded(), which is true for the media-less dummy timeline) gates
-                // on a real decodable file being loaded as the original source.
-                return ofs::util::toolAvailable("ffmpeg") && ofs::util::toolAvailable("ffprobe") && player &&
-                       player->hasMedia() && scriptProject.activeSource == ofs::MediaSource::Original &&
-                       !scriptProject.transcode.active;
-            },
+        .isEnabled = [this] { return canOptimizeIntra(); },
     });
 }

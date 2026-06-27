@@ -35,6 +35,17 @@ struct SimulatorState {
     // Rotation DOFs (R0/R1/R2) read out the mapped deflection in degrees when true, percent when false.
     // Linear DOFs (L0/L1/L2) are always percent — degrees have no meaning for a translation.
     bool labels3dInDegrees = true;
+
+    // Reset the per-project widget placement (p1/p2/sim3dPos/sim3dSize) to defaults; the rest of this
+    // struct is app-level and survives a project close. The same four fields are the ones
+    // ProjectManager::saveToProject / loadFromProject serialize — keep all three in sync.
+    void resetPlacement() {
+        const SimulatorState d;
+        p1 = d.p1;
+        p2 = d.p2;
+        sim3dPos = d.sim3dPos;
+        sim3dSize = d.sim3dSize;
+    }
 };
 
 } // namespace ofs

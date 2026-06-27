@@ -2,6 +2,7 @@
 
 #include <string>
 #include <string_view>
+#include <vector>
 
 // Forward declarations so consumers don't pull in SDL just to hold a process handle. In C++ a struct
 // tag declaration also introduces the type name, so these double as the SDL typedef names.
@@ -9,6 +10,17 @@ struct SDL_Process;
 struct SDL_IOStream;
 
 namespace ofs::util {
+
+// vector<string> → NULL-terminated argv for spawn()/runCaptured(). The backing strings must outlive the
+// returned view — it borrows their c_str() pointers.
+inline std::vector<const char *> toArgv(const std::vector<std::string> &args) {
+    std::vector<const char *> v;
+    v.reserve(args.size() + 1);
+    for (const auto &a : args)
+        v.push_back(a.c_str());
+    v.push_back(nullptr);
+    return v;
+}
 
 // Resolve a tool name ("ffmpeg", "ffprobe") to the command used to launch it. On Windows the tool
 // ships next to the exe, so this returns the absolute "<base>/<tool>.exe"; elsewhere it returns the

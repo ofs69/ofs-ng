@@ -13,6 +13,9 @@ namespace ofs {
 // Set of axis roles — one bit per StandardAxis value
 using AxisRoles = std::bitset<kStandardAxisCount>;
 
+// Default region discretization rate (Hz), used wherever the graph turns a functional signal discrete.
+inline constexpr int kDefaultRegionHz = 30;
+
 enum class GraphNodeType : uint8_t {
     Input,      // source signal — no inputs, 1 output
     Output,     // sink — 1 input, no outputs
@@ -169,8 +172,8 @@ struct ProcessingRegion {
     // creation (ofs::util::goldenRatioColor) and user-overridable via the region context menu.
     ImU32 color = IM_COL32(70, 130, 180, 220);
     ProcessingNodeGraph nodeGraph;
-    int hz = 30; // discretization rate (1–120) for the whole region; used wherever the graph
-                 // turns a functional signal into discrete actions
+    int hz = kDefaultRegionHz; // discretization rate (1–120) for the whole region; used wherever the graph
+                               // turns a functional signal into discrete actions
     bool showSourceActions = true;
     AxisRoles axisRoles;                   // runtime bitset — kept in sync with axisRoleTags
     std::vector<std::string> axisRoleTags; // serialized axis tags; rebuilt from axisRoles on save

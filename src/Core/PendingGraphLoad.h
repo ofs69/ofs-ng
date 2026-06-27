@@ -17,7 +17,7 @@ struct PendingGraphLoad {
     ProcessingNodeGraph graph;           // the graph to remap; roles still as saved
     std::vector<StandardAxis> savedAxes; // distinct Input/Output axes in `graph`, in encounter order
     std::string name;                    // region name saved with the graph; restored on apply
-    int hz = 30;                         // region discretization rate saved with the graph
+    int hz = kDefaultRegionHz;           // region discretization rate saved with the graph
     // If any Script node in `graph` carries embedded source, the graph holds executable code and
     // MUST clear the trust gate (needsTrust) before it is applied or compiled.
     bool needsTrust = false; // true until the user accepts the embedded scripts

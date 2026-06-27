@@ -18,28 +18,6 @@ namespace ofs {
 
 namespace {
 
-// Discrete I/O accessors handed to the script trampolines (s_discApi). Identical in behavior to
-// the plugin-host versions; duplicated here so the script host works with no plugin loaded.
-int scriptNodeInputCount(const OfsDiscreteInput *in) {
-    return in ? static_cast<int>(in->times.size()) : 0;
-}
-double scriptNodeInputTime(const OfsDiscreteInput *in, int i) {
-    if (!in || i < 0 || i >= static_cast<int>(in->times.size()))
-        return 0.0;
-    return in->times[static_cast<size_t>(i)];
-}
-int scriptNodeInputPosition(const OfsDiscreteInput *in, int i) {
-    if (!in || i < 0 || i >= static_cast<int>(in->positions.size()))
-        return 0;
-    return static_cast<int>(std::round(in->positions[static_cast<size_t>(i)]));
-}
-void scriptNodeAddAction(OfsDiscreteOutput *out, double time, int position) {
-    if (!out)
-        return;
-    out->times.push_back(time);
-    out->positions.push_back(static_cast<float>(std::clamp(position, 0, 100)));
-}
-
 // hostLog/hostReportFault for the script host's HostApi, so a throwing script node is logged + toasted
 // even when no plugin is loaded (the plugin path installs the managed PluginGuard sinks; a script-only
 // project has none). ctx is the ScriptSystem (set as hostApi.ctx in init).
@@ -113,10 +91,10 @@ bool ScriptSystem::init() {
     // ctx). hostNotify is left null — script authors have no plugin-initiated toast surface.
     hostApi.version = OFS_ABI_VERSION;
     hostApi.ctx = this;
-    hostApi.nodeInputCount = &scriptNodeInputCount;
-    hostApi.nodeInputTime = &scriptNodeInputTime;
-    hostApi.nodeInputPosition = &scriptNodeInputPosition;
-    hostApi.nodeAddAction = &scriptNodeAddAction;
+    hostApi.nodeInputCount = &nodeInputCount;
+    hostApi.nodeInputTime = &nodeInputTime;
+    hostApi.nodeInputPosition = &nodeInputPosition;
+    hostApi.nodeAddAction = &nodeAddAction;
     hostApi.hostLog = &scriptHostLog;
     hostApi.hostReportFault = &scriptHostReportFault;
     initFn(&hostApi);
@@ -133,23 +111,12 @@ bool ScriptSystem::init() {
 }
 
 void ScriptSystem::notifyScriptFault(const std::string &ctx) {
-    constexpr auto kWindow = std::chrono::seconds(3);
-    const auto now = std::chrono::steady_clock::now();
-    std::string message;
-    {
-        std::lock_guard<std::mutex> lock(faultNotifyMutex);
-        auto &st = faultNotifyState[ctx];
-        // Suppress (but count) repeat faults inside the window so a per-sample throw can't flood the bell.
-        if (st.lastEmit.time_since_epoch().count() != 0 && now - st.lastEmit < kWindow) {
-            ++st.suppressed;
-            return;
-        }
-        const int suppressed = st.suppressed;
-        st.suppressed = 0;
-        st.lastEmit = now;
-        message = suppressed > 0 ? fmt::format("Script node error in {} (+{} more) — see log", ctx, suppressed)
-                                 : fmt::format("Script node error in {} — see log", ctx);
-    }
+    const auto suppressed = faultThrottle.onFault(ctx);
+    if (!suppressed) // inside the coalescing window — counted, not emitted
+        return;
+    std::string message = *suppressed > 0
+                              ? fmt::format("Script node error in {} (+{} more) — see log", ctx, *suppressed)
+                              : fmt::format("Script node error in {} — see log", ctx);
     eq.push(NotifyEvent{.level = NotifyLevel::Error, .message = std::move(message)});
 }
 

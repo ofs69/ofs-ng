@@ -343,6 +343,25 @@ translation  = "{0}× · 残り {1}"
 english     = "Optimization failed"
 translation = "最適化に失敗しました"
 
+[TranscodeErrCantStart]
+english     = "Could not start ffmpeg"
+translation = "ffmpeg を起動できませんでした"
+
+[TranscodeErrExitCode]
+english      = "ffmpeg failed (exit code {0})"
+translation  = "ffmpeg が失敗しました (終了コード {0})"
+placeholders = [
+    "{0} = ffmpeg process exit code",
+]
+
+[TranscodeErrDuration]
+english      = "Output duration {0}s differs from source {1}s"
+translation  = "出力の長さ {0}秒 がソース {1}秒 と異なります"
+placeholders = [
+    "{0} = output duration in seconds",
+    "{1} = source duration in seconds",
+]
+
 [WaveformTaskLabel]
 english     = "Audio waveform"
 translation = "音声波形"
@@ -2798,6 +2817,10 @@ translation = "プロジェクトなし"
 [AppNoProjectOpen]
 english     = "No project open — open or create one to begin"
 translation = "プロジェクトが開いていません — 開くか作成して開始してください"
+
+[AppUntitledProject]
+english     = "Untitled Project"
+translation = "無題のプロジェクト"
 
 [AppSavedSecsAgo]
 english      = "saved {0}s ago"

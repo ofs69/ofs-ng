@@ -1,5 +1,6 @@
 #include "VideoPreview.h"
 #include "MpvLoader.h"
+#include "MpvRenderTarget.h"
 #include "Platform/Headless.h"
 #include "Util/Log.h"
 #include <SDL3/SDL.h>
@@ -243,17 +244,7 @@ void VideoPreview::processEvents() {
 }
 
 void VideoPreview::renderFrame() {
-    if (!framebuffer || targetWidth <= 0 || targetHeight <= 0)
-        return;
-
-    mpv_opengl_fbo fbo = {
-        .fbo = static_cast<int>(framebuffer), .w = targetWidth, .h = targetHeight, .internal_format = GL_RGBA8};
-
-    uint32_t disable = 0;
-    mpv_render_param params[] = {{.type = MPV_RENDER_PARAM_OPENGL_FBO, .data = &fbo},
-                                 {.type = MPV_RENDER_PARAM_BLOCK_FOR_TARGET_TIME, .data = &disable},
-                                 {.type = MPV_RENDER_PARAM_INVALID, .data = nullptr}};
-    MpvLoader::mpv_render_context_render(mpvGl, params);
+    mpv::renderToFbo(mpvGl, framebuffer, targetWidth, targetHeight);
 }
 
 void VideoPreview::updateRenderTexture() {
@@ -270,24 +261,7 @@ void VideoPreview::updateRenderTexture() {
     targetWidth = w;
     targetHeight = h;
 
-    if (!framebuffer)
-        glGenFramebuffers(1, &framebuffer);
-    if (!frameTexture)
-        glGenTextures(1, &frameTexture);
-
-    glBindFramebuffer(GL_FRAMEBUFFER, framebuffer);
-    glBindTexture(GL_TEXTURE_2D, frameTexture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, targetWidth, targetHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, nullptr);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, frameTexture, 0);
-
-    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-    if (status != GL_FRAMEBUFFER_COMPLETE)
-        OFS_CORE_ERROR("Preview framebuffer is not complete: {:x}", status);
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
+    mpv::allocRenderTarget(framebuffer, frameTexture, targetWidth, targetHeight, "Preview framebuffer");
 }
 
 void VideoPreview::onMpvEvents(void *ctx) {

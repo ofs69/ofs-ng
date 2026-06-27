@@ -6,6 +6,7 @@
 #include <cstdlib>
 #include <cstring>
 #include <glm/glm.hpp>
+#include <glm/gtc/type_ptr.hpp>
 #include <optional>
 #include <unordered_map>
 #include <vector>
@@ -81,8 +82,21 @@ Transform nodeTransform(const cgltf_node *node) {
     }
     if (node->has_scale)
         t.scale = glm::vec3{node->scale[0], node->scale[1], node->scale[2]};
-    if (node->has_matrix && !node->has_translation && !node->has_rotation && !node->has_scale)
-        t.position = glm::vec3{node->matrix[12], node->matrix[13], node->matrix[14]};
+    if (node->has_matrix && !node->has_translation && !node->has_rotation && !node->has_scale) {
+        // glTF stores a column-major 4x4 matching glm::mat4's layout. Decompose into TRS rather than
+        // reading only the translation column, or matrix-authored nodes lose their rotation and scale.
+        const glm::mat4 m = glm::make_mat4(node->matrix);
+        t.position = glm::vec3{m[3]};
+        t.scale = glm::vec3{glm::length(glm::vec3{m[0]}), glm::length(glm::vec3{m[1]}), glm::length(glm::vec3{m[2]})};
+        glm::mat3 rot{m};
+        if (t.scale.x != 0.0f)
+            rot[0] /= t.scale.x;
+        if (t.scale.y != 0.0f)
+            rot[1] /= t.scale.y;
+        if (t.scale.z != 0.0f)
+            rot[2] /= t.scale.z;
+        t.rotation = glm::quat_cast(rot);
+    }
     return t;
 }
 

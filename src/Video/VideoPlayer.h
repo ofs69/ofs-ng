@@ -6,6 +6,10 @@
 
 namespace ofs {
 
+// Playback-speed bounds, shared by every VideoPlayer implementation's setPlaybackSpeed clamp.
+inline constexpr float kMinPlaybackSpeed = 0.1f;
+inline constexpr float kMaxPlaybackSpeed = 2.0f;
+
 class VideoPlayer {
   public:
     virtual ~VideoPlayer() = default;

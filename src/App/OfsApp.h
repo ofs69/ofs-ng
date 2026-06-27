@@ -101,10 +101,10 @@ class OfsApp : public ofs::Application {
     void renderPluginsMenu(bool hasProject);
     void renderMenuBarTitle(); // right-aligned project title + dirty marker + last-saved age
     void renderEditor();       // the dockspace + all editor windows; rendered only with an active project
-#if !defined(NDEBUG) && !defined(OFS_TEST_PREF_SUBDIR)
-    // Debug overlay: while ImGui holds the keyboard, draw the window path to the focus owner.
-    void renderFocusPathDebugOverlay();
-#endif
+    // Whether intra-frame optimize is currently possible: a real original media file is loaded, both
+    // ffmpeg/ffprobe resolve, and nothing is already transcoding. Shared by the footer readout, the
+    // command's isEnabled, and the auto-offer gate (which adds its own "worthwhile" conditions on top).
+    [[nodiscard]] bool canOptimizeIntra() const;
     void renderFooterBar();          // bottom status strip; gathers telemetry and calls ui::renderFooterBar
     void renderToolOptions();        // docked "Tool Options" panel: the active modes' onUi
     bool renderActiveToolSections(); // draws all active edit/nav/select onUi as collapsing sections (panel only)

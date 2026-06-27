@@ -38,19 +38,14 @@ static double clockSeconds() {
     return elapsed.count();
 }
 
-// The themed imnodes style at 1× DPI. Captured by onThemeApplied() (which runs at
-// the tail of every theme::apply via the post-apply hook) so a later DPI change can
-// re-scale from the unscaled themed base — mirroring how defaultStyle works for ImGui.
-static ImNodesStyle gThemedNodesUnscaled;
-static bool gHasThemedNodes = false;
-
 // Apply DPI scaling to the imnodes geometry that should scale. NodeCornerRounding is
 // identity (a theme/identity choice), so it is intentionally not scaled. Colors and the
-// remaining geometry are copied from the unscaled themed base verbatim.
-static void applyDpiToImNodes(float scale) {
-    if (!gHasThemedNodes || ImNodes::GetCurrentContext() == nullptr)
+// remaining geometry are copied from the unscaled themed base verbatim. The themed base
+// (themedNodesUnscaled) is captured by onThemeApplied() — mirroring how defaultStyle works for ImGui.
+void Application::applyDpiToImNodes(float scale) {
+    if (!hasThemedNodes || ImNodes::GetCurrentContext() == nullptr)
         return;
-    ImNodesStyle ns = gThemedNodesUnscaled;
+    ImNodesStyle ns = themedNodesUnscaled;
     ns.GridSpacing *= scale;
     ns.NodePadding.x *= scale;
     ns.NodePadding.y *= scale;
@@ -162,8 +157,8 @@ void Application::onThemeApplied() {
     style.FontScaleDpi = currentDpiScale;
 
     if (ImNodes::GetCurrentContext() != nullptr) {
-        gThemedNodesUnscaled = ImNodes::GetStyle(); // apply() just wrote the unscaled themed nodes
-        gHasThemedNodes = true;
+        themedNodesUnscaled = ImNodes::GetStyle(); // apply() just wrote the unscaled themed nodes
+        hasThemedNodes = true;
         applyDpiToImNodes(currentDpiScale);
     }
 
@@ -240,6 +235,7 @@ void Application::shutdownImGui() {
     // (ImNodes is created right after the ImGui context, so it exists iff it does).
     if (ImGui::GetCurrentContext() == nullptr)
         return;
+    Heatmap::shutdownShared(); // release the shared LUT texture + shader while the GL context is still live
     ImNodes::DestroyContext();
     if constexpr (ofs::kHeadless)
         ImGui_ImplNull_Shutdown();
@@ -387,14 +383,12 @@ void Application::idleBySleeping() {
         }
 
         double beforeWait = clockSeconds();
-        double waitTimeout = 1.0 / static_cast<double>(fpsIdling.fpsIdle);
+        double idlePeriod = 1.0 / static_cast<double>(fpsIdling.fpsIdle);
 
-        window->waitEvents(static_cast<int>(waitTimeout * 1000.0));
+        window->waitEvents(static_cast<int>(idlePeriod * 1000.0));
 
-        double afterWait = clockSeconds();
-        double waitDuration = afterWait - beforeWait;
-        double waitIdleExpected = 1.0 / static_cast<double>(fpsIdling.fpsIdle);
-        fpsIdling.isIdling = (waitDuration > waitIdleExpected * 0.9);
+        double waitDuration = clockSeconds() - beforeWait;
+        fpsIdling.isIdling = (waitDuration > idlePeriod * 0.9);
     }
 }
 

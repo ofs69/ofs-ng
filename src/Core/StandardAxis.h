@@ -1,7 +1,5 @@
 #pragma once
 
-#include "UI/Theme.h"
-#include "imgui.h"
 #include <array>
 #include <cstdint>
 #include <optional>
@@ -69,34 +67,6 @@ constexpr std::string_view standardAxisName(StandardAxis a) noexcept {
 constexpr std::string_view standardAxisShortName(StandardAxis a) noexcept {
     const auto i = static_cast<size_t>(a);
     return i < kStandardAxisCount ? detail::kAxisNames[i].shortName : std::string_view{};
-}
-
-inline ImU32 standardAxisColor(StandardAxis a) noexcept {
-    const int idx = static_cast<int>(a);
-    if (idx < 0 || idx >= static_cast<int>(StandardAxis::Count))
-        return IM_COL32(128, 128, 128, 255);
-    return ofs::theme::GetColorU32(static_cast<AppCol>(AppCol_AxisL0 + idx));
-}
-
-inline ImVec4 standardAxisColorVec4(StandardAxis a) noexcept {
-    const int idx = static_cast<int>(a);
-    if (idx < 0 || idx >= static_cast<int>(StandardAxis::Count))
-        return {0.5, 0.5, 0.5, 1.0};
-    return ofs::theme::GetStyleColorVec4(static_cast<AppCol>(AppCol_AxisL0 + idx));
-}
-
-inline ImU32 standardAxisColorDim(StandardAxis a) noexcept {
-    const int idx = static_cast<int>(a);
-    if (idx < 0 || idx >= static_cast<int>(StandardAxis::Count))
-        return IM_COL32(70, 70, 70, 255);
-    return ofs::theme::GetColorU32(static_cast<AppCol>(AppCol_AxisDimL0 + idx));
-}
-
-inline ImVec4 standardAxisColorDimVec4(StandardAxis a) noexcept {
-    const int idx = static_cast<int>(a);
-    if (idx < 0 || idx >= static_cast<int>(StandardAxis::Count))
-        return {0.27f, 0.27f, 0.27f, 1.0f};
-    return ofs::theme::GetStyleColorVec4(static_cast<AppCol>(AppCol_AxisDimL0 + idx));
 }
 
 std::string_view standardAxisTag(StandardAxis a) noexcept;

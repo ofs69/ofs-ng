@@ -7,6 +7,17 @@
 #include <cmath>
 
 namespace ofs {
+
+// Funscript stores integer milliseconds on disk; the editor works in seconds (double). Convert only at
+// this boundary. seconds→ms rounds to the nearest millisecond (not truncate) so a sub-ms remainder isn't
+// lost on export.
+static constexpr double msToSeconds(int64_t ms) {
+    return static_cast<double>(ms) / 1000.0;
+}
+static int64_t secondsToMs(double seconds) {
+    return std::llround(seconds * 1000.0);
+}
+
 // Standard on-disk keys (snake_case). Any other key in the metadata object is a custom field.
 static constexpr std::initializer_list<std::string_view> kFunscriptStandardKeys = {
     "version", "inverted",  "range",      "type", "title",      "creator", "description",
@@ -114,7 +125,7 @@ bool Funscript::save(const std::filesystem::path &path) const {
 
 VectorSet<ScriptAxisAction> Funscript::toActions() const {
     auto mapAction = [](const Action &action) {
-        return clampedAction(static_cast<double>(action.at) / 1000.0, action.pos); // import boundary
+        return clampedAction(msToSeconds(action.at), action.pos); // import boundary
     };
     auto transformedView = actions | std::views::transform(mapAction);
     VectorSet<ScriptAxisAction> result(transformedView.begin(), transformedView.end());
@@ -127,7 +138,7 @@ Funscript Funscript::fromActions(const VectorSet<ScriptAxisAction> &scriptAction
     // Round seconds→ms to the nearest millisecond (not truncate) so a timestamp like 3.4567 s
     // exports as 3457 ms rather than losing the sub-ms remainder.
     for (const auto &action : scriptActions)
-        fs.actions.push_back({.at = std::llround(action.at * 1000.0), .pos = action.pos});
+        fs.actions.push_back({.at = secondsToMs(action.at), .pos = action.pos});
     return fs;
 }
 
@@ -135,13 +146,13 @@ static std::vector<Funscript::Action> toActionVec(const VectorSet<ScriptAxisActi
     std::vector<Funscript::Action> result;
     result.reserve(acts.size());
     for (const auto &a : acts)
-        result.push_back({.at = std::llround(a.at * 1000.0), .pos = a.pos}); // round to nearest ms, see fromActions
+        result.push_back({.at = secondsToMs(a.at), .pos = a.pos});
     return result;
 }
 
 static VectorSet<ScriptAxisAction> fromActionVec(const std::vector<Funscript::Action> &acts) {
     auto mapped = acts | std::views::transform([](const Funscript::Action &a) {
-                      return clampedAction(static_cast<double>(a.at) / 1000.0, a.pos); // import boundary
+                      return clampedAction(msToSeconds(a.at), a.pos); // import boundary
                   });
     return {mapped.begin(), mapped.end()};
 }

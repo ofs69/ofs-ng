@@ -12,6 +12,7 @@
 #include "Services/NodeCategory.h"
 #include "Services/ScriptHeader.h"
 #include "Services/ScriptRegistry.h"
+#include "UI/AxisColors.h"
 #include "UI/Icons.h"
 #include "UI/ImGuiHelpers.h"
 #include "UI/Modals.h"
@@ -86,10 +87,17 @@ static const char *mathNodeLabel(GraphNodeType t) {
         return "Multiply  (A \xc3\x97 B)";
     case GraphNodeType::Divide:
         return "Divide  (A \xc3\xb7 B)";
+    case GraphNodeType::Constant:
+        return "Constant";
     default:
         return "";
     }
 }
+
+// The native nodes offered under the add-menu's Math group, in display order. mathNodeLabel/mathNodeIcon
+// are the single source for their text/glyph (shared with the node-title renderer).
+inline constexpr GraphNodeType kMathMenuTypes[] = {GraphNodeType::Add, GraphNodeType::Subtract, GraphNodeType::Multiply,
+                                                   GraphNodeType::Divide, GraphNodeType::Constant};
 
 // ── Node category presentation ───────────────────────────────────────────────
 // Label and icon for an add-menu grouping bucket (the single source of truth — effects, scripts and
@@ -524,10 +532,10 @@ static void renderEffectNodeBody(const ProcessingGraphNode &node, const EffectDe
     ImNodes::EndStaticAttribute();
 }
 
-static void renderNode(const ProcessingGraphNode &node, const EffectRegistryState &effectReg,
-                       const ScriptRegistryState &scriptReg, EventQueue &eq, int regionId,
-                       const ProcessingRegion &region, bool hot, bool pending, int &outSaveReqNodeId,
-                       int &outLoadReqNodeId) {
+void ProcessingPanel::renderNode(const ProcessingGraphNode &node, const EffectRegistryState &effectReg,
+                                 const ScriptRegistryState &scriptReg, EventQueue &eq, int regionId,
+                                 const ProcessingRegion &region, bool hot, bool pending, int &outSaveReqNodeId,
+                                 int &outLoadReqNodeId) {
     ImU32 tBase = 0;
     if (node.type == GraphNodeType::Input || node.type == GraphNodeType::Output) {
         tBase = standardAxisColor(node.role);
@@ -692,17 +700,17 @@ static void renderNode(const ProcessingGraphNode &node, const EffectRegistryStat
             // into the 2-column param table here. On a change it writes the node's new state JSON into
             // `working`, which we fold into the region and re-eval through the existing ModifyRegionEvent
             // path.
-            std::string working = node.nodeState;
+            m_nodeUiBuffer = node.nodeState; // reuse the member's capacity instead of a per-frame allocation
             bool changed = false;
             if (beginNodeParamTable("##plugui")) {
-                changed = effectReg.renderNodeUi(*entry, working, regionId, node.id);
+                changed = effectReg.renderNodeUi(*entry, m_nodeUiBuffer, regionId, node.id);
                 ImGui::EndTable();
             }
             if (changed) {
                 ProcessingRegion updated = region;
                 for (auto &n : updated.nodeGraph.nodes)
                     if (n.id == node.id)
-                        n.nodeState = working;
+                        n.nodeState = m_nodeUiBuffer;
                 eq.push(ModifyRegionEvent{.regionId = regionId, .updatedRegion = updated, .snapshot = false});
             }
             snapshotOnDragStart(eq, regionId, region);
@@ -845,22 +853,20 @@ static void renderNode(const ProcessingGraphNode &node, const EffectRegistryStat
             const char *comboLabel = node.scriptFile.empty() ? Str::ProcSelectCs.c_str() : node.scriptFile.c_str();
             // The file list is cached and refreshed only when this node's combo opens, so the directory
             // is not scanned (nor strings allocated) every frame.
-            static std::vector<std::string> cachedFiles;
-            static int cachedForNode = -1;
             const bool comboOpen = ImGui::BeginCombo(fmtScratch("##scriptfile{}", node.id), comboLabel);
             if (comboOpen) {
-                if (cachedForNode != node.id) {
+                if (m_scriptFileCacheNode != node.id) {
                     // Only the user folder: re-pointing a file node targets an editable user script. A
                     // shipped library script is added (as an embedded node) from the add menu, not here.
-                    cachedFiles.clear();
+                    m_scriptFileCache.clear();
                     std::error_code ec;
                     for (const auto &de : std::filesystem::directory_iterator(scriptsDirPath(), ec))
                         if (de.is_regular_file() && de.path().extension() == ".cs")
-                            cachedFiles.push_back(ofs::util::toUtf8(de.path().filename()));
-                    std::ranges::sort(cachedFiles);
-                    cachedForNode = node.id;
+                            m_scriptFileCache.push_back(ofs::util::toUtf8(de.path().filename()));
+                    std::ranges::sort(m_scriptFileCache);
+                    m_scriptFileCacheNode = node.id;
                 }
-                for (const auto &f : cachedFiles) {
+                for (const auto &f : m_scriptFileCache) {
                     if (ImGui::Selectable(f.c_str(), f == node.scriptFile)) {
                         const ScriptHeader h = readScriptHeaderFile(f);
                         ProcessingRegion updated = region;
@@ -876,8 +882,8 @@ static void renderNode(const ProcessingGraphNode &node, const EffectRegistryStat
                     }
                 }
                 ImGui::EndCombo();
-            } else if (cachedForNode == node.id) {
-                cachedForNode = -1; // closed — rescan on next open
+            } else if (m_scriptFileCacheNode == node.id) {
+                m_scriptFileCacheNode = -1; // closed — rescan on next open
             }
         } // end file-node picker
 
@@ -1085,114 +1091,7 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
         }
     }
 
-    // ── Header ────────────────────────────────────────────────────────────────
-    ImGui::TextDisabled("%s \xe2\x80\x93 %s", TimeUtil::formatTime(region.startTime, true),
-                        TimeUtil::formatTime(region.endTime, true));
-
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(3.0f, 3.0f));
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5.0f, 2.0f));
-
-    auto renderChipRow = [&](size_t first, size_t last, bool sameLineBefore) {
-        bool rowStarted = false;
-        for (size_t i = first; i <= last; ++i) {
-            const auto axis = static_cast<StandardAxis>(i);
-            if (isScratchAxis(axis) && !project.axes[i].showInStrip)
-                continue;
-
-            const bool assigned = region.axisRoles.test(i);
-            // Deactivated chip uses the theme's dimmed-axis token (same as inactive axes elsewhere)
-            // rather than scaling toward black, which goes near-invisible on the light theme.
-            const ImVec4 btnCol = assigned ? standardAxisColorVec4(axis) : standardAxisColorDimVec4(axis);
-
-            if (rowStarted || sameLineBefore)
-                ImGui::SameLine();
-            rowStarted = true;
-
-            ImGui::PushID(static_cast<int>(i));
-            ImGui::PushStyleColor(ImGuiCol_Button, btnCol);
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered,
-                                  ImVec4(std::min(btnCol.x + 0.2f, 1.f), std::min(btnCol.y + 0.2f, 1.f),
-                                         std::min(btnCol.z + 0.2f, 1.f), btnCol.w));
-            ImGui::PushStyleColor(ImGuiCol_ButtonActive,
-                                  ImVec4(std::min(btnCol.x + 0.35f, 1.f), std::min(btnCol.y + 0.35f, 1.f),
-                                         std::min(btnCol.z + 0.35f, 1.f), btnCol.w));
-
-            if (ImGui::Button(standardAxisTag(axis).data())) {
-                eq.push(AssignAxisToRegionEvent{.regionId = selId, .axis = axis, .assign = !assigned});
-            }
-
-            ImGui::PopStyleColor(3);
-            ImGui::PopID();
-
-            if (ImGui::IsItemHovered())
-                ImGui::SetTooltip("%s", ofs::loc::localizedAxisName(axis));
-        }
-    };
-
-    ImGui::SameLine(0.0f, 15.0f);
-    renderChipRow(0, 9, false);
-    renderChipRow(10, kStandardAxisCount - 1, true);
-
-    ImGui::PopStyleVar(2);
-
-    ImGui::Checkbox(m_locked ? ICON_LOCK "##lock" : ICON_LOCK_OPEN "##lock", &m_locked);
-    if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("%s", Str::ProcLockTip.c_str());
-
-    // Show-actions toggle, mirroring the lock as a single-icon checkbox (eye / eye-off). ###id keeps
-    // the id stable across the icon swap so the click target doesn't move when toggled.
-    ImGui::SameLine();
-    bool showPts = region.showSourceActions;
-    if (ImGui::Checkbox(showPts ? ICON_EYE "###showactions" : ICON_EYE_OFF "###showactions", &showPts)) {
-        ProcessingRegion updated = region;
-        updated.showSourceActions = showPts;
-        eq.push(ModifyRegionEvent{.regionId = selId, .updatedRegion = updated});
-    }
-    if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("%s", Str::ProcShowActionsTip.c_str());
-
-    // Reserve the right end of the row for the graph I/O buttons; the name field fills the gap between.
-    // Measure the actual (translated) labels so the reserve tracks the rendered text, not an English literal.
-    const char *remapGraphLabel = Str::ProcRemap.icon(ICON_ARROW_RIGHT_LEFT);
-    const char *saveGraphLabel = Str::ProcSaveGraph.icon(ICON_SAVE);
-    const char *loadGraphLabel = Str::ProcLoadGraph.icon(ICON_FOLDER_OPEN);
-    const float ioSpacing = ImGui::GetStyle().ItemSpacing.x;
-    const float ioPadX = ImGui::GetStyle().FramePadding.x * 2.0f;
-    const float remapBtnW = ImGui::CalcTextSize(remapGraphLabel).x + ioPadX;
-    const float saveBtnW = ImGui::CalcTextSize(saveGraphLabel).x + ioPadX;
-    const float loadBtnW = ImGui::CalcTextSize(loadGraphLabel).x + ioPadX;
-    const float ioReserved = remapBtnW + saveBtnW + loadBtnW + ioSpacing * 3.0f + ofs::ui::kRightGap;
-
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ioReserved);
-    ImGui::InputText("##region_name", &m_nameEdit);
-    // IsItemDeactivatedAfterEdit also fires on a type-then-revert (the buffer was touched but ends
-    // identical). Pushing then would still take an undo snapshot before onModifyRegion discards the
-    // unchanged region, so commit only a real rename.
-    if (ImGui::IsItemDeactivatedAfterEdit() && m_nameEdit != region.name) {
-        ProcessingRegion updated = region;
-        updated.name = m_nameEdit;
-        eq.push(ModifyRegionEvent{.regionId = selId, .updatedRegion = std::move(updated)});
-    } else if (!ImGui::IsItemActive()) {
-        // Single sync point: mirror region.name while not editing, so external
-        // renames (region switch, graph load) refresh the field. The else skips the
-        // commit frame, before the pushed event drains, so the typed value survives.
-        m_nameEdit = region.name;
-    }
-
-    ImGui::SameLine();
-    if (ImGui::Button(fmtScratch("{}###remapgraph", remapGraphLabel)))
-        eq.push(RemapCurrentGraphEvent{selId});
-    if (ImGui::IsItemHovered())
-        ImGui::SetTooltip("%s", Str::ProcRemapTip.c_str());
-    ImGui::SameLine();
-    if (ImGui::Button(fmtScratch("{}###savegraph", saveGraphLabel)))
-        eq.push(SaveGraphEvent{selId});
-    ImGui::SameLine();
-    if (ImGui::Button(fmtScratch("{}###loadgraph", loadGraphLabel)))
-        eq.push(LoadGraphEvent{selId});
-
-    ImGui::Separator();
+    renderHeader(project, eq, selId, region);
 
     const float footerH = ImGui::GetFrameHeightWithSpacing() + 4.0f;
 
@@ -1256,338 +1155,8 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
         ImGui::OpenPopup("##addnode");
     }
 
-    ImVec2 newNodePos = ImGui::GetMousePosOnOpeningCurrentPopup();
-    GraphNodeType pendingAddType = GraphNodeType::Input;
-    bool pendingAddEffect = false;
-    std::string pendingEffectType;
-    bool pendingAddPlugin = false;
-    std::string pendingPluginNodeId;
-    bool pendingAddScript = false; // a ready library/user script picked from the catalog
-    int pendingScriptIndex = -1;   // index into m_scriptCatalog
-
-    struct MathEntry {
-        const char *label;
-        GraphNodeType type;
-    };
-    static constexpr MathEntry kMathEntries[] = {
-        {.label = "Add  (A + B)", .type = GraphNodeType::Add},
-        {.label = "Subtract  (A \xe2\x88\x92 B)", .type = GraphNodeType::Subtract},
-        {.label = "Multiply  (A \xc3\x97 B)", .type = GraphNodeType::Multiply},
-        {.label = "Divide  (A \xc3\xb7 B)", .type = GraphNodeType::Divide},
-        {.label = "Constant", .type = GraphNodeType::Constant},
-    };
-
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {8.0f, 8.0f});
-    if (ImGui::BeginPopup("##addnode")) {
-        newNodePos = ImGui::GetMousePosOnOpeningCurrentPopup();
-
-        // Rebuild the script catalog once per open (a file walk + header parse, not per frame).
-        if (ImGui::IsWindowAppearing())
-            buildScriptCatalog(m_scriptCatalog);
-
-        // Picking Script defers to a modal (name + signal + inputs) instead of dropping a node
-        // immediately; capture the drop position and any dropped link pin for the deferred create.
-        auto requestNewScript = [&]() {
-            m_openNewScriptModal = true;
-            m_focusScriptNameNextFrame = true;
-            m_newScriptPosX = newNodePos.x;
-            m_newScriptPosY = newNodePos.y;
-            m_newScriptLinkPin = m_pendingLinkPin;
-            m_pendingLinkPin = -1;
-            m_newScriptName[0] = '\0';
-            m_newScriptDisplayName.clear();
-            m_newScriptDescription.clear();
-            m_newScriptSignal = 0;
-            m_newScriptInputs = 1;
-            m_newScriptOutputs = 1;
-            m_newScriptComments = true;
-            // Scan the scripts folder once, here on open, so the modal's "open existing" list needs
-            // no per-frame directory walk.
-            m_scriptFileList.clear();
-            std::error_code ec;
-            for (const auto &de : std::filesystem::directory_iterator(scriptsDirPath(), ec))
-                if (de.is_regular_file() && de.path().extension() == ".cs")
-                    m_scriptFileList.push_back(ofs::util::toUtf8(de.path().filename()));
-            std::ranges::sort(m_scriptFileList);
-            ImGui::CloseCurrentPopup();
-        };
-
-        if (m_focusFilterNextFrame) {
-            ImGui::SetKeyboardFocusHere();
-            m_focusFilterNextFrame = false;
-        }
-        ImGui::SetNextItemWidth(ImGui::GetFontSize() * 12.0f);
-        ImGui::InputText("##filter", &m_nodeFilter);
-        ImGui::Separator();
-
-        const bool filtering = !m_nodeFilter.empty();
-        const ImVec4 &mathCol = ofs::theme::GetStyleColorVec4(AppCol_NodeMath);
-        const ImVec4 &funcCol = ofs::theme::GetStyleColorVec4(AppCol_LinkFunctional);
-        const ImVec4 &discCol = ofs::theme::GetStyleColorVec4(AppCol_LinkDiscrete);
-
-        auto renderEffectTooltip = [](const EffectDefinition &def) {
-            if (!ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
-                return;
-            ImGui::BeginTooltip();
-            ImGui::PushTextWrapPos(ImGui::GetFontSize() * 22.0f);
-            if (def.description.index != 0) // index 0 ⇒ no description key
-                ImGui::TextUnformatted(def.description.c_str());
-            ImGui::TextDisabled(def.kind == EffectKind::Functional ? "Functional" : "Discrete");
-            ImGui::PopTextWrapPos();
-            ImGui::EndTooltip();
-        };
-
-        auto renderDiscretizeTooltip = [] {
-            if (!ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
-                return;
-            ImGui::BeginTooltip();
-            ImGui::PushTextWrapPos(ImGui::GetFontSize() * 22.0f);
-            ImGui::TextUnformatted(Str::ProcDiscretizeDesc.c_str());
-            ImGui::TextDisabled("%s", Str::ProcDiscrete.c_str());
-            ImGui::PopTextWrapPos();
-            ImGui::EndTooltip();
-        };
-
-        auto renderScriptTooltip = [](const ScriptCatalogEntry &e) {
-            if (!ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
-                return;
-            ImGui::BeginTooltip();
-            ImGui::PushTextWrapPos(ImGui::GetFontSize() * 22.0f);
-            if (!e.description.empty())
-                ImGui::TextUnformatted(e.description.c_str());
-            const char *sig = (e.signal == OfsSignalDiscrete ? Str::ProcDiscrete : Str::ProcFunctional).c_str();
-            const char *kind = (e.library ? Str::ProcLibraryScript : Str::ProcScript).c_str();
-            ImGui::TextDisabled("%s \xc2\xb7 %s", sig, kind); // "·" is a separator glyph, not translatable text
-            ImGui::PopTextWrapPos();
-            ImGui::EndTooltip();
-        };
-
-        auto renderPluginNodeTooltip = [](const PluginNodeEntry &pn) {
-            if (!ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
-                return;
-            ImGui::BeginTooltip();
-            ImGui::PushTextWrapPos(ImGui::GetFontSize() * 22.0f);
-            if (!pn.description.empty())
-                ImGui::TextUnformatted(pn.description.c_str());
-            const char *sig = (pn.signal == OfsSignalDiscrete ? Str::ProcDiscrete : Str::ProcFunctional).c_str();
-            ImGui::TextDisabled("%s", sig);
-            ImGui::PopTextWrapPos();
-            ImGui::EndTooltip();
-        };
-
-        if (!filtering) {
-            if (ImGui::BeginMenu(fmtScratch("{}  Math", ICON_CALCULATOR))) {
-                ImGui::PushStyleColor(ImGuiCol_Text, mathCol);
-                for (const auto &me : kMathEntries) {
-                    if (ImGui::MenuItem(fmtScratch("{}  {}", mathNodeIcon(me.type), me.label)))
-                        pendingAddType = me.type;
-                }
-                ImGui::PopStyleColor();
-                ImGui::EndMenu();
-            }
-
-            if (ImGui::MenuItem(fmtScratch("{}  Script\xe2\x80\xa6", ICON_BRACES)))
-                requestNewScript();
-
-            // Generate / Modify / Combine submenus hold native effects and ready-to-add library/user
-            // scripts together, in fixed bucket order so the menu is stable even when a category has
-            // only scripts (the common case after the native cull). The built-in Discretize node lives
-            // under Modify (a 1-in/1-out signal transform), so Modify is always shown.
-            for (const NodeCategory category : {NodeCategory::Generate, NodeCategory::Modify, NodeCategory::Combine}) {
-                const bool isModify = (category == NodeCategory::Modify);
-                bool any = isModify;
-                for (const auto &key : effectReg.orderedKeys)
-                    if (effectReg.effects.at(key).category == category) {
-                        any = true;
-                        break;
-                    }
-                if (!any)
-                    for (const auto &e : m_scriptCatalog)
-                        if (nodeCategoryForInputs(e.inputCount) == category) {
-                            any = true;
-                            break;
-                        }
-                if (!any)
-                    continue;
-                if (!ImGui::BeginMenu(fmtScratch("{}  {}", nodeCategoryIcon(category), nodeCategoryLabel(category))))
-                    continue;
-                if (isModify) {
-                    ImGui::PushStyleColor(ImGuiCol_Text, discCol);
-                    if (ImGui::MenuItem(fmtScratch("{}  Discretize", ICON_BAR_CHART)))
-                        pendingAddType = GraphNodeType::Discretize;
-                    ImGui::PopStyleColor();
-                    renderDiscretizeTooltip();
-                }
-                for (const auto &key : effectReg.orderedKeys) {
-                    const auto &def = effectReg.effects.at(key);
-                    if (def.category != category)
-                        continue;
-                    ImGui::PushStyleColor(ImGuiCol_Text, def.kind == EffectKind::Functional ? funcCol : discCol);
-                    if (ImGui::MenuItem(fmtScratch("{}  {}", nodeCategoryIcon(category), def.displayName.c_str()))) {
-                        pendingAddEffect = true;
-                        pendingEffectType = key;
-                        ImGui::CloseCurrentPopup();
-                    }
-                    ImGui::PopStyleColor();
-                    renderEffectTooltip(def);
-                }
-                for (int i = 0; i < static_cast<int>(m_scriptCatalog.size()); ++i) {
-                    const auto &e = m_scriptCatalog[i];
-                    if (nodeCategoryForInputs(e.inputCount) != category)
-                        continue;
-                    ImGui::PushStyleColor(ImGuiCol_Text, e.signal == OfsSignalFunctional ? funcCol : discCol);
-                    if (ImGui::MenuItem(fmtScratch("{}  {}", scriptMenuIcon(e.library), e.displayName.c_str()))) {
-                        pendingAddScript = true;
-                        pendingScriptIndex = i;
-                        ImGui::CloseCurrentPopup();
-                    }
-                    ImGui::PopStyleColor();
-                    renderScriptTooltip(e);
-                }
-                ImGui::EndMenu();
-            }
-
-            if (!effectReg.pluginNodeKeys.empty()) {
-                // Group each plugin's nodes by arity bucket (Generate / Modify / Combine).
-                std::string_view openPlugin;
-                for (const auto &key : effectReg.pluginNodeKeys) {
-                    const auto &pn = effectReg.pluginNodes.at(key);
-                    if (pn.category == openPlugin)
-                        continue;
-                    openPlugin = pn.category;
-                    if (!ImGui::BeginMenu(fmtScratch("{}  {}", ICON_PLUGIN, pn.category.c_str())))
-                        continue;
-                    for (const NodeCategory bucket :
-                         {NodeCategory::Generate, NodeCategory::Modify, NodeCategory::Combine}) {
-                        bool kindOpen = false;
-                        for (const auto &k2 : effectReg.pluginNodeKeys) {
-                            const auto &pn2 = effectReg.pluginNodes.at(k2);
-                            if (std::string_view(pn2.category) != openPlugin ||
-                                nodeCategoryForInputs(pn2.inputCount) != bucket)
-                                continue;
-                            if (!kindOpen) {
-                                kindOpen = ImGui::BeginMenu(
-                                    fmtScratch("{}  {}", nodeCategoryIcon(bucket), nodeCategoryLabel(bucket)));
-                                if (!kindOpen)
-                                    break;
-                            }
-                            ImGui::PushStyleColor(ImGuiCol_Text, pn2.signal == OfsSignalFunctional ? funcCol : discCol);
-                            if (ImGui::MenuItem(fmtScratch("{}  {}", pluginNodeIcon(pn2), pn2.displayName.c_str()))) {
-                                pendingAddPlugin = true;
-                                pendingPluginNodeId = k2;
-                                ImGui::CloseCurrentPopup();
-                            }
-                            ImGui::PopStyleColor();
-                            renderPluginNodeTooltip(pn2);
-                        }
-                        if (kindOpen)
-                            ImGui::EndMenu();
-                    }
-                    ImGui::EndMenu();
-                }
-            }
-        } else {
-            bool mathHeaderShown = false;
-            for (const auto &me : kMathEntries) {
-                if (!ofs::util::fuzzyMatch(m_nodeFilter, me.label).matched)
-                    continue;
-                if (!mathHeaderShown) {
-                    ImGui::SeparatorText(fmtScratch("{}  Math", ICON_CALCULATOR));
-                    mathHeaderShown = true;
-                }
-                ImGui::PushStyleColor(ImGuiCol_Text, mathCol);
-                if (ImGui::MenuItem(fmtScratch("{}  {}", mathNodeIcon(me.type), me.label))) {
-                    pendingAddType = me.type;
-                    ImGui::CloseCurrentPopup();
-                }
-                ImGui::PopStyleColor();
-            }
-
-            if (ofs::util::fuzzyMatch(m_nodeFilter, "Script").matched) {
-                ImGui::SeparatorText(fmtScratch("{}  Script", ICON_BRACES));
-                if (ImGui::MenuItem(fmtScratch("{}  Script\xe2\x80\xa6", ICON_BRACES)))
-                    requestNewScript();
-            }
-
-            // Generate / Modify / Combine — effects and catalog scripts under one header per category.
-            for (const NodeCategory category : {NodeCategory::Generate, NodeCategory::Modify, NodeCategory::Combine}) {
-                const char *catLabel = nodeCategoryLabel(category);
-                bool headerShown = false;
-                auto header = [&] {
-                    if (!headerShown) {
-                        ImGui::SeparatorText(fmtScratch("{}  {}", nodeCategoryIcon(category), catLabel));
-                        headerShown = true;
-                    }
-                };
-                if (category == NodeCategory::Modify &&
-                    ofs::util::fuzzyMatchAny(m_nodeFilter, {"Discretize", catLabel}).matched) {
-                    header();
-                    ImGui::PushStyleColor(ImGuiCol_Text, discCol);
-                    if (ImGui::MenuItem(fmtScratch("{}  Discretize", ICON_BAR_CHART))) {
-                        pendingAddType = GraphNodeType::Discretize;
-                        ImGui::CloseCurrentPopup();
-                    }
-                    ImGui::PopStyleColor();
-                    renderDiscretizeTooltip();
-                }
-                for (const auto &key : effectReg.orderedKeys) {
-                    const auto &def = effectReg.effects.at(key);
-                    if (def.category != category)
-                        continue;
-                    if (!ofs::util::fuzzyMatchAny(m_nodeFilter, {def.displayName.c_str(), catLabel}).matched)
-                        continue;
-                    header();
-                    ImGui::PushStyleColor(ImGuiCol_Text, def.kind == EffectKind::Functional ? funcCol : discCol);
-                    if (ImGui::MenuItem(fmtScratch("{}  {}", nodeCategoryIcon(category), def.displayName.c_str()))) {
-                        pendingAddEffect = true;
-                        pendingEffectType = key;
-                        ImGui::CloseCurrentPopup();
-                    }
-                    ImGui::PopStyleColor();
-                    renderEffectTooltip(def);
-                }
-                for (int i = 0; i < static_cast<int>(m_scriptCatalog.size()); ++i) {
-                    const auto &e = m_scriptCatalog[i];
-                    if (nodeCategoryForInputs(e.inputCount) != category)
-                        continue;
-                    if (!ofs::util::fuzzyMatchAny(m_nodeFilter, {e.displayName, catLabel}).matched)
-                        continue;
-                    header();
-                    ImGui::PushStyleColor(ImGuiCol_Text, e.signal == OfsSignalFunctional ? funcCol : discCol);
-                    if (ImGui::MenuItem(fmtScratch("{}  {}", scriptMenuIcon(e.library), e.displayName.c_str()))) {
-                        pendingAddScript = true;
-                        pendingScriptIndex = i;
-                        ImGui::CloseCurrentPopup();
-                    }
-                    ImGui::PopStyleColor();
-                    renderScriptTooltip(e);
-                }
-            }
-            std::string_view openCategory;
-            for (const auto &key : effectReg.pluginNodeKeys) {
-                const auto &pn = effectReg.pluginNodes.at(key);
-                if (!ofs::util::fuzzyMatchAny(m_nodeFilter, {pn.displayName, pn.category,
-                                                             nodeCategoryLabel(nodeCategoryForInputs(pn.inputCount))})
-                         .matched)
-                    continue;
-                if (pn.category != openCategory) {
-                    openCategory = pn.category;
-                    ImGui::SeparatorText(fmtScratch("{}  {}", ICON_PLUGIN, pn.category.c_str()));
-                }
-                ImGui::PushStyleColor(ImGuiCol_Text, pn.signal == OfsSignalFunctional ? funcCol : discCol);
-                if (ImGui::MenuItem(fmtScratch("{}  {}", pluginNodeIcon(pn), pn.displayName.c_str()))) {
-                    pendingAddPlugin = true;
-                    pendingPluginNodeId = key;
-                    ImGui::CloseCurrentPopup();
-                }
-                ImGui::PopStyleColor();
-                renderPluginNodeTooltip(pn);
-            }
-        }
-
-        ImGui::EndPopup();
-    }
-    ImGui::PopStyleVar();
+    const AddNodeRequest addReq = renderAddNodeMenu(effectReg);
+    const ImVec2 newNodePos{addReq.posX, addReq.posY};
 
     int saveReqNodeId = -1; // set by an embedded Script node's "Save to scripts folder" button
     int loadReqNodeId = -1; // set by an embedded Script node's "Load from disk..." button
@@ -1720,20 +1289,20 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
         }
     }
 
-    if (isMathNode(pendingAddType)) {
+    if (isMathNode(addReq.type)) {
         ProcessingRegion updated = region;
         int nodeId = updated.nodeGraph.allocId();
         ImVec2 editorPos = ImGui::GetWindowPos();
         float edX = newNodePos.x - editorPos.x;
         float edY = newNodePos.y - editorPos.y;
-        updated.nodeGraph.nodes.push_back({.id = nodeId, .type = pendingAddType, .posX = edX, .posY = edY});
+        updated.nodeGraph.nodes.push_back({.id = nodeId, .type = addReq.type, .posX = edX, .posY = edY});
         if (m_pendingLinkPin != -1) {
             autoConnectNewNode(nodeId, m_pendingLinkPin, false, updated.nodeGraph);
             m_pendingLinkPin = -1;
         }
         eq.push(ModifyRegionEvent{.regionId = selId, .updatedRegion = updated});
         ImNodes::SetNodeScreenSpacePos(GraphId::nodeBody(nodeId), newNodePos);
-    } else if (pendingAddType == GraphNodeType::Discretize) {
+    } else if (addReq.type == GraphNodeType::Discretize) {
         ProcessingRegion updated = region;
         int nodeId = updated.nodeGraph.allocId();
         ImVec2 editorPos = ImGui::GetWindowPos();
@@ -1751,7 +1320,7 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
         }
         eq.push(ModifyRegionEvent{.regionId = selId, .updatedRegion = updated});
         ImNodes::SetNodeScreenSpacePos(GraphId::nodeBody(nodeId), newNodePos);
-    } else if (pendingAddType == GraphNodeType::Constant) {
+    } else if (addReq.type == GraphNodeType::Constant) {
         ProcessingRegion updated = region;
         int nodeId = updated.nodeGraph.allocId();
         ImVec2 editorPos = ImGui::GetWindowPos();
@@ -1775,8 +1344,8 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
         }
         eq.push(ModifyRegionEvent{.regionId = selId, .updatedRegion = updated});
         ImNodes::SetNodeScreenSpacePos(GraphId::nodeBody(nodeId), newNodePos);
-    } else if (pendingAddEffect) {
-        const auto &def = effectReg.effects.at(pendingEffectType);
+    } else if (addReq.addEffect) {
+        const auto &def = effectReg.effects.at(addReq.effectType);
         ProcessingRegion updated = region;
         int nodeId = updated.nodeGraph.allocId();
         ImVec2 editorPos = ImGui::GetWindowPos();
@@ -1795,8 +1364,8 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
         }
         eq.push(ModifyRegionEvent{.regionId = selId, .updatedRegion = updated});
         ImNodes::SetNodeScreenSpacePos(GraphId::nodeBody(nodeId), newNodePos);
-    } else if (pendingAddPlugin) {
-        const auto &pn = effectReg.pluginNodes.at(pendingPluginNodeId);
+    } else if (addReq.addPlugin) {
+        const auto &pn = effectReg.pluginNodes.at(addReq.pluginNodeId);
         ProcessingRegion updated = region;
         int nodeId = updated.nodeGraph.allocId();
         ImVec2 editorPos = ImGui::GetWindowPos();
@@ -1819,13 +1388,13 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
         }
         eq.push(ModifyRegionEvent{.regionId = selId, .updatedRegion = updated});
         ImNodes::SetNodeScreenSpacePos(GraphId::nodeBody(nodeId), newNodePos);
-    } else if (pendingAddScript && pendingScriptIndex >= 0 &&
-               pendingScriptIndex < static_cast<int>(m_scriptCatalog.size())) {
+    } else if (addReq.addScript && addReq.scriptIndex >= 0 &&
+               addReq.scriptIndex < static_cast<int>(m_scriptCatalog.size())) {
         // A ready script picked from the catalog (no editor, unlike "New Script…"). A shipped library
         // script is dropped as an EMBEDDED node — its source baked in from data.pak — so it is read-only
         // and forkable like any embedded script. A user-folder script is
         // dropped as a file reference (editable, hot-reloaded), as before.
-        const ScriptCatalogEntry &ce = m_scriptCatalog[pendingScriptIndex];
+        const ScriptCatalogEntry &ce = m_scriptCatalog[addReq.scriptIndex];
         std::optional<std::string> libSource =
             ce.library ? ofs::res::readText(std::string(kScriptLibPrefix) + ce.fileName) : std::optional<std::string>{};
         ProcessingRegion updated = region;
@@ -1882,6 +1451,498 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
 
     ImGui::EndChild();
 
+    renderFooter(project, eq, selId, region, anyPending);
+
+    maybeShowNewScriptModal(eq);
+    maybeShowSaveScriptModal(eq);
+    maybeShowTrustModal(project, eq, selId);
+    maybeShowRemapModal(project, eq, selId, region);
+
+    // Escape closes the panel — clearing the region selection reverts the shared dock window to the
+    // video player. Deliberately NOT gated on panel focus: selecting a region (e.g. clicking its band
+    // on the timeline) opens the panel without moving focus to it, and Escape must still close it.
+    // This block only runs while a region is selected (the panel is open), so that is the real gate.
+    // Guarded so Escape still does its normal job first: dismiss any open popup/modal (a separate
+    // window), or cancel an in-progress text edit anywhere (itemActiveAtFrameStart is global and was
+    // sampled before this frame's InputTexts ran — see above).
+    if (ImGui::IsKeyPressed(ImGuiKey_Escape) && !itemActiveAtFrameStart &&
+        !ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel)) {
+        eq.push(ClearRegionSelectionEvent{});
+    }
+
+    ImGui::End();
+}
+
+bool ProcessingPanel::deleteSelected(const ScriptProject &project, EventQueue &eq) {
+    const int numSelNodes = ImNodes::NumSelectedNodes();
+    const int numSelLinks = ImNodes::NumSelectedLinks();
+    if (numSelNodes == 0 && numSelLinks == 0)
+        return false;
+
+    const int selId = project.procSelRegionId;
+    if (selId == -1)
+        return false;
+
+    auto regionIt = std::ranges::find_if(project.regions, [selId](const auto &r) { return r.id == selId; });
+    if (regionIt == project.regions.end())
+        return false;
+
+    ImNodes::EditorContextSet(m_editorCtx);
+    ProcessingRegion updated = *regionIt;
+
+    if (numSelLinks > 0) {
+        std::vector<int> selLinks(static_cast<size_t>(numSelLinks));
+        ImNodes::GetSelectedLinks(selLinks.data());
+        for (int lid : selLinks)
+            removeLink(updated.nodeGraph, GraphId::decode(lid).owner);
+    }
+
+    if (numSelNodes > 0) {
+        std::vector<int> selNodes(static_cast<size_t>(numSelNodes));
+        ImNodes::GetSelectedNodes(selNodes.data());
+        for (int encId : selNodes) {
+            const int nid = GraphId::decode(encId).owner;
+            const auto *n = updated.nodeGraph.findNode(nid);
+            if (!n || n->type == GraphNodeType::Input || n->type == GraphNodeType::Output)
+                continue;
+            removeNodeAndLinks(updated.nodeGraph, nid);
+        }
+    }
+
+    eq.push(ModifyRegionEvent{.regionId = selId, .updatedRegion = updated});
+    return true;
+}
+
+ProcessingPanel::AddNodeRequest ProcessingPanel::renderAddNodeMenu(const EffectRegistryState &effectReg) {
+    AddNodeRequest req;
+    ImVec2 newNodePos{};
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {8.0f, 8.0f});
+    if (ImGui::BeginPopup("##addnode")) {
+        newNodePos = ImGui::GetMousePosOnOpeningCurrentPopup();
+
+        // Rebuild the script catalog once per open (a file walk + header parse, not per frame).
+        if (ImGui::IsWindowAppearing())
+            buildScriptCatalog(m_scriptCatalog);
+
+        // Picking Script defers to a modal (name + signal + inputs) instead of dropping a node
+        // immediately; capture the drop position and any dropped link pin for the deferred create.
+        auto requestNewScript = [&]() {
+            m_openNewScriptModal = true;
+            m_focusScriptNameNextFrame = true;
+            m_newScriptPosX = newNodePos.x;
+            m_newScriptPosY = newNodePos.y;
+            m_newScriptLinkPin = m_pendingLinkPin;
+            m_pendingLinkPin = -1;
+            m_newScriptName[0] = '\0';
+            m_newScriptDisplayName.clear();
+            m_newScriptDescription.clear();
+            m_newScriptSignal = 0;
+            m_newScriptInputs = 1;
+            m_newScriptOutputs = 1;
+            m_newScriptComments = true;
+            // Scan the scripts folder once, here on open, so the modal's "open existing" list needs
+            // no per-frame directory walk.
+            m_scriptFileList.clear();
+            std::error_code ec;
+            for (const auto &de : std::filesystem::directory_iterator(scriptsDirPath(), ec))
+                if (de.is_regular_file() && de.path().extension() == ".cs")
+                    m_scriptFileList.push_back(ofs::util::toUtf8(de.path().filename()));
+            std::ranges::sort(m_scriptFileList);
+            ImGui::CloseCurrentPopup();
+        };
+
+        if (m_focusFilterNextFrame) {
+            ImGui::SetKeyboardFocusHere();
+            m_focusFilterNextFrame = false;
+        }
+        ImGui::SetNextItemWidth(ImGui::GetFontSize() * 12.0f);
+        ImGui::InputText("##filter", &m_nodeFilter);
+        ImGui::Separator();
+
+        const bool filtering = !m_nodeFilter.empty();
+        const ImVec4 &mathCol = ofs::theme::GetStyleColorVec4(AppCol_NodeMath);
+        const ImVec4 &funcCol = ofs::theme::GetStyleColorVec4(AppCol_LinkFunctional);
+        const ImVec4 &discCol = ofs::theme::GetStyleColorVec4(AppCol_LinkDiscrete);
+
+        auto renderEffectTooltip = [](const EffectDefinition &def) {
+            if (!ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+                return;
+            ImGui::BeginTooltip();
+            ImGui::PushTextWrapPos(ImGui::GetFontSize() * 22.0f);
+            if (def.description.index != 0) // index 0 ⇒ no description key
+                ImGui::TextUnformatted(def.description.c_str());
+            ImGui::TextDisabled("%s",
+                                (def.kind == EffectKind::Functional ? Str::ProcFunctional : Str::ProcDiscrete).c_str());
+            ImGui::PopTextWrapPos();
+            ImGui::EndTooltip();
+        };
+
+        auto renderDiscretizeTooltip = [] {
+            if (!ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+                return;
+            ImGui::BeginTooltip();
+            ImGui::PushTextWrapPos(ImGui::GetFontSize() * 22.0f);
+            ImGui::TextUnformatted(Str::ProcDiscretizeDesc.c_str());
+            ImGui::TextDisabled("%s", Str::ProcDiscrete.c_str());
+            ImGui::PopTextWrapPos();
+            ImGui::EndTooltip();
+        };
+
+        auto renderScriptTooltip = [](const ScriptCatalogEntry &e) {
+            if (!ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+                return;
+            ImGui::BeginTooltip();
+            ImGui::PushTextWrapPos(ImGui::GetFontSize() * 22.0f);
+            if (!e.description.empty())
+                ImGui::TextUnformatted(e.description.c_str());
+            const char *sig = (e.signal == OfsSignalDiscrete ? Str::ProcDiscrete : Str::ProcFunctional).c_str();
+            const char *kind = (e.library ? Str::ProcLibraryScript : Str::ProcScript).c_str();
+            ImGui::TextDisabled("%s \xc2\xb7 %s", sig, kind); // "·" is a separator glyph, not translatable text
+            ImGui::PopTextWrapPos();
+            ImGui::EndTooltip();
+        };
+
+        auto renderPluginNodeTooltip = [](const PluginNodeEntry &pn) {
+            if (!ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+                return;
+            ImGui::BeginTooltip();
+            ImGui::PushTextWrapPos(ImGui::GetFontSize() * 22.0f);
+            if (!pn.description.empty())
+                ImGui::TextUnformatted(pn.description.c_str());
+            const char *sig = (pn.signal == OfsSignalDiscrete ? Str::ProcDiscrete : Str::ProcFunctional).c_str();
+            ImGui::TextDisabled("%s", sig);
+            ImGui::PopTextWrapPos();
+            ImGui::EndTooltip();
+        };
+
+        if (!filtering) {
+            if (ImGui::BeginMenu(fmtScratch("{}  Math", ICON_CALCULATOR))) {
+                ImGui::PushStyleColor(ImGuiCol_Text, mathCol);
+                for (const auto t : kMathMenuTypes) {
+                    if (ImGui::MenuItem(fmtScratch("{}  {}", mathNodeIcon(t), mathNodeLabel(t))))
+                        req.type = t;
+                }
+                ImGui::PopStyleColor();
+                ImGui::EndMenu();
+            }
+
+            if (ImGui::MenuItem(fmtScratch("{}  Script\xe2\x80\xa6", ICON_BRACES)))
+                requestNewScript();
+
+            // Generate / Modify / Combine submenus hold native effects and ready-to-add library/user
+            // scripts together, in fixed bucket order so the menu is stable even when a category has
+            // only scripts (the common case after the native cull). The built-in Discretize node lives
+            // under Modify (a 1-in/1-out signal transform), so Modify is always shown.
+            for (const NodeCategory category : {NodeCategory::Generate, NodeCategory::Modify, NodeCategory::Combine}) {
+                const bool isModify = (category == NodeCategory::Modify);
+                bool any = isModify;
+                for (const auto &key : effectReg.orderedKeys)
+                    if (effectReg.effects.at(key).category == category) {
+                        any = true;
+                        break;
+                    }
+                if (!any)
+                    for (const auto &e : m_scriptCatalog)
+                        if (nodeCategoryForInputs(e.inputCount) == category) {
+                            any = true;
+                            break;
+                        }
+                if (!any)
+                    continue;
+                if (!ImGui::BeginMenu(fmtScratch("{}  {}", nodeCategoryIcon(category), nodeCategoryLabel(category))))
+                    continue;
+                if (isModify) {
+                    ImGui::PushStyleColor(ImGuiCol_Text, discCol);
+                    if (ImGui::MenuItem(fmtScratch("{}  Discretize", ICON_BAR_CHART)))
+                        req.type = GraphNodeType::Discretize;
+                    ImGui::PopStyleColor();
+                    renderDiscretizeTooltip();
+                }
+                for (const auto &key : effectReg.orderedKeys) {
+                    const auto &def = effectReg.effects.at(key);
+                    if (def.category != category)
+                        continue;
+                    ImGui::PushStyleColor(ImGuiCol_Text, def.kind == EffectKind::Functional ? funcCol : discCol);
+                    if (ImGui::MenuItem(fmtScratch("{}  {}", nodeCategoryIcon(category), def.displayName.c_str()))) {
+                        req.addEffect = true;
+                        req.effectType = key;
+                        ImGui::CloseCurrentPopup();
+                    }
+                    ImGui::PopStyleColor();
+                    renderEffectTooltip(def);
+                }
+                for (int i = 0; i < static_cast<int>(m_scriptCatalog.size()); ++i) {
+                    const auto &e = m_scriptCatalog[i];
+                    if (nodeCategoryForInputs(e.inputCount) != category)
+                        continue;
+                    ImGui::PushStyleColor(ImGuiCol_Text, e.signal == OfsSignalFunctional ? funcCol : discCol);
+                    if (ImGui::MenuItem(fmtScratch("{}  {}", scriptMenuIcon(e.library), e.displayName.c_str()))) {
+                        req.addScript = true;
+                        req.scriptIndex = i;
+                        ImGui::CloseCurrentPopup();
+                    }
+                    ImGui::PopStyleColor();
+                    renderScriptTooltip(e);
+                }
+                ImGui::EndMenu();
+            }
+
+            if (!effectReg.pluginNodeKeys.empty()) {
+                // Group each plugin's nodes by arity bucket (Generate / Modify / Combine).
+                std::string_view openPlugin;
+                for (const auto &key : effectReg.pluginNodeKeys) {
+                    const auto &pn = effectReg.pluginNodes.at(key);
+                    if (pn.category == openPlugin)
+                        continue;
+                    openPlugin = pn.category;
+                    if (!ImGui::BeginMenu(fmtScratch("{}  {}", ICON_PLUGIN, pn.category.c_str())))
+                        continue;
+                    for (const NodeCategory bucket :
+                         {NodeCategory::Generate, NodeCategory::Modify, NodeCategory::Combine}) {
+                        bool kindOpen = false;
+                        for (const auto &k2 : effectReg.pluginNodeKeys) {
+                            const auto &pn2 = effectReg.pluginNodes.at(k2);
+                            if (std::string_view(pn2.category) != openPlugin ||
+                                nodeCategoryForInputs(pn2.inputCount) != bucket)
+                                continue;
+                            if (!kindOpen) {
+                                kindOpen = ImGui::BeginMenu(
+                                    fmtScratch("{}  {}", nodeCategoryIcon(bucket), nodeCategoryLabel(bucket)));
+                                if (!kindOpen)
+                                    break;
+                            }
+                            ImGui::PushStyleColor(ImGuiCol_Text, pn2.signal == OfsSignalFunctional ? funcCol : discCol);
+                            if (ImGui::MenuItem(fmtScratch("{}  {}", pluginNodeIcon(pn2), pn2.displayName.c_str()))) {
+                                req.addPlugin = true;
+                                req.pluginNodeId = k2;
+                                ImGui::CloseCurrentPopup();
+                            }
+                            ImGui::PopStyleColor();
+                            renderPluginNodeTooltip(pn2);
+                        }
+                        if (kindOpen)
+                            ImGui::EndMenu();
+                    }
+                    ImGui::EndMenu();
+                }
+            }
+        } else {
+            bool mathHeaderShown = false;
+            for (const auto t : kMathMenuTypes) {
+                if (!ofs::util::fuzzyMatch(m_nodeFilter, mathNodeLabel(t)).matched)
+                    continue;
+                if (!mathHeaderShown) {
+                    ImGui::SeparatorText(fmtScratch("{}  Math", ICON_CALCULATOR));
+                    mathHeaderShown = true;
+                }
+                ImGui::PushStyleColor(ImGuiCol_Text, mathCol);
+                if (ImGui::MenuItem(fmtScratch("{}  {}", mathNodeIcon(t), mathNodeLabel(t)))) {
+                    req.type = t;
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::PopStyleColor();
+            }
+
+            if (ofs::util::fuzzyMatch(m_nodeFilter, "Script").matched) {
+                ImGui::SeparatorText(fmtScratch("{}  Script", ICON_BRACES));
+                if (ImGui::MenuItem(fmtScratch("{}  Script\xe2\x80\xa6", ICON_BRACES)))
+                    requestNewScript();
+            }
+
+            // Generate / Modify / Combine — effects and catalog scripts under one header per category.
+            for (const NodeCategory category : {NodeCategory::Generate, NodeCategory::Modify, NodeCategory::Combine}) {
+                const char *catLabel = nodeCategoryLabel(category);
+                bool headerShown = false;
+                auto header = [&] {
+                    if (!headerShown) {
+                        ImGui::SeparatorText(fmtScratch("{}  {}", nodeCategoryIcon(category), catLabel));
+                        headerShown = true;
+                    }
+                };
+                if (category == NodeCategory::Modify &&
+                    ofs::util::fuzzyMatchAny(m_nodeFilter, {"Discretize", catLabel}).matched) {
+                    header();
+                    ImGui::PushStyleColor(ImGuiCol_Text, discCol);
+                    if (ImGui::MenuItem(fmtScratch("{}  Discretize", ICON_BAR_CHART))) {
+                        req.type = GraphNodeType::Discretize;
+                        ImGui::CloseCurrentPopup();
+                    }
+                    ImGui::PopStyleColor();
+                    renderDiscretizeTooltip();
+                }
+                for (const auto &key : effectReg.orderedKeys) {
+                    const auto &def = effectReg.effects.at(key);
+                    if (def.category != category)
+                        continue;
+                    if (!ofs::util::fuzzyMatchAny(m_nodeFilter, {def.displayName.c_str(), catLabel}).matched)
+                        continue;
+                    header();
+                    ImGui::PushStyleColor(ImGuiCol_Text, def.kind == EffectKind::Functional ? funcCol : discCol);
+                    if (ImGui::MenuItem(fmtScratch("{}  {}", nodeCategoryIcon(category), def.displayName.c_str()))) {
+                        req.addEffect = true;
+                        req.effectType = key;
+                        ImGui::CloseCurrentPopup();
+                    }
+                    ImGui::PopStyleColor();
+                    renderEffectTooltip(def);
+                }
+                for (int i = 0; i < static_cast<int>(m_scriptCatalog.size()); ++i) {
+                    const auto &e = m_scriptCatalog[i];
+                    if (nodeCategoryForInputs(e.inputCount) != category)
+                        continue;
+                    if (!ofs::util::fuzzyMatchAny(m_nodeFilter, {e.displayName, catLabel}).matched)
+                        continue;
+                    header();
+                    ImGui::PushStyleColor(ImGuiCol_Text, e.signal == OfsSignalFunctional ? funcCol : discCol);
+                    if (ImGui::MenuItem(fmtScratch("{}  {}", scriptMenuIcon(e.library), e.displayName.c_str()))) {
+                        req.addScript = true;
+                        req.scriptIndex = i;
+                        ImGui::CloseCurrentPopup();
+                    }
+                    ImGui::PopStyleColor();
+                    renderScriptTooltip(e);
+                }
+            }
+            std::string_view openCategory;
+            for (const auto &key : effectReg.pluginNodeKeys) {
+                const auto &pn = effectReg.pluginNodes.at(key);
+                if (!ofs::util::fuzzyMatchAny(m_nodeFilter, {pn.displayName, pn.category,
+                                                             nodeCategoryLabel(nodeCategoryForInputs(pn.inputCount))})
+                         .matched)
+                    continue;
+                if (pn.category != openCategory) {
+                    openCategory = pn.category;
+                    ImGui::SeparatorText(fmtScratch("{}  {}", ICON_PLUGIN, pn.category.c_str()));
+                }
+                ImGui::PushStyleColor(ImGuiCol_Text, pn.signal == OfsSignalFunctional ? funcCol : discCol);
+                if (ImGui::MenuItem(fmtScratch("{}  {}", pluginNodeIcon(pn), pn.displayName.c_str()))) {
+                    req.addPlugin = true;
+                    req.pluginNodeId = key;
+                    ImGui::CloseCurrentPopup();
+                }
+                ImGui::PopStyleColor();
+                renderPluginNodeTooltip(pn);
+            }
+        }
+
+        ImGui::EndPopup();
+    }
+    ImGui::PopStyleVar();
+    req.posX = newNodePos.x;
+    req.posY = newNodePos.y;
+    return req;
+}
+
+void ProcessingPanel::renderHeader(const ScriptProject &project, EventQueue &eq, int selId,
+                                   const ProcessingRegion &region) {
+    // ── Header ────────────────────────────────────────────────────────────────
+    ImGui::TextDisabled("%s \xe2\x80\x93 %s", TimeUtil::formatTime(region.startTime, true),
+                        TimeUtil::formatTime(region.endTime, true));
+
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(3.0f, 3.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5.0f, 2.0f));
+
+    auto renderChipRow = [&](size_t first, size_t last, bool sameLineBefore) {
+        bool rowStarted = false;
+        for (size_t i = first; i <= last; ++i) {
+            const auto axis = static_cast<StandardAxis>(i);
+            if (isScratchAxis(axis) && !project.axes[i].showInStrip)
+                continue;
+
+            const bool assigned = region.axisRoles.test(i);
+            // Deactivated chip uses the theme's dimmed-axis token (same as inactive axes elsewhere)
+            // rather than scaling toward black, which goes near-invisible on the light theme.
+            const ImVec4 btnCol = assigned ? standardAxisColorVec4(axis) : standardAxisColorDimVec4(axis);
+
+            if (rowStarted || sameLineBefore)
+                ImGui::SameLine();
+            rowStarted = true;
+
+            ImGui::PushID(static_cast<int>(i));
+            ImGui::PushStyleColor(ImGuiCol_Button, btnCol);
+            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ofs::ui::brighten(btnCol, 0.2f));
+            ImGui::PushStyleColor(ImGuiCol_ButtonActive, ofs::ui::brighten(btnCol, 0.35f));
+
+            if (ImGui::Button(standardAxisTag(axis).data())) {
+                eq.push(AssignAxisToRegionEvent{.regionId = selId, .axis = axis, .assign = !assigned});
+            }
+
+            ImGui::PopStyleColor(3);
+            ImGui::PopID();
+
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip("%s", ofs::loc::localizedAxisName(axis));
+        }
+    };
+
+    ImGui::SameLine(0.0f, 15.0f);
+    renderChipRow(0, 9, false);
+    renderChipRow(10, kStandardAxisCount - 1, true);
+
+    ImGui::PopStyleVar(2);
+
+    ImGui::Checkbox(m_locked ? ICON_LOCK "##lock" : ICON_LOCK_OPEN "##lock", &m_locked);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("%s", Str::ProcLockTip.c_str());
+
+    // Show-actions toggle, mirroring the lock as a single-icon checkbox (eye / eye-off). ###id keeps
+    // the id stable across the icon swap so the click target doesn't move when toggled.
+    ImGui::SameLine();
+    bool showPts = region.showSourceActions;
+    if (ImGui::Checkbox(showPts ? ICON_EYE "###showactions" : ICON_EYE_OFF "###showactions", &showPts)) {
+        ProcessingRegion updated = region;
+        updated.showSourceActions = showPts;
+        eq.push(ModifyRegionEvent{.regionId = selId, .updatedRegion = updated});
+    }
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("%s", Str::ProcShowActionsTip.c_str());
+
+    // Reserve the right end of the row for the graph I/O buttons; the name field fills the gap between.
+    // Measure the actual (translated) labels so the reserve tracks the rendered text, not an English literal.
+    const char *remapGraphLabel = Str::ProcRemap.icon(ICON_ARROW_RIGHT_LEFT);
+    const char *saveGraphLabel = Str::ProcSaveGraph.icon(ICON_SAVE);
+    const char *loadGraphLabel = Str::ProcLoadGraph.icon(ICON_FOLDER_OPEN);
+    const float ioSpacing = ImGui::GetStyle().ItemSpacing.x;
+    const float ioPadX = ImGui::GetStyle().FramePadding.x * 2.0f;
+    const float remapBtnW = ImGui::CalcTextSize(remapGraphLabel).x + ioPadX;
+    const float saveBtnW = ImGui::CalcTextSize(saveGraphLabel).x + ioPadX;
+    const float loadBtnW = ImGui::CalcTextSize(loadGraphLabel).x + ioPadX;
+    const float ioReserved = remapBtnW + saveBtnW + loadBtnW + ioSpacing * 3.0f + ofs::ui::kRightGap;
+
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ioReserved);
+    ImGui::InputText("##region_name", &m_nameEdit);
+    // IsItemDeactivatedAfterEdit also fires on a type-then-revert (the buffer was touched but ends
+    // identical). Pushing then would still take an undo snapshot before onModifyRegion discards the
+    // unchanged region, so commit only a real rename.
+    if (ImGui::IsItemDeactivatedAfterEdit() && m_nameEdit != region.name) {
+        ProcessingRegion updated = region;
+        updated.name = m_nameEdit;
+        eq.push(ModifyRegionEvent{.regionId = selId, .updatedRegion = std::move(updated)});
+    } else if (!ImGui::IsItemActive()) {
+        // Single sync point: mirror region.name while not editing, so external
+        // renames (region switch, graph load) refresh the field. The else skips the
+        // commit frame, before the pushed event drains, so the typed value survives.
+        m_nameEdit = region.name;
+    }
+
+    ImGui::SameLine();
+    if (ImGui::Button(fmtScratch("{}###remapgraph", remapGraphLabel)))
+        eq.push(RemapCurrentGraphEvent{selId});
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("%s", Str::ProcRemapTip.c_str());
+    ImGui::SameLine();
+    if (ImGui::Button(fmtScratch("{}###savegraph", saveGraphLabel)))
+        eq.push(SaveGraphEvent{selId});
+    ImGui::SameLine();
+    if (ImGui::Button(fmtScratch("{}###loadgraph", loadGraphLabel)))
+        eq.push(LoadGraphEvent{selId});
+
+    ImGui::Separator();
+}
+
+void ProcessingPanel::renderFooter(const ScriptProject &project, EventQueue &eq, int selId,
+                                   const ProcessingRegion &region, bool anyPending) {
     // ── Footer ────────────────────────────────────────────────────────────────
     // Footer: compute (Bake/Recompute) then region rate (Hz/Auto). Graph I/O and the show-actions
     // toggle live in the header row.
@@ -1967,7 +2028,8 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
             ImGui::TextDisabled("%s", label);
         }
     }
-
+}
+void ProcessingPanel::maybeShowNewScriptModal(EventQueue &eq) {
     // ── Add Script dialog (open an existing .cs, or create a new one) ─────────────
     // Raised once when m_openNewScriptModal latches; the body (captures only `this`) reads the
     // panel's script-form members and is consumed by the deferred node-create block next frame.
@@ -2101,7 +2163,9 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
                  return closeModal;
              }});
     }
+}
 
+void ProcessingPanel::maybeShowSaveScriptModal(EventQueue &eq) {
     // ── Save embedded script to the scripts folder (promote to a file node) ──────
     if (m_openSaveScriptModal) {
         m_openSaveScriptModal = false;
@@ -2164,7 +2228,9 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
                      return false;
                  }});
     }
+}
 
+void ProcessingPanel::maybeShowTrustModal(const ScriptProject &project, EventQueue &eq, int selId) {
     // ── Graph-load trust warning (embedded scripts run code) ─────────────────────
     // Raised once when a pending graph-load needs trust; the body re-checks the pending load each
     // frame (via the captured project pointer) and closes itself when it is gone — resolved or
@@ -2210,7 +2276,10 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
                      return false;
                  }});
     }
+}
 
+void ProcessingPanel::maybeShowRemapModal(const ScriptProject &project, EventQueue &eq, int selId,
+                                          const ProcessingRegion &region) {
     // ── Graph-load axis remap dialog ────────────────────────────────────────────
     // Raised once per pending load. The positional defaults read the live `region`, so they are
     // computed here at the push site (not in the body, which has no region reference). The body
@@ -2314,60 +2383,5 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
                      return false;
                  }});
     }
-
-    // Escape closes the panel — clearing the region selection reverts the shared dock window to the
-    // video player. Deliberately NOT gated on panel focus: selecting a region (e.g. clicking its band
-    // on the timeline) opens the panel without moving focus to it, and Escape must still close it.
-    // This block only runs while a region is selected (the panel is open), so that is the real gate.
-    // Guarded so Escape still does its normal job first: dismiss any open popup/modal (a separate
-    // window), or cancel an in-progress text edit anywhere (itemActiveAtFrameStart is global and was
-    // sampled before this frame's InputTexts ran — see above).
-    if (ImGui::IsKeyPressed(ImGuiKey_Escape) && !itemActiveAtFrameStart &&
-        !ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel)) {
-        eq.push(ClearRegionSelectionEvent{});
-    }
-
-    ImGui::End();
 }
-
-bool ProcessingPanel::deleteSelected(const ScriptProject &project, EventQueue &eq) {
-    const int numSelNodes = ImNodes::NumSelectedNodes();
-    const int numSelLinks = ImNodes::NumSelectedLinks();
-    if (numSelNodes == 0 && numSelLinks == 0)
-        return false;
-
-    const int selId = project.procSelRegionId;
-    if (selId == -1)
-        return false;
-
-    auto regionIt = std::ranges::find_if(project.regions, [selId](const auto &r) { return r.id == selId; });
-    if (regionIt == project.regions.end())
-        return false;
-
-    ImNodes::EditorContextSet(m_editorCtx);
-    ProcessingRegion updated = *regionIt;
-
-    if (numSelLinks > 0) {
-        std::vector<int> selLinks(static_cast<size_t>(numSelLinks));
-        ImNodes::GetSelectedLinks(selLinks.data());
-        for (int lid : selLinks)
-            removeLink(updated.nodeGraph, GraphId::decode(lid).owner);
-    }
-
-    if (numSelNodes > 0) {
-        std::vector<int> selNodes(static_cast<size_t>(numSelNodes));
-        ImNodes::GetSelectedNodes(selNodes.data());
-        for (int encId : selNodes) {
-            const int nid = GraphId::decode(encId).owner;
-            const auto *n = updated.nodeGraph.findNode(nid);
-            if (!n || n->type == GraphNodeType::Input || n->type == GraphNodeType::Output)
-                continue;
-            removeNodeAndLinks(updated.nodeGraph, nid);
-        }
-    }
-
-    eq.push(ModifyRegionEvent{.regionId = selId, .updatedRegion = updated});
-    return true;
-}
-
 } // namespace ofs

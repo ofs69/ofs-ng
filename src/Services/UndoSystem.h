@@ -24,7 +24,7 @@ class UndoSystem {
     [[nodiscard]] bool canUndo() const { return history.canUndo(); }
     [[nodiscard]] bool canRedo() const { return history.canRedo(); }
 
-    // Live undo/redo memory telemetry (packed + compressed bytes currently held, and the budget). Surfaced
+    // Live undo/redo memory telemetry (bitsery-packed bytes currently held, and the budget). Surfaced
     // in the footer.
     [[nodiscard]] size_t memoryUsedBytes() const { return history.usedBytes(); }
     [[nodiscard]] size_t memoryMaxBytes() const { return history.maxBytes(); }

@@ -101,9 +101,9 @@ void SelectIntentRouter::resolve(const SelectRequestEvent &event, const Selectio
     // Apply the gesture's candidate set to one axis: replace the selection, or — when Ctrl is held —
     // toggle the candidates into the current selection. Host-owned combine, below the seam, so a mode
     // never reasons about it.
-    auto apply = [&](StandardAxis role, AxisState &axis, VectorSet<ScriptAxisAction> candidates) {
+    auto apply = [&](StandardAxis role, AxisState &axis, const VectorSet<ScriptAxisAction> &candidates) {
         if (!event.additive) {
-            project.setSelection(role, std::move(candidates), eq);
+            project.setSelection(role, candidates, eq);
             return;
         }
         VectorSet<ScriptAxisAction> newSel = axis.selection;
@@ -113,7 +113,7 @@ void SelectIntentRouter::resolve(const SelectRequestEvent &event, const Selectio
             else
                 newSel.insert(c);
         }
-        project.setSelection(role, std::move(newSel), eq);
+        project.setSelection(role, newSel, eq);
     };
 
     const OfsSelectFn onSelect = mode ? mode->onSelect : nullptr;

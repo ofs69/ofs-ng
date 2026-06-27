@@ -9,6 +9,7 @@
 #include "Localization/Translator.h"
 #include "Platform/Headless.h"
 #include "Scenegraph/VrCamera.h"
+#include "UI/AxisColors.h"
 #include "UI/Icons.h"
 #include "UI/ImGuiHelpers.h"
 #include "UI/Theme.h"
