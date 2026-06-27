@@ -61,6 +61,3 @@ Line numbers are approximate — several files moved during the cleanup. Locate 
   One shared visible-dot enumeration helper used by both. (The dot-draw side now also precomputes hidden
   intervals — fold that in.)
 
-- **Node-creation boilerplate across the add-node branches** — `src/UI/ProcessingPanel.cpp` (the
-  per-type create blocks each repeat copy-region / allocId / editor-space / push / auto-connect / set-pos;
-  the Constant branch hand-rolls its own link splice). A `placeNewNode(...)` helper.

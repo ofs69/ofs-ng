@@ -31,6 +31,7 @@
 #include <cmath>
 #include <filesystem>
 #include <imnodes.h>
+#include <functional>
 #include <optional>
 #include <string_view>
 #include <unordered_set>
@@ -479,6 +480,26 @@ static void renderCompileStatus(EventQueue &eq, const ProcessingGraphNode &node,
 static void snapshotOnDragStart(EventQueue &eq, int regionId, const ProcessingRegion &region) {
     if (ImGui::IsItemActivated())
         eq.push(ModifyRegionEvent{.regionId = regionId, .updatedRegion = region, .snapshot = true});
+}
+
+// Drop a freshly-built node into `region`'s graph at `screenPos`. The common add-node skeleton: copy the
+// region, mint an id, convert the screen drop point into editor-space coords, let `configure` fill the
+// node's type/params, auto-connect it to the pending drop pin (`linkPin`, -1 if none; `ignoresInput`
+// suppresses the output-splice for a generator with no input), push the ModifyRegion, and pin the imnodes
+// screen position. Returns the new node id. The per-type compile/open follow-ups stay with the caller.
+static int placeNewNode(EventQueue &eq, const ProcessingRegion &region, int regionId, ImVec2 screenPos, int linkPin,
+                        bool ignoresInput, const std::function<void(ProcessingGraphNode &)> &configure) {
+    ProcessingRegion updated = region;
+    const int nodeId = updated.nodeGraph.allocId();
+    const ImVec2 editorPos = ImGui::GetWindowPos();
+    ProcessingGraphNode node{.id = nodeId, .posX = screenPos.x - editorPos.x, .posY = screenPos.y - editorPos.y};
+    configure(node);
+    updated.nodeGraph.nodes.push_back(std::move(node));
+    if (linkPin != -1)
+        autoConnectNewNode(nodeId, linkPin, ignoresInput, updated.nodeGraph);
+    eq.push(ModifyRegionEvent{.regionId = regionId, .updatedRegion = updated});
+    ImNodes::SetNodeScreenSpacePos(GraphId::nodeBody(nodeId), screenPos);
+    return nodeId;
 }
 
 static void renderEffectNodeBody(const ProcessingGraphNode &node, const EffectDefinition *def, EventQueue &eq,
@@ -1290,104 +1311,49 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
     }
 
     if (isMathNode(addReq.type)) {
-        ProcessingRegion updated = region;
-        int nodeId = updated.nodeGraph.allocId();
-        ImVec2 editorPos = ImGui::GetWindowPos();
-        float edX = newNodePos.x - editorPos.x;
-        float edY = newNodePos.y - editorPos.y;
-        updated.nodeGraph.nodes.push_back({.id = nodeId, .type = addReq.type, .posX = edX, .posY = edY});
-        if (m_pendingLinkPin != -1) {
-            autoConnectNewNode(nodeId, m_pendingLinkPin, false, updated.nodeGraph);
-            m_pendingLinkPin = -1;
-        }
-        eq.push(ModifyRegionEvent{.regionId = selId, .updatedRegion = updated});
-        ImNodes::SetNodeScreenSpacePos(GraphId::nodeBody(nodeId), newNodePos);
+        const GraphNodeType type = addReq.type;
+        placeNewNode(eq, region, selId, newNodePos, m_pendingLinkPin, /*ignoresInput=*/false,
+                     [type](ProcessingGraphNode &n) { n.type = type; });
+        m_pendingLinkPin = -1;
     } else if (addReq.type == GraphNodeType::Discretize) {
-        ProcessingRegion updated = region;
-        int nodeId = updated.nodeGraph.allocId();
-        ImVec2 editorPos = ImGui::GetWindowPos();
-        float edX = newNodePos.x - editorPos.x;
-        float edY = newNodePos.y - editorPos.y;
-        // params: [0] keep-actions (default on → loss-free out of the box), [1] sampling rate Hz (default 30).
-        updated.nodeGraph.nodes.push_back({.id = nodeId,
-                                           .type = GraphNodeType::Discretize,
-                                           .effect = {.params = {1.0f, 30.0f}},
-                                           .posX = edX,
-                                           .posY = edY});
-        if (m_pendingLinkPin != -1) {
-            autoConnectNewNode(nodeId, m_pendingLinkPin, false, updated.nodeGraph);
-            m_pendingLinkPin = -1;
-        }
-        eq.push(ModifyRegionEvent{.regionId = selId, .updatedRegion = updated});
-        ImNodes::SetNodeScreenSpacePos(GraphId::nodeBody(nodeId), newNodePos);
+        placeNewNode(eq, region, selId, newNodePos, m_pendingLinkPin, /*ignoresInput=*/false,
+                     [](ProcessingGraphNode &n) {
+                         n.type = GraphNodeType::Discretize;
+                         // params: [0] keep-actions (default on → loss-free out of the box), [1] sampling Hz.
+                         n.effect.params = {1.0f, 30.0f};
+                     });
+        m_pendingLinkPin = -1;
     } else if (addReq.type == GraphNodeType::Constant) {
-        ProcessingRegion updated = region;
-        int nodeId = updated.nodeGraph.allocId();
-        ImVec2 editorPos = ImGui::GetWindowPos();
-        float edX = newNodePos.x - editorPos.x;
-        float edY = newNodePos.y - editorPos.y;
-        updated.nodeGraph.nodes.push_back({.id = nodeId, .type = GraphNodeType::Constant, .posX = edX, .posY = edY});
-        if (m_pendingLinkPin != -1) {
-            if (GraphId::decode(m_pendingLinkPin).tag != GraphId::Tag::OutPin) {
-                int toNode = GraphId::decode(m_pendingLinkPin).owner;
-                int toPin = GraphId::decode(m_pendingLinkPin).slot;
-                auto &links = updated.nodeGraph.links;
-                links.erase(
-                    std::ranges::remove_if(
-                        links, [toNode, toPin](const auto &l) { return l.toNode == toNode && l.toPin == toPin; })
-                        .begin(),
-                    links.end());
-                links.push_back(
-                    {.id = updated.nodeGraph.allocId(), .fromNode = nodeId, .toNode = toNode, .toPin = toPin});
-            }
-            m_pendingLinkPin = -1;
-        }
-        eq.push(ModifyRegionEvent{.regionId = selId, .updatedRegion = updated});
-        ImNodes::SetNodeScreenSpacePos(GraphId::nodeBody(nodeId), newNodePos);
+        // A Constant is a generator (no input), so ignoresInput=true: a drop on an output pin makes no
+        // splice, a drop on an input pin just feeds the Constant into it — exactly the old hand-rolled case.
+        placeNewNode(eq, region, selId, newNodePos, m_pendingLinkPin, /*ignoresInput=*/true,
+                     [](ProcessingGraphNode &n) { n.type = GraphNodeType::Constant; });
+        m_pendingLinkPin = -1;
     } else if (addReq.addEffect) {
         const auto &def = effectReg.effects.at(addReq.effectType);
-        ProcessingRegion updated = region;
-        int nodeId = updated.nodeGraph.allocId();
-        ImVec2 editorPos = ImGui::GetWindowPos();
-        float edX = newNodePos.x - editorPos.x;
-        float edY = newNodePos.y - editorPos.y;
         std::vector<float> defParams;
         defParams.reserve(def.paramDefs.size());
         for (const auto &pd : def.paramDefs)
             defParams.push_back(pd.defaultValue);
-        ProcessingEffect eff{.type = def.type, .params = std::move(defParams)};
-        updated.nodeGraph.nodes.push_back(
-            {.id = nodeId, .type = GraphNodeType::Effect, .effect = eff, .posX = edX, .posY = edY});
-        if (m_pendingLinkPin != -1) {
-            autoConnectNewNode(nodeId, m_pendingLinkPin, def.ignoresInput, updated.nodeGraph);
-            m_pendingLinkPin = -1;
-        }
-        eq.push(ModifyRegionEvent{.regionId = selId, .updatedRegion = updated});
-        ImNodes::SetNodeScreenSpacePos(GraphId::nodeBody(nodeId), newNodePos);
+        placeNewNode(eq, region, selId, newNodePos, m_pendingLinkPin, def.ignoresInput,
+                     [&](ProcessingGraphNode &n) {
+                         n.type = GraphNodeType::Effect;
+                         n.effect = ProcessingEffect{.type = def.type, .params = defParams};
+                     });
+        m_pendingLinkPin = -1;
     } else if (addReq.addPlugin) {
         const auto &pn = effectReg.pluginNodes.at(addReq.pluginNodeId);
-        ProcessingRegion updated = region;
-        int nodeId = updated.nodeGraph.allocId();
-        ImVec2 editorPos = ImGui::GetWindowPos();
-        float edX = newNodePos.x - editorPos.x;
-        float edY = newNodePos.y - editorPos.y;
-        // Plugin nodes carry no scalar params — their state is a TState persisted in nodeState,
-        // populated lazily by the node's UI; a fresh node starts with empty (default) state.
-        ProcessingGraphNode n{.id = nodeId,
-                              .type = GraphNodeType::PluginNode,
-                              .posX = edX,
-                              .posY = edY,
-                              .pluginInputCount = static_cast<uint8_t>(pn.inputCount),
-                              .pluginOutputCount = static_cast<uint8_t>(pn.outputCount),
-                              .pluginSignal = static_cast<uint8_t>(pn.signal),
-                              .pluginNodeId = pn.id};
-        updated.nodeGraph.nodes.push_back(std::move(n));
-        if (m_pendingLinkPin != -1) {
-            autoConnectNewNode(nodeId, m_pendingLinkPin, /*ignoresInput=*/pn.inputCount == 0, updated.nodeGraph);
-            m_pendingLinkPin = -1;
-        }
-        eq.push(ModifyRegionEvent{.regionId = selId, .updatedRegion = updated});
-        ImNodes::SetNodeScreenSpacePos(GraphId::nodeBody(nodeId), newNodePos);
+        placeNewNode(eq, region, selId, newNodePos, m_pendingLinkPin, /*ignoresInput=*/pn.inputCount == 0,
+                     [&](ProcessingGraphNode &n) {
+                         // Plugin nodes carry no scalar params — their state is a TState persisted in
+                         // nodeState, populated lazily by the node's UI; a fresh node starts with empty state.
+                         n.type = GraphNodeType::PluginNode;
+                         n.pluginInputCount = static_cast<uint8_t>(pn.inputCount);
+                         n.pluginOutputCount = static_cast<uint8_t>(pn.outputCount);
+                         n.pluginSignal = static_cast<uint8_t>(pn.signal);
+                         n.pluginNodeId = pn.id;
+                     });
+        m_pendingLinkPin = -1;
     } else if (addReq.addScript && addReq.scriptIndex >= 0 &&
                addReq.scriptIndex < static_cast<int>(m_scriptCatalog.size())) {
         // A ready script picked from the catalog (no editor, unlike "New Script…"). A shipped library
@@ -1397,26 +1363,17 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
         const ScriptCatalogEntry &ce = m_scriptCatalog[addReq.scriptIndex];
         std::optional<std::string> libSource =
             ce.library ? ofs::res::readText(std::string(kScriptLibPrefix) + ce.fileName) : std::optional<std::string>{};
-        ProcessingRegion updated = region;
-        int nodeId = updated.nodeGraph.allocId();
-        ImVec2 editorPos = ImGui::GetWindowPos();
-        ProcessingGraphNode n{.id = nodeId,
-                              .type = GraphNodeType::Script,
-                              .posX = newNodePos.x - editorPos.x,
-                              .posY = newNodePos.y - editorPos.y,
-                              .scriptFile = ce.fileName, // file ref (user) or the suggested fork name (embedded)
-                              .scriptSignal = ce.signal,
-                              .scriptInputCount = static_cast<uint8_t>(ce.inputCount),
-                              .scriptOutputCount = static_cast<uint8_t>(ce.outputCount)};
-        if (libSource)
-            n.scriptEmbeddedSource = *libSource;
-        updated.nodeGraph.nodes.push_back(std::move(n));
-        if (m_pendingLinkPin != -1) {
-            autoConnectNewNode(nodeId, m_pendingLinkPin, /*ignoresInput=*/ce.inputCount == 0, updated.nodeGraph);
-            m_pendingLinkPin = -1;
-        }
-        eq.push(ModifyRegionEvent{.regionId = selId, .updatedRegion = updated});
-        ImNodes::SetNodeScreenSpacePos(GraphId::nodeBody(nodeId), newNodePos);
+        placeNewNode(eq, region, selId, newNodePos, m_pendingLinkPin, /*ignoresInput=*/ce.inputCount == 0,
+                     [&](ProcessingGraphNode &n) {
+                         n.type = GraphNodeType::Script;
+                         n.scriptFile = ce.fileName; // file ref (user) or the suggested fork name (embedded)
+                         n.scriptSignal = ce.signal;
+                         n.scriptInputCount = static_cast<uint8_t>(ce.inputCount);
+                         n.scriptOutputCount = static_cast<uint8_t>(ce.outputCount);
+                         if (libSource)
+                             n.scriptEmbeddedSource = *libSource;
+                     });
+        m_pendingLinkPin = -1;
         if (libSource)
             eq.push(CompileEmbeddedScriptEvent{.source = *libSource});
         else
@@ -1426,25 +1383,16 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
         // the node here (inside the graph child window, where GetWindowPos is the editor canvas).
         m_scriptCreateConfirmed = false;
         const ScriptHeader h = readScriptHeaderFile(m_newScriptFile);
-        ProcessingRegion updated = region;
-        int nodeId = updated.nodeGraph.allocId();
-        ImVec2 screenPos{m_newScriptPosX, m_newScriptPosY};
-        ImVec2 editorPos = ImGui::GetWindowPos();
-        ProcessingGraphNode n{.id = nodeId,
-                              .type = GraphNodeType::Script,
-                              .posX = screenPos.x - editorPos.x,
-                              .posY = screenPos.y - editorPos.y,
-                              .scriptFile = m_newScriptFile,
-                              .scriptSignal = static_cast<uint8_t>(h.signal),
-                              .scriptInputCount = static_cast<uint8_t>(h.inputCount()),
-                              .scriptOutputCount = static_cast<uint8_t>(h.outputCount())};
-        updated.nodeGraph.nodes.push_back(std::move(n));
-        if (m_newScriptLinkPin != -1) {
-            autoConnectNewNode(nodeId, m_newScriptLinkPin, /*ignoresInput=*/h.inputCount() == 0, updated.nodeGraph);
-            m_newScriptLinkPin = -1;
-        }
-        eq.push(ModifyRegionEvent{.regionId = selId, .updatedRegion = updated});
-        ImNodes::SetNodeScreenSpacePos(GraphId::nodeBody(nodeId), screenPos);
+        const ImVec2 screenPos{m_newScriptPosX, m_newScriptPosY};
+        placeNewNode(eq, region, selId, screenPos, m_newScriptLinkPin, /*ignoresInput=*/h.inputCount() == 0,
+                     [&](ProcessingGraphNode &n) {
+                         n.type = GraphNodeType::Script;
+                         n.scriptFile = m_newScriptFile;
+                         n.scriptSignal = static_cast<uint8_t>(h.signal);
+                         n.scriptInputCount = static_cast<uint8_t>(h.inputCount());
+                         n.scriptOutputCount = static_cast<uint8_t>(h.outputCount());
+                     });
+        m_newScriptLinkPin = -1;
         eq.push(CompileScriptEvent{.fileName = m_newScriptFile});
         ofs::util::openInDefaultApp(scriptsDirPath() / ofs::util::fromUtf8(m_newScriptFile));
     }
