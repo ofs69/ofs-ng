@@ -32,9 +32,6 @@ Line numbers are approximate — several files moved during the cleanup. Locate 
 
 ## C# marshaling / loops
 
-- **Per-widget UTF-8 marshaling boilerplate (~20 sites)** — `plugins/Ofs.Api/Ui.cs`. A caller-allocated
-  span + a helper centralizing the stackalloc-vs-heap / `+1` NUL policy.
-
 ## Remaining duplication
 
 - **Hit-test fade/decimation duplicated from the dot renderer** — `src/UI/ScriptTimeline.cpp` (the

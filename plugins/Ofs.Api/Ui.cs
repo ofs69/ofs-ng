@@ -84,20 +84,24 @@ namespace Ofs
             public static readonly string[] Names = new string[Values.Length];
         }
 
-        private static void WriteUtf8(string s, Span<byte> buf)
+        // Encode `s` as NUL-terminated UTF-8 into `scratch` when it fits, else into a fresh heap buffer;
+        // returns the span to `fixed` and hand to native. Callers pass `stackalloc byte[StackUtf8Max]`, so
+        // the common (short-string) case never allocates. Centralizes the +1-for-NUL and stack-vs-heap
+        // policy every widget shared; the terminating NUL is written past the encoded bytes.
+        private static Span<byte> Utf8(string s, Span<byte> scratch)
         {
+            int max = Encoding.UTF8.GetMaxByteCount(s.Length) + 1;
+            Span<byte> buf = max <= scratch.Length ? scratch : new byte[max];
             int n = Encoding.UTF8.GetBytes(s, buf);
             buf[n] = 0;
+            return buf;
         }
 
         /// <summary>A single line of unwrapped text. For wrapping paragraphs use <see cref="LabelWrapped"/>.</summary>
         public void Label(string text)
         {
             Guard(nameof(Label));
-            int max = Encoding.UTF8.GetMaxByteCount(text.Length) + 1;
-            Span<byte> buf = max <= StackUtf8Max ? stackalloc byte[StackUtf8Max] : new byte[max];
-            WriteUtf8(text, buf);
-            fixed (byte* p = buf) _api->UiLabel(_api->Ctx, p);
+            fixed (byte* p = Utf8(text, stackalloc byte[StackUtf8Max])) _api->UiLabel(_api->Ctx, p);
         }
 
         /// <summary>Word-wrapped paragraph text. Unlike <see cref="Label"/> (a single unwrapped line),
@@ -105,32 +109,23 @@ namespace Ofs
         public void LabelWrapped(string text)
         {
             Guard(nameof(LabelWrapped));
-            int max = Encoding.UTF8.GetMaxByteCount(text.Length) + 1;
-            Span<byte> buf = max <= StackUtf8Max ? stackalloc byte[StackUtf8Max] : new byte[max];
-            WriteUtf8(text, buf);
-            fixed (byte* p = buf) _api->UiTextWrapped(_api->Ctx, p);
+            fixed (byte* p = Utf8(text, stackalloc byte[StackUtf8Max])) _api->UiTextWrapped(_api->Ctx, p);
         }
 
         /// <summary>A clickable button. Returns true on the frame it is clicked.</summary>
         public bool Button(string label)
         {
             Guard(nameof(Button));
-            int max = Encoding.UTF8.GetMaxByteCount(label.Length) + 1;
-            Span<byte> buf = max <= StackUtf8Max ? stackalloc byte[StackUtf8Max] : new byte[max];
-            WriteUtf8(label, buf);
-            fixed (byte* p = buf) return _api->UiButton(_api->Ctx, p) != 0;
+            fixed (byte* p = Utf8(label, stackalloc byte[StackUtf8Max])) return _api->UiButton(_api->Ctx, p) != 0;
         }
 
         /// <summary>A boolean checkbox bound to <paramref name="value"/>. Returns true on the frame it changes.</summary>
         public bool Checkbox(string label, ref bool value)
         {
             Guard(nameof(Checkbox));
-            int max = Encoding.UTF8.GetMaxByteCount(label.Length) + 1;
-            Span<byte> buf = max <= StackUtf8Max ? stackalloc byte[StackUtf8Max] : new byte[max];
-            WriteUtf8(label, buf);
             int v = value ? 1 : 0;
             int changed;
-            fixed (byte* p = buf) changed = _api->UiCheckbox(_api->Ctx, p, &v);
+            fixed (byte* p = Utf8(label, stackalloc byte[StackUtf8Max])) changed = _api->UiCheckbox(_api->Ctx, p, &v);
             value = v != 0;
             return changed != 0;
         }
@@ -140,12 +135,10 @@ namespace Ofs
         public bool Slider(string label, ref float value, float min, float max, int decimals = 3)
         {
             Guard(nameof(Slider));
-            int maxBytes = Encoding.UTF8.GetMaxByteCount(label.Length) + 1;
-            Span<byte> buf = maxBytes <= StackUtf8Max ? stackalloc byte[StackUtf8Max] : new byte[maxBytes];
-            WriteUtf8(label, buf);
             float v = value;
             int changed;
-            fixed (byte* p = buf) changed = _api->UiSliderFloat(_api->Ctx, p, &v, min, max, decimals);
+            fixed (byte* p = Utf8(label, stackalloc byte[StackUtf8Max]))
+                changed = _api->UiSliderFloat(_api->Ctx, p, &v, min, max, decimals);
             value = v;
             return changed != 0;
         }
@@ -155,12 +148,10 @@ namespace Ofs
         public bool Slider(string label, ref int value, int min, int max)
         {
             Guard(nameof(Slider));
-            int maxBytes = Encoding.UTF8.GetMaxByteCount(label.Length) + 1;
-            Span<byte> buf = maxBytes <= StackUtf8Max ? stackalloc byte[StackUtf8Max] : new byte[maxBytes];
-            WriteUtf8(label, buf);
             int v = value;
             int changed;
-            fixed (byte* p = buf) changed = _api->UiSliderInt(_api->Ctx, p, &v, min, max);
+            fixed (byte* p = Utf8(label, stackalloc byte[StackUtf8Max]))
+                changed = _api->UiSliderInt(_api->Ctx, p, &v, min, max);
             value = v;
             return changed != 0;
         }
@@ -171,9 +162,7 @@ namespace Ofs
         public bool Combo(string label, ref int index, IReadOnlyList<string> items)
         {
             Guard(nameof(Combo));
-            int maxLabel = Encoding.UTF8.GetMaxByteCount(label.Length) + 1;
-            Span<byte> lb = maxLabel <= StackUtf8Max ? stackalloc byte[StackUtf8Max] : new byte[maxLabel];
-            WriteUtf8(label, lb);
+            Span<byte> lb = Utf8(label, stackalloc byte[StackUtf8Max]);
 
             // items_separated_by_zeros: "item1\0item2\0item3\0" — trailing \0 terminates the scan.
             int capacity = 1;
@@ -230,12 +219,10 @@ namespace Ofs
         public bool RadioButton(string label, ref int value, int option)
         {
             Guard(nameof(RadioButton));
-            int max = Encoding.UTF8.GetMaxByteCount(label.Length) + 1;
-            Span<byte> buf = max <= StackUtf8Max ? stackalloc byte[StackUtf8Max] : new byte[max];
-            WriteUtf8(label, buf);
             int v = value;
             int clicked;
-            fixed (byte* p = buf) clicked = _api->UiRadioButton(_api->Ctx, p, &v, option);
+            fixed (byte* p = Utf8(label, stackalloc byte[StackUtf8Max]))
+                clicked = _api->UiRadioButton(_api->Ctx, p, &v, option);
             value = v;
             return clicked != 0;
         }
@@ -246,14 +233,11 @@ namespace Ofs
         public bool InputInt(string label, ref int value, int step = 1, bool stepButtons = true)
         {
             Guard(nameof(InputInt));
-            int max = Encoding.UTF8.GetMaxByteCount(label.Length) + 1;
-            Span<byte> buf = max <= StackUtf8Max ? stackalloc byte[StackUtf8Max] : new byte[max];
-            WriteUtf8(label, buf);
             int v = value;
             int changed;
             // The host shows the -/+ buttons iff the step it receives is > 0, so collapse "no buttons" to 0.
             int hostStep = stepButtons ? step : 0;
-            fixed (byte* p = buf) changed = _api->UiInputInt(_api->Ctx, p, &v, hostStep);
+            fixed (byte* p = Utf8(label, stackalloc byte[StackUtf8Max])) changed = _api->UiInputInt(_api->Ctx, p, &v, hostStep);
             value = v;
             return changed != 0;
         }
@@ -266,13 +250,11 @@ namespace Ofs
             int decimals = 3)
         {
             Guard(nameof(InputFloat));
-            int max = Encoding.UTF8.GetMaxByteCount(label.Length) + 1;
-            Span<byte> buf = max <= StackUtf8Max ? stackalloc byte[StackUtf8Max] : new byte[max];
-            WriteUtf8(label, buf);
             float v = value;
             int changed;
             float hostStep = stepButtons ? step : 0f;
-            fixed (byte* p = buf) changed = _api->UiInputFloat(_api->Ctx, p, &v, hostStep, decimals);
+            fixed (byte* p = Utf8(label, stackalloc byte[StackUtf8Max]))
+                changed = _api->UiInputFloat(_api->Ctx, p, &v, hostStep, decimals);
             value = v;
             return changed != 0;
         }
@@ -282,12 +264,10 @@ namespace Ofs
         public bool DragInt(string label, ref int value, float speed = 1f, int min = 0, int max = 0)
         {
             Guard(nameof(DragInt));
-            int maxBytes = Encoding.UTF8.GetMaxByteCount(label.Length) + 1;
-            Span<byte> buf = maxBytes <= StackUtf8Max ? stackalloc byte[StackUtf8Max] : new byte[maxBytes];
-            WriteUtf8(label, buf);
             int v = value;
             int changed;
-            fixed (byte* p = buf) changed = _api->UiDragInt(_api->Ctx, p, &v, speed, min, max);
+            fixed (byte* p = Utf8(label, stackalloc byte[StackUtf8Max]))
+                changed = _api->UiDragInt(_api->Ctx, p, &v, speed, min, max);
             value = v;
             return changed != 0;
         }
@@ -298,12 +278,10 @@ namespace Ofs
             int decimals = 3)
         {
             Guard(nameof(DragFloat));
-            int maxBytes = Encoding.UTF8.GetMaxByteCount(label.Length) + 1;
-            Span<byte> buf = maxBytes <= StackUtf8Max ? stackalloc byte[StackUtf8Max] : new byte[maxBytes];
-            WriteUtf8(label, buf);
             float v = value;
             int changed;
-            fixed (byte* p = buf) changed = _api->UiDragFloat(_api->Ctx, p, &v, speed, min, max, decimals);
+            fixed (byte* p = Utf8(label, stackalloc byte[StackUtf8Max]))
+                changed = _api->UiDragFloat(_api->Ctx, p, &v, speed, min, max, decimals);
             value = v;
             return changed != 0;
         }
@@ -317,9 +295,7 @@ namespace Ofs
         {
             Guard(nameof(InputText));
             if (maxBytes < 1) maxBytes = 1;
-            int maxLabel = Encoding.UTF8.GetMaxByteCount(label.Length) + 1;
-            Span<byte> lb = maxLabel <= StackUtf8Max ? stackalloc byte[StackUtf8Max] : new byte[maxLabel];
-            WriteUtf8(label, lb);
+            Span<byte> lb = Utf8(label, stackalloc byte[StackUtf8Max]);
 
             // Mutable, NUL-terminated UTF-8 edit buffer; ImGui writes the edited text back into it.
             // Encoder.Convert fills only what fits (leaving room for the NUL) without splitting a
@@ -377,10 +353,8 @@ namespace Ofs
         public void Disabled(bool disabled, string tooltipWhenDisabled, Action body)
         {
             Guard(nameof(Disabled));
-            int max = Encoding.UTF8.GetMaxByteCount(tooltipWhenDisabled.Length) + 1;
-            Span<byte> buf = max <= StackUtf8Max ? stackalloc byte[StackUtf8Max] : new byte[max];
-            WriteUtf8(tooltipWhenDisabled, buf);
-            fixed (byte* p = buf) _api->UiPushDisabledTooltip(_api->Ctx, disabled ? 1 : 0, p);
+            fixed (byte* p = Utf8(tooltipWhenDisabled, stackalloc byte[StackUtf8Max]))
+                _api->UiPushDisabledTooltip(_api->Ctx, disabled ? 1 : 0, p);
             try { body(); }
             finally { _api->UiPopDisabledTooltip(_api->Ctx); }
         }
@@ -391,10 +365,7 @@ namespace Ofs
         public void Tooltip(string text)
         {
             Guard(nameof(Tooltip));
-            int max = Encoding.UTF8.GetMaxByteCount(text.Length) + 1;
-            Span<byte> buf = max <= StackUtf8Max ? stackalloc byte[StackUtf8Max] : new byte[max];
-            WriteUtf8(text, buf);
-            fixed (byte* p = buf) _api->UiTooltip(_api->Ctx, p);
+            fixed (byte* p = Utf8(text, stackalloc byte[StackUtf8Max])) _api->UiTooltip(_api->Ctx, p);
         }
 
         /// <summary>Groups the widgets drawn in <paramref name="body"/> under a titled heading, laid out as a
@@ -403,10 +374,7 @@ namespace Ofs
         public void Section(string title, Action body)
         {
             Guard(nameof(Section));
-            int max = Encoding.UTF8.GetMaxByteCount(title.Length) + 1;
-            Span<byte> buf = max <= StackUtf8Max ? stackalloc byte[StackUtf8Max] : new byte[max];
-            WriteUtf8(title, buf);
-            fixed (byte* p = buf) _api->UiPushSection(_api->Ctx, p);
+            fixed (byte* p = Utf8(title, stackalloc byte[StackUtf8Max])) _api->UiPushSection(_api->Ctx, p);
             try { body(); }
             finally { _api->UiPopSection(_api->Ctx); }
         }
@@ -418,10 +386,7 @@ namespace Ofs
         public void Row(string label, Action body)
         {
             Guard(nameof(Row));
-            int max = Encoding.UTF8.GetMaxByteCount(label.Length) + 1;
-            Span<byte> buf = max <= StackUtf8Max ? stackalloc byte[StackUtf8Max] : new byte[max];
-            WriteUtf8(label, buf);
-            fixed (byte* p = buf) _api->UiPushRow(_api->Ctx, p);
+            fixed (byte* p = Utf8(label, stackalloc byte[StackUtf8Max])) _api->UiPushRow(_api->Ctx, p);
             try { body(); }
             finally { _api->UiPopRow(_api->Ctx); }
         }
@@ -432,9 +397,7 @@ namespace Ofs
         public bool ColorEdit(string label, ref Vector4 color, bool alpha = true)
         {
             Guard(nameof(ColorEdit));
-            int max = Encoding.UTF8.GetMaxByteCount(label.Length) + 1;
-            Span<byte> lb = max <= StackUtf8Max ? stackalloc byte[StackUtf8Max] : new byte[max];
-            WriteUtf8(label, lb);
+            Span<byte> lb = Utf8(label, stackalloc byte[StackUtf8Max]);
             float* rgba = stackalloc float[4];
             rgba[0] = color.X; rgba[1] = color.Y; rgba[2] = color.Z; rgba[3] = color.W;
             int changed;
@@ -451,9 +414,7 @@ namespace Ofs
         {
             Guard(nameof(InputTextMultiline));
             if (maxBytes < 1) maxBytes = 1;
-            int maxLabel = Encoding.UTF8.GetMaxByteCount(label.Length) + 1;
-            Span<byte> lb = maxLabel <= StackUtf8Max ? stackalloc byte[StackUtf8Max] : new byte[maxLabel];
-            WriteUtf8(label, lb);
+            Span<byte> lb = Utf8(label, stackalloc byte[StackUtf8Max]);
 
             // Mutable NUL-terminated UTF-8 edit buffer; truncated on a valid char boundary if value
             // overflows. Pooled (drawn every frame the widget is visible); the host caps writes at maxBytes
@@ -489,10 +450,7 @@ namespace Ofs
         {
             Guard(nameof(ProgressBar));
             if (overlay == null) { _api->UiProgressBar(_api->Ctx, fraction, null); return; }
-            int max = Encoding.UTF8.GetMaxByteCount(overlay.Length) + 1;
-            Span<byte> buf = max <= StackUtf8Max ? stackalloc byte[StackUtf8Max] : new byte[max];
-            WriteUtf8(overlay, buf);
-            fixed (byte* p = buf) _api->UiProgressBar(_api->Ctx, fraction, p);
+            fixed (byte* p = Utf8(overlay, stackalloc byte[StackUtf8Max])) _api->UiProgressBar(_api->Ctx, fraction, p);
         }
     }
 }
