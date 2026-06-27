@@ -81,9 +81,6 @@ Line numbers are approximate — several files moved during the cleanup. Locate 
   One shared visible-dot enumeration helper used by both. (The dot-draw side now also precomputes hidden
   intervals — fold that in.)
 
-- **Footer task-indicator lifecycle duplicated** — `src/Services/WaveformService.cpp` vs
-  `VideoTranscoder.cpp` (start/clear the footer task entry). A small `FooterTask` RAII/helper.
-
 - **Node-creation boilerplate across the add-node branches** — `src/UI/ProcessingPanel.cpp` (the
   per-type create blocks each repeat copy-region / allocId / editor-space / push / auto-connect / set-pos;
   the Constant branch hand-rolls its own link splice). A `placeNewNode(...)` helper.

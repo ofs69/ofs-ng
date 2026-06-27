@@ -341,9 +341,7 @@ void VideoTranscoder::onRequest(const TranscodeRequestEvent &ev) {
     project.transcode.outputPath = cfg.outputPath;
 
     // Raise the footer task indicator for the run (replaces the old blocking progress modal).
-    taskId_ = ++taskSeq_;
-    eq.push(
-        TaskStartedEvent{.id = taskId_, .label = std::string(Str::TranscodeTaskLabel.c_str()), .cancellable = true});
+    footerTask_.start(std::string(Str::TranscodeTaskLabel.c_str()), true);
 
     // Resolve the binaries on the main thread (getBasePath is cached here) and hand UTF-8 strings to the
     // worker, so the worker never reaches back into shared resolution state.
@@ -354,13 +352,6 @@ void VideoTranscoder::onRequest(const TranscodeRequestEvent &ev) {
     });
 }
 
-void VideoTranscoder::endTask() {
-    if (taskId_ != 0) {
-        eq.push(TaskEndedEvent{.id = taskId_});
-        taskId_ = 0;
-    }
-}
-
 void VideoTranscoder::onProgress(const TranscodeProgressEvent &ev) {
     if (!project.transcode.active)
         return;
@@ -368,7 +359,7 @@ void VideoTranscoder::onProgress(const TranscodeProgressEvent &ev) {
     project.transcode.progress = ev.progress;
     project.transcode.etaSeconds = ev.etaSeconds;
     project.transcode.speed = ev.speed;
-    if (taskId_ == 0)
+    if (!footerTask_.active())
         return;
 
     // Probing/Verifying are short and have no meaningful fraction → indeterminate bar; Encoding shows the
@@ -389,7 +380,7 @@ void VideoTranscoder::onProgress(const TranscodeProgressEvent &ev) {
             detail = Str::TranscodePhaseEncoding.c_str();
         }
     }
-    eq.push(TaskProgressEvent{.id = taskId_, .detail = std::move(detail), .progress = progress});
+    footerTask_.progress(std::move(detail), progress);
 }
 
 void VideoTranscoder::onComplete(const TranscodeCompleteEvent &ev) {
@@ -398,7 +389,7 @@ void VideoTranscoder::onComplete(const TranscodeCompleteEvent &ev) {
     project.transcode.phase = TranscodePhase::Done;
     project.transcode.progress = 1.0;
     project.transcode.error.clear();
-    endTask();
+    footerTask_.end();
     eq.push(NotifyEvent{.level = NotifyLevel::Success, .message = std::string(Str::TranscodeDone.c_str())});
     // Switch the player to the optimized copy. ProjectManager's ChangeMediaPath handler sees the path is
     // the (just-set) intra source, flips activeSource = Intra, and loads it — single source of truth.
@@ -411,7 +402,7 @@ void VideoTranscoder::onFailed(const TranscodeFailedEvent &ev) {
     project.transcode.active = false;
     project.transcode.phase = ev.cancelled ? TranscodePhase::Cancelled : TranscodePhase::Failed;
     project.transcode.progress = 0.0;
-    endTask();
+    footerTask_.end();
     if (ev.cancelled) { // a user cancel is self-explanatory: no error text, no toast/bell entry
         project.transcode.error.clear();
         return;
@@ -442,7 +433,7 @@ void VideoTranscoder::onFailed(const TranscodeFailedEvent &ev) {
 void VideoTranscoder::onCancelTask(const CancelTaskEvent &ev) {
     // The user hit the abort button on our task entry. Flip the flag the worker polls; it kills ffmpeg
     // and pushes TranscodeFailedEvent{cancelled=true}, which clears the indicator via onFailed.
-    if (taskId_ != 0 && ev.id == taskId_ && cancel_)
+    if (footerTask_.matches(ev.id) && cancel_)
         cancel_->store(true, std::memory_order_release);
 }
 

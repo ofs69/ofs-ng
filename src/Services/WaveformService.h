@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Services/FooterTask.h"
 #include "Services/WaveformPeaks.h"
 #include <atomic>
 #include <cstdint>
@@ -61,9 +62,6 @@ class WaveformService {
     void onFailed(const WaveformFailedEvent &e);
     void onCancelTask(const CancelTaskEvent &e);
 
-    // End the footer task indicator (if one is showing) for the current extraction. Idempotent.
-    void endTask();
-
     // Kick off extraction for `sourceUtf8` (the original media with audio). No-op if it's already the
     // current source (loaded, in-flight, or known to have failed) — only a genuine media change retries.
     void requestFor(const std::string &sourceUtf8);
@@ -81,10 +79,8 @@ class WaveformService {
     std::future<bool> worker_;
     std::string currentSource_; // UTF-8 path the in-flight / loaded waveform belongs to
 
-    // Footer background-task indicator for the running extraction. `taskId_` is non-zero while an entry is
-    // showing; `taskSeq_` mints a fresh id per extraction so a superseded task and its replacement differ.
-    uint32_t taskId_ = 0;
-    uint32_t taskSeq_ = 0;
+    // Footer background-task indicator for the running extraction (raised on the cache-miss rising edge).
+    FooterTask footerTask_{eq};
 
     GpuView view_;
     uint32_t texture_ = 0;

@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/TranscodeEvents.h"
+#include "Services/FooterTask.h"
 #include <atomic>
 #include <cstdint>
 #include <future>
@@ -74,9 +75,6 @@ class VideoTranscoder {
     void onCancelTask(const CancelTaskEvent &ev);
     void onRequestMediaInfo(const RequestMediaInfoEvent &ev);
 
-    // End the footer task indicator (if showing) for the current transcode. Idempotent.
-    void endTask();
-
     ScriptProject &project;
     EventQueue &eq;
     JobSystem &jobSystem;
@@ -87,10 +85,8 @@ class VideoTranscoder {
     std::shared_ptr<std::atomic<bool>> cancel_;
     bool switchAfter_ = true;  // remembered from the running config, applied in onComplete
     std::future<bool> worker_; // kept so the task handle isn't dropped while the transcode runs
-    // Footer background-task indicator for the running transcode. `taskId_` is non-zero while an entry is
-    // showing; `taskSeq_` mints a fresh id per run so a superseded task and its replacement differ.
-    uint32_t taskId_ = 0;
-    uint32_t taskSeq_ = 0;
+    // Footer background-task indicator for the running transcode.
+    FooterTask footerTask_{eq};
     std::future<bool> infoProbe_; // ffprobe-for-the-modal task handle; runs independently of a transcode
 };
 

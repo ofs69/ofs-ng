@@ -295,7 +295,7 @@ void WaveformService::requestFor(const std::string &sourceUtf8) {
 
     if (cancel_) // supersede any in-flight extraction
         cancel_->store(true, std::memory_order_release);
-    endTask(); // drop any indicator for the superseded extraction; the worker raises a new one on cache miss
+    footerTask_.end(); // drop any indicator for the superseded extraction; the worker raises a new one on cache miss
     cancel_ = std::make_shared<std::atomic<bool>>(false);
     currentSource_ = sourceUtf8;
     view_.ready = false;
@@ -313,27 +313,18 @@ void WaveformService::requestFor(const std::string &sourceUtf8) {
 void WaveformService::clear() {
     if (cancel_)
         cancel_->store(true, std::memory_order_release);
-    endTask(); // remove the footer indicator if an extraction was in flight
+    footerTask_.end(); // remove the footer indicator if an extraction was in flight
     currentSource_.clear();
     view_.ready = false;
-}
-
-void WaveformService::endTask() {
-    if (taskId_ != 0) {
-        eq.push(TaskEndedEvent{.id = taskId_});
-        taskId_ = 0;
-    }
 }
 
 void WaveformService::onProgress(const WaveformProgressEvent &e) {
     if (e.mediaPath != currentSource_) // a newer request superseded this one
         return;
 
-    if (taskId_ == 0) { // rising edge of an extraction (a cache hit never sends progress) → raise the indicator
-        taskId_ = ++taskSeq_;
-        eq.push(
-            TaskStartedEvent{.id = taskId_, .label = std::string(Str::WaveformTaskLabel.c_str()), .cancellable = true});
-    }
+    // Rising edge of an extraction (a cache hit never sends progress) → raise the indicator.
+    if (!footerTask_.active())
+        footerTask_.start(std::string(Str::WaveformTaskLabel.c_str()), true);
 
     std::string detail;
     float progress = -1.0f; // indeterminate until we have a real fraction
@@ -349,20 +340,20 @@ void WaveformService::onProgress(const WaveformProgressEvent &e) {
             detail = Str::WaveformExtracting.c_str();
         }
     }
-    eq.push(TaskProgressEvent{.id = taskId_, .detail = std::move(detail), .progress = progress});
+    footerTask_.progress(std::move(detail), progress);
 }
 
 void WaveformService::onReady(const WaveformReadyEvent &e) {
     if (e.mediaPath != currentSource_ || !e.peaks) // a newer media superseded this result
         return;
-    endTask();
+    footerTask_.end();
     upload(e.bucketCount, e.durationSeconds, *e.peaks);
 }
 
 void WaveformService::onFailed(const WaveformFailedEvent &e) {
     if (e.mediaPath != currentSource_) // stale (e.g. a cancel from a since-superseded request)
         return;
-    endTask();
+    footerTask_.end();
     view_.ready = false; // currentSource_ stays set, so we don't re-run ffmpeg until the media changes
     if (!e.cancelled)    // a genuine failure earns a toast + bell entry; a user cancel is self-explanatory
         eq.push(NotifyEvent{.level = NotifyLevel::Warning, .message = std::string(Str::WaveformFailed.c_str())});
@@ -371,7 +362,7 @@ void WaveformService::onFailed(const WaveformFailedEvent &e) {
 void WaveformService::onCancelTask(const CancelTaskEvent &e) {
     // The user hit the abort button on our task entry. Flip the flag the worker polls; it kills ffmpeg
     // and pushes WaveformFailedEvent{cancelled=true}, which clears the indicator via onFailed.
-    if (taskId_ != 0 && e.id == taskId_ && cancel_)
+    if (footerTask_.matches(e.id) && cancel_)
         cancel_->store(true, std::memory_order_release);
 }
 
