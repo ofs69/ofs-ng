@@ -5,6 +5,7 @@
 #include "Core/IntentEvents.h"
 #include "Core/ProjectLifecycleEvents.h"
 #include "Core/ScriptProject.h"
+#include "Services/ModeLifecycle.h"
 #include "Services/PluginApi.h"
 #include "Services/PluginEvents.h"
 #include "Services/SelectionModeRegistry.h"
@@ -147,22 +148,8 @@ void SelectIntentRouter::resolve(const SelectRequestEvent &event, const Selectio
 }
 
 void SelectIntentRouter::onSetActiveSelectionMode(const SetActiveSelectionModeEvent &event) {
-    // The footer selector is the only writer of activeSelectionMode. Ignore an unknown id defensively (a
-    // stale UI option after a plugin unloaded mid-frame) so selection always resolves. A no-op
-    // re-selection of the current mode is harmless.
-    if (event.id == project.activeSelectionMode || !registry.has(event.id))
-        return;
-
-    // Run the outgoing mode's onExit then the incoming mode's onEnter (a user switch, not the plugin's
-    // initiative). The native entry has no callbacks. Order matters: exit-old before enter-new.
-    if (const SelectionModeEntry *prev = registry.find(project.activeSelectionMode); prev && prev->onExit)
-        prev->onExit(prev->userData);
-    // A user pick updates both the effective and the stored (authored) id, so a save persists the new
-    // selection rather than a previously fallen-back id.
-    project.activeSelectionMode = event.id;
-    project.storedSelectionMode = event.id;
-    if (const SelectionModeEntry *next = registry.find(event.id); next && next->onEnter)
-        next->onEnter(next->userData);
+    // The footer selector is the only writer of activeSelectionMode/storedSelectionMode (ModeLifecycle.h).
+    mode_lifecycle::setActive(registry, project.activeSelectionMode, project.storedSelectionMode, event.id);
 }
 
 void SelectIntentRouter::onRegisterSelectionMode(const RegisterSelectionModeEvent &event) {
@@ -172,31 +159,12 @@ void SelectIntentRouter::onRegisterSelectionMode(const RegisterSelectionModeEven
 }
 
 void SelectIntentRouter::onUnregisterSelectionModes(const UnregisterSelectionModesEvent &event) {
-    // The plugin is unloading (disabled, unloaded, hot-reloaded, crashed). If its selection mode is the
-    // active one, fall the *effective* id back to native and run its onExit best-effort first; leave the
-    // stored (authored) id intact so a re-save preserves it and a reload re-publishes the mode without
-    // silently re-activating it. onExit is a safe no-op once the managed slot is released (the guard turns
-    // a post-teardown/crash callback into a fallback).
-    if (const SelectionModeEntry *active = registry.find(project.activeSelectionMode);
-        active && active->owningPlugin == event.pluginName) {
-        if (active->onExit)
-            active->onExit(active->userData);
-        project.activeSelectionMode = kNativeSelectionModeId; // storedSelectionMode untouched — authored id preserved
-    }
-    registry.removeByPlugin(event.pluginName);
+    mode_lifecycle::unregisterPlugin(registry, project.activeSelectionMode, event.pluginName, kNativeSelectionModeId);
 }
 
 void SelectIntentRouter::onProjectLoaded(const LoadProjectEvent &) {
-    // Weak reference: a loaded project may name a selection mode no loaded plugin registers (uninstalled
-    // plugin, foreign file). Fall the *effective* id back to native so selection always resolves; leave
-    // storedSelectionMode pointing at the authored id so a re-save preserves it and re-opening with the
-    // plugin present restores it. The effective id is re-derived from the stored id each load.
-    project.activeSelectionMode = project.storedSelectionMode;
-    if (!registry.has(project.activeSelectionMode)) {
-        OFS_CORE_INFO("Selection mode '{}' is not registered; falling back to '{}' (authored id preserved).",
-                      project.storedSelectionMode, kNativeSelectionModeId);
-        project.activeSelectionMode = kNativeSelectionModeId;
-    }
+    mode_lifecycle::onProjectLoaded(registry, project.activeSelectionMode, project.storedSelectionMode,
+                                    kNativeSelectionModeId, "Selection mode");
 }
 
 } // namespace ofs

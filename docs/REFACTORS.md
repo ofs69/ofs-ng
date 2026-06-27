@@ -22,12 +22,6 @@ Line numbers are approximate — several files moved during the cleanup. Locate 
 
 ## Router / registry templating
 
-- **Three C++ interaction routers duplicate mode-lifecycle handlers** —
-  `src/Services/EditIntentRouter.cpp`, `NavigatorRouter.cpp`, `SelectIntentRouter.cpp`.
-  `onSetActive* / onRegister* / onUnregister* / onProjectLoaded` are structurally identical. Introduce a
-  templated base / free helper parameterized on (registry, native id, field accessors). Watch the
-  per-router selection-id write ownership documented in CLAUDE.md.
-
 - **Triplicated mode-registry infrastructure (C#)** — `plugins/Ofs.Api/Editing.cs`, `Navigation.cs`,
   `Selection.cs` (~150 lines each: slot record, lock/list, `GetSlot`/`ReleaseOwnedSlots`, `RegisterMode`
   preamble, trampolines). Extract a generic `ModeRegistry<TSlot>` base for the slot bookkeeping. Note:
@@ -51,8 +45,6 @@ Line numbers are approximate — several files moved during the cleanup. Locate 
 
 - **Three name-overflow reread loops in `Project` getters** — `plugins/Ofs.Api/Project.cs`. A generic
   count/loop/stack-buffer/reread helper taking a per-record read delegate.
-
-## Cohesion / file structure
 
 ## Remaining duplication
 

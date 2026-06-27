@@ -6,6 +6,7 @@
 #include "Core/OverlaySettings.h"
 #include "Core/ProjectLifecycleEvents.h"
 #include "Core/ScriptProject.h"
+#include "Services/ModeLifecycle.h"
 #include "Services/NavigatorRegistry.h"
 #include "Services/PluginApi.h"
 #include "Services/PluginEvents.h"
@@ -194,23 +195,8 @@ void NavigatorRouter::onStepRequest(const StepRequestEvent &event) {
 }
 
 void NavigatorRouter::onSetActiveNavigator(const SetActiveNavigatorEvent &event) {
-    // The footer selector is the only writer of activeNavigator. Ignore an unknown id defensively (a
-    // stale UI option after a plugin unloaded mid-frame) so stepping always resolves. A no-op
-    // re-selection of the current navigator is harmless.
-    if (event.id == project.activeNavigator || !registry.has(event.id))
-        return;
-
-    // Run the outgoing navigator's onExit then the incoming one's onEnter (a user switch, not the
-    // plugin's initiative). The native follow-overlay entry has no callbacks. Order matters: exit-old
-    // before enter-new.
-    if (const NavigatorEntry *prev = registry.find(project.activeNavigator); prev && prev->onExit)
-        prev->onExit(prev->userData);
-    // A user pick updates both the effective and the stored (authored) id, so a save persists the new
-    // selection rather than a previously fallen-back id.
-    project.activeNavigator = event.id;
-    project.storedNavigator = event.id;
-    if (const NavigatorEntry *next = registry.find(event.id); next && next->onEnter)
-        next->onEnter(next->userData);
+    // The footer selector is the only writer of activeNavigator/storedNavigator (see ModeLifecycle.h).
+    mode_lifecycle::setActive(registry, project.activeNavigator, project.storedNavigator, event.id);
 }
 
 void NavigatorRouter::onRegisterNavigator(const RegisterNavigatorEvent &event) {
@@ -220,31 +206,12 @@ void NavigatorRouter::onRegisterNavigator(const RegisterNavigatorEvent &event) {
 }
 
 void NavigatorRouter::onUnregisterNavigators(const UnregisterNavigatorsEvent &event) {
-    // The plugin is unloading (disabled, unloaded, hot-reloaded, crashed). If its navigator is the active
-    // one, fall the *effective* selection back to follow-overlay and run its onExit best-effort first;
-    // leave the stored (authored) id intact so a re-save preserves it and a reload re-publishes the
-    // navigator without silently re-activating it. onExit is a safe no-op once the managed slot is released
-    // (the guard turns a post-teardown/crash callback into a fallback).
-    if (const NavigatorEntry *active = registry.find(project.activeNavigator);
-        active && active->owningPlugin == event.pluginName) {
-        if (active->onExit)
-            active->onExit(active->userData);
-        project.activeNavigator = kFollowOverlayNavigatorId; // storedNavigator untouched — authored id preserved
-    }
-    registry.removeByPlugin(event.pluginName);
+    mode_lifecycle::unregisterPlugin(registry, project.activeNavigator, event.pluginName, kFollowOverlayNavigatorId);
 }
 
 void NavigatorRouter::onProjectLoaded(const LoadProjectEvent &) {
-    // Weak reference: a loaded project may name a navigator no loaded plugin registers (uninstalled
-    // plugin, foreign file). Fall the *effective* id back to follow-overlay so stepping always resolves;
-    // leave storedNavigator pointing at the authored id so a re-save preserves it and re-opening with the
-    // plugin present restores it. The effective id is re-derived from the stored id each load.
-    project.activeNavigator = project.storedNavigator;
-    if (!registry.has(project.activeNavigator)) {
-        OFS_CORE_INFO("Navigator '{}' is not registered; falling back to '{}' (authored id preserved).",
-                      project.storedNavigator, kFollowOverlayNavigatorId);
-        project.activeNavigator = kFollowOverlayNavigatorId;
-    }
+    mode_lifecycle::onProjectLoaded(registry, project.activeNavigator, project.storedNavigator,
+                                    kFollowOverlayNavigatorId, "Navigator");
 }
 
 } // namespace ofs

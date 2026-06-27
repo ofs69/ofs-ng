@@ -7,6 +7,7 @@
 #include "Core/ProjectLifecycleEvents.h"
 #include "Core/ScriptProject.h"
 #include "Services/EditModeRegistry.h"
+#include "Services/ModeLifecycle.h"
 #include "Services/PluginApi.h"
 #include "Services/PluginEvents.h"
 #include "Util/Log.h"
@@ -295,22 +296,8 @@ void EditIntentRouter::resolveNative(const EditIntent &intent, bool fanToGroup) 
 }
 
 void EditIntentRouter::onSetActiveEditMode(const SetActiveEditModeEvent &event) {
-    // The footer selector is the only writer of activeEditMode. Ignore an unknown id defensively (a
-    // stale UI option after a plugin unloaded mid-frame) so the active mode can never dangle. A no-op
-    // re-selection of the current mode is harmless.
-    if (event.id == project.activeEditMode || !registry.has(event.id))
-        return;
-
-    // Run the outgoing mode's onExit then the incoming mode's onEnter (a user switch, not the plugin's
-    // initiative). Native has no callbacks. Order matters: exit-old before enter-new.
-    if (const EditModeEntry *prev = registry.find(project.activeEditMode); prev && prev->onExit)
-        prev->onExit(prev->userData);
-    // A user pick updates both the effective and the stored (authored) id — the new selection is what a
-    // save should persist, so the next save writes it rather than a previously fallen-back id.
-    project.activeEditMode = event.id;
-    project.storedEditMode = event.id;
-    if (const EditModeEntry *next = registry.find(event.id); next && next->onEnter)
-        next->onEnter(next->userData);
+    // The footer selector is the only writer of activeEditMode/storedEditMode (see ModeLifecycle.h).
+    mode_lifecycle::setActive(registry, project.activeEditMode, project.storedEditMode, event.id);
 }
 
 void EditIntentRouter::onRegisterEditMode(const RegisterEditModeEvent &event) {
@@ -320,18 +307,7 @@ void EditIntentRouter::onRegisterEditMode(const RegisterEditModeEvent &event) {
 }
 
 void EditIntentRouter::onUnregisterEditModes(const UnregisterEditModesEvent &event) {
-    // The plugin is unloading (disabled, unloaded, hot-reloaded, crashed). If its mode is the active one,
-    // fall the *effective* selection back to native and run its onExit best-effort first. The stored
-    // (authored) id is left intact, so a re-save preserves it and a reload re-publishes the mode without
-    // silently re-activating it (no plugin-callable setter). onExit is a safe no-op once the managed slot
-    // is released (the guard turns a post-teardown/crash callback into a fallback).
-    if (const EditModeEntry *active = registry.find(project.activeEditMode);
-        active && active->owningPlugin == event.pluginName) {
-        if (active->onExit)
-            active->onExit(active->userData);
-        project.activeEditMode = kNativeEditModeId; // storedEditMode untouched — authored id preserved
-    }
-    registry.removeByPlugin(event.pluginName);
+    mode_lifecycle::unregisterPlugin(registry, project.activeEditMode, event.pluginName, kNativeEditModeId);
 }
 
 bool EditIntentRouter::consumeSnapshot() {
@@ -341,16 +317,8 @@ bool EditIntentRouter::consumeSnapshot() {
 }
 
 void EditIntentRouter::onProjectLoaded(const LoadProjectEvent &) {
-    // Weak reference: a loaded project may name an edit mode no loaded plugin registers (uninstalled
-    // plugin, foreign file). Fall the *effective* id back to native so editing always resolves; leave
-    // storedEditMode pointing at the authored id so a re-save preserves it and re-opening with the plugin
-    // present restores it. The effective id is re-derived from the stored id each load.
-    project.activeEditMode = project.storedEditMode;
-    if (!registry.has(project.activeEditMode)) {
-        OFS_CORE_INFO("Edit mode '{}' is not registered; falling back to '{}' (authored id preserved).",
-                      project.storedEditMode, kNativeEditModeId);
-        project.activeEditMode = kNativeEditModeId;
-    }
+    mode_lifecycle::onProjectLoaded(registry, project.activeEditMode, project.storedEditMode, kNativeEditModeId,
+                                    "Edit mode");
 }
 
 } // namespace ofs
