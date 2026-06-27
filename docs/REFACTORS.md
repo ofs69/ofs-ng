@@ -81,15 +81,6 @@ Line numbers are approximate — several files moved during the cleanup. Locate 
   One shared visible-dot enumeration helper used by both. (The dot-draw side now also precomputes hidden
   intervals — fold that in.)
 
-- **Funscript→ImportTrack tag/role mapping duplicated** — `src/Services/ProjectManager.cpp` (scan vs
-  append paths). One mapping helper that `scanSiblingFunscripts` reuses.
-
-- **Near-identical `finalize` lambdas in the two new-project flows** — `src/Services/ProjectManager.cpp`.
-  A private helper parameterized on the media-source setup.
-
-- **Backup `copy_file` fan-out loop duplicated in `update()`** — `src/Services/ProjectManager.cpp`.
-  Hoist the loop and reuse `scheduleWrite`.
-
 - **`exportCatalog` / `refreshTranslation` duplicate catalog build/write** — `src/Localization/Translator.cpp`.
   A helper taking a per-key translation fn + header.
 

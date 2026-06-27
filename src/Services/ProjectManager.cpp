@@ -44,6 +44,21 @@ namespace ofs {
 static constexpr double kBackupIntervals[5] = {60.0, 300.0, 600.0, 1800.0, 3600.0};
 static constexpr const char *kBackupNames[5] = {"1min.ofp", "5min.ofp", "10min.ofp", "30min.ofp", "60min.ofp"};
 
+// Fan the freshly written primary backup (slot 0) out to every longer-interval slot that also fired this
+// tick, by file copy rather than a re-serialize. Slot 0 is the source, so it is skipped. Runs on the
+// write worker, off the main thread.
+static void copyBackupSlots(const std::filesystem::path &backupDir, const std::vector<int> &fired) {
+    for (int slot : fired) {
+        if (slot == 0)
+            continue;
+        std::error_code ec;
+        std::filesystem::copy_file(backupDir / kBackupNames[0], backupDir / kBackupNames[slot],
+                                   std::filesystem::copy_options::overwrite_existing, ec);
+        if (!ec)
+            OFS_CORE_INFO("[Backup] {} (copied)", kBackupNames[slot]);
+    }
+}
+
 // SHA-256 over a graph's embedded script sources — the only trust-relevant, code-executing content.
 // Sources are length-prefixed and ordered by node id so the digest is stable regardless of node
 // order and unambiguous across concatenation. Returns "" when the graph embeds no scripts that need
@@ -423,6 +438,14 @@ struct SiblingScan {
     std::vector<ImportTrack> tracks; // directory-iteration order, so scratch defaults fill S0, S1, …
 };
 
+// Auto-detect the standard axis a funscript tag/suffix names, or nullopt when it matches no standard
+// axis — or only a scratch axis, which is left unassigned for the mapping picker to default onto the
+// first free scratch slot. Shared by every funscript→ImportTrack path (sibling scan + import append).
+std::optional<StandardAxis> autoDetectAxisRole(const std::string &tag) {
+    auto matched = standardAxisFromTag(tag);
+    return (matched && !isScratchAxis(*matched)) ? matched : std::nullopt;
+}
+
 // Worker-thread body for initNewProject's auto-discovery: parse every sibling funscript whose stem
 // prefixes the video stem into tracks. Pure file I/O + tag mapping, no ScriptProject access. Uses an
 // error_code directory walk so a vanished dir yields an empty scan instead of throwing out of the
@@ -446,12 +469,10 @@ SiblingScan scanSiblingFunscripts(const std::filesystem::path &videoDir, const s
 
         if (fs->isMultiAxis()) {
             for (auto &[tag, acts] : fs->toAllAxes()) {
-                auto matchedRole = standardAxisFromTag(tag);
-                std::optional<StandardAxis> role =
-                    (matchedRole && !isScratchAxis(*matchedRole)) ? matchedRole : std::nullopt;
                 // Prefix each axis with the source file so the row reads "clip: L0", not a bare "L0".
-                out.tracks.push_back(
-                    {.label = fmt::format("{}: {}", fsStem, tag), .role = role, .actions = std::move(acts)});
+                out.tracks.push_back({.label = fmt::format("{}: {}", fsStem, tag),
+                                      .role = autoDetectAxisRole(tag),
+                                      .actions = std::move(acts)});
             }
         } else {
             auto fsActions = fs->toActions();
@@ -462,10 +483,8 @@ SiblingScan scanSiblingFunscripts(const std::filesystem::path &videoDir, const s
             if (axisName.empty())
                 axisName = "L0";
 
-            auto matchedRole = standardAxisFromTag(axisName);
-            std::optional<StandardAxis> role =
-                (matchedRole && !isScratchAxis(*matchedRole)) ? matchedRole : std::nullopt;
-            out.tracks.push_back({.label = fsStem, .role = role, .actions = std::move(fsActions)});
+            out.tracks.push_back(
+                {.label = fsStem, .role = autoDetectAxisRole(axisName), .actions = std::move(fsActions)});
         }
     }
     return out;
@@ -491,13 +510,20 @@ void appendTracksFromFunscript(std::vector<ImportTrack> &out, const Funscript &f
         // Prefix each axis with the source file so a multi-axis import shows e.g. "clip: L0", not a bare
         // "L0" with no hint which file it came from.
         for (auto &[tag, acts] : fs.toAllAxes()) {
-            auto matched = standardAxisFromTag(tag);
-            std::optional<StandardAxis> role = (matched && !isScratchAxis(*matched)) ? matched : std::nullopt;
-            out.push_back({.label = fmt::format("{}: {}", fileLabel, tag), .role = role, .actions = std::move(acts)});
+            out.push_back({.label = fmt::format("{}: {}", fileLabel, tag),
+                           .role = autoDetectAxisRole(tag),
+                           .actions = std::move(acts)});
         }
     } else {
         out.push_back({.label = fileLabel, .role = singleAxisDefault, .actions = fs.toActions()});
     }
+}
+
+// Restore every confirmed import track onto its mapped axis (dirty + selected, no undo snapshot). Shared
+// tail of both new-project import flows; every confirmed track carries a resolved role at this point.
+void restoreImportedTracks(ScriptProject &project, std::vector<ImportTrack> &confirmed) {
+    for (auto &t : confirmed)
+        project.restoreAxis(*t.role, true, true, false, true, std::move(t.actions), {});
 }
 
 // Build the editable import picker. One row per track; each row defaults to its auto-detected axis or —
@@ -621,20 +647,16 @@ co::Fire ProjectManager::initNewProject(std::string mediaPath) {
     // Finalize the open once placement is settled (confirmed or cancelled): restore the confirmed
     // tracks, seed the no-media fallback length, select L0, adopt any optimized copy, and load the video.
     auto finalize = [this](std::vector<ImportTrack> confirmed) {
-        for (auto &t : confirmed)
-            project.restoreAxis(*t.role, true, true, false, true, std::move(t.actions), {});
-        // dummyDuration is the canvas to use whenever there's no media, so it must always be valid even
-        // with a video loaded — unloading later then simply reuses it.
-        project.state.dummyDuration = mediaLessDuration();
-        eq.push(AxisSelectedEvent{StandardAxis::L0});
-        // The opened file is the original; record it as such and resolve the active source. This adopts
-        // an already-existing optimized copy for this content (resolveActiveMedia → discoverExistingIntra)
-        // and loads it in place of the original — so a new project on a previously optimized video seeks
-        // fast immediately, with no re-encode and no optimize prompt. The sibling scan ran against the
-        // original path, so the swap here doesn't affect funscript matching.
-        project.state.originalMediaPath = project.state.mediaPath;
-        resolveActiveMedia();
-        openProjectVideo();
+        restoreImportedTracks(project, confirmed);
+        finalizeNewProjectOpen([this] {
+            // The opened file is the original; record it as such and resolve the active source. This adopts
+            // an already-existing optimized copy for this content (resolveActiveMedia → discoverExistingIntra)
+            // and loads it in place of the original — so a new project on a previously optimized video seeks
+            // fast immediately, with no re-encode and no optimize prompt. The sibling scan ran against the
+            // original path, so the swap here doesn't affect funscript matching.
+            project.state.originalMediaPath = project.state.mediaPath;
+            resolveActiveMedia();
+        });
     };
 
     // Always confirm placement: show the editable picker for every discovered funscript so the user can
@@ -675,11 +697,8 @@ co::Fire ProjectManager::initNewProjectFromFunscript(std::filesystem::path funsc
     // Finalize once placement is settled: restore the confirmed tracks, then open the media-less project
     // on the dummy player (length never 0, long enough to show the imported actions).
     auto finalize = [this](std::vector<ImportTrack> confirmed) {
-        for (auto &t : confirmed)
-            project.restoreAxis(*t.role, true, true, false, true, std::move(t.actions), {});
-        project.state.dummyDuration = mediaLessDuration();
-        eq.push(AxisSelectedEvent{StandardAxis::L0});
-        openProjectVideo();
+        restoreImportedTracks(project, confirmed);
+        finalizeNewProjectOpen(nullptr);
     };
 
     std::vector<ImportTrack> tracks;
@@ -700,6 +719,17 @@ double ProjectManager::mediaLessDuration() const {
         if (!axis.actions.empty())
             lastActionTime = std::max(lastActionTime, axis.actions.back().at);
     return std::max(kDefaultDummyDuration, lastActionTime + 1.0);
+}
+
+void ProjectManager::finalizeNewProjectOpen(const std::function<void()> &mediaSetup) {
+    // dummyDuration is the canvas to use whenever there's no media, so it must always be valid even with a
+    // video loaded — unloading later then simply reuses it. Seeded after the tracks are restored so the
+    // longest imported axis bounds it.
+    project.state.dummyDuration = mediaLessDuration();
+    eq.push(AxisSelectedEvent{StandardAxis::L0});
+    if (mediaSetup)
+        mediaSetup();
+    openProjectVideo();
 }
 
 namespace {
@@ -1187,33 +1217,18 @@ void ProjectManager::update(float dt) {
                     std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - writeStart)
                         .count();
                 OFS_CORE_INFO("[Backup] {} — capture {}ms, write {}ms", kBackupNames[0], captureMs, writeMs);
-                for (int slot : fired) {
-                    if (slot == 0)
-                        continue;
-                    std::error_code ec;
-                    std::filesystem::copy_file(backupDir / kBackupNames[0], backupDir / kBackupNames[slot],
-                                               std::filesystem::copy_options::overwrite_existing, ec);
-                    if (!ec)
-                        OFS_CORE_INFO("[Backup] {} (copied)", kBackupNames[slot]);
-                }
+                copyBackupSlots(backupDir, fired);
                 return ok;
             }),
             .path = backupDir / kBackupNames[0],
             .isUserSave = false};
     } else {
-        pendingWrite =
-            PendingWrite{.future = jobSystem.submitTask([backupDir, fired]() -> bool {
-                             for (int slot : fired) {
-                                 std::error_code ec;
-                                 std::filesystem::copy_file(backupDir / kBackupNames[0], backupDir / kBackupNames[slot],
-                                                            std::filesystem::copy_options::overwrite_existing, ec);
-                                 if (!ec)
-                                     OFS_CORE_INFO("[Backup] {} (copied)", kBackupNames[slot]);
-                             }
-                             return true;
-                         }),
-                         .path = {},
-                         .isUserSave = false};
+        pendingWrite = PendingWrite{.future = jobSystem.submitTask([backupDir, fired]() -> bool {
+                                        copyBackupSlots(backupDir, fired);
+                                        return true;
+                                    }),
+                                    .path = {},
+                                    .isUserSave = false};
     }
 }
 

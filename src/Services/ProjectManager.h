@@ -61,6 +61,9 @@ class ProjectManager {
     // Timeline span for a media-less project: never 0, and long enough to show every existing action
     // (the latest action time, with a small tail, when that exceeds kDefaultDummyDuration).
     [[nodiscard]] double mediaLessDuration() const;
+    // Shared tail of the two new-project import flows: seed the no-media canvas length, select L0, run the
+    // per-flow `mediaSetup` (source wiring; null for the media-less funscript flow), then open the video.
+    void finalizeNewProjectOpen(const std::function<void()> &mediaSetup);
     co::Fire relocateFlow();
     co::Fire saveFlow(bool saveAs); // standalone Save / Save As (menu), independent of guardUnsaved
     void doClose();                 // synchronous close work (after any unsaved-changes prompt)
