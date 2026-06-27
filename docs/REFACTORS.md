@@ -93,9 +93,6 @@ Line numbers are approximate — several files moved during the cleanup. Locate 
 - **`exportCatalog` / `refreshTranslation` duplicate catalog build/write** — `src/Localization/Translator.cpp`.
   A helper taking a per-key translation fn + header.
 
-- **Auto-hide-taskbar trim logic duplicated** — `src/Platform/Window.cpp` (two near-identical blocks;
-  mind `WINDOWPOS` vs `RECT`). Extract `trimSizeForAutoHide(...)`.
-
 - **Footer task-indicator lifecycle duplicated** — `src/Services/WaveformService.cpp` vs
   `VideoTranscoder.cpp` (start/clear the footer task entry). A small `FooterTask` RAII/helper.
 

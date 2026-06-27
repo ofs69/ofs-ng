@@ -65,6 +65,29 @@ int autoHideTaskbarEdge(const RECT &monitorRect) {
     return -1;
 }
 
+// Shave kAutoHideTaskbarThicknessPx off a maximized extent (width, height by ref) on the dimension
+// *perpendicular* to an auto-hide taskbar, so the window no longer covers the monitor fully and the
+// shell's full-screen detection can't bury the bar. No-op when the extent is already sub-monitor or no
+// auto-hide bar sits on this monitor — see borderlessWndProc for why a perpendicular 1px is the trim.
+void trimSizeForAutoHide(const RECT &monitorRect, int &width, int &height) {
+    const int monW = monitorRect.right - monitorRect.left;
+    const int monH = monitorRect.bottom - monitorRect.top;
+    if (width < monW || height < monH)
+        return; // only when we'd cover the whole monitor
+    switch (autoHideTaskbarEdge(monitorRect)) {
+    case ABE_TOP:
+    case ABE_BOTTOM:
+        width -= kAutoHideTaskbarThicknessPx; // horizontal bar: shrink the width
+        break;
+    case ABE_LEFT:
+    case ABE_RIGHT:
+        height -= kAutoHideTaskbarThicknessPx; // vertical bar: shrink the height
+        break;
+    default:
+        break; // no auto-hide taskbar on this monitor
+    }
+}
+
 // Subclass proc for the borderless main window. Three maximize fix-ups, each chaining to SDL first:
 //   WM_GETMINMAXINFO     — SDL reports the maximized size as the *full* monitor (SM_CXSCREEN/SM_CYSCREEN
 //                          in SDL_windowsevents.c); we clamp it to the work area so a normal (reserved)
@@ -116,28 +139,12 @@ LRESULT CALLBACK borderlessWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
                 MONITORINFO mi = {};
                 mi.cbSize = sizeof(mi);
                 if (GetMonitorInfo(mon, &mi)) {
-                    const int monW = mi.rcMonitor.right - mi.rcMonitor.left;
-                    const int monH = mi.rcMonitor.bottom - mi.rcMonitor.top;
-                    if (wp->cx >= monW && wp->cy >= monH) { // only when we'd cover the whole monitor
-                        // Trim a 1px sliver off an edge *perpendicular* to the taskbar. Windows reserves
-                        // a 1px line at the auto-hide bar's own edge, so shrinking there still reads as a
-                        // full work-area cover and FSO stays on (verified: bottom=mon-1 was still
-                        // fullscreen). A perpendicular edge has no reservation, so 1px there genuinely
-                        // breaks the full-cover test while leaving the taskbar's edge fully spanned —
-                        // the bar still triggers and pops in front.
-                        switch (autoHideTaskbarEdge(mi.rcMonitor)) {
-                        case ABE_TOP:
-                        case ABE_BOTTOM:
-                            wp->cx -= kAutoHideTaskbarThicknessPx; // horizontal bar: shrink the width
-                            break;
-                        case ABE_LEFT:
-                        case ABE_RIGHT:
-                            wp->cy -= kAutoHideTaskbarThicknessPx; // vertical bar: shrink the height
-                            break;
-                        default:
-                            break; // no auto-hide taskbar on this monitor
-                        }
-                    }
+                    // Trim a 1px sliver off an edge *perpendicular* to the taskbar. Windows reserves a 1px
+                    // line at the auto-hide bar's own edge, so shrinking there still reads as a full
+                    // work-area cover and FSO stays on (verified: bottom=mon-1 was still fullscreen). A
+                    // perpendicular edge has no reservation, so 1px there genuinely breaks the full-cover
+                    // test while leaving the taskbar's edge fully spanned — the bar still triggers.
+                    trimSizeForAutoHide(mi.rcMonitor, wp->cx, wp->cy);
                 }
             }
         }
@@ -158,21 +165,11 @@ LRESULT CALLBACK borderlessWndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lP
                 if (GetMonitorInfo(mon, &mi)) {
                     auto *params = reinterpret_cast<NCCALCSIZE_PARAMS *>(lParam);
                     RECT &client = params->rgrc[0];
-                    if (client.right - client.left >= mi.rcMonitor.right - mi.rcMonitor.left &&
-                        client.bottom - client.top >= mi.rcMonitor.bottom - mi.rcMonitor.top) {
-                        switch (autoHideTaskbarEdge(mi.rcMonitor)) {
-                        case ABE_TOP:
-                        case ABE_BOTTOM:
-                            client.right -= kAutoHideTaskbarThicknessPx;
-                            break;
-                        case ABE_LEFT:
-                        case ABE_RIGHT:
-                            client.bottom -= kAutoHideTaskbarThicknessPx;
-                            break;
-                        default:
-                            break;
-                        }
-                    }
+                    int w = client.right - client.left;
+                    int h = client.bottom - client.top;
+                    trimSizeForAutoHide(mi.rcMonitor, w, h);
+                    client.right = client.left + w;
+                    client.bottom = client.top + h;
                 }
             }
         }
