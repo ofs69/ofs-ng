@@ -55,6 +55,11 @@ struct Command {
     // resolves whichever it holds — no separate raw/localized pair to keep in step. Default-empty so a
     // default-constructed Command (PluginManager builds one field by field) stays valid.
     TrString title{std::string{}};
+    // Optional dimmed secondary line under the title in the Shortcut window. Carries the canonical-action
+    // summary for a custom command the user gave its own name, so the row still says what it does. Empty
+    // for native/plugin/dynamic commands and for an unnamed custom command (whose title already is the
+    // summary). An owned string, not a TrKey — a custom summary is composed at build time, not catalogued.
+    std::string subtitle;
     CommandSource source = CommandSource::Native;
     // Listed in the Shortcut window's rebind table *by default* — the binding-UI counterpart of
     // `inPalette`. false ⇒ not offered for binding without the user asking (provider/window-opener

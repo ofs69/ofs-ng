@@ -28,6 +28,12 @@ class ShortcutWindow {
     // bindingSystem_.rebindState() — an empty targetCommandId means dismissed. On Apply it pushes an
     // ApplyBindingCaptureEvent (BindingSystem owns the conflict-resolution / mode-carry orchestration).
     bool renderCaptureModal(EventQueue &eq);
+    // Starts a binding capture: pushes the BeginBindingCaptureEvent (BindingSystem fills in rebindState on
+    // the next drain) and raises the capture modal, whose own deferred ShowModalEvent renders the body a
+    // frame later — by then the state has landed. The capture kind picks the modal title here, so the body
+    // need not read the not-yet-populated rebindState for it. The single start path for all four sites
+    // (row "+", re-capture, modifier, provider-target).
+    void beginCapture(EventQueue &eq, BeginBindingCaptureEvent req);
     // Command currently holding `trigger`, if any other than targetCommandId — null if unbound.
     [[nodiscard]] const Command *conflictingCommand(const Trigger &trigger, const std::string &targetCommandId) const;
     // Draws the preset bar (combo + Load / Save As / Delete) and latches its modals.
@@ -41,7 +47,7 @@ class ShortcutWindow {
     // The provider-category target modal interior (raised for m_addProviderGroup). Lists that group's
     // unbound provider commands (e.g. each axis under "Select Axis"); picking one starts a binding capture
     // for it. Returns true when it should close.
-    bool renderProviderTargetModal(const std::string &group);
+    bool renderProviderTargetModal(EventQueue &eq, const std::string &group);
 
     // True when `id` currently holds at least one real (non-empty) trigger. Drives both the main list's
     // "show a bound provider row" rule and the "Only bound" filter, and excludes already-bound providers
@@ -63,9 +69,8 @@ class ShortcutWindow {
 
     // "Add command…" picker state. The popup lists custom-command kinds plus provider categories; picking a
     // category latches m_addProviderGroup (the target modal is raised next frame), and picking a target
-    // there latches m_openCaptureModal (the capture modal, shared with the table's "+" path).
-    std::string m_addProviderGroup;  // non-empty ⇒ raise the provider-target modal for this group
-    bool m_openCaptureModal = false; // a provider-target pick wants the binding-capture modal raised this frame
+    // there calls beginCapture() directly.
+    std::string m_addProviderGroup; // non-empty ⇒ raise the provider-target modal for this group
 
     // Preset bar state. The list is cached (refreshed on window open and after each load/save/delete)
     // so render never touches the disk or allocates per frame.
@@ -79,10 +84,10 @@ class ShortcutWindow {
     std::string m_pendingDeleteSlug;  // non-empty ⇒ raise the delete-confirm modal
     std::string m_pendingDeleteName;  // display name for the delete-confirm message
 
-    // Custom-command editor state. The draft survives across frames (the modal body runs deferred), so
-    // it lives here, not as a render-local. m_customEditing distinguishes Update (id kept) from Add.
+    // Custom-command editor state. The draft survives across frames (the modal body runs deferred), so it
+    // lives here, not as a render-local. A non-empty m_customDraft.id means Edit (Update keeps it); an empty
+    // id means Add (the store assigns the id) — so no separate editing flag is needed.
     bool m_openCustomModal = false;
-    bool m_customEditing = false;
     CustomCommand m_customDraft;
     std::string m_pendingDeleteCustomId;   // non-empty ⇒ raise the custom-command delete-confirm modal
     std::string m_pendingDeleteCustomName; // display name for that confirm

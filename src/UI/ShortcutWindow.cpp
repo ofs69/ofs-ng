@@ -23,6 +23,33 @@ namespace ofs {
 
 using ofs::ui::buttonW;
 
+namespace {
+
+// Raise a standard confirm modal: a wrapped message, a confirm button (its own label + stable id), and a
+// Cancel button (its own stable id — kept distinct per modal so UI tests can target each). `onConfirm`
+// runs when the user confirms; the modal closes on either button. The message is formatted once here into
+// an owned string, since the body renders deferred — after the frame arena that .fmt() wrote to is reset.
+void confirmModal(EventQueue &eq, const char *title, std::string message, TrKey confirmLabel, const char *confirmId,
+                  const char *cancelId, std::function<void()> onConfirm) {
+    showCustomModal(eq, {.title = title,
+                         .width = 420.0f,
+                         .body = [message = std::move(message), confirmLabel, confirmId, cancelId,
+                                  onConfirm = std::move(onConfirm)]() -> bool {
+                             ImGui::TextWrapped("%s", message.c_str());
+                             ImGui::Spacing();
+                             if (ImGui::Button(confirmLabel.id(confirmId), {buttonW(confirmLabel), 0.f})) {
+                                 onConfirm();
+                                 return true;
+                             }
+                             ImGui::SameLine();
+                             if (ImGui::Button(Str::ScCancel.id(cancelId), {buttonW(Str::ScCancel), 0.f}))
+                                 return true;
+                             return false;
+                         }});
+}
+
+} // namespace
+
 ShortcutWindow::ShortcutWindow(CommandRegistry &commandRegistry, BindingSystem &bindingSystem,
                                const CustomCommandStore &customStore, const CustomCommandTemplateRegistry &templates)
     : commandRegistry_(commandRegistry), bindingSystem_(bindingSystem), customStore_(customStore),
@@ -150,6 +177,18 @@ bool ShortcutWindow::renderCaptureModal(EventQueue &eq) {
         }
     }
     return false;
+}
+
+void ShortcutWindow::beginCapture(EventQueue &eq, BeginBindingCaptureEvent req) {
+    // The kind picks the modal title up front: BindingSystem won't populate rebindState until this event
+    // drains next frame, so the title can't come from there.
+    const char *title = req.captureModifier  ? Str::ScSetModifierTitle.c_str()
+                        : req.replaceTrigger ? Str::ScRebindTitle.c_str()
+                                             : Str::ScAddBindingTitle.c_str();
+    eq.push(std::move(req));
+    showCustomModal(eq, {.title = title, .width = 380.0f, .body = [this, eqp = &eq]() -> bool {
+                             return renderCaptureModal(*eqp);
+                         }});
 }
 
 void ShortcutWindow::render(bool &open, EventQueue &eq, const AppSettings &appSettings) {
@@ -369,7 +408,6 @@ void ShortcutWindow::render(bool &open, EventQueue &eq, const AppSettings &appSe
     if (matchCount == 0)
         ImGui::TextDisabled("%s", Str::ScNoMatch.c_str());
 
-    bool openModal = false;
     constexpr ImGuiTableFlags kTableFlags = ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_BordersInnerV;
     const float tableW = ImGui::GetContentRegionAvail().x - ofs::ui::kRightGap;
 
@@ -446,7 +484,6 @@ void ShortcutWindow::render(bool &open, EventQueue &eq, const AppSettings &appSe
                                 std::ranges::find_if(defs, [cmd](const CustomCommand &c) { return c.id == cmd->id; });
                             it != defs.end()) {
                             m_customDraft = *it;
-                            m_customEditing = true;
                             m_openCustomModal = true;
                         }
                     }
@@ -458,6 +495,11 @@ void ShortcutWindow::render(bool &open, EventQueue &eq, const AppSettings &appSe
                     }
                     ImGui::SetItemTooltip("%s", Str::ScCustomDeleteTip.c_str());
                 }
+                // A custom command the user named carries its canonical action as a dimmed subtitle, so the
+                // row still says what it does. Empty for native/plugin/dynamic rows and for an unnamed
+                // custom (whose title already is that action).
+                if (!cmd->subtitle.empty())
+                    ImGui::TextDisabled("%s", cmd->subtitle.c_str());
 
                 ImGui::TableSetColumnIndex(1);
                 // Render each binding for this command on its own line: trigger + remove button.
@@ -495,13 +537,8 @@ void ShortcutWindow::render(bool &open, EventQueue &eq, const AppSettings &appSe
                         const bool hasMod = !std::holds_alternative<std::monostate>(b.modifier);
                         const char *icon = ICON_GAMEPAD;
                         auto startModifierCapture = [&]() {
-                            RebindState &rs = bindingSystem_.rebindState();
-                            rs.targetCommandId = cmd->id;
-                            rs.modifierTarget = b.trigger;
-                            rs.captureModifier = true;
-                            rs.capturing = true;
-                            rs.hasResult = false;
-                            openModal = true;
+                            beginCapture(eq,
+                                         {.commandId = cmd->id, .captureModifier = true, .modifierTarget = b.trigger});
                         };
                         ImGui::SameLine();
                         if (hasMod) {
@@ -539,16 +576,8 @@ void ShortcutWindow::render(bool &open, EventQueue &eq, const AppSettings &appSe
                     // Re-capture: listen for a new trigger and overwrite this binding in place (the old
                     // trigger is removed and the new one inherits this binding's mode/modifier). Stable
                     // "###bindrebind" id (display stays the glyph) so tests target it by id.
-                    if (ImGui::Button(fmtScratch("{}###bindrebind", ICON_PENCIL))) {
-                        RebindState &rs = bindingSystem_.rebindState();
-                        rs.targetCommandId = cmd->id;
-                        rs.replaceTarget = b.trigger;
-                        rs.replaceTrigger = true;
-                        rs.captureModifier = false;
-                        rs.capturing = true;
-                        rs.hasResult = false;
-                        openModal = true;
-                    }
+                    if (ImGui::Button(fmtScratch("{}###bindrebind", ICON_PENCIL)))
+                        beginCapture(eq, {.commandId = cmd->id, .replaceTrigger = true, .replaceTarget = b.trigger});
                     ImGui::SetItemTooltip("%s", Str::ScRebindBindingTip.c_str());
                     ImGui::SameLine();
                     // Stable "###bindremove" id (display stays the glyph) so tests target it by id.
@@ -608,13 +637,8 @@ void ShortcutWindow::render(bool &open, EventQueue &eq, const AppSettings &appSe
 
                 ImGui::TableSetColumnIndex(3);
                 // Stable "###bindadd" id (display stays the glyph) so tests target it by id.
-                if (ImGui::Button(fmtScratch("{}###bindadd", ICON_PLUS), {-FLT_MIN, 0.f})) {
-                    RebindState &rs = bindingSystem_.rebindState();
-                    rs.targetCommandId = cmd->id;
-                    rs.capturing = true;
-                    rs.hasResult = false;
-                    openModal = true;
-                }
+                if (ImGui::Button(fmtScratch("{}###bindadd", ICON_PLUS), {-FLT_MIN, 0.f}))
+                    beginCapture(eq, {.commandId = cmd->id});
                 ImGui::SetItemTooltip("%s", Str::ScAddBindingTip.c_str());
 
                 ImGui::PopID();
@@ -631,51 +655,27 @@ void ShortcutWindow::render(bool &open, EventQueue &eq, const AppSettings &appSe
     // frames, so it closes over the long-lived EventQueue by pointer (not the render() reference param).
     if (m_openResetModal) {
         m_openResetModal = false;
-        showCustomModal(eq, {.title = Str::ScResetTitle.c_str(), .width = 420.0f, .body = [this, eqp = &eq]() -> bool {
-                                 ImGui::TextWrapped("%s", Str::ScResetBody.c_str());
-                                 ImGui::Spacing();
-                                 if (ImGui::Button(Str::ScReset.id("resetconfirm"), {buttonW(Str::ScReset), 0.f})) {
-                                     eqp->push(ResetBindingsEvent{});
-                                     // Global input tunables live in AppSettings — reset them through the
-                                     // same ModifyEvent path the sliders use, so OfsApp reapplies them live.
-                                     eqp->push(ofs::ModifyEvent<ofs::AppSettings>{[](ofs::AppSettings &s) {
-                                         s.input = ofs::InputSettings{};
-                                         s.holdRepeat = ofs::HoldRepeatSettings{};
-                                     }});
-                                     return true;
-                                 }
-                                 ImGui::SameLine();
-                                 if (ImGui::Button(Str::ScCancel.id("resetcancel"), {buttonW(Str::ScCancel), 0.f}))
-                                     return true;
-                                 return false;
-                             }});
+        confirmModal(eq, Str::ScResetTitle.c_str(), Str::ScResetBody.c_str(), Str::ScReset, "resetconfirm",
+                     "resetcancel", [eqp = &eq]() {
+                         eqp->push(ResetBindingsEvent{});
+                         // Global input tunables live in AppSettings — reset them through the same
+                         // ModifyEvent path the sliders use, so OfsApp reapplies them live.
+                         eqp->push(ofs::ModifyEvent<ofs::AppSettings>{[](ofs::AppSettings &s) {
+                             s.input = ofs::InputSettings{};
+                             s.holdRepeat = ofs::HoldRepeatSettings{};
+                         }});
+                     });
     }
 
     // Provider-category target modal, raised after its picker category was chosen. Picking a target inside
-    // sets up rebindState + m_openCaptureModal, so the capture modal follows on the next frame.
+    // calls beginCapture(), which raises the capture modal on its own (the capture modal is not latched here).
     if (!m_addProviderGroup.empty()) {
         const std::string group = m_addProviderGroup;
         m_addProviderGroup.clear();
-        showCustomModal(eq, {.title = commandRegistry_.groupDisplayName(group),
-                             .width = 380.0f,
-                             .body = [this, group]() -> bool { return renderProviderTargetModal(group); }});
-    }
-
-    // Capture modal raised once when a row's "+" (openModal) or a provider-target pick (m_openCaptureModal)
-    // sets up rebindState; the body is driven by bindingSystem_.rebindState() and closes when the target
-    // command id clears.
-    if (m_openCaptureModal) {
-        m_openCaptureModal = false;
-        openModal = true;
-    }
-    if (openModal) {
-        const RebindState &rs = bindingSystem_.rebindState();
-        const char *captureTitle = rs.captureModifier  ? Str::ScSetModifierTitle.c_str()
-                                   : rs.replaceTrigger ? Str::ScRebindTitle.c_str()
-                                                       : Str::ScAddBindingTitle.c_str();
-        showCustomModal(eq, {.title = captureTitle, .width = 380.0f, .body = [this, eqp = &eq]() -> bool {
-                                 return renderCaptureModal(*eqp);
-                             }});
+        showCustomModal(
+            eq, {.title = commandRegistry_.groupDisplayName(group),
+                 .width = 380.0f,
+                 .body = [this, group, eqp = &eq]() -> bool { return renderProviderTargetModal(*eqp, group); }});
     }
 
     // ── Preset modals (latched by renderPresetBar; raised here, outside the table/child) ──
@@ -709,74 +709,46 @@ void ShortcutWindow::render(bool &open, EventQueue &eq, const AppSettings &appSe
 
     if (!m_pendingLoadSlug.empty()) {
         const std::string slug = m_pendingLoadSlug;
-        const std::string name = m_pendingLoadName;
+        const char *body = Str::ScLoadBody.fmt(m_pendingLoadName);
         m_pendingLoadSlug.clear();
-        showCustomModal(
-            eq, {.title = Str::ScLoadTitle.c_str(), .width = 420.0f, .body = [this, slug, name, eqp = &eq]() -> bool {
-                     ImGui::TextWrapped("%s", Str::ScLoadBody.fmt(name));
-                     ImGui::Spacing();
-                     if (ImGui::Button(Str::ScLoad.id("loadconfirm"), {buttonW(Str::ScLoad), 0.f})) {
+        confirmModal(eq, Str::ScLoadTitle.c_str(), body, Str::ScLoad, "loadconfirm", "loadcancel",
+                     [this, slug, name = m_pendingLoadName, eqp = &eq]() {
                          // The handler loads the preset and emits the (possibly partial) load notification.
                          eqp->push(LoadBindingPresetEvent{.slug = slug, .name = name});
                          m_selectedPresetSlug = slug;
-                         return true;
-                     }
-                     ImGui::SameLine();
-                     if (ImGui::Button(Str::ScCancel.id("loadcancel"), {buttonW(Str::ScCancel), 0.f}))
-                         return true;
-                     return false;
-                 }});
+                     });
     }
 
     if (!m_pendingDeleteSlug.empty()) {
         const std::string slug = m_pendingDeleteSlug;
-        const std::string name = m_pendingDeleteName;
+        const char *body = Str::ScDeleteBody.fmt(m_pendingDeleteName);
         m_pendingDeleteSlug.clear();
-        showCustomModal(
-            eq, {.title = Str::ScDeleteTitle.c_str(), .width = 420.0f, .body = [this, slug, name, eqp = &eq]() -> bool {
-                     ImGui::TextWrapped("%s", Str::ScDeleteBody.fmt(name));
-                     ImGui::Spacing();
-                     if (ImGui::Button(Str::ScDelete.id("deleteconfirm"), {buttonW(Str::ScDelete), 0.f})) {
+        confirmModal(eq, Str::ScDeleteTitle.c_str(), body, Str::ScDelete, "deleteconfirm", "deletecancel",
+                     [this, slug, eqp = &eq]() {
                          eqp->push(DeleteBindingPresetEvent{.slug = slug});
                          m_presetsLoaded = false; // re-fetch the list next render, after the delete drains
                          if (m_selectedPresetSlug == slug)
                              m_selectedPresetSlug.clear();
-                         return true;
-                     }
-                     ImGui::SameLine();
-                     if (ImGui::Button(Str::ScCancel.id("deletecancel"), {buttonW(Str::ScCancel), 0.f}))
-                         return true;
-                     return false;
-                 }});
+                     });
     }
 
     // Custom-command editor (new or edit). Raised once; the body runs deferred, editing m_customDraft.
     if (m_openCustomModal) {
         m_openCustomModal = false;
-        showCustomModal(eq, {.title = m_customEditing ? Str::ScCustomEditTitle.c_str() : Str::ScCustomNewTitle.c_str(),
-                             .width = 420.0f,
-                             .body = [this, eqp = &eq]() -> bool { return renderCustomEditor(*eqp); }});
+        showCustomModal(
+            eq, {.title = m_customDraft.id.empty() ? Str::ScCustomNewTitle.c_str() : Str::ScCustomEditTitle.c_str(),
+                 .width = 420.0f,
+                 .body = [this, eqp = &eq]() -> bool { return renderCustomEditor(*eqp); }});
     }
 
     // Custom-command delete confirmation. RemoveCustomCommandEvent is handled independently by the store
     // (drops the def) and BindingSystem (prunes its bindings).
     if (!m_pendingDeleteCustomId.empty()) {
         const std::string id = m_pendingDeleteCustomId;
-        const std::string name = m_pendingDeleteCustomName;
+        const char *body = Str::ScCustomDeleteBody.fmt(m_pendingDeleteCustomName);
         m_pendingDeleteCustomId.clear();
-        showCustomModal(
-            eq, {.title = Str::ScCustomDeleteTitle.c_str(), .width = 420.0f, .body = [id, name, eqp = &eq]() -> bool {
-                     ImGui::TextWrapped("%s", Str::ScCustomDeleteBody.fmt(name));
-                     ImGui::Spacing();
-                     if (ImGui::Button(Str::ScDelete.id("customdeleteconfirm"), {buttonW(Str::ScDelete), 0.f})) {
-                         eqp->push(ofs::RemoveCustomCommandEvent{id});
-                         return true;
-                     }
-                     ImGui::SameLine();
-                     if (ImGui::Button(Str::ScCancel.id("customdeletecancel"), {buttonW(Str::ScCancel), 0.f}))
-                         return true;
-                     return false;
-                 }});
+        confirmModal(eq, Str::ScCustomDeleteTitle.c_str(), body, Str::ScDelete, "customdeleteconfirm",
+                     "customdeletecancel", [id, eqp = &eq]() { eqp->push(ofs::RemoveCustomCommandEvent{id}); });
     }
 
     ImGui::End();
@@ -790,30 +762,32 @@ bool ShortcutWindow::renderCustomEditor(EventQueue &eq) {
     if (t)
         ImGui::SeparatorText(t->displayName.c_str());
 
-    // Name — std::string-bound InputText so a CJK title isn't truncated at the byte cap.
+    // Name is optional — left blank, the command takes the template's live summary as its title. The hint
+    // shows that summary so the placeholder previews the auto-name. std::string-bound InputText so a CJK
+    // title isn't truncated at the byte cap.
     ImGui::TextUnformatted(Str::ScCustomName);
     ImGui::SetNextItemWidth(-FLT_MIN);
-    ImGui::InputTextWithHint("###custom_name", Str::ScCustomNameHint.c_str(), &m_customDraft.name);
+    const char *nameHint = t && t->summary ? t->summary(m_customDraft.params) : Str::ScCustomNameHint.c_str();
+    ImGui::InputTextWithHint("###custom_name", nameHint, &m_customDraft.name);
 
-    // The template draws its own parameter widgets — the Shortcut window knows nothing about any specific
-    // kind's fields ("the UI is rendered from a function on the provider").
+    // The template draws its own parameter widgets, editing its opaque param bag — the Shortcut window
+    // knows nothing about any specific kind's fields ("the UI is rendered from a function on the provider").
     if (t && t->renderEditor)
-        t->renderEditor(m_customDraft);
+        t->renderEditor(m_customDraft.params);
 
     ImGui::Separator();
     ImGui::Spacing();
 
-    const bool hasName = !m_customDraft.name.empty();
     bool close = false;
-    ImGui::BeginDisabled(!hasName);
     if (ImGui::Button(Str::ScSave.id("customsaveconfirm"), {buttonW(Str::ScSave), 0.f})) {
-        if (m_customEditing)
-            eq.push(ofs::UpdateCustomCommandEvent{m_customDraft});
-        else
+        // An existing draft carries its "custom.N" id (Update keeps it); a fresh one has an empty id the
+        // store assigns on Add.
+        if (m_customDraft.id.empty())
             eq.push(ofs::AddCustomCommandEvent{m_customDraft});
+        else
+            eq.push(ofs::UpdateCustomCommandEvent{m_customDraft});
         close = true;
     }
-    ImGui::EndDisabled();
     ImGui::SameLine();
     if (ImGui::Button(Str::ScCancel.id("customcancel"), {buttonW(Str::ScCancel), 0.f}))
         close = true;
@@ -828,7 +802,6 @@ void ShortcutWindow::renderAddCommandPicker() {
         if (ImGui::Selectable(t.displayName.iconId(ICON_WAND_2, t.key.c_str()))) {
             m_customDraft = CustomCommand{};
             m_customDraft.templateKey = t.key;
-            m_customEditing = false;
             m_openCustomModal = true;
             ImGui::CloseCurrentPopup();
         }
@@ -863,7 +836,7 @@ void ShortcutWindow::renderAddCommandPicker() {
     }
 }
 
-bool ShortcutWindow::renderProviderTargetModal(const std::string &group) {
+bool ShortcutWindow::renderProviderTargetModal(EventQueue &eq, const std::string &group) {
     ImGui::TextWrapped("%s", Str::ScAddProviderPrompt.c_str());
     ImGui::Spacing();
     // One selectable per unbound command in this group (e.g. each axis under "Select Axis"). Picking one
@@ -876,12 +849,7 @@ bool ShortcutWindow::renderProviderTargetModal(const std::string &group) {
         if (cmd.inRebindList || cmd.group != group || hasValidBinding(cmd.id))
             continue;
         if (ImGui::Selectable(fmtScratch("{}###provpick_{}", cmd.title.c_str(), cmd.id.c_str()))) {
-            RebindState &rs = bindingSystem_.rebindState();
-            rs.targetCommandId = cmd.id;
-            rs.capturing = true;
-            rs.hasResult = false;
-            rs.captureModifier = false;
-            m_openCaptureModal = true;
+            beginCapture(eq, {.commandId = cmd.id});
             close = true;
         }
     }

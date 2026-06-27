@@ -13,29 +13,32 @@ struct CustomCommand;
 struct ScriptProject;
 struct AppSettings;
 
-// One kind of user-definable command, expressed as a self-describing provider: it owns its kind-picker
-// label, the editor UI for its parameters, the factory that turns a definition into a registry Command,
-// and its param (de)serialization. The first-party kinds (step / move-position / move-time) register
-// through registerBuiltinCommandTemplates; a plugin-contributed template would register the same way
-// (the reserved seam). Making the kind set table-driven is what lets the
-// Shortcut window render any kind's editor — and the store build/serialize it — with no hardcoded switch.
+// One kind of user-definable command, self-describing: it owns its kind-picker label, the editor UI for
+// its parameters, the factory that turns a definition into a registry Command, and its summary. The kinds
+// (step / move-position / move-time) register through registerBuiltinCommandTemplates — an in-tree, closed
+// set. Making it table-driven is what lets the Shortcut window render any kind's editor (and the store
+// (de)serialize it) with no hardcoded switch; params (de)serialization is generic, so a kind needs no
+// per-kind wire hook.
 struct CustomCommandTemplate {
     std::string key;      // stable serialization id, e.g. "step" — also the JSON "kind" value + widget-id slug
     TrKey displayName{0}; // kind-picker label
 
-    // Render this kind's parameter widgets into `draft` (the generic name + kind picker are drawn by the
-    // caller). Main-thread ImGui like every other render function — provider-owned, mirroring the plugin
-    // node-UI callbacks that also live in Services.
-    std::function<void(CustomCommand &draft)> renderEditor;
+    // Render this kind's parameter widgets, editing its opaque param bag in place (the generic name + kind
+    // picker are drawn by the caller). Main-thread ImGui like every other render function — provider-owned,
+    // mirroring the plugin node-UI callbacks that also live in Services. Must read defensively (the bag may
+    // be empty / from an older file): `params.value("reps", 1)` with the default supplies missing keys.
+    std::function<void(nlohmann::json &params)> renderEditor;
 
     // Definition → registry Command. The owning project/appSettings are captured at registration (they
     // outlive the registry — OfsApp members), so this needs only the definition.
     std::function<Command(const CustomCommand &def)> build;
 
-    // This kind's params ↔ JSON. The caller writes/reads the shared id/name/kind; these add or read only
-    // the fields this kind owns. readParams returns false to forward-tolerantly skip a malformed entry.
-    std::function<void(const CustomCommand &def, nlohmann::json &out)> writeParams;
-    std::function<bool(const nlohmann::json &in, CustomCommand &def)> readParams;
+    // One-line localized description of `params` (e.g. "Step forward ×3 (frame)"). Used as the row title
+    // when the user left the name blank, and as the dimmed subtitle otherwise. Returns a frame-arena
+    // (fmtScratch) pointer — main-thread only, never stored across frames; callers copy it into an owned
+    // string the same frame. Params (de)serialization is generic — the bag *is* the wire format — so there
+    // is no per-template write/read hook.
+    std::function<const char *(const nlohmann::json &params)> summary;
 };
 
 // Ordered registry of command templates. Insertion order is the kind-picker order; lookup by key resolves

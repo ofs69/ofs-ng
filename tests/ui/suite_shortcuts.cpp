@@ -1,3 +1,4 @@
+#include "Core/CommandEvents.h"
 #include "Core/Events.h"
 #include "Format/AppSettings.h"
 #include "Services/BindingSystem.h"
@@ -8,12 +9,14 @@
 #include <cmath>
 #include <cstring>
 #include <filesystem>
+#include <functional>
 #include <imgui.h>
 #include <imgui_internal.h> // ImGuiItemFlags_Disabled, ImGuiWindow
 #include <imgui_te_context.h>
 #include <imgui_te_engine.h>
 #include <string>
 #include <variant>
+#include <vector>
 
 // UI tests for the Shortcut Bindings window (src/UI/ShortcutWindow.cpp): filtering, the "Only bound"
 // toggle, Reset to Defaults, setting/removing a keybind, and the preset save/load/delete cycle. They
@@ -288,6 +291,105 @@ void RegisterShortcutTests(ImGuiTestEngine *e) {
         IM_CHECK(getTestState().commandRegistry->find(id) == nullptr);
         IM_CHECK(!hasKeyBinding(id.c_str(), SDLK_F8)); // binding pruned on delete
 
+        resetControls(ctx);
+        closeWindow(ctx);
+    };
+
+    // ── Custom command: a blank name is allowed (the summary becomes the title) and each kind's param
+    //    editor drives the saved definition. Covers move-position / move-time / step renderEditor widgets. ──
+    IM_REGISTER_TEST(e, "shortcuts", "custom_command_blank_name_and_param_editors")->TestFunc =
+        [](ImGuiTestContext *ctx) {
+            loadFixture(ctx);
+            getTestState().bindingSystem->resetToDefaults();
+            openWindow(ctx);
+            resetControls(ctx);
+
+            auto customIds = []() {
+                std::vector<std::string> ids;
+                for (const auto &c : getTestState().commandRegistry->all())
+                    if (c.source == CommandSource::Custom)
+                        ids.push_back(c.id);
+                return ids;
+            };
+            IM_CHECK(customIds().empty());
+
+            // Open the picker, pick `kind`, run `editParams` on the open editor, then Save WITHOUT typing a
+            // name. Asserts the command registered with a (summary) title and no subtitle, then removes it so
+            // the persisted store leaves no residue for later tests. Returns nothing; checks inline.
+            auto createUnnamed = [&](const char *kindId, const std::function<void()> &editParams) {
+                ctx->ItemClick("###addcommand");
+                ctx->Yield(2);
+                ctx->SetRef("//$FOCUSED");
+                ctx->ItemClick(kindId);
+                ctx->Yield(3);
+                IM_CHECK(anyModalOpen());
+                ctx->SetRef("//$FOCUSED");
+                editParams();
+                ctx->ItemClick("###customsaveconfirm"); // no name typed — Save is no longer gated on a name
+                ctx->Yield(3);
+                ctx->SetRef(kWin);
+                IM_CHECK(!anyModalOpen());
+
+                const auto ids = customIds();
+                IM_CHECK(ids.size() == 1);
+                const Command *c = getTestState().commandRegistry->find(ids[0]);
+                IM_CHECK(c != nullptr);
+                IM_CHECK(c->title.c_str()[0] != '\0'); // the summary stands in as the title
+                IM_CHECK(c->subtitle.empty());         // unnamed ⇒ no dimmed subtitle
+
+                getTestState().eventQueue->push(RemoveCustomCommandEvent{ids[0]});
+                ctx->Yield(2);
+                IM_CHECK(customIds().empty());
+            };
+
+            createUnnamed("###move-position", [&] { ctx->ItemInputValue("###custom_delta", -25); });
+            createUnnamed("###move-time", [&] {
+                ctx->ItemInputValue("###custom_reps", 3);
+                ctx->ComboClick("###custom_dir/dir_back");
+                ctx->ItemCheck("###custom_seek");
+            });
+            createUnnamed("###step", [&] { ctx->ComboClick("###custom_gran/gran_action"); });
+
+            resetControls(ctx);
+            closeWindow(ctx);
+        };
+
+    // ── Custom command: editing a row's params updates the definition in place (same id, rebuilt summary). ──
+    IM_REGISTER_TEST(e, "shortcuts", "custom_command_edit_updates_definition")->TestFunc = [](ImGuiTestContext *ctx) {
+        loadFixture(ctx);
+        getTestState().bindingSystem->resetToDefaults();
+        openWindow(ctx);
+        resetControls(ctx);
+
+        // Seed a named Step command, then drive the EDIT flow through the UI (the row's pencil button).
+        getTestState().eventQueue->push(
+            AddCustomCommandEvent{CustomCommand{.name = "UIEditStep",
+                                                .templateKey = "step",
+                                                .params = {{"direction", 1}, {"reps", 1}, {"granularity", "frame"}}}});
+        ctx->Yield(2);
+        const std::string id = customCmdIdByTitle("UIEditStep");
+        IM_CHECK(!id.empty());
+        const std::string before = getTestState().commandRegistry->find(id)->subtitle; // summary with reps==1
+
+        setFilter(ctx, "UIEditStep");
+        ctx->ItemClick("**/###cmdedit");
+        ctx->Yield(3);
+        IM_CHECK(anyModalOpen());
+        ctx->SetRef("//$FOCUSED");
+        ctx->ItemInputValue("###custom_reps", 5);
+        ctx->ItemClick("###customsaveconfirm"); // → UpdateCustomCommandEvent (keeps the id)
+        ctx->Yield(3);
+        ctx->SetRef(kWin);
+        IM_CHECK(!anyModalOpen());
+
+        // Same id (so any existing bindings stay attached) but the rebuilt summary reflects the new count.
+        const Command *c = getTestState().commandRegistry->find(id);
+        IM_CHECK(c != nullptr);                           // resolved → Update in place, not a second Add
+        IM_CHECK(customCmdIdByTitle("UIEditStep") == id); // still the one command, same id
+        IM_CHECK(c->subtitle != before);                  // summary rebuilt from the edited params
+
+        getTestState().eventQueue->push(RemoveCustomCommandEvent{id});
+        ctx->Yield(2);
         resetControls(ctx);
         closeWindow(ctx);
     };

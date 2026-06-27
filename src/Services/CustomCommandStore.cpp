@@ -66,17 +66,24 @@ void CustomCommandStore::load() {
         nextId_ = j.value("nextId", 0);
         if (j.contains("commands")) {
             for (const auto &entry : j["commands"]) {
+                if (!entry.is_object())
+                    continue; // hand-edited non-object entry — skip (keeps params a valid object)
                 CustomCommand def;
                 def.id = entry.value("id", std::string{});
                 def.name = entry.value("name", std::string{});
                 def.templateKey = entry.value("kind", std::string{});
-                const CustomCommandTemplate *t = templates_.find(def.templateKey);
-                if (!t)
+                if (!templates_.find(def.templateKey))
                     continue; // unknown/absent kind — forward-tolerant skip (no template registered)
-                if (!t->readParams(entry, def))
-                    continue; // template rejected the params (e.g. unknown granularity) — skip
                 if (def.id.empty())
                     continue;
+                // The bag is the wire format: carry every kind-specific key through verbatim. The
+                // resolved template reads the keys it owns and ignores the rest, so an unknown value
+                // (e.g. a stale granularity) round-trips and only degrades to a default at build —
+                // it never drops the command. Strip the structural keys so params holds params only.
+                def.params = entry;
+                def.params.erase("id");
+                def.params.erase("name");
+                def.params.erase("kind");
                 // De-duplicate a hand-edited duplicate id: last wins.
                 std::erase_if(commands_, [&def](const CustomCommand &c) { return c.id == def.id; });
                 commands_.push_back(std::move(def));
@@ -133,10 +140,12 @@ void CustomCommandStore::save() const {
     try {
         nlohmann::json arr = nlohmann::json::array();
         for (const auto &c : commands_) {
-            // The "kind" key is the template's stable id; the template owns its kind-specific fields.
-            nlohmann::json e{{"id", c.id}, {"name", c.name}, {"kind", c.templateKey}};
-            if (const CustomCommandTemplate *t = templates_.find(c.templateKey))
-                t->writeParams(c, e);
+            // Start from the kind-specific param bag, then stamp the structural keys. "kind" is the
+            // template's stable id; the template owns everything else inside params.
+            nlohmann::json e = c.params;
+            e["id"] = c.id;
+            e["name"] = c.name;
+            e["kind"] = c.templateKey;
             arr.push_back(std::move(e));
         }
         nlohmann::json j;

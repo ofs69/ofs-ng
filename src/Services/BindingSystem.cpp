@@ -250,6 +250,15 @@ BindingSystem::BindingSystem(EventQueue &eq, CommandRegistry &registry, RebindSt
     });
 
     // Binding-table + preset write-API (pushed by the Shortcut window; see Services/BindingEvents.h).
+    eventQueue_.on<BeginBindingCaptureEvent>([this](const BeginBindingCaptureEvent &e) {
+        rebindState_.targetCommandId = e.commandId;
+        rebindState_.capturing = true;
+        rebindState_.hasResult = false;
+        rebindState_.captureModifier = e.captureModifier;
+        rebindState_.modifierTarget = e.modifierTarget;
+        rebindState_.replaceTrigger = e.replaceTrigger;
+        rebindState_.replaceTarget = e.replaceTarget;
+    });
     eventQueue_.on<ApplyBindingCaptureEvent>([this](const ApplyBindingCaptureEvent &e) {
         if (e.captureModifier)
             applyModifier(e.commandId, e.modifierTarget, e.captured);

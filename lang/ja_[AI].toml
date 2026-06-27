@@ -1404,6 +1404,22 @@ translation = "量"
 english     = "Seek after move"
 translation = "移動後にシーク"
 
+[ScCustomSummaryStep]
+english     = "Step {0} ×{1} ({2})"
+translation = "ステップ {0} ×{1}（{2}）"
+
+[ScCustomSummaryMovePos]
+english     = "Move position {0}"
+translation = "位置を移動 {0}"
+
+[ScCustomSummaryMoveTime]
+english     = "Move time {0} ×{1}{2}"
+translation = "時間を移動 {0} ×{1}{2}"
+
+[ScCustomSummarySeekSuffix]
+english     = "  + seek"
+translation = "  + シーク"
+
 [ScCustomEditTip]
 english     = "Edit this custom command"
 translation = "このカスタムコマンドを編集"

@@ -14,6 +14,8 @@
 #include "helpers/TestProject.h"
 #include <doctest/doctest.h>
 #include <filesystem>
+#include <nlohmann/json.hpp>
+#include <string>
 #include <system_error>
 
 using ofs::test::EventCapture;
@@ -28,12 +30,40 @@ void removeStoreFile() {
     std::filesystem::remove(ofs::util::getPrefPath() / "custom_commands.json", ec);
 }
 
+// Params are an opaque per-template json bag now, so the builders write the same wire keys the templates
+// read: `direction` as the ±1 enum int, `granularity` as the symbolic string, `reps`/`delta` ints,
+// `seekAfter` bool.
+const char *granName(ofs::StepGranularity g) {
+    switch (g) {
+    case ofs::StepGranularity::Action:
+        return "action";
+    case ofs::StepGranularity::ActionAllAxes:
+        return "action-all-axes";
+    case ofs::StepGranularity::Frame:
+        break;
+    }
+    return "frame";
+}
 ofs::CustomCommand stepDef(const char *name, int dir, int reps, ofs::StepGranularity g = ofs::StepGranularity::Frame) {
     return {.name = name,
             .templateKey = "step",
-            .direction = static_cast<ofs::StepDirection>(dir),
-            .reps = reps,
-            .granularity = g};
+            .params = {{"direction", dir}, {"reps", reps}, {"granularity", granName(g)}}};
+}
+ofs::CustomCommand movePosDef(const char *name, int delta) {
+    return {.name = name, .templateKey = "move-position", .params = {{"delta", delta}}};
+}
+ofs::CustomCommand moveTimeDef(const char *name, ofs::StepDirection dir, int reps, bool seek) {
+    return {.name = name,
+            .templateKey = "move-time",
+            .params = {{"direction", static_cast<int>(dir)}, {"reps", reps}, {"seekAfter", seek}}};
+}
+
+// Read a param off a stored definition's bag with a default.
+int paramInt(const ofs::CustomCommand &c, const char *key) {
+    return c.params.value(key, 0);
+}
+std::string paramStr(const ofs::CustomCommand &c, const char *key) {
+    return c.params.value(key, std::string{});
 }
 
 } // namespace
@@ -103,14 +133,14 @@ TEST_CASE("CustomCommandStore: Update keeps the id so existing bindings stay att
     tp.eq.drain();
     ofs::CustomCommand def = store.commands()[0];
     def.name = "Jump 7";
-    def.reps = 7;
+    def.params["reps"] = 7;
     tp.eq.push(ofs::UpdateCustomCommandEvent{def});
     tp.eq.drain();
 
     REQUIRE(store.commands().size() == 1);
     CHECK(store.commands()[0].id == "custom.0");
     CHECK(store.commands()[0].name == "Jump 7");
-    CHECK(store.commands()[0].reps == 7);
+    CHECK(paramInt(store.commands()[0], "reps") == 7);
     CHECK(registry.find("custom.0") != nullptr);
 }
 
@@ -146,8 +176,7 @@ TEST_CASE("CustomCommandStore: definitions persist across a reload; ids are appe
         store.load();
         tp.eq.freeze();
         tp.eq.push(ofs::AddCustomCommandEvent{stepDef("A", 1, 1)});
-        tp.eq.push(
-            ofs::AddCustomCommandEvent{ofs::CustomCommand{.name = "B", .templateKey = "move-position", .delta = 7}});
+        tp.eq.push(ofs::AddCustomCommandEvent{movePosDef("B", 7)});
         tp.eq.drain();
         REQUIRE(store.commands().size() == 2);
         CHECK(store.commands()[1].id == "custom.1");
@@ -165,7 +194,7 @@ TEST_CASE("CustomCommandStore: definitions persist across a reload; ids are appe
     CHECK(store.commands()[0].id == "custom.0");
     CHECK(store.commands()[1].id == "custom.1");
     CHECK(store.commands()[1].templateKey == "move-position");
-    CHECK(store.commands()[1].delta == 7);
+    CHECK(paramInt(store.commands()[1], "delta") == 7);
     CHECK(registry.find("custom.1") != nullptr);
 
     // nextId survived the reload, so the next add takes custom.2 — a deleted/loaded id is never reused.
@@ -317,16 +346,16 @@ TEST_CASE("CustomCommandStore: step granularity round-trips through save and rel
     store.load();
 
     REQUIRE(store.commands().size() == 2);
-    CHECK(store.commands()[0].granularity == ofs::StepGranularity::ActionAllAxes);
-    CHECK(store.commands()[0].direction == ofs::StepDirection::Backward);
-    CHECK(store.commands()[0].reps == 4);
-    CHECK(store.commands()[1].granularity == ofs::StepGranularity::Action);
+    CHECK(paramStr(store.commands()[0], "granularity") == "action-all-axes");
+    CHECK(paramInt(store.commands()[0], "direction") == static_cast<int>(ofs::StepDirection::Backward));
+    CHECK(paramInt(store.commands()[0], "reps") == 4);
+    CHECK(paramStr(store.commands()[1], "granularity") == "action");
 }
 
-TEST_CASE("CustomCommandStore: a present-but-unknown granularity skips just that entry") {
+TEST_CASE("CustomCommandStore: a present-but-unknown granularity is kept and degrades at build") {
     removeStoreFile();
-    // readParams returns false when "granularity" is present but unrecognized — the whole entry is
-    // dropped (forward-tolerant), while a sibling with a valid granularity still loads.
+    // The param bag is the wire format, so an unrecognized "granularity" is no longer dropped: the entry
+    // loads, the value round-trips verbatim, and only the built Command falls back to the Frame default.
     ofs::util::writeFile(ofs::util::getPrefPath() / "custom_commands.json", R"({
         "version": 1, "nextId": 5,
         "commands": [
@@ -343,10 +372,10 @@ TEST_CASE("CustomCommandStore: a present-but-unknown granularity skips just that
     ofs::CustomCommandStore store{tp.eq, registry, templates};
     store.load();
 
-    REQUIRE(store.commands().size() == 1);
-    CHECK(store.commands()[0].id == "custom.0");
-    CHECK(store.commands()[0].granularity == ofs::StepGranularity::Action);
-    CHECK(registry.find("custom.1") == nullptr);
+    REQUIRE(store.commands().size() == 2);
+    CHECK(paramStr(store.commands()[0], "granularity") == "action");
+    CHECK(paramStr(store.commands()[1], "granularity") == "warp"); // round-trips verbatim, not dropped
+    CHECK(registry.find("custom.1") != nullptr);                   // it still registers
 }
 
 TEST_CASE("CustomCommandTemplate: a held Step scales the authored reps by the frame's burst count") {
@@ -403,11 +432,7 @@ TEST_CASE("CustomCommandTemplate: a MoveTime command shifts the selection in tim
 
     const ofs::CustomCommandTemplate *t = templates.find("move-time");
     REQUIRE(t != nullptr);
-    ofs::Command c = t->build(ofs::CustomCommand{.name = "Back 2",
-                                                 .templateKey = "move-time",
-                                                 .direction = ofs::StepDirection::Backward,
-                                                 .reps = 2,
-                                                 .seekAfter = true});
+    ofs::Command c = t->build(moveTimeDef("Back 2", ofs::StepDirection::Backward, 2, true));
     c.run(tp.eq); // single press
     tp.eq.drain();
 
@@ -431,9 +456,7 @@ TEST_CASE("CustomCommandTemplate: a MoveTime command is a no-op with no active a
     cap.attach(tp.eq);
     tp.eq.freeze();
 
-    ofs::Command c = templates.find("move-time")
-                         ->build(ofs::CustomCommand{
-                             .name = "Shift", .templateKey = "move-time", .direction = ofs::StepDirection::Forward});
+    ofs::Command c = templates.find("move-time")->build(moveTimeDef("Shift", ofs::StepDirection::Forward, 1, false));
     c.run(tp.eq);
     tp.eq.drain();
 
@@ -451,11 +474,7 @@ TEST_CASE("CustomCommandStore: move-time params round-trip through save and relo
         ofs::CustomCommandStore store{tp.eq, registry, templates};
         store.load();
         tp.eq.freeze();
-        tp.eq.push(ofs::AddCustomCommandEvent{ofs::CustomCommand{.name = "Shift",
-                                                                 .templateKey = "move-time",
-                                                                 .direction = ofs::StepDirection::Backward,
-                                                                 .reps = 3,
-                                                                 .seekAfter = true}});
+        tp.eq.push(ofs::AddCustomCommandEvent{moveTimeDef("Shift", ofs::StepDirection::Backward, 3, true)});
         tp.eq.drain();
     }
 
@@ -469,9 +488,9 @@ TEST_CASE("CustomCommandStore: move-time params round-trip through save and relo
 
     REQUIRE(store.commands().size() == 1);
     CHECK(store.commands()[0].templateKey == "move-time");
-    CHECK(store.commands()[0].direction == ofs::StepDirection::Backward);
-    CHECK(store.commands()[0].reps == 3);
-    CHECK(store.commands()[0].seekAfter);
+    CHECK(paramInt(store.commands()[0], "direction") == static_cast<int>(ofs::StepDirection::Backward));
+    CHECK(paramInt(store.commands()[0], "reps") == 3);
+    CHECK(store.commands()[0].params.value("seekAfter", false));
 }
 
 TEST_CASE("CustomCommandTemplate: a MovePosition command is a no-op with no active axis") {
@@ -484,8 +503,7 @@ TEST_CASE("CustomCommandTemplate: a MovePosition command is a no-op with no acti
     cap.attach(tp.eq);
     tp.eq.freeze();
 
-    ofs::Command c = templates.find("move-position")
-                         ->build(ofs::CustomCommand{.name = "Nudge", .templateKey = "move-position", .delta = 7});
+    ofs::Command c = templates.find("move-position")->build(movePosDef("Nudge", 7));
     c.run(tp.eq);
     tp.eq.drain();
 
@@ -503,8 +521,7 @@ TEST_CASE("CustomCommandTemplate: a held MovePosition scales delta and continues
     cap.attach(tp.eq);
     tp.eq.freeze();
 
-    ofs::Command c = templates.find("move-position")
-                         ->build(ofs::CustomCommand{.name = "Nudge", .templateKey = "move-position", .delta = 5});
+    ofs::Command c = templates.find("move-position")->build(movePosDef("Nudge", 5));
     const ofs::HoldRepeatParams hp{.initialDelay = 0.0f, .interval = 0.01f, .accel = 1.0f, .maxRateHz = 250.0f};
     const int burst = ofs::holdRepeats(1.0f, 0.1f, hp);
     REQUIRE(burst > 1);
@@ -529,7 +546,7 @@ TEST_CASE("CustomCommandTemplate: a MovePosition command nudges the active axis 
 
     const ofs::CustomCommandTemplate *t = templates.find("move-position");
     REQUIRE(t != nullptr);
-    ofs::Command c = t->build(ofs::CustomCommand{.name = "Nudge +7", .templateKey = "move-position", .delta = 7});
+    ofs::Command c = t->build(movePosDef("Nudge +7", 7));
     c.run(tp.eq);
     tp.eq.drain();
 
@@ -538,4 +555,118 @@ TEST_CASE("CustomCommandTemplate: a MovePosition command nudges the active axis 
     CHECK(cap.received[0].intent.axis == ofs::StandardAxis::L0);
     CHECK(cap.received[0].intent.pos == 7);
     CHECK(cap.received[0].gesture == ofs::GesturePhase::Begin); // single press opens its own undo step
+}
+
+// ── Auto-name + summary (the row title / dimmed subtitle the Shortcut window shows) ──────────────────
+
+namespace {
+// Resolve a built Command's display title (a TrString) to a plain string for comparison.
+std::string cmdTitle(const ofs::Command &c) {
+    return c.title.c_str();
+}
+} // namespace
+
+TEST_CASE("CustomCommandTemplate: an unnamed command uses its summary as the title, a named one as the subtitle") {
+    TestProject tp;
+    ofs::AppSettings settings;
+    ofs::CustomCommandTemplateRegistry templates;
+    ofs::registerBuiltinCommandTemplates(templates, tp.project, settings);
+
+    // One unnamed + one named definition per kind, identical params otherwise.
+    struct KindCase {
+        const char *key;
+        ofs::CustomCommand unnamed, named;
+    };
+    const KindCase cases[] = {
+        {"step", stepDef("", 1, 3), stepDef("My Step", 1, 3)},
+        {"move-position", movePosDef("", 7), movePosDef("My Nudge", 7)},
+        {"move-time", moveTimeDef("", ofs::StepDirection::Backward, 2, true),
+         moveTimeDef("My Shift", ofs::StepDirection::Backward, 2, true)},
+    };
+
+    for (const auto &kc : cases) {
+        CAPTURE(kc.key);
+        const ofs::CustomCommandTemplate *t = templates.find(kc.key);
+        REQUIRE(t != nullptr);
+        const ofs::Command cu = t->build(kc.unnamed);
+        const ofs::Command cn = t->build(kc.named);
+
+        // Unnamed: the live summary IS the title; there is no dimmed subtitle.
+        CHECK_FALSE(cmdTitle(cu).empty());
+        CHECK(cu.subtitle.empty());
+        // Named: the user name is the title and that same summary moves to the dimmed subtitle.
+        CHECK(cmdTitle(cn) == kc.named.name);
+        CHECK(cn.subtitle == cmdTitle(cu));
+    }
+}
+
+TEST_CASE("CustomCommandTemplate: the summary reflects the params it describes") {
+    TestProject tp;
+    ofs::AppSettings settings;
+    ofs::CustomCommandTemplateRegistry templates;
+    ofs::registerBuiltinCommandTemplates(templates, tp.project, settings);
+
+    const ofs::CustomCommandTemplate *step = templates.find("step");
+    const ofs::CustomCommandTemplate *movePos = templates.find("move-position");
+    const ofs::CustomCommandTemplate *moveTime = templates.find("move-time");
+    REQUIRE(step != nullptr);
+    REQUIRE(movePos != nullptr);
+    REQUIRE(moveTime != nullptr);
+
+    // Step: the count and each of the three granularities change the summary (granularityWord's branches).
+    CHECK(cmdTitle(step->build(stepDef("", 1, 3))) != cmdTitle(step->build(stepDef("", 1, 9))));
+    const std::string frame = cmdTitle(step->build(stepDef("", 1, 3, ofs::StepGranularity::Frame)));
+    const std::string action = cmdTitle(step->build(stepDef("", 1, 3, ofs::StepGranularity::Action)));
+    const std::string allAxes = cmdTitle(step->build(stepDef("", 1, 3, ofs::StepGranularity::ActionAllAxes)));
+    CHECK(frame != action);
+    CHECK(action != allAxes);
+    CHECK(frame != allAxes);
+
+    // Move-position: the signed amount is shown.
+    CHECK(cmdTitle(movePos->build(movePosDef("", 7))) != cmdTitle(movePos->build(movePosDef("", -25))));
+
+    // Move-time: direction (directionWord's two branches) and the appended "+ seek" suffix each change it.
+    CHECK(cmdTitle(moveTime->build(moveTimeDef("", ofs::StepDirection::Forward, 2, false))) !=
+          cmdTitle(moveTime->build(moveTimeDef("", ofs::StepDirection::Backward, 2, false))));
+    const std::string noSeek = cmdTitle(moveTime->build(moveTimeDef("", ofs::StepDirection::Forward, 2, false)));
+    const std::string seek = cmdTitle(moveTime->build(moveTimeDef("", ofs::StepDirection::Forward, 2, true)));
+    CHECK(noSeek != seek);
+    CHECK(seek.size() > noSeek.size()); // the suffix is appended, not substituted
+}
+
+TEST_CASE("CustomCommandStore: a command saved with no name persists and registers with its summary as title") {
+    removeStoreFile();
+    {
+        TestProject tp;
+        ofs::AppSettings settings;
+        ofs::CustomCommandTemplateRegistry templates;
+        ofs::registerBuiltinCommandTemplates(templates, tp.project, settings);
+        ofs::CommandRegistry registry{tp.eq};
+        ofs::CustomCommandStore store{tp.eq, registry, templates};
+        store.load();
+        tp.eq.freeze();
+        tp.eq.push(ofs::AddCustomCommandEvent{movePosDef("", 7)}); // blank name — the editor now allows it
+        tp.eq.drain();
+
+        REQUIRE(store.commands().size() == 1);
+        CHECK(store.commands()[0].name.empty());
+        const ofs::Command *c = registry.find("custom.0");
+        REQUIRE(c != nullptr);
+        CHECK_FALSE(std::string{c->title.c_str()}.empty()); // the summary stands in as the title
+        CHECK(c->subtitle.empty());                         // unnamed ⇒ no subtitle
+    }
+
+    // The empty name survives a reload — it is not coerced to a placeholder on disk.
+    TestProject tp;
+    ofs::AppSettings settings;
+    ofs::CustomCommandTemplateRegistry templates;
+    ofs::registerBuiltinCommandTemplates(templates, tp.project, settings);
+    ofs::CommandRegistry registry{tp.eq};
+    ofs::CustomCommandStore store{tp.eq, registry, templates};
+    store.load();
+
+    REQUIRE(store.commands().size() == 1);
+    CHECK(store.commands()[0].name.empty());
+    CHECK(registry.find("custom.0") != nullptr);
+    removeStoreFile();
 }

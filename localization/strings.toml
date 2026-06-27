@@ -1472,6 +1472,35 @@ description = "Shortcuts: label above the signed position-units input for a Move
 english     = "Seek after move"
 description = "Shortcuts: checkbox — seek the playhead to the moved selection after a Move time command."
 
+[ScCustomSummaryStep]
+english      = "Step {0} ×{1} ({2})"
+description  = "Shortcuts: one-line summary of a Step custom command — its auto-name and its dimmed subtitle."
+placeholders = [
+    "{0} = direction word (Forward / Backward)",
+    "{1} = step count, e.g. 3",
+    "{2} = granularity word (Frame / grid, Action, …)",
+]
+
+[ScCustomSummaryMovePos]
+english      = "Move position {0}"
+description  = "Shortcuts: one-line summary of a Move position custom command — its auto-name and dimmed subtitle."
+placeholders = [
+    "{0} = signed position units, e.g. 7 or -25",
+]
+
+[ScCustomSummaryMoveTime]
+english      = "Move time {0} ×{1}{2}"
+description  = "Shortcuts: one-line summary of a Move time custom command — its auto-name and dimmed subtitle."
+placeholders = [
+    "{0} = direction word (Forward / Backward)",
+    "{1} = step count, e.g. 3",
+    "{2} = seek suffix (ScCustomSummarySeekSuffix) or empty",
+]
+
+[ScCustomSummarySeekSuffix]
+english     = "  + seek"
+description = "Shortcuts: appended to a Move time summary when 'seek after move' is on (note the leading spaces)."
+
 [ScCustomEditTip]
 english     = "Edit this custom command"
 description = "Shortcuts: tooltip for the edit button on a custom-command row."

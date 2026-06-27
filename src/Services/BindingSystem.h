@@ -19,6 +19,7 @@ struct KeyUpEvent;           // Core/Events.h
 struct GamepadButtonEvent;   // Core/Events.h
 struct GamepadButtonUpEvent; // Core/Events.h
 
+struct BeginBindingCaptureEvent; // Services/BindingEvents.h
 struct ApplyBindingCaptureEvent; // Services/BindingEvents.h
 struct RemoveBindingEvent;       // Services/BindingEvents.h
 struct SetBindingModeEvent;      // Services/BindingEvents.h

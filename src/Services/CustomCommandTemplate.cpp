@@ -11,13 +11,15 @@
 #include <algorithm>
 #include <imgui.h>
 #include <nlohmann/json.hpp>
+#include <string>
 
 namespace ofs {
 
 namespace {
 
 // Symbolic enum names — stable across builds, unlike the integer values (the bindings.json rule, CP
-// §16.2). An unknown string makes readParams skip the whole entry (forward-tolerant).
+// §16.2). An unknown string leaves `out` at its default (Frame) — the bag round-trips verbatim and only
+// degrades to the default at use, never dropping the command.
 const char *granularityToString(StepGranularity g) {
     switch (g) {
     case StepGranularity::Frame:
@@ -41,16 +43,56 @@ bool granularityFromString(const std::string &s, StepGranularity &out) {
     return true;
 }
 
+// Localized fragment for a direction / granularity value — shared by the editors and the summaries.
+const char *directionWord(StepDirection d) {
+    return d == StepDirection::Backward ? Str::ScCustomDirBackward.c_str() : Str::ScCustomDirForward.c_str();
+}
+const char *granularityWord(StepGranularity g) {
+    switch (g) {
+    case StepGranularity::Action:
+        return Str::ScCustomGranAction.c_str();
+    case StepGranularity::ActionAllAxes:
+        return Str::ScCustomGranActionAll.c_str();
+    case StepGranularity::Frame:
+        break;
+    }
+    return Str::ScCustomGranFrame.c_str();
+}
+
+// One-line localized descriptions of a param bag. fmtScratch/TrKey::fmt return frame-arena pointers — the
+// caller copies them into owned Command strings the same frame.
+const char *stepSummary(const nlohmann::json &p) {
+    const auto dir = static_cast<StepDirection>(p.value("direction", 1));
+    const int reps = std::max(1, p.value("reps", 1));
+    StepGranularity gran = StepGranularity::Frame;
+    granularityFromString(p.value("granularity", std::string{"frame"}), gran);
+    return Str::ScCustomSummaryStep.fmt(directionWord(dir), reps, granularityWord(gran));
+}
+const char *movePosSummary(const nlohmann::json &p) {
+    return Str::ScCustomSummaryMovePos.fmt(p.value("delta", 1));
+}
+const char *moveTimeSummary(const nlohmann::json &p) {
+    const auto dir = static_cast<StepDirection>(p.value("direction", 1));
+    const int reps = std::max(1, p.value("reps", 1));
+    const char *seek = p.value("seekAfter", false) ? Str::ScCustomSummarySeekSuffix.c_str() : "";
+    return Str::ScCustomSummaryMoveTime.fmt(directionWord(dir), reps, seek);
+}
+
 // Wrap a per-kind emitter (eq, burst, first) into a holdable Command. The built-in step/move verbs inline
 // this same run/tick pairing; a custom command differs only in supplying user-chosen params. `burst` is
 // the held-repeat coalesce count (1 on a single press), so the authored amount is the base, scaled by N.
 // The cadence is read live each tick (appSettings.holdRepeat), identical to OfsApp::holdRepeatParams(),
-// so a Shortcut-window edit applies instantly and every hold binding shares one tunable feel.
-template <class Emit> Command holdCommand(const CustomCommand &def, const AppSettings &appSettings, const Emit &step) {
+// so a Shortcut-window edit applies instantly and every hold binding shares one tunable feel. `title` is
+// the resolved row title (user name, or the summary when unnamed); `subtitle` the dimmed canonical action
+// (empty when the title already is the summary).
+template <class Emit>
+Command holdCommand(const std::string &id, const char *title, const char *subtitle, const AppSettings &appSettings,
+                    const Emit &step) {
     Command c;
-    c.id = def.id;
+    c.id = id;
     c.group = "Custom";
-    c.title = def.name; // owned std::string (TrString) — a user title, never run through the catalog
+    c.title = std::string{title}; // owned std::string (TrString) — a user title, never run through the catalog
+    c.subtitle = subtitle;
     c.source = CommandSource::Custom;
     c.run = [step](EventQueue &eq) { step(eq, 1, true); };
     c.tick = [step, &appSettings](EventQueue &eq, const HoldTickInfo &info) {
@@ -65,20 +107,33 @@ template <class Emit> Command holdCommand(const CustomCommand &def, const AppSet
     return c;
 }
 
-// Direction (Forward/Backward) and Count are shared by the Step and Move-time editors.
-void directionCombo(CustomCommand &d) {
+// Direction (Forward/Backward) and Count are shared by the Step and Move-time editors. Both edit the bag
+// in place, reading defensively so a missing key falls back to the documented default.
+void directionCombo(nlohmann::json &p) {
     ImGui::TextUnformatted(Str::ScCustomDirection);
     const char *items[] = {Str::ScCustomDirForward.id("dir_fwd"), Str::ScCustomDirBackward.id("dir_back")};
-    int idx = d.direction == StepDirection::Backward ? 1 : 0;
+    int idx = p.value("direction", 1) == static_cast<int>(StepDirection::Backward) ? 1 : 0;
     ImGui::SetNextItemWidth(-FLT_MIN);
     if (ImGui::Combo("###custom_dir", &idx, items, IM_ARRAYSIZE(items)))
-        d.direction = idx == 1 ? StepDirection::Backward : StepDirection::Forward;
+        p["direction"] = static_cast<int>(idx == 1 ? StepDirection::Backward : StepDirection::Forward);
 }
-void countInput(CustomCommand &d) {
+void countInput(nlohmann::json &p) {
     ImGui::TextUnformatted(Str::ScCustomCount);
     ImGui::SetNextItemWidth(-FLT_MIN);
-    if (ImGui::InputInt("###custom_reps", &d.reps))
-        d.reps = std::max(1, d.reps);
+    int reps = std::max(1, p.value("reps", 1));
+    if (ImGui::InputInt("###custom_reps", &reps))
+        p["reps"] = std::max(1, reps);
+}
+
+// Resolve a definition's row title + subtitle from its name and a summary: an unnamed command shows the
+// summary as its title (no subtitle); a named one keeps its name with the summary dimmed beneath.
+struct Labels {
+    const char *title;
+    const char *subtitle;
+};
+Labels labels(const CustomCommand &def, const char *summary) {
+    return def.name.empty() ? Labels{.title = summary, .subtitle = ""}
+                            : Labels{.title = def.name.c_str(), .subtitle = summary};
 }
 
 } // namespace
@@ -90,40 +145,34 @@ void registerBuiltinCommandTemplates(CustomCommandTemplateRegistry &registry, Sc
         .key = "step",
         .displayName = Str::ScCustomKindStep,
         .renderEditor =
-            [](CustomCommand &d) {
-                directionCombo(d);
-                countInput(d);
+            [](nlohmann::json &p) {
+                directionCombo(p);
+                countInput(p);
                 ImGui::TextUnformatted(Str::ScCustomGranularity);
                 const char *gran[] = {Str::ScCustomGranFrame.id("gran_frame"),
                                       Str::ScCustomGranAction.id("gran_action"),
                                       Str::ScCustomGranActionAll.id("gran_actionall")};
-                int gi = static_cast<int>(d.granularity);
+                StepGranularity g = StepGranularity::Frame;
+                granularityFromString(p.value("granularity", std::string{"frame"}), g);
+                int gi = static_cast<int>(g);
                 ImGui::SetNextItemWidth(-FLT_MIN);
                 if (ImGui::Combo("###custom_gran", &gi, gran, IM_ARRAYSIZE(gran)))
-                    d.granularity = static_cast<StepGranularity>(gi);
+                    p["granularity"] = granularityToString(static_cast<StepGranularity>(gi));
             },
         .build =
             [&appSettings](const CustomCommand &def) { // Step reads no project state
-                return holdCommand(def, appSettings, [def](EventQueue &eq, int burst, bool /*first*/) {
-                    eq.push(StepRequestEvent{
-                        .direction = def.direction, .reps = def.reps * burst, .granularity = def.granularity});
-                });
+                const auto dir = static_cast<StepDirection>(def.params.value("direction", 1));
+                const int reps = std::max(1, def.params.value("reps", 1));
+                StepGranularity gran = StepGranularity::Frame;
+                granularityFromString(def.params.value("granularity", std::string{"frame"}), gran);
+                const Labels l = labels(def, stepSummary(def.params));
+                return holdCommand(
+                    def.id, l.title, l.subtitle, appSettings,
+                    [dir, reps, gran](EventQueue &eq, int burst, bool /*first*/) {
+                        eq.push(StepRequestEvent{.direction = dir, .reps = reps * burst, .granularity = gran});
+                    });
             },
-        .writeParams =
-            [](const CustomCommand &c, nlohmann::json &e) {
-                e["direction"] = static_cast<int>(c.direction);
-                e["reps"] = c.reps;
-                e["granularity"] = granularityToString(c.granularity);
-            },
-        .readParams =
-            [](const nlohmann::json &e, CustomCommand &c) {
-                c.direction = static_cast<StepDirection>(e.value("direction", 1));
-                c.reps = std::max(1, e.value("reps", 1));
-                if (e.contains("granularity") &&
-                    !granularityFromString(e["granularity"].get<std::string>(), c.granularity))
-                    return false; // present but unknown granularity — skip
-                return true;
-            },
+        .summary = stepSummary,
     });
 
     // ── Move-position ── signed nudge of the active axis selection; the sign is the direction.
@@ -131,29 +180,30 @@ void registerBuiltinCommandTemplates(CustomCommandTemplateRegistry &registry, Sc
         .key = "move-position",
         .displayName = Str::ScCustomKindMovePos,
         .renderEditor =
-            [](CustomCommand &d) {
+            [](nlohmann::json &p) {
                 ImGui::TextUnformatted(Str::ScCustomAmount);
                 ImGui::SetNextItemWidth(-FLT_MIN);
-                ImGui::InputInt("###custom_delta", &d.delta);
+                int delta = p.value("delta", 1);
+                if (ImGui::InputInt("###custom_delta", &delta))
+                    p["delta"] = delta;
             },
         .build =
             [&project, &appSettings](const CustomCommand &def) {
-                return holdCommand(def, appSettings, [def, &project](EventQueue &eq, int burst, bool first) {
-                    const auto role = project.state.activeAxis;
-                    if (role >= StandardAxis::Count)
-                        return;
-                    // first → gesture boundary (snapshot); a later hold fire continues the same undo step.
-                    eq.push(EditRequestEvent{
-                        .intent = {.kind = EditIntentKind::MoveSelection, .axis = role, .pos = def.delta * burst},
-                        .gesture = first ? GesturePhase::Begin : GesturePhase::Continue});
-                });
+                const int delta = def.params.value("delta", 1);
+                const Labels l = labels(def, movePosSummary(def.params));
+                return holdCommand(
+                    def.id, l.title, l.subtitle, appSettings, [delta, &project](EventQueue &eq, int burst, bool first) {
+                        const auto role = project.state.activeAxis;
+                        if (role >= StandardAxis::Count)
+                            return;
+                        // first → gesture boundary (snapshot); a later hold fire continues
+                        // the same undo step.
+                        eq.push(EditRequestEvent{
+                            .intent = {.kind = EditIntentKind::MoveSelection, .axis = role, .pos = delta * burst},
+                            .gesture = first ? GesturePhase::Begin : GesturePhase::Continue});
+                    });
             },
-        .writeParams = [](const CustomCommand &c, nlohmann::json &e) { e["delta"] = c.delta; },
-        .readParams =
-            [](const nlohmann::json &e, CustomCommand &c) {
-                c.delta = e.value("delta", 1);
-                return true;
-            },
+        .summary = movePosSummary,
     });
 
     // ── Move-time ── shift the active axis selection in time; optionally seek the playhead after.
@@ -161,38 +211,34 @@ void registerBuiltinCommandTemplates(CustomCommandTemplateRegistry &registry, Sc
         .key = "move-time",
         .displayName = Str::ScCustomKindMoveTime,
         .renderEditor =
-            [](CustomCommand &d) {
-                directionCombo(d);
-                countInput(d);
-                ImGui::Checkbox(Str::ScCustomSeekAfter.id("custom_seek"), &d.seekAfter);
+            [](nlohmann::json &p) {
+                directionCombo(p);
+                countInput(p);
+                bool seek = p.value("seekAfter", false);
+                if (ImGui::Checkbox(Str::ScCustomSeekAfter.id("custom_seek"), &seek))
+                    p["seekAfter"] = seek;
             },
         .build =
             [&project, &appSettings](const CustomCommand &def) {
-                return holdCommand(def, appSettings, [def, &project](EventQueue &eq, int burst, bool first) {
-                    const auto role = project.state.activeAxis;
-                    if (role >= StandardAxis::Count)
-                        return;
-                    eq.push(EditRequestEvent{.intent = {.kind = EditIntentKind::MoveSelection,
-                                                        .axis = role,
-                                                        .direction = def.direction,
-                                                        .reps = def.reps * burst,
-                                                        .seekAfter = def.seekAfter},
-                                             .gesture = first ? GesturePhase::Begin : GesturePhase::Continue});
-                });
+                const auto dir = static_cast<StepDirection>(def.params.value("direction", 1));
+                const int reps = std::max(1, def.params.value("reps", 1));
+                const bool seekAfter = def.params.value("seekAfter", false);
+                const Labels l = labels(def, moveTimeSummary(def.params));
+                return holdCommand(
+                    def.id, l.title, l.subtitle, appSettings,
+                    [dir, reps, seekAfter, &project](EventQueue &eq, int burst, bool first) {
+                        const auto role = project.state.activeAxis;
+                        if (role >= StandardAxis::Count)
+                            return;
+                        eq.push(EditRequestEvent{.intent = {.kind = EditIntentKind::MoveSelection,
+                                                            .axis = role,
+                                                            .direction = dir,
+                                                            .reps = reps * burst,
+                                                            .seekAfter = seekAfter},
+                                                 .gesture = first ? GesturePhase::Begin : GesturePhase::Continue});
+                    });
             },
-        .writeParams =
-            [](const CustomCommand &c, nlohmann::json &e) {
-                e["direction"] = static_cast<int>(c.direction);
-                e["reps"] = c.reps;
-                e["seekAfter"] = c.seekAfter;
-            },
-        .readParams =
-            [](const nlohmann::json &e, CustomCommand &c) {
-                c.direction = static_cast<StepDirection>(e.value("direction", 1));
-                c.reps = std::max(1, e.value("reps", 1));
-                c.seekAfter = e.value("seekAfter", false);
-                return true;
-            },
+        .summary = moveTimeSummary,
     });
 }
 
