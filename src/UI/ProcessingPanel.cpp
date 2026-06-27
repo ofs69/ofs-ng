@@ -30,8 +30,8 @@
 #include <cctype>
 #include <cmath>
 #include <filesystem>
-#include <imnodes.h>
 #include <functional>
+#include <imnodes.h>
 #include <optional>
 #include <string_view>
 #include <unordered_set>
@@ -1335,11 +1335,10 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
         defParams.reserve(def.paramDefs.size());
         for (const auto &pd : def.paramDefs)
             defParams.push_back(pd.defaultValue);
-        placeNewNode(eq, region, selId, newNodePos, m_pendingLinkPin, def.ignoresInput,
-                     [&](ProcessingGraphNode &n) {
-                         n.type = GraphNodeType::Effect;
-                         n.effect = ProcessingEffect{.type = def.type, .params = defParams};
-                     });
+        placeNewNode(eq, region, selId, newNodePos, m_pendingLinkPin, def.ignoresInput, [&](ProcessingGraphNode &n) {
+            n.type = GraphNodeType::Effect;
+            n.effect = ProcessingEffect{.type = def.type, .params = defParams};
+        });
         m_pendingLinkPin = -1;
     } else if (addReq.addPlugin) {
         const auto &pn = effectReg.pluginNodes.at(addReq.pluginNodeId);

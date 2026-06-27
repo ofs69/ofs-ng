@@ -1489,181 +1489,185 @@ void OfsApp::openTranscodeOptionsModal() {
     // and the body starts + closes on its next frame. -1 means no start pending.
     auto pendingReuse = std::make_shared<int>(-1);
 
-    ofs::showCustomModal(
-        eventQueue,
-        {.title = Str::TranscodeTitle.c_str(),
-         .width = ImGui::GetFontSize() * 26.0f,
-         .body = [this, cfg, resolvable, exists, pendingReuse]() -> bool {
-             // A deferred high-resolution "optimize anyway" landed: start the run and close.
-             if (*pendingReuse >= 0) {
-                 cfg->reuseIfExists = *pendingReuse == 1;
-                 eventQueue.push(ofs::TranscodeRequestEvent{*cfg});
-                 return true;
-             }
+    ofs::showCustomModal(eventQueue, {.title = Str::TranscodeTitle.c_str(),
+                                      .width = ImGui::GetFontSize() * 26.0f,
+                                      .body = [this, cfg, resolvable, exists, pendingReuse]() -> bool {
+                                          return renderTranscodeOptionsBody(cfg, resolvable, exists, pendingReuse);
+                                      }});
+}
 
-             ImGui::TextWrapped("%s", Str::TranscodeIntro.c_str());
+void OfsApp::startTranscode(const std::shared_ptr<ofs::TranscodeConfig> &cfg, bool reuse) {
+    cfg->reuseIfExists = reuse;
+    eventQueue.push(ofs::TranscodeRequestEvent{*cfg});
+}
 
-             // ── Scale (downscale factor expressed as a % of each source dimension; not a target
-             // resolution). Percentages are numeric/symbolic, so the labels stay literal like the
-             // resolution combo in ProjectConfigWindow — only a stable ###id is attached. ──
-             ImGui::SeparatorText(Str::TranscodeScale);
-             int scale = static_cast<int>(cfg->scale);
-             ImGui::RadioButton("100%###intra_scale_full", &scale, 0);
-             ImGui::SameLine();
-             ImGui::RadioButton("75%###intra_scale_threequarter", &scale, 1);
-             ImGui::SameLine();
-             ImGui::RadioButton("50%###intra_scale_half", &scale, 2);
-             ImGui::SameLine();
-             ImGui::RadioButton("25%###intra_scale_quarter", &scale, 3);
-             cfg->scale = static_cast<ofs::ScaleFactor>(scale);
+bool OfsApp::renderTranscodeOptionsBody(const std::shared_ptr<ofs::TranscodeConfig> &cfg, bool resolvable, bool exists,
+                                        const std::shared_ptr<int> &pendingReuse) {
+    // A deferred high-resolution "optimize anyway" landed: start the run and close.
+    if (*pendingReuse >= 0) {
+        startTranscode(cfg, *pendingReuse == 1);
+        return true;
+    }
 
-             // ── Resolution preview: the source size and what the chosen factor produces. Filled by the
-             // async ffprobe (placeholder until then). The pixel sizes are literal; only labels localize. ──
-             if (transcodeSourceInfo && transcodeSourceInfo->valid()) {
-                 const auto &mi = *transcodeSourceInfo;
-                 // Seed timing from the probe so the flow needs no player: the duration feeds the progress
-                 // %, and the source rate pre-fills the CFR field (harmless to update while it stays hidden
-                 // under Keep-original — once the user picks Constant FPS they own the value).
-                 if (cfg->sourceDuration <= 0.0)
-                     cfg->sourceDuration = mi.durationSec;
-                 if (cfg->timing == ofs::TimingMode::KeepOriginal && mi.fps > 0.0)
-                     cfg->cfrFps = mi.fps;
-                 ImGui::TextDisabled("%s", Str::TranscodeResSource.fmt(fmtScratch("{}×{}", mi.width, mi.height)));
-                 if (cfg->scale != ofs::ScaleFactor::Full) {
-                     const auto [ow, oh] = ofs::transcode::scaledDimensions(mi.width, mi.height, cfg->scale);
-                     ImGui::SameLine();
-                     ImGui::TextDisabled("%s", Str::TranscodeResOutput.fmt(fmtScratch("{}×{}", ow, oh)));
-                 }
-             } else {
-                 ImGui::TextDisabled("%s", Str::TranscodeResProbing.c_str());
-             }
+    ImGui::TextWrapped("%s", Str::TranscodeIntro.c_str());
 
-             ImGui::SeparatorText(Str::TranscodeTiming);
-             int timing = static_cast<int>(cfg->timing);
-             ImGui::RadioButton(Str::TranscodeTimingKeep.id("intra_timing_keep"), &timing, 0);
-             ImGui::SameLine();
-             ImGui::RadioButton(Str::TranscodeTimingCfr.id("intra_timing_cfr"), &timing, 1);
-             cfg->timing = static_cast<ofs::TimingMode>(timing);
-             if (cfg->timing == ofs::TimingMode::ConstantFps) {
-                 ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6.0f);
-                 ImGui::InputDouble("###intra_cfr_fps", &cfg->cfrFps, 0.0, 0.0, "%.3f");
-                 ImGui::SameLine();
-                 ImGui::TextDisabled("%s", Str::TranscodeFps.c_str());
-                 ImGui::PushTextWrapPos(0.0f);
-                 ImGui::TextColored(ofs::theme::GetStyleColorVec4(AppCol_Warning), "%s", Str::TranscodeCfrNote.c_str());
-                 ImGui::PopTextWrapPos();
-             }
+    // ── Scale (downscale factor expressed as a % of each source dimension; not a target
+    // resolution). Percentages are numeric/symbolic, so the labels stay literal like the
+    // resolution combo in ProjectConfigWindow — only a stable ###id is attached. ──
+    ImGui::SeparatorText(Str::TranscodeScale);
+    int scale = static_cast<int>(cfg->scale);
+    ImGui::RadioButton("100%###intra_scale_full", &scale, 0);
+    ImGui::SameLine();
+    ImGui::RadioButton("75%###intra_scale_threequarter", &scale, 1);
+    ImGui::SameLine();
+    ImGui::RadioButton("50%###intra_scale_half", &scale, 2);
+    ImGui::SameLine();
+    ImGui::RadioButton("25%###intra_scale_quarter", &scale, 3);
+    cfg->scale = static_cast<ofs::ScaleFactor>(scale);
 
-             // ── Codec. H.264 (all-intra) is the safe default for almost every use case; MJPEG is the
-             // experimental max-seek-speed path. Selecting MJPEG raises a stacked confirm (huge files) so
-             // an expert opts in deliberately — declining reverts to H.264. ──
-             ImGui::SeparatorText(Str::TranscodeCodec);
-             const auto prevCodec = cfg->codec;
-             int codec = static_cast<int>(cfg->codec);
-             ImGui::RadioButton(Str::TranscodeCodecH264.id("intra_codec_h264"), &codec, 0);
-             ImGui::SameLine();
-             ImGui::RadioButton(Str::TranscodeCodecMjpeg.id("intra_codec_mjpeg"), &codec, 1);
-             cfg->codec = static_cast<ofs::VideoCodec>(codec);
-             if (cfg->codec == ofs::VideoCodec::Mjpeg && prevCodec != ofs::VideoCodec::Mjpeg)
-                 ofs::confirmAsync(
-                     eventQueue,
-                     {.title = Str::TranscodeMjpegWarnTitle.c_str(),
-                      .message = Str::TranscodeMjpegNote.c_str(),
-                      // Decline is last so Escape (mapped to the last button) lands on the safe codec.
-                      .buttons = {Str::TranscodeMjpegWarnAccept.c_str(), Str::TranscodeMjpegWarnDecline.c_str()},
-                      .severity = ofs::ModalSeverity::Warning},
-                     [cfg](int idx) {
-                         if (idx != 0) // declined / dismissed → fall back to the safe codec
-                             cfg->codec = ofs::VideoCodec::H264;
-                     },
-                     /*stack=*/true);
+    // ── Resolution preview: the source size and what the chosen factor produces. Filled by the
+    // async ffprobe (placeholder until then). The pixel sizes are literal; only labels localize. ──
+    if (transcodeSourceInfo && transcodeSourceInfo->valid()) {
+        const auto &mi = *transcodeSourceInfo;
+        // Seed timing from the probe so the flow needs no player: the duration feeds the progress
+        // %, and the source rate pre-fills the CFR field (harmless to update while it stays hidden
+        // under Keep-original — once the user picks Constant FPS they own the value).
+        if (cfg->sourceDuration <= 0.0)
+            cfg->sourceDuration = mi.durationSec;
+        if (cfg->timing == ofs::TimingMode::KeepOriginal && mi.fps > 0.0)
+            cfg->cfrFps = mi.fps;
+        ImGui::TextDisabled("%s", Str::TranscodeResSource.fmt(fmtScratch("{}×{}", mi.width, mi.height)));
+        if (cfg->scale != ofs::ScaleFactor::Full) {
+            const auto [ow, oh] = ofs::transcode::scaledDimensions(mi.width, mi.height, cfg->scale);
+            ImGui::SameLine();
+            ImGui::TextDisabled("%s", Str::TranscodeResOutput.fmt(fmtScratch("{}×{}", ow, oh)));
+        }
+    } else {
+        ImGui::TextDisabled("%s", Str::TranscodeResProbing.c_str());
+    }
 
-             // ── Quality. CRF (libx264, 18–28) and MJPEG -q:v (2–31) share the "lower = better/larger"
-             // direction, so one hint covers both; the slider id and range switch with the codec. ──
-             ImGui::SeparatorText(Str::TranscodeQuality);
-             ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize(ICON_CIRCLE_HELP).x -
-                                     ImGui::GetStyle().ItemSpacing.x);
-             if (cfg->codec == ofs::VideoCodec::Mjpeg)
-                 ImGui::SliderInt("###intra_mjpeg_q", &cfg->mjpegQuality, 2, 31);
-             else
-                 ImGui::SliderInt("###intra_crf", &cfg->crf, 18, 28);
-             ImGui::SameLine();
-             ofs::ui::helpMarker(Str::TranscodeQualityHint.c_str());
+    ImGui::SeparatorText(Str::TranscodeTiming);
+    int timing = static_cast<int>(cfg->timing);
+    ImGui::RadioButton(Str::TranscodeTimingKeep.id("intra_timing_keep"), &timing, 0);
+    ImGui::SameLine();
+    ImGui::RadioButton(Str::TranscodeTimingCfr.id("intra_timing_cfr"), &timing, 1);
+    cfg->timing = static_cast<ofs::TimingMode>(timing);
+    if (cfg->timing == ofs::TimingMode::ConstantFps) {
+        ImGui::SetNextItemWidth(ImGui::GetFontSize() * 6.0f);
+        ImGui::InputDouble("###intra_cfr_fps", &cfg->cfrFps, 0.0, 0.0, "%.3f");
+        ImGui::SameLine();
+        ImGui::TextDisabled("%s", Str::TranscodeFps.c_str());
+        ImGui::PushTextWrapPos(0.0f);
+        ImGui::TextColored(ofs::theme::GetStyleColorVec4(AppCol_Warning), "%s", Str::TranscodeCfrNote.c_str());
+        ImGui::PopTextWrapPos();
+    }
 
-             // ── Decode-speed options (each carries a cost disclaimer in its tooltip). fastdecode is an
-             // x264 bitstream tweak, so it's hidden under MJPEG (which is already maximally decode-cheap);
-             // the 8-bit 4:2:0 pin applies to either codec. ──
-             if (cfg->codec == ofs::VideoCodec::H264) {
-                 ImGui::Checkbox(Str::TranscodeFastDecode.id("intra_fastdecode"), &cfg->fastDecode);
-                 ImGui::SetItemTooltip("%s", Str::TranscodeFastDecodeTip.c_str());
-             }
-             ImGui::Checkbox(Str::TranscodeForceYuv420p.id("intra_force_yuv420p"), &cfg->forceYuv420p);
-             ImGui::SetItemTooltip("%s", Str::TranscodeForceYuv420pTip.c_str());
+    // ── Codec. H.264 (all-intra) is the safe default for almost every use case; MJPEG is the
+    // experimental max-seek-speed path. Selecting MJPEG raises a stacked confirm (huge files) so
+    // an expert opts in deliberately — declining reverts to H.264. ──
+    ImGui::SeparatorText(Str::TranscodeCodec);
+    const auto prevCodec = cfg->codec;
+    int codec = static_cast<int>(cfg->codec);
+    ImGui::RadioButton(Str::TranscodeCodecH264.id("intra_codec_h264"), &codec, 0);
+    ImGui::SameLine();
+    ImGui::RadioButton(Str::TranscodeCodecMjpeg.id("intra_codec_mjpeg"), &codec, 1);
+    cfg->codec = static_cast<ofs::VideoCodec>(codec);
+    if (cfg->codec == ofs::VideoCodec::Mjpeg && prevCodec != ofs::VideoCodec::Mjpeg)
+        ofs::confirmAsync(
+            eventQueue,
+            {.title = Str::TranscodeMjpegWarnTitle.c_str(),
+             .message = Str::TranscodeMjpegNote.c_str(),
+             // Decline is last so Escape (mapped to the last button) lands on the safe codec.
+             .buttons = {Str::TranscodeMjpegWarnAccept.c_str(), Str::TranscodeMjpegWarnDecline.c_str()},
+             .severity = ofs::ModalSeverity::Warning},
+            [cfg](int idx) {
+                if (idx != 0) // declined / dismissed → fall back to the safe codec
+                    cfg->codec = ofs::VideoCodec::H264;
+            },
+            /*stack=*/true);
 
-             ImGui::Separator();
-             ImGui::Checkbox(Str::TranscodeSwitchAfter.id("intra_switch_after"), &cfg->switchAfter);
+    // ── Quality. CRF (libx264, 18–28) and MJPEG -q:v (2–31) share the "lower = better/larger"
+    // direction, so one hint covers both; the slider id and range switch with the codec. ──
+    ImGui::SeparatorText(Str::TranscodeQuality);
+    ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ImGui::CalcTextSize(ICON_CIRCLE_HELP).x -
+                            ImGui::GetStyle().ItemSpacing.x);
+    if (cfg->codec == ofs::VideoCodec::Mjpeg)
+        ImGui::SliderInt("###intra_mjpeg_q", &cfg->mjpegQuality, 2, 31);
+    else
+        ImGui::SliderInt("###intra_crf", &cfg->crf, 18, 28);
+    ImGui::SameLine();
+    ofs::ui::helpMarker(Str::TranscodeQualityHint.c_str());
 
-             ImGui::Separator();
-             if (exists)
-                 ImGui::TextColored(ofs::theme::GetStyleColorVec4(AppCol_Warning), "%s", Str::TranscodeExists.c_str());
+    // ── Decode-speed options (each carries a cost disclaimer in its tooltip). fastdecode is an
+    // x264 bitstream tweak, so it's hidden under MJPEG (which is already maximally decode-cheap);
+    // the 8-bit 4:2:0 pin applies to either codec. ──
+    if (cfg->codec == ofs::VideoCodec::H264) {
+        ImGui::Checkbox(Str::TranscodeFastDecode.id("intra_fastdecode"), &cfg->fastDecode);
+        ImGui::SetItemTooltip("%s", Str::TranscodeFastDecodeTip.c_str());
+    }
+    ImGui::Checkbox(Str::TranscodeForceYuv420p.id("intra_force_yuv420p"), &cfg->forceYuv420p);
+    ImGui::SetItemTooltip("%s", Str::TranscodeForceYuv420pTip.c_str());
 
-             // Kick off a run with the current config (outputPath was resolved at open). Progress shows in
-             // the footer task indicator — no modal.
-             auto start = [&](bool reuse) {
-                 cfg->reuseIfExists = reuse;
-                 eventQueue.push(ofs::TranscodeRequestEvent{*cfg});
-             };
+    ImGui::Separator();
+    ImGui::Checkbox(Str::TranscodeSwitchAfter.id("intra_switch_after"), &cfg->switchAfter);
 
-             // Gate a re-encode whose output is still beyond 4K after the chosen scale: an all-intra copy
-             // at that size (worse, an 8K source left at Full) explodes on disk. The stacked confirm nudges
-             // a 50%/25% downscale; "optimize anyway" defers the real start to the body's next frame via
-             // the latch. Returns whether to close the options modal now. "Use Existing" never routes here
-             // — it adopts the already-encoded copy and produces nothing new.
-             auto guardedStart = [&](bool reuse) -> bool {
-                 bool oversized = false;
-                 if (transcodeSourceInfo && transcodeSourceInfo->valid()) {
-                     const auto [ow, oh] = ofs::transcode::scaledDimensions(transcodeSourceInfo->width,
-                                                                            transcodeSourceInfo->height, cfg->scale);
-                     oversized = static_cast<long long>(ow) * oh > 3840LL * 2160; // beyond UHD 4K
-                 }
-                 if (!oversized) {
-                     start(reuse);
-                     return true;
-                 }
-                 ofs::confirmAsync(
-                     eventQueue,
-                     {.title = Str::TranscodeResWarnTitle.c_str(),
-                      .message = Str::TranscodeResWarnBody.fmt(
-                          fmtScratch("{}×{}", transcodeSourceInfo->width, transcodeSourceInfo->height)),
-                      .buttons = {Str::TranscodeResWarnReduce.c_str(), Str::TranscodeResWarnProceed.c_str()},
-                      .severity = ofs::ModalSeverity::Warning},
-                     [pendingReuse, reuse](int idx) {
-                         if (idx == 1) // "Optimize anyway"
-                             *pendingReuse = reuse ? 1 : 0;
-                     },
-                     /*stack=*/true);
-                 return false; // keep the options modal open beneath the warning
-             };
+    ImGui::Separator();
+    if (exists)
+        ImGui::TextColored(ofs::theme::GetStyleColorVec4(AppCol_Warning), "%s", Str::TranscodeExists.c_str());
 
-             bool close = false;
-             ImGui::BeginDisabled(!resolvable);
-             if (exists) {
-                 if (ImGui::Button(Str::TranscodeUseExisting.id("intra_use_existing"))) {
-                     start(true);
-                     close = true;
-                 }
-                 ImGui::SameLine();
-                 if (ImGui::Button(Str::TranscodeReoptimize.id("intra_reoptimize")))
-                     close = guardedStart(false);
-             } else if (ImGui::Button(Str::TranscodeStart.id("intra_start"))) {
-                 close = guardedStart(false);
-             }
-             ImGui::EndDisabled();
-             ImGui::SameLine();
-             if (ImGui::Button(Str::TranscodeCancel.id("intra_options_cancel")))
-                 close = true;
-             return close;
-         }});
+    // Kick off a run with the current config (outputPath was resolved at open). Progress shows in
+    // the footer task indicator — no modal.
+    auto start = [&](bool reuse) { startTranscode(cfg, reuse); };
+
+    // Gate a re-encode whose output is still beyond 4K after the chosen scale: an all-intra copy
+    // at that size (worse, an 8K source left at Full) explodes on disk. The stacked confirm nudges
+    // a 50%/25% downscale; "optimize anyway" defers the real start to the body's next frame via
+    // the latch. Returns whether to close the options modal now. "Use Existing" never routes here
+    // — it adopts the already-encoded copy and produces nothing new.
+    auto guardedStart = [&](bool reuse) -> bool {
+        bool oversized = false;
+        if (transcodeSourceInfo && transcodeSourceInfo->valid()) {
+            const auto [ow, oh] =
+                ofs::transcode::scaledDimensions(transcodeSourceInfo->width, transcodeSourceInfo->height, cfg->scale);
+            oversized = static_cast<long long>(ow) * oh > 3840LL * 2160; // beyond UHD 4K
+        }
+        if (!oversized) {
+            start(reuse);
+            return true;
+        }
+        ofs::confirmAsync(
+            eventQueue,
+            {.title = Str::TranscodeResWarnTitle.c_str(),
+             .message = Str::TranscodeResWarnBody.fmt(
+                 fmtScratch("{}×{}", transcodeSourceInfo->width, transcodeSourceInfo->height)),
+             .buttons = {Str::TranscodeResWarnReduce.c_str(), Str::TranscodeResWarnProceed.c_str()},
+             .severity = ofs::ModalSeverity::Warning},
+            [pendingReuse, reuse](int idx) {
+                if (idx == 1) // "Optimize anyway"
+                    *pendingReuse = reuse ? 1 : 0;
+            },
+            /*stack=*/true);
+        return false; // keep the options modal open beneath the warning
+    };
+
+    bool close = false;
+    ImGui::BeginDisabled(!resolvable);
+    if (exists) {
+        if (ImGui::Button(Str::TranscodeUseExisting.id("intra_use_existing"))) {
+            start(true);
+            close = true;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button(Str::TranscodeReoptimize.id("intra_reoptimize")))
+            close = guardedStart(false);
+    } else if (ImGui::Button(Str::TranscodeStart.id("intra_start"))) {
+        close = guardedStart(false);
+    }
+    ImGui::EndDisabled();
+    ImGui::SameLine();
+    if (ImGui::Button(Str::TranscodeCancel.id("intra_options_cancel")))
+        close = true;
+    return close;
 }
 
 void OfsApp::pickIntraOutputDir() {

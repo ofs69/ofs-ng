@@ -16,10 +16,6 @@ Line numbers are approximate — several files moved during the cleanup. Locate 
   extract methods, thread the frame-local state through params). Highest-risk of the three — heavy
   ImGui/draw-list ordering.
 
-- **`openTranscodeOptionsModal` (~220 lines, ~170-line nested body lambda)** — `src/App/OfsApp.cpp`.
-  Nested `start`/`guardedStart` lambdas plus the full scale/timing/codec/quality UI. Peer modals are
-  already factored into methods — follow that pattern: render helpers + a `startTranscode` helper.
-
 ## Router / registry templating
 
 - **Triplicated mode-registry infrastructure (C#)** — `plugins/Ofs.Api/Editing.cs`, `Navigation.cs`,

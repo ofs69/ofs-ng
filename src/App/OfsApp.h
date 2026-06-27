@@ -128,14 +128,20 @@ class OfsApp : public ofs::Application {
     bool renderExportFunscriptBody(); // interior of the Export modal; returns true to close
     void openExportFunscriptModal();  // populate axis options + show the Export modal
     void onQuickExport();             // replay the project's last export, or open the modal if none yet
-    void openTranscodeOptionsModal(); // build + show the intra-frame optimize options modal
-    void promptForMissingIntraDir();  // alert + force re-pick when the configured output folder is gone
-    void pickIntraOutputDir();        // open the folder picker, persist the choice, re-open the options modal
-    void maybeOfferOptimize();        // consume optimizePromptPending once media is ready; offer the prompt
-    bool renderNewLayoutBody();       // interior of the New Layout modal; returns true to close
-    void saveActiveLayout();          // snapshot current dock arrangement into the active preset
-    void revertToActiveLayout();      // reload the active layout's saved state, discarding live tweaks
-    void initCommands();              // registers all Commands + default KeyChord bindings
+    void openTranscodeOptionsModal(); // gate + seed the config, then show the intra-frame optimize modal
+    // Interior of the optimize options modal; returns true to close. Shares the live config and the
+    // deferred-start latch with openTranscodeOptionsModal via the shared_ptrs captured into the body.
+    bool renderTranscodeOptionsBody(const std::shared_ptr<ofs::TranscodeConfig> &cfg, bool resolvable, bool exists,
+                                    const std::shared_ptr<int> &pendingReuse);
+    // Push a transcode run for `cfg` with reuseIfExists set; progress shows in the footer task indicator.
+    void startTranscode(const std::shared_ptr<ofs::TranscodeConfig> &cfg, bool reuse);
+    void promptForMissingIntraDir(); // alert + force re-pick when the configured output folder is gone
+    void pickIntraOutputDir();       // open the folder picker, persist the choice, re-open the options modal
+    void maybeOfferOptimize();       // consume optimizePromptPending once media is ready; offer the prompt
+    bool renderNewLayoutBody();      // interior of the New Layout modal; returns true to close
+    void saveActiveLayout();         // snapshot current dock arrangement into the active preset
+    void revertToActiveLayout();     // reload the active layout's saved state, discarding live tweaks
+    void initCommands();             // registers all Commands + default KeyChord bindings
     void onSeekEvent(const ofs::SeekEvent &event);
 
     // Live global hold-repeat cadence, read fresh each tick so Shortcut-window edits apply instantly.
