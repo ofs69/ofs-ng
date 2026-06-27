@@ -142,6 +142,7 @@ class ProjectManager {
     // RestoreSceneViewEvent so the video window snaps its camera. Called once per update().
     void resolveActiveSceneView();
     void onClearRegionSelection(const ClearRegionSelectionEvent &event);
+    void onSetProcPanelLocked(const SetProcPanelLockedEvent &event);
     void onUpdateTimelineView(const UpdateTimelineViewEvent &event);
     void onSetTimelineShowPoints(const SetTimelineShowPointsEvent &event);
     void onSetTimelineShowWaveform(const SetTimelineShowWaveformEvent &event);

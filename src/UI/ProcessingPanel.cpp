@@ -1828,7 +1828,9 @@ void ProcessingPanel::renderHeader(const ScriptProject &project, EventQueue &eq,
 
     ImGui::PopStyleVar(2);
 
-    ImGui::Checkbox(m_locked ? ICON_LOCK "##lock" : ICON_LOCK_OPEN "##lock", &m_locked);
+    bool locked = project.procPanelLocked;
+    if (ImGui::Checkbox(locked ? ICON_LOCK "##lock" : ICON_LOCK_OPEN "##lock", &locked))
+        eq.push(SetProcPanelLockedEvent{locked});
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("%s", Str::ProcLockTip.c_str());
 

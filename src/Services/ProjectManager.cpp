@@ -156,6 +156,7 @@ ProjectManager::ProjectManager(ScriptProject &project, EventQueue &eq, const App
     eq.on<CaptureVideoFramingEvent>([this](const CaptureVideoFramingEvent &e) { onCaptureVideoFraming(e); });
     eq.on<CaptureSimInvertedEvent>([this](const CaptureSimInvertedEvent &e) { onCaptureSimInverted(e); });
     eq.on<ClearRegionSelectionEvent>([this](const auto &e) { onClearRegionSelection(e); });
+    eq.on<SetProcPanelLockedEvent>([this](const auto &e) { onSetProcPanelLocked(e); });
     eq.on<UpdateTimelineViewEvent>([this](const auto &e) { onUpdateTimelineView(e); });
     eq.on<SetTimelineShowPointsEvent>([this](const auto &e) { onSetTimelineShowPoints(e); });
     eq.on<SetTimelineShowWaveformEvent>([this](const auto &e) { onSetTimelineShowWaveform(e); });
@@ -262,7 +263,8 @@ void ProjectManager::onAxisSelected(const AxisSelectedEvent &event) {
     if (!inPanel(project, event.role))
         return; // can't activate an axis that isn't shown in the panel
     project.state.activeAxis = event.role;
-    project.procSelRegionId = -1;
+    if (!project.procPanelLocked)
+        project.procSelRegionId = -1;   // a locked processing panel stays pinned across an axis switch
     project.state.axesGrouping.reset(); // activating an axis dissolves any multi-axis group
 }
 
@@ -2623,6 +2625,10 @@ void ProjectManager::onSelectRegion(const SelectRegionEvent &event) {
 
 void ProjectManager::onClearRegionSelection(const ClearRegionSelectionEvent &) {
     project.procSelRegionId = -1;
+}
+
+void ProjectManager::onSetProcPanelLocked(const SetProcPanelLockedEvent &event) {
+    project.procPanelLocked = event.locked;
 }
 
 void ProjectManager::onUpdateTimelineView(const UpdateTimelineViewEvent &event) {

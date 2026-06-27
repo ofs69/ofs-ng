@@ -144,6 +144,11 @@ struct ScriptProject {
     // recomputes on demand via the processing panel. Not serialized; resets to true each session.
     bool autoEvalEnabled = true;
 
+    // Transient: the processing panel's focus lock. When set, the panel stays pinned to its selected
+    // region — neither a click-away nor activating a different axis closes it. Not serialized, not
+    // captured in undo; resets to false each session.
+    bool procPanelLocked = false;
+
     // Transient: which remembered source (state.original/intraMediaPath) is loaded into the player.
     // Recomputed on open (prefer Intra when present); NOT serialized.
     MediaSource activeSource = MediaSource::Original;

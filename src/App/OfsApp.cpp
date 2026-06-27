@@ -978,7 +978,7 @@ void OfsApp::renderEditor() {
 
     renderToolOptions();
 
-    if (processingPanel && scriptTimelineWindow && !processingPanel->isLocked() &&
+    if (processingPanel && scriptTimelineWindow && !scriptProject.procPanelLocked &&
         ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
         const bool anyPopupOpen = ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel);
         if (scriptProject.procSelRegionId != -1 && !processingPanel->cursorInsideThisFrame() &&

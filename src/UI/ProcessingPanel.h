@@ -43,7 +43,6 @@ class ProcessingPanel {
 
     [[nodiscard]] bool cursorInsideThisFrame() const { return m_cursorInside; }
     [[nodiscard]] bool isGraphFocused() const { return m_graphFocused; }
-    [[nodiscard]] bool isLocked() const { return m_locked; }
 
   private:
     // One node-creation request produced by the add-node popup and consumed by the node-create branches
@@ -81,7 +80,6 @@ class ProcessingPanel {
 
     bool m_cursorInside = false; // cursor was over this panel (z-order aware) this frame; for click-away deselect
     bool m_graphFocused = false;
-    bool m_locked = false; // when set, focus loss does not close the panel; transient, not persisted
     ImNodesEditorContext *m_editorCtx = nullptr;
     int m_loadedRegionId = -1;
     std::string m_nameEdit;

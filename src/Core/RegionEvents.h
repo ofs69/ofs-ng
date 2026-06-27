@@ -45,6 +45,11 @@ struct AssignAxisToRegionEvent {
 
 struct ClearRegionSelectionEvent {};
 
+// Toggle the processing panel's focus lock. Transient session state (ScriptProject::procPanelLocked).
+struct SetProcPanelLockedEvent {
+    bool locked;
+};
+
 struct SelectRegionEvent {
     int regionId;
 };
