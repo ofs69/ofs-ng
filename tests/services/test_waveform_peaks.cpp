@@ -58,7 +58,9 @@ TEST_CASE("writeCache/loadCache round-trips a waveform") {
     WaveformData d;
     d.bucketCount = 3;
     d.durationSeconds = 12.5;
-    d.peaks = {-1.0f, 1.0f, -0.5f, 0.5f, 0.0f, 0.2f};
+    // The cache stores peaks as int16 (each peak is min/max of s16 PCM, i.e. exactly k/32768), so values on
+    // that grid round-trip bit-exactly; 0.2 is off-grid and comes back within one quantization step.
+    d.peaks = {-1.0f, 0.75f, -0.5f, 0.5f, 0.0f, 0.2f};
 
     REQUIRE(writeCache(file, d));
 
@@ -68,7 +70,7 @@ TEST_CASE("writeCache/loadCache round-trips a waveform") {
     CHECK(loaded->durationSeconds == doctest::Approx(12.5));
     REQUIRE(loaded->peaks.size() == d.peaks.size());
     for (size_t i = 0; i < d.peaks.size(); ++i)
-        CHECK(loaded->peaks[i] == doctest::Approx(d.peaks[i]));
+        CHECK(loaded->peaks[i] == doctest::Approx(d.peaks[i]).epsilon(1.0 / 32768));
 
     std::filesystem::remove(file, ec);
 }
@@ -83,7 +85,7 @@ TEST_CASE("loadCache rejects a missing or truncated file") {
     const auto truncated = std::filesystem::temp_directory_path() / "ofs_waveform_truncated.wfm";
     {
         std::ofstream out(truncated, std::ios::binary | std::ios::trunc);
-        const uint32_t magic = 0x4F574631, version = 1, bucketCount = 1000;
+        const uint32_t magic = 0x4F574631, version = 2, bucketCount = 1000;
         const double duration = 1.0;
         out.write(reinterpret_cast<const char *>(&magic), sizeof(magic));
         out.write(reinterpret_cast<const char *>(&version), sizeof(version));

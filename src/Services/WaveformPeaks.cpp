@@ -1,5 +1,6 @@
 #include "Services/WaveformPeaks.h"
 #include <algorithm>
+#include <cmath>
 #include <fstream>
 
 namespace ofs::waveform {
@@ -33,7 +34,16 @@ WaveformData PeakBuilder::finish() const {
 
 namespace {
 constexpr uint32_t kCacheMagic = 0x4F574631; // "OWF1"
-constexpr uint32_t kCacheVersion = 1;
+// v2 stores peaks as int16 (was float) — half the bytes. The cache is regenerable, so an older v2-less
+// file is simply rejected below and rebuilt; there is no on-disk migration to carry.
+constexpr uint32_t kCacheVersion = 2;
+
+// Peaks originate as min/max of s16le PCM, each exactly int16/32768 (see WaveformService::feedSamples), so
+// int16 is their lossless native form. The mapping is symmetric for storage and load.
+int16_t quantizePeak(float v) {
+    return static_cast<int16_t>(std::clamp<long>(std::lround(v * 32768.0f), -32768, 32767));
+}
+float dequantizePeak(int16_t q) { return static_cast<float>(q) / 32768.0f; }
 } // namespace
 
 std::optional<WaveformData> loadCache(const std::filesystem::path &file) {
@@ -48,13 +58,16 @@ std::optional<WaveformData> loadCache(const std::filesystem::path &file) {
     in.read(reinterpret_cast<char *>(&duration), sizeof(duration));
     if (!in || magic != kCacheMagic || version != kCacheVersion || bucketCount == 0 || bucketCount > kMaxBuckets)
         return std::nullopt;
+    const size_t count = static_cast<size_t>(bucketCount) * 2;
+    std::vector<int16_t> packed(count);
+    in.read(reinterpret_cast<char *>(packed.data()), static_cast<std::streamsize>(count * sizeof(int16_t)));
+    if (in.gcount() != static_cast<std::streamsize>(count * sizeof(int16_t)))
+        return std::nullopt;
     WaveformData d;
     d.bucketCount = bucketCount;
     d.durationSeconds = duration;
-    d.peaks.resize(static_cast<size_t>(bucketCount) * 2);
-    in.read(reinterpret_cast<char *>(d.peaks.data()), static_cast<std::streamsize>(d.peaks.size() * sizeof(float)));
-    if (in.gcount() != static_cast<std::streamsize>(d.peaks.size() * sizeof(float)))
-        return std::nullopt;
+    d.peaks.resize(count);
+    std::ranges::transform(packed, d.peaks.begin(), dequantizePeak);
     return d;
 }
 
@@ -68,8 +81,10 @@ bool writeCache(const std::filesystem::path &file, const WaveformData &data) {
     out.write(reinterpret_cast<const char *>(&kCacheVersion), sizeof(kCacheVersion));
     out.write(reinterpret_cast<const char *>(&data.bucketCount), sizeof(data.bucketCount));
     out.write(reinterpret_cast<const char *>(&data.durationSeconds), sizeof(data.durationSeconds));
-    out.write(reinterpret_cast<const char *>(data.peaks.data()),
-              static_cast<std::streamsize>(data.peaks.size() * sizeof(float)));
+    std::vector<int16_t> packed(data.peaks.size());
+    std::ranges::transform(data.peaks, packed.begin(), quantizePeak);
+    out.write(reinterpret_cast<const char *>(packed.data()),
+              static_cast<std::streamsize>(packed.size() * sizeof(int16_t)));
     return static_cast<bool>(out);
 }
 
