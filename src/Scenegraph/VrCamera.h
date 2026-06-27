@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Scenegraph/Shader.h" // VrShader::hfovDegrees — the single source for the equirect HFOV
+#include "Scenegraph/VrShader.h" // VrShader::hfovDegrees — the single source for the equirect HFOV
 #include "imgui.h"
 #include <glm/glm.hpp>
 

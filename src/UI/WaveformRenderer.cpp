@@ -1,5 +1,5 @@
 #include "UI/WaveformRenderer.h"
-#include "Scenegraph/Shader.h"
+#include "Scenegraph/WaveformShader.h"
 #include "Services/WaveformService.h"
 #include "UI/Theme.h"
 #include <algorithm>

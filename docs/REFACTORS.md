@@ -59,12 +59,6 @@ Line numbers are approximate — several files moved during the cleanup. Locate 
   `AxisEvents.h` / `RegionEvents.h` / `LocalizationEvents.h` (siblings already split this way). Large
   include-churn but mechanical.
 
-- **`VrShader` and `WaveformShader` share one file** — `src/Scenegraph/Shader.{h,cpp}`. Only the abstract
-  base `Shader` couples them; each has a single distinct consumer. Split into `VrShader.{h,cpp}` and
-  `WaveformShader.{h,cpp}`, leaving base `Shader` + `checkCompileErrors` in `Shader.{h,cpp}`. Update
-  consumers (`VideoPlayerWindow.cpp`, `WaveformRenderer.cpp`) and `VrCamera.h` (now includes `Shader.h`
-  for `VrShader::hfovDegrees` → should include the new `VrShader.h`).
-
 - **Core event headers include Services-layer headers** — `src/Core/PluginEvents.h`,
   `src/Core/ScriptNodeEvents.h` pull in `Services/*Registry.h` to embed service-defined payloads (only
   `ScriptProject.h`→`JobSystem.h` is the sanctioned upward exception). Move these events into Services,

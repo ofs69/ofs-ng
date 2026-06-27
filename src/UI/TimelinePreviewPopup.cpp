@@ -3,7 +3,7 @@
 #include "Core/Events.h"
 #include "Core/ScriptProject.h"
 #include "Localization/Translator.h"
-#include "Scenegraph/Shader.h"
+#include "Scenegraph/VrShader.h"
 #include "Util/FrameAllocator.h"
 #include "Util/TimeUtil.h"
 #include "Video/VideoMode.h"
