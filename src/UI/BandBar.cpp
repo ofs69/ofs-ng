@@ -181,32 +181,12 @@ void drawBandBar(ImDrawList *dl, ImVec2 barMin, ImVec2 barMax, std::span<const B
             dl->AddRectFilled({x1 - kEdgeW, cMin.y}, cMax, ofs::theme::GetColorU32(AppCol_BandBarStripe));
         }
 
-        {
+        if (!bands[i].name.empty()) {
             const float cy = (barMin.y + barMax.y) * 0.5f;
-            const float r = std::max(1.f, (barMax.y - barMin.y - 2.f * kChPad) * 0.5f - 2.f);
-            const bool hasName = !bands[i].name.empty();
-            const bool spinning = bands[i].spinning;
-
-            ImVec2 ts{0.f, 0.f};
-            if (hasName)
-                ts = ImGui::CalcTextSize(bands[i].name.data(), bands[i].name.data() + bands[i].name.size());
-
-            const float spinW = spinning ? (r * 2.f + (ts.x > 0.f ? 4.f : 0.f)) : 0.f;
-            const float totalW = ts.x + spinW;
-            const float availW = x1 - x0 - 6.f;
-
-            if (totalW > 0.f && totalW <= availW) {
-                const float groupLeft = (x0 + x1 - totalW) * 0.5f;
-                if (hasName && ts.x > 0.f)
-                    ofs::ui::addTextShadow(dl, {groupLeft, cy - ts.y * 0.5f},
-                                           ofs::theme::GetColorU32(AppCol_BandBarText), bands[i].name);
-                if (spinning) {
-                    const float spinCx = groupLeft + ts.x + (ts.x > 0.f ? 4.f : 0.f) + r;
-                    ofs::ui::spinnerAt(dl, {spinCx, cy}, r, 1.5f, ofs::theme::GetColorU32(AppCol_BandBarText));
-                }
-            } else if (spinning && r * 2.f <= availW) {
-                ofs::ui::spinnerAt(dl, {(x0 + x1) * 0.5f, cy}, r, 1.5f, ofs::theme::GetColorU32(AppCol_BandBarText));
-            }
+            const ImVec2 ts = ImGui::CalcTextSize(bands[i].name.data(), bands[i].name.data() + bands[i].name.size());
+            if (ts.x > 0.f && ts.x <= x1 - x0 - 6.f)
+                ofs::ui::addTextShadow(dl, {(x0 + x1 - ts.x) * 0.5f, cy - ts.y * 0.5f},
+                                       ofs::theme::GetColorU32(AppCol_BandBarText), bands[i].name);
         }
 
         // Selection highlight, drawn last so it sits above the fill, hatch and label.

@@ -1178,18 +1178,10 @@ void ScriptTimelineWindow::renderRegionBar(VideoPlayer &videoPlayer, const Scrip
     auto *regionIds = ofs::FrameAllocator::instance().allocArray<int>(bandCount);
     int i = 0;
     for (const auto &reg : project.regions) {
-        bool spinning = false;
-        for (size_t a = 0; a < kStandardAxisCount; ++a) {
-            if (reg.axisRoles.test(a) && project.axes[a].pendingEval) {
-                spinning = true;
-                break;
-            }
-        }
         bandData[i] = {.startTime = reg.startTime,
                        .endTime = reg.endTime,
                        .color = reg.color,
                        .name = reg.name,
-                       .spinning = spinning,
                        .selected = reg.id == project.procSelRegionId,
                        .hatched = true}; // region bands are hatched to read distinctly from chapter bands
         regionIds[i] = reg.id;

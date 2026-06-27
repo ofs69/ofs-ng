@@ -33,7 +33,6 @@ struct BandItem {
     double endTime;
     ImU32 color;
     std::string_view name; // displayed centered if it fits; empty = no label
-    bool spinning = false; // when true, draws a rotating arc indicator next to the name
     bool selected = false; // when true, draws a bright highlight outline (e.g. the selected region)
     bool hatched = false;  // when true, fills with diagonal stripes instead of solid (region bands,
                            // so they read as visually distinct from solid chapter bands)
