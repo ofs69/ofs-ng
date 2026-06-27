@@ -54,11 +54,6 @@ Line numbers are approximate — several files moved during the cleanup. Locate 
 
 ## Cohesion / file structure
 
-- **Core event headers include Services-layer headers** — `src/Core/PluginEvents.h`,
-  `src/Core/ScriptNodeEvents.h` pull in `Services/*Registry.h` to embed service-defined payloads (only
-  `ScriptProject.h`→`JobSystem.h` is the sanctioned upward exception). Move these events into Services,
-  or relocate the small payload structs into Core. *(Layering is described, not a stated MUST — low.)*
-
 ## Remaining duplication
 
 - **Hit-test fade/decimation duplicated from the dot renderer** — `src/UI/ScriptTimeline.cpp` (the

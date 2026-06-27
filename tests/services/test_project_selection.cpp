@@ -1,10 +1,10 @@
 #include "Core/Events.h"
 #include "Core/IntentEvents.h"
-#include "Core/PluginEvents.h"
 #include "Core/ProjectLifecycleEvents.h"
 #include "Core/ScriptAxisAction.h"
 #include "Core/VectorSet.h"
 #include "Services/PluginApi.h"
+#include "Services/PluginEvents.h"
 #include "Services/SelectionModeRegistry.h"
 #include "helpers/PmFixture.h"
 #include <doctest/doctest.h>

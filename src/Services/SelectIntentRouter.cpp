@@ -3,10 +3,10 @@
 #include "Core/EventQueue.h"
 #include "Core/Events.h"
 #include "Core/IntentEvents.h"
-#include "Core/PluginEvents.h"
 #include "Core/ProjectLifecycleEvents.h"
 #include "Core/ScriptProject.h"
 #include "Services/PluginApi.h"
+#include "Services/PluginEvents.h"
 #include "Services/SelectionModeRegistry.h"
 #include "Util/Log.h"
 

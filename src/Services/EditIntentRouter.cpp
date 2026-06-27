@@ -4,11 +4,11 @@
 #include "Core/Events.h"
 #include "Core/IntentEvents.h"
 #include "Core/OverlaySettings.h"
-#include "Core/PluginEvents.h"
 #include "Core/ProjectLifecycleEvents.h"
 #include "Core/ScriptProject.h"
 #include "Services/EditModeRegistry.h"
 #include "Services/PluginApi.h"
+#include "Services/PluginEvents.h"
 #include "Util/Log.h"
 
 #include <algorithm>

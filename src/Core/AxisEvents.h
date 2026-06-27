@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Core/IntentEvents.h"      // StepDirection
-#include "Core/ProcessingRegion.h"  // AxisRoles
+#include "Core/IntentEvents.h"     // StepDirection
+#include "Core/ProcessingRegion.h" // AxisRoles
 #include "Core/ScriptAxisAction.h"
 #include "Core/StandardAxis.h"
 #include "Core/VectorSet.h"

@@ -1,13 +1,13 @@
 ﻿#pragma once
 
 #include "Core/Events.h"
-#include "Core/PluginEvents.h"
 #include "Core/ProjectLifecycleEvents.h"
 #include "Platform/DotNetHost.h"
 #include "Services/BindingSystem.h"
 #include "Services/CommandRegistry.h"
 #include "Services/EffectRegistry.h"
 #include "Services/PluginApi.h"
+#include "Services/PluginEvents.h"
 #include "Util/Coro.h"
 #include "Util/FaultThrottle.h"
 #include <bitset>

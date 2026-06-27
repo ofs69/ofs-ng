@@ -2,9 +2,9 @@
 
 #include "Core/Events.h"
 #include "Core/ProjectLifecycleEvents.h"
-#include "Core/ScriptNodeEvents.h"
 #include "Platform/DotNetHost.h"
 #include "Services/PluginApi.h"
+#include "Services/ScriptNodeEvents.h"
 #include "Services/ScriptRegistry.h"
 #include "Services/ScriptWatch.h"
 #include "Util/FaultThrottle.h"

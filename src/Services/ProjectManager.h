@@ -5,11 +5,11 @@
 #include "Core/GraphPresetEvents.h"
 #include "Core/ProjectLifecycleEvents.h"
 #include "Core/SceneViewEvents.h"
-#include "Core/ScriptNodeEvents.h"
 #include "Core/StandardAxis.h"
 #include "Format/AppSettings.h"
 #include "Format/Project.h"
 #include "Services/EffectRegistry.h"
+#include "Services/ScriptNodeEvents.h"
 #include "Util/Coro.h"
 #include <array>
 #include <chrono>

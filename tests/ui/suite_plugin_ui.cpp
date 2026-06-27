@@ -12,11 +12,9 @@
 
 #include "Core/Events.h"
 #include "Core/IntentEvents.h" // EditRequestEvent / SetActiveEditModeEvent ÔÇö drive Ofs.Core's edit mode
-#include "Core/PluginEvents.h"
 #include "Core/ProcessingRegion.h"
 #include "Core/ProjectLifecycleEvents.h"
 #include "Core/ScriptAxisAction.h"
-#include "Core/ScriptNodeEvents.h"
 #include "Core/ScriptProject.h"
 #include "Core/StandardAxis.h"
 #include "Core/VectorSet.h"
@@ -28,7 +26,9 @@
 #include "Services/EffectRegistry.h"
 #include "Services/NavigatorRegistry.h" // kFollowOverlayNavigatorId
 #include "Services/PluginApi.h"
+#include "Services/PluginEvents.h"
 #include "Services/PluginManager.h"
+#include "Services/ScriptNodeEvents.h"
 #include "Services/ScriptRegistry.h"
 #include "Services/SelectionModeRegistry.h" // kNativeSelectionModeId
 #include "UI/Icons.h"
