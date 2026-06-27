@@ -106,8 +106,8 @@ static void forEachVisibleDot(const ScriptProject &project, StandardAxis role,
     struct HiddenIv {
         double start, end;
     };
-    auto *hidden = ofs::FrameAllocator::instance().allocArray<HiddenIv>(
-        project.regions.empty() ? 1 : project.regions.size());
+    auto *hidden =
+        ofs::FrameAllocator::instance().allocArray<HiddenIv>(project.regions.empty() ? 1 : project.regions.size());
     size_t hiddenCount = 0;
     for (const auto &reg : project.regions)
         if (reg.axisRoles.test(static_cast<size_t>(role)) && !reg.showSourceActions && reg.endTime >= offsetTime &&
@@ -506,10 +506,10 @@ void ScriptTimelineWindow::renderCurves(const ScriptProject &project, ImDrawList
                             bool selected = ax.selection.contains(a);
                             const ImU32 outlineCol =
                                 (ofs::theme::GetColorU32(AppCol_TimelineOutline) & 0x00FFFFFFU) | (alpha << 24);
-                            const ImU32 innerCol =
-                                (ofs::theme::GetColorU32(selected ? AppCol_TimelinePointSelected : AppCol_TimelinePoint) &
-                                 0x00FFFFFFU) |
-                                (alpha << 24);
+                            const ImU32 innerCol = (ofs::theme::GetColorU32(selected ? AppCol_TimelinePointSelected
+                                                                                     : AppCol_TimelinePoint) &
+                                                    0x00FFFFFFU) |
+                                                   (alpha << 24);
                             drawList->AddCircleFilled(p, kDotR, outlineCol, 4);
                             drawList->AddCircleFilled(p, kDotR * 0.7f, innerCol, 4);
                         });

@@ -80,9 +80,9 @@ class ScriptTimelineWindow {
                      const AxisEntry *stripEntries, int numRows, bool hasGroup);
     // Curve area: background gradient, waveform, grid, the per-axis polylines + active-axis dots, the
     // in-progress selection box, and the outer border. Read-only; all interaction stays in renderTimeline.
-    void renderCurves(const ScriptProject &project, ImDrawList *drawList, WaveformRenderer &waveform,
-                      const ImVec2 &pos, const ImVec2 &size, const ImVec2 &curvePos, const ImVec2 &curveSize,
-                      double offsetTime, const AxisEntry *curveEntries, int curveCount, bool windowHovered);
+    void renderCurves(const ScriptProject &project, ImDrawList *drawList, WaveformRenderer &waveform, const ImVec2 &pos,
+                      const ImVec2 &size, const ImVec2 &curvePos, const ImVec2 &curveSize, double offsetTime,
+                      const AxisEntry *curveEntries, int curveCount, bool windowHovered);
     // The ##timeline_ctx popup body (axis lock/visibility/delete/add-region, view toggles, overlay
     // submenu). Begun and ended here; the matching OpenPopup calls live in the strip/curve interaction.
     void renderContextMenu(const ScriptProject &project, EventQueue &eq, VideoPlayer &videoPlayer);
