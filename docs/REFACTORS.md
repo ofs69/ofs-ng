@@ -54,11 +54,6 @@ Line numbers are approximate — several files moved during the cleanup. Locate 
 
 ## Cohesion / file structure
 
-- **`Events.h` is a catch-all across unrelated domains** — `src/Core/Events.h`. Bundles input, playback/
-  video, axis, region, and localization events. Split into `InputEvents.h` / `PlaybackEvents.h` /
-  `AxisEvents.h` / `RegionEvents.h` / `LocalizationEvents.h` (siblings already split this way). Large
-  include-churn but mechanical.
-
 - **Core event headers include Services-layer headers** — `src/Core/PluginEvents.h`,
   `src/Core/ScriptNodeEvents.h` pull in `Services/*Registry.h` to embed service-defined payloads (only
   `ScriptProject.h`→`JobSystem.h` is the sanctioned upward exception). Move these events into Services,
