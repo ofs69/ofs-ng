@@ -27,10 +27,6 @@ Line numbers are approximate — several files moved during the cleanup. Locate 
   `Navigation.cs`, `Selection.cs`. A shared base / static `OwnedSlots` helper. Folds into the
   `ModeRegistry<TSlot>` work above.
 
-- **`AppScoped<T>` and `ProjectScoped<T>` near-identical (C#)** — `plugins/Ofs.Api/AppScoped.cs`,
-  `ProjectScoped.cs`. Differ only in the backing-store calls. Shared non-public base / strategy holding
-  the load/save callbacks.
-
 > C# changes need a managed rebuild and are higher-risk (the public `Ofs.Api` surface is the plugin
 > stabilization contract — keep these internal/non-breaking).
 
