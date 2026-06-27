@@ -1725,7 +1725,7 @@ static void savePendingUninstalls(const std::set<std::string> &names) {
     nlohmann::json j = nlohmann::json::array();
     for (const auto &n : names)
         j.push_back(n);
-    ofs::util::writeFile(getPendingUninstallPath(), j.dump(2));
+    ofs::util::writeFileAtomic(getPendingUninstallPath(), j.dump(2));
 }
 
 std::map<std::string, PluginManager::PluginSavedState> PluginManager::loadPluginStates() const {
@@ -1762,7 +1762,7 @@ void PluginManager::savePluginStates() const {
                 {"version", plugin.version},
             });
         }
-        ofs::util::writeFile(getPluginStatesPath(), j.dump(4));
+        ofs::util::writeFileAtomic(getPluginStatesPath(), j.dump(4));
     } catch (const std::exception &e) {
         OFS_CORE_ERROR("Failed to save plugin states: {}", e.what());
     }

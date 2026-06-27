@@ -112,7 +112,7 @@ std::optional<Funscript> Funscript::load(const std::filesystem::path &path) {
 bool Funscript::save(const std::filesystem::path &path) const {
     try {
         nlohmann::json j = *this;
-        if (!ofs::util::writeFile(path, j.dump())) {
+        if (!ofs::util::writeFileAtomic(path, j.dump())) {
             OFS_CORE_ERROR("Failed to open funscript file for writing: {}", ofs::util::toUtf8(path));
             return false;
         }

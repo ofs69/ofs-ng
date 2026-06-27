@@ -211,7 +211,7 @@ void ProjectManager::loadTrustedGraphs() {
 
 void ProjectManager::saveTrustedGraphs() const {
     try {
-        ofs::util::writeFile(trustedGraphsPath(), nlohmann::json(trustedGraphHashes).dump(2));
+        ofs::util::writeFileAtomic(trustedGraphsPath(), nlohmann::json(trustedGraphHashes).dump(2));
     } catch (const std::exception &e) {
         OFS_CORE_ERROR("Failed to save trusted graphs: {}", e.what());
     }

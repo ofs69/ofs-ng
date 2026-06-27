@@ -152,7 +152,7 @@ void CustomCommandStore::save() const {
         j["version"] = kCustomCommandsVersion;
         j["nextId"] = nextId_;
         j["commands"] = std::move(arr);
-        ofs::util::writeFile(getCustomCommandsPath(), j.dump(4));
+        ofs::util::writeFileAtomic(getCustomCommandsPath(), j.dump(4));
     } catch (const std::exception &e) {
         OFS_CORE_ERROR("CustomCommandStore: failed to save: {}", e.what());
     }

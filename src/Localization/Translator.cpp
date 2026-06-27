@@ -145,7 +145,7 @@ bool writeCatalogToFile(const std::filesystem::path &path, std::string_view iso6
     std::ostringstream out;
     out << header;
     writeRootAsToml(out, root);
-    if (!ofs::util::writeFile(path, out.str())) {
+    if (!ofs::util::writeFileAtomic(path, out.str())) {
         OFS_CORE_ERROR("Localization: cannot write catalog to '{}'", ofs::util::toUtf8(path));
         return false;
     }

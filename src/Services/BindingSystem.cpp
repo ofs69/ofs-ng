@@ -773,7 +773,7 @@ void BindingSystem::saveBindings() const {
         nlohmann::json j;
         j["version"] = kBindingsFileVersion;
         j["bindings"] = arr;
-        ofs::util::writeFile(getBindingsPath(), j.dump(4));
+        ofs::util::writeFileAtomic(getBindingsPath(), j.dump(4));
     } catch (const std::exception &e) {
         OFS_CORE_ERROR("BindingSystem: failed to save bindings: {}", e.what());
     }
@@ -886,7 +886,7 @@ void BindingSystem::saveActiveAsPreset(const std::string &name) {
 
         std::error_code ec;
         std::filesystem::create_directories(userPresetDir(), ec);
-        ofs::util::writeFile(userPresetDir() / ofs::util::fromUtf8(slugify(name) + ".json"), j.dump(4));
+        ofs::util::writeFileAtomic(userPresetDir() / ofs::util::fromUtf8(slugify(name) + ".json"), j.dump(4));
     } catch (const std::exception &e) {
         OFS_CORE_ERROR("BindingSystem: failed to save preset '{}': {}", name, e.what());
     }

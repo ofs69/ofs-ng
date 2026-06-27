@@ -57,7 +57,7 @@ void LayoutStore::save() const {
     try {
         nlohmann::json j;
         to_json(j, *this);
-        ofs::util::writeFile(path, j.dump(4));
+        ofs::util::writeFileAtomic(path, j.dump(4));
     } catch (const std::exception &e) {
         OFS_CORE_ERROR("Failed to save layouts: {}", e.what());
     }

@@ -767,7 +767,7 @@ bool saveAs(const Theme &theme, std::string_view name) {
         std::filesystem::create_directories(userThemesDir());
         Theme copy = theme;
         copy.name = std::string(name);
-        ofs::util::writeFile(userThemeFile(name), themeToJson(copy).dump(4));
+        ofs::util::writeFileAtomic(userThemeFile(name), themeToJson(copy).dump(4));
         return true;
     } catch (const std::exception &e) {
         OFS_CORE_ERROR("Failed to save theme '{}': {}", std::string(name), e.what());
@@ -784,7 +784,7 @@ bool remove(std::string_view name) {
 
 bool exportToFile(const Theme &theme, const std::filesystem::path &dest) {
     try {
-        ofs::util::writeFile(dest, themeToJson(theme).dump(4));
+        ofs::util::writeFileAtomic(dest, themeToJson(theme).dump(4));
         return true;
     } catch (const std::exception &e) {
         OFS_CORE_ERROR("Failed to export theme to '{}': {}", ofs::util::toUtf8(dest), e.what());

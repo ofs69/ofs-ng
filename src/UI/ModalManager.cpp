@@ -186,7 +186,7 @@ void ModalManager::loadDialogDirs() {
 void ModalManager::saveDialogDirs() const {
     try {
         nlohmann::json j = dialogDirs_;
-        ofs::util::writeFile(dialogPathsFile(), j.dump(2));
+        ofs::util::writeFileAtomic(dialogPathsFile(), j.dump(2));
     } catch (const std::exception &e) {
         OFS_CORE_ERROR("Failed to save dialog_paths.json: {}", e.what());
     }

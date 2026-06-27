@@ -762,7 +762,7 @@ bool GraphPreset::save(const std::filesystem::path &path, const EffectRegistrySt
         });
         // Script sources travel on their nodes (scriptEmbeddedSource), serialized inside nodeGraph —
         // no separate top-level map. The caller inlines file-backed nodes' sources before saving.
-        if (!ofs::util::writeFile(path, j.dump(4))) {
+        if (!ofs::util::writeFileAtomic(path, j.dump(4))) {
             OFS_CORE_ERROR("Failed to open graph file for writing: {}", ofs::util::toUtf8(path));
             return false;
         }
