@@ -120,6 +120,38 @@ toml::table buildEntry(std::uint32_t idx, std::string_view translation) {
     return entry;
 }
 
+// Build a full strings-shaped catalog (optional [_meta].iso639 + one annotated entry per key, each
+// entry's translation supplied by `perKey(idx)`), prepend `header`, and write it to `path`. The shared
+// body of exportCatalog and refreshTranslation, which differ only in the per-key source and the header.
+// `forceMeta` emits the [_meta] table even for an empty code (export always declares one); otherwise it
+// is emitted only when non-empty. Logs and returns false on a write failure; the caller logs success.
+template <typename PerKeyFn>
+bool writeCatalogToFile(const std::filesystem::path &path, std::string_view iso639, bool forceMeta, PerKeyFn &&perKey,
+                        std::string_view header) {
+    toml::table root;
+    if (forceMeta || !iso639.empty()) {
+        toml::table meta;
+        meta.insert("iso639", std::string(iso639));
+        root.insert("_meta", std::move(meta));
+    }
+    for (std::uint32_t idx = 1; idx < gen::Count; ++idx)
+        root.insert(gen::KeyName[idx], buildEntry(idx, perKey(idx)));
+
+    // The export defaults under <pref>/lang, which need not exist yet on a fresh install.
+    std::error_code ec;
+    if (path.has_parent_path())
+        std::filesystem::create_directories(path.parent_path(), ec);
+
+    std::ostringstream out;
+    out << header;
+    writeRootAsToml(out, root);
+    if (!ofs::util::writeFile(path, out.str())) {
+        OFS_CORE_ERROR("Localization: cannot write catalog to '{}'", ofs::util::toUtf8(path));
+        return false;
+    }
+    return true;
+}
+
 } // namespace
 
 Translator &Translator::instance() {
@@ -252,51 +284,34 @@ std::vector<std::string> Translator::available() const {
 }
 
 bool Translator::exportCatalog(const std::filesystem::path &path) const {
-    toml::table root;
     // Carry the active language's ISO 639 code into the export so the file declares one (a new language
     // edits it to its own code). Without it the catalog has no code and plugins fall back to English.
-    {
-        toml::table meta;
-        meta.insert("iso639", activeLanguageCode_);
-        root.insert("_meta", std::move(meta));
-    }
-    for (std::uint32_t idx = 1; idx < gen::Count; ++idx) {
-        // Pre-fill each entry's translation with the active language's text so the user exports the
-        // currently-selected language and patches it from there. load() leaves untranslated keys
-        // pointing at the baked-in default (same pointer), so a pointer match means "not translated"
-        // → emit an empty translation (the English source still shows in the `english` field).
-        const char *tr = translation[idx];
-        const std::string_view active =
-            (tr != nullptr && tr != gen::Default[idx]) ? std::string_view(tr) : std::string_view{};
-        root.insert(gen::KeyName[idx], buildEntry(idx, active));
-    }
-
-    // The export defaults under <pref>/lang, which need not exist yet on a fresh install.
-    std::error_code ec;
-    if (path.has_parent_path())
-        std::filesystem::create_directories(path.parent_path(), ec);
-
-    std::ostringstream out;
-    out << "# Translation catalog — ofs-ng localization.\n"
-           "#\n"
-           "# One [Key] table per UI string. Fill in the 'translation' field for each entry.\n"
-           "# Leave 'translation' empty to fall back to the English default at runtime.\n"
-           "#\n"
-           "# [_meta].iso639 is this catalog's ISO 639 language code (e.g. \"ja\"); set it to the\n"
-           "# language you are translating into. ofs-ng hands it to plugins so they localize to match.\n"
-           "#\n"
-           "# Fields:\n"
-           "#   description  — context: what the string is / where it appears.\n"
-           "#   placeholders — docs for {0}, {1}, … placeholders (omitted when none).\n"
-           "#   english      — the source string (do not modify).\n"
-           "#   translation  — your translated text. Must use the same {N} placeholders.\n";
-    writeRootAsToml(out, root);
-    if (!ofs::util::writeFile(path, out.str())) {
-        OFS_CORE_ERROR("Localization: cannot write catalog to '{}'", ofs::util::toUtf8(path));
-        return false;
-    }
-    OFS_CORE_INFO("Localization: exported catalog to '{}'", ofs::util::toUtf8(path));
-    return true;
+    // Pre-fill each entry's translation with the active language's text so the user exports the
+    // currently-selected language and patches it from there. load() leaves untranslated keys pointing at
+    // the baked-in default (same pointer), so a pointer match means "not translated" → emit an empty
+    // translation (the English source still shows in the `english` field).
+    const bool ok = writeCatalogToFile(
+        path, activeLanguageCode_, /*forceMeta=*/true,
+        [this](std::uint32_t idx) -> std::string_view {
+            const char *tr = translation[idx];
+            return (tr != nullptr && tr != gen::Default[idx]) ? std::string_view(tr) : std::string_view{};
+        },
+        "# Translation catalog — ofs-ng localization.\n"
+        "#\n"
+        "# One [Key] table per UI string. Fill in the 'translation' field for each entry.\n"
+        "# Leave 'translation' empty to fall back to the English default at runtime.\n"
+        "#\n"
+        "# [_meta].iso639 is this catalog's ISO 639 language code (e.g. \"ja\"); set it to the\n"
+        "# language you are translating into. ofs-ng hands it to plugins so they localize to match.\n"
+        "#\n"
+        "# Fields:\n"
+        "#   description  — context: what the string is / where it appears.\n"
+        "#   placeholders — docs for {0}, {1}, … placeholders (omitted when none).\n"
+        "#   english      — the source string (do not modify).\n"
+        "#   translation  — your translated text. Must use the same {N} placeholders.\n");
+    if (ok)
+        OFS_CORE_INFO("Localization: exported catalog to '{}'", ofs::util::toUtf8(path));
+    return ok;
 }
 
 bool Translator::refreshTranslation(const std::filesystem::path &path) const {
@@ -320,27 +335,16 @@ bool Translator::refreshTranslation(const std::filesystem::path &path) const {
         }
     }
 
-    toml::table root;
-    if (!iso639.empty()) {
-        toml::table meta;
-        meta.insert("iso639", iso639);
-        root.insert("_meta", std::move(meta));
-    }
-    for (std::uint32_t idx = 1; idx < gen::Count; ++idx) {
-        auto it = existing.find(gen::KeyName[idx]);
-        const std::string &tr = (it != existing.end()) ? it->second : std::string{};
-        root.insert(gen::KeyName[idx], buildEntry(idx, tr));
-    }
-
-    std::ostringstream out;
-    out << "# Translation catalog refreshed by ofs-ng against the current source.\n";
-    writeRootAsToml(out, root);
-    if (!ofs::util::writeFile(path, out.str())) {
-        OFS_CORE_ERROR("Localization: cannot write '{}'", ofs::util::toUtf8(path));
-        return false;
-    }
-    OFS_CORE_INFO("Localization: refreshed translation '{}'", ofs::util::toUtf8(path));
-    return true;
+    const bool ok = writeCatalogToFile(
+        path, iso639, /*forceMeta=*/false,
+        [&existing](std::uint32_t idx) -> std::string_view {
+            auto it = existing.find(gen::KeyName[idx]);
+            return (it != existing.end()) ? std::string_view(it->second) : std::string_view{};
+        },
+        "# Translation catalog refreshed by ofs-ng against the current source.\n");
+    if (ok)
+        OFS_CORE_INFO("Localization: refreshed translation '{}'", ofs::util::toUtf8(path));
+    return ok;
 }
 
 void Translator::pollReload() {

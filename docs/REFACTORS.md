@@ -81,9 +81,6 @@ Line numbers are approximate — several files moved during the cleanup. Locate 
   One shared visible-dot enumeration helper used by both. (The dot-draw side now also precomputes hidden
   intervals — fold that in.)
 
-- **`exportCatalog` / `refreshTranslation` duplicate catalog build/write** — `src/Localization/Translator.cpp`.
-  A helper taking a per-key translation fn + header.
-
 - **Footer task-indicator lifecycle duplicated** — `src/Services/WaveformService.cpp` vs
   `VideoTranscoder.cpp` (start/clear the footer task entry). A small `FooterTask` RAII/helper.
 
