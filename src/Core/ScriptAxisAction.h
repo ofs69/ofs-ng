@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Core/VectorSet.h"
+
 #include <algorithm>
 
 namespace ofs {
@@ -22,5 +24,13 @@ struct ScriptAxisAction {
 // restore, paste from the clipboard) don't need to re-clamp, so this never runs as a whole-set sweep.
 [[nodiscard]] inline ScriptAxisAction clampedAction(double at, int pos) {
     return {std::max(at, 0.0), std::clamp(pos, 0, 100)};
+}
+
+// The action nearest `time`, or nullptr on an empty set. Resolves a no-selection edit/nudge gesture to
+// the single action the playhead is closest to — the edit and intent-router paths must agree on it.
+[[nodiscard]] inline const ScriptAxisAction *closestActionByTime(const VectorSet<ScriptAxisAction> &actions,
+                                                                 double time) {
+    auto it = actions.closest(ScriptAxisAction{time, 0}, &ScriptAxisAction::at);
+    return it == actions.end() ? nullptr : &*it;
 }
 } // namespace ofs

@@ -41,29 +41,6 @@
 
 namespace ofs {
 
-static const ScriptAxisAction *findClosestAction(const VectorSet<ScriptAxisAction> &actions, double time) {
-    if (actions.empty())
-        return nullptr;
-    auto it = actions.lowerBound(ScriptAxisAction{time, 0});
-    const ScriptAxisAction *best = nullptr;
-    double bestDist = std::numeric_limits<double>::max();
-    if (it != actions.end()) {
-        double d = std::abs(it->at - time);
-        if (d < bestDist) {
-            bestDist = d;
-            best = &(*it);
-        }
-    }
-    if (it != actions.begin()) {
-        auto prev = std::prev(it);
-        double d = std::abs(prev->at - time);
-        if (d < bestDist) {
-            best = &(*prev);
-        }
-    }
-    return best;
-}
-
 static constexpr double kBackupIntervals[5] = {60.0, 300.0, 600.0, 1800.0, 3600.0};
 static constexpr const char *kBackupNames[5] = {"1min.ofp", "5min.ofp", "10min.ofp", "30min.ofp", "60min.ofp"};
 
@@ -323,7 +300,7 @@ void ProjectManager::onRemoveSelectedActions(const RemoveSelectedActionsEvent &e
         } else if (!group) {
             // Single-axis convenience: with nothing selected, delete the action nearest the playhead.
             // A group never deletes unselected points out from under members.
-            const ScriptAxisAction *closest = findClosestAction(axis.actions, project.playback.cursorPos);
+            const ScriptAxisAction *closest = closestActionByTime(axis.actions, project.playback.cursorPos);
             if (!closest)
                 return;
             ScriptAxisAction toRemove = *closest;
@@ -1631,7 +1608,7 @@ void ProjectManager::onMoveSelectionPosition(const MoveSelectionPositionEvent &e
                 },
                 eq);
         } else if (!group) {
-            const ScriptAxisAction *closest = findClosestAction(axis.actions, project.playback.cursorPos);
+            const ScriptAxisAction *closest = closestActionByTime(axis.actions, project.playback.cursorPos);
             if (!closest)
                 return;
             int newPos = std::clamp(closest->pos + event.delta, 0, 100);
@@ -1687,7 +1664,7 @@ void ProjectManager::onMoveSelectionTime(const MoveSelectionTimeEvent &event) {
             if (role == project.state.activeAxis && !newSel.empty())
                 leadSeek = newSel.front().at;
         } else if (!group) {
-            const ScriptAxisAction *closest = findClosestAction(axis.actions, project.playback.cursorPos);
+            const ScriptAxisAction *closest = closestActionByTime(axis.actions, project.playback.cursorPos);
             if (!closest)
                 return;
             double newAt = std::max(0.0, closest->at + delta);
@@ -1708,7 +1685,7 @@ void ProjectManager::onMoveActionToCurrentTime(const MoveActionToCurrentTimeEven
                     [&](StandardAxis role, AxisState &axis) {
                         if (axis.actions.empty())
                             return;
-                        const ScriptAxisAction *closest = findClosestAction(axis.actions, currentTime);
+                        const ScriptAxisAction *closest = closestActionByTime(axis.actions, currentTime);
                         if (!closest || closest->at == currentTime)
                             return;
                         if (axis.actions.contains(ScriptAxisAction{currentTime, 0}))

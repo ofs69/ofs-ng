@@ -190,6 +190,39 @@ bool axisExists(const ScriptProject &project, size_t i) {
     return project.axes[i].exists();
 }
 
+// Copy up to bufSize actions from a sorted set into the plugin's flat buffer, returning the full count
+// (so the plugin can re-query with a larger buffer). A null buf is a count-only probe.
+int copyActionsToBuffer(const VectorSet<ScriptAxisAction> &src, PluginAction *buf, int bufSize) {
+    const int count = static_cast<int>(src.size());
+    if (buf) {
+        const int toCopy = std::min(count, bufSize);
+        auto it = src.begin();
+        for (int i = 0; i < toCopy; ++i, ++it) {
+            buf[i].at = it->at;
+            buf[i].pos = it->pos;
+        }
+    }
+    return count;
+}
+
+// Resolve a plugin-supplied axis role to its AxisState, or null if the role is out of range or the axis
+// is not part of the project. Centralizes the bounds + existence gate every axis HostApi callback shares;
+// write callbacks combine it with their own !eventQueue check.
+const AxisState *validAxis(const PluginCtx *p, int role) {
+    if (!p->project || role < 0 || role >= static_cast<int>(kStandardAxisCount))
+        return nullptr;
+    const auto i = static_cast<size_t>(role);
+    return axisExists(*p->project, i) ? &p->project->axes[i] : nullptr;
+}
+
+// Bounds-checked element access for the indexed collection getters: the element at `index`, or null when
+// out of range.
+template <typename Coll> const typename Coll::value_type *itemAt(const Coll &coll, int index) {
+    if (index < 0 || index >= static_cast<int>(coll.size()))
+        return nullptr;
+    return &coll[static_cast<size_t>(index)];
+}
+
 bool checkOnLoad(void *ctx, const char *fnName) {
     if (pc(ctx)->inOnLoad)
         return true;
@@ -204,6 +237,30 @@ bool checkMainThread(void *ctx, const char *fnName) {
                    "All HostApi calls must be made on the main thread.",
                    fnName);
     return false;
+}
+
+// Main-thread + project guard shared by the read callbacks: the live project, or null if called off the
+// main thread or before a project exists (the caller then returns its own default).
+ScriptProject *guardedProject(void *ctx, const char *fnName) {
+    if (!checkMainThread(ctx, fnName))
+        return nullptr;
+    return pc(ctx)->project;
+}
+
+// Decode a set* callback's JSON payload: empty/null text → JSON null (an erase), valid JSON → its value,
+// both written into `out` and reported as true. Malformed JSON logs under `fnName`/`key` and returns
+// false so the caller drops the call.
+bool parsePluginJson(const char *fnName, const char *pluginName, const char *key, const char *jsonUtf8,
+                     nlohmann::json &out) {
+    out = nlohmann::json{};
+    if (jsonUtf8 && jsonUtf8[0] != '\0') {
+        out = nlohmann::json::parse(jsonUtf8, nullptr, /*allow_exceptions=*/false);
+        if (out.is_discarded()) {
+            OFS_CORE_WARN("[Plugin] '{}' {}('{}'): invalid JSON, ignored.", pluginName, fnName, key);
+            return false;
+        }
+    }
+    return true;
 }
 
 double hostGetTime(void *ctx) {
@@ -324,43 +381,24 @@ int hostGetActiveAxisRole(void *ctx) {
 int hostGetAxisActions(void *ctx, int role, PluginAction *buf, int bufSize) {
     if (!checkMainThread(ctx, "getAxisActions"))
         return 0;
-    auto *p = pc(ctx);
-    if (!p->project || role < 0 || role >= static_cast<int>(kStandardAxisCount))
-        return 0;
-    const auto &axis = p->project->axes[role];
-    if (!axisExists(*p->project, static_cast<size_t>(role)))
-        return 0;
-    int count = static_cast<int>(axis.actions.size());
-    if (buf) {
-        int toCopy = std::min(count, bufSize);
-        auto it = axis.actions.begin();
-        for (int i = 0; i < toCopy; ++i, ++it) {
-            buf[i].at = it->at;
-            buf[i].pos = it->pos;
-        }
-    }
-    return count;
+    const AxisState *axis = validAxis(pc(ctx), role);
+    return axis ? copyActionsToBuffer(axis->actions, buf, bufSize) : 0;
 }
 
 int hostGetAxisActionCount(void *ctx, int role) {
     if (!checkMainThread(ctx, "getAxisActionCount"))
         return 0;
-    auto *p = pc(ctx);
-    if (!p->project || role < 0 || role >= static_cast<int>(kStandardAxisCount))
-        return 0;
-    const auto &axis = p->project->axes[role];
-    return axisExists(*p->project, static_cast<size_t>(role)) ? static_cast<int>(axis.actions.size()) : 0;
+    const AxisState *axis = validAxis(pc(ctx), role);
+    return axis ? static_cast<int>(axis->actions.size()) : 0;
 }
 
 void hostCommitAxisActions(void *ctx, int role, const PluginAction *actions, int count) {
     if (!checkMainThread(ctx, "commitAxisActions"))
         return;
     auto *p = pc(ctx);
-    if (!p->project || !p->eventQueue || role < 0 || role >= static_cast<int>(kStandardAxisCount))
+    if (!p->eventQueue || !validAxis(p, role))
         return;
     const auto axisRole = static_cast<StandardAxis>(role);
-    if (!axisExists(*p->project, static_cast<size_t>(role)))
-        return;
     auto view = std::span(actions, count) |
                 std::views::transform([](const PluginAction &a) { return ScriptAxisAction{a.at, a.pos}; });
     p->eventQueue->push(
@@ -370,41 +408,22 @@ void hostCommitAxisActions(void *ctx, int role, const PluginAction *actions, int
 int hostGetAxisSelection(void *ctx, int role, PluginAction *buf, int bufSize) {
     if (!checkMainThread(ctx, "getAxisSelection"))
         return 0;
-    auto *p = pc(ctx);
-    if (!p->project || role < 0 || role >= static_cast<int>(kStandardAxisCount))
-        return 0;
-    const auto &axis = p->project->axes[role];
-    if (!axisExists(*p->project, static_cast<size_t>(role)))
-        return 0;
-    int count = static_cast<int>(axis.selection.size());
-    if (buf) {
-        int toCopy = std::min(count, bufSize);
-        auto it = axis.selection.begin();
-        for (int i = 0; i < toCopy; ++i, ++it) {
-            buf[i].at = it->at;
-            buf[i].pos = it->pos;
-        }
-    }
-    return count;
+    const AxisState *axis = validAxis(pc(ctx), role);
+    return axis ? copyActionsToBuffer(axis->selection, buf, bufSize) : 0;
 }
 
 int hostGetAxisSelectionCount(void *ctx, int role) {
     if (!checkMainThread(ctx, "getAxisSelectionCount"))
         return 0;
-    auto *p = pc(ctx);
-    if (!p->project || role < 0 || role >= static_cast<int>(kStandardAxisCount))
-        return 0;
-    const auto &axis = p->project->axes[role];
-    return axisExists(*p->project, static_cast<size_t>(role)) ? static_cast<int>(axis.selection.size()) : 0;
+    const AxisState *axis = validAxis(pc(ctx), role);
+    return axis ? static_cast<int>(axis->selection.size()) : 0;
 }
 
 void hostSetAxisSelection(void *ctx, int role, const PluginAction *actions, int count) {
     if (!checkMainThread(ctx, "setAxisSelection"))
         return;
     auto *p = pc(ctx);
-    if (!p->project || !p->eventQueue || role < 0 || role >= static_cast<int>(kStandardAxisCount))
-        return;
-    if (!axisExists(*p->project, static_cast<size_t>(role)))
+    if (!p->eventQueue || !validAxis(p, role))
         return;
     auto view = std::span(actions, count) |
                 std::views::transform([](const PluginAction &a) { return ScriptAxisAction{a.at, a.pos}; });
@@ -577,6 +596,20 @@ void endField(PluginCtx *p) {
     ImGui::PopID();
 }
 
+// Shared body of every value-returning ui* widget: main-thread guard, the beginField label/layout setup,
+// the widget call (supplied by `body`, which reports whether it changed), then endField. `body` receives
+// the resolved label and returns the widget's changed/clicked bool. Callers with a pre-beginField guard
+// (a null buffer/pointer that must skip the field entirely) stay hand-written.
+template <typename Fn>
+int uiField(void *ctx, const char *fnName, const char *label, bool fillWidth, bool ownLabel, Fn body) {
+    if (!checkMainThread(ctx, fnName))
+        return 0;
+    const char *l = beginField(pc(ctx), label, fillWidth, ownLabel);
+    const bool changed = body(l);
+    endField(pc(ctx));
+    return changed ? 1 : 0;
+}
+
 void hostUiLabel(void *ctx, const char *text) {
     if (!checkMainThread(ctx, "uiLabel"))
         return;
@@ -594,12 +627,8 @@ void hostUiTextWrapped(void *ctx, const char *text) {
 }
 
 int hostUiButton(void *ctx, const char *label) {
-    if (!checkMainThread(ctx, "uiButton"))
-        return 0;
-    const char *l = beginField(pc(ctx), label, /*fillWidth*/ true, /*ownLabel*/ true);
-    bool clicked = ImGui::Button(l);
-    endField(pc(ctx));
-    return clicked ? 1 : 0;
+    return uiField(ctx, "uiButton", label, /*fillWidth*/ true, /*ownLabel*/ true,
+                   [&](const char *l) { return ImGui::Button(l); });
 }
 
 // Builds a bounded "%.Nf" display format from a plugin-supplied decimal count. A plugin only ever
@@ -610,93 +639,62 @@ void floatFormat(char (&out)[8], int decimals) {
 }
 
 int hostUiSliderFloat(void *ctx, const char *label, float *value, float min, float max, int decimals) {
-    if (!checkMainThread(ctx, "uiSliderFloat"))
-        return 0;
-    const char *l = beginField(pc(ctx), label, /*fillWidth*/ true, /*ownLabel*/ false);
-    char fmt[8];
-    floatFormat(fmt, decimals);
-    bool changed = ImGui::SliderFloat(l, value, min, max, fmt);
-    endField(pc(ctx));
-    return changed ? 1 : 0;
+    return uiField(ctx, "uiSliderFloat", label, /*fillWidth*/ true, /*ownLabel*/ false, [&](const char *l) {
+        char fmt[8];
+        floatFormat(fmt, decimals);
+        return ImGui::SliderFloat(l, value, min, max, fmt);
+    });
 }
 
 int hostUiSliderInt(void *ctx, const char *label, int *value, int min, int max) {
-    if (!checkMainThread(ctx, "uiSliderInt"))
-        return 0;
-    const char *l = beginField(pc(ctx), label, /*fillWidth*/ true, /*ownLabel*/ false);
-    bool changed = ImGui::SliderInt(l, value, min, max);
-    endField(pc(ctx));
-    return changed ? 1 : 0;
+    return uiField(ctx, "uiSliderInt", label, /*fillWidth*/ true, /*ownLabel*/ false,
+                   [&](const char *l) { return ImGui::SliderInt(l, value, min, max); });
 }
 
 int hostUiCombo(void *ctx, const char *label, int *index, const char *itemsSeparatedByZeros) {
-    if (!checkMainThread(ctx, "uiCombo"))
-        return 0;
-    const char *l = beginField(pc(ctx), label, /*fillWidth*/ true, /*ownLabel*/ false);
-    bool changed = ImGui::Combo(l, index, itemsSeparatedByZeros);
-    endField(pc(ctx));
-    return changed ? 1 : 0;
+    return uiField(ctx, "uiCombo", label, /*fillWidth*/ true, /*ownLabel*/ false,
+                   [&](const char *l) { return ImGui::Combo(l, index, itemsSeparatedByZeros); });
 }
 
 int hostUiCheckbox(void *ctx, const char *label, int *value) {
-    if (!checkMainThread(ctx, "uiCheckbox"))
-        return 0;
-    const char *l = beginField(pc(ctx), label, /*fillWidth*/ false, /*ownLabel*/ false);
-    bool bval = *value != 0;
-    bool changed = ImGui::Checkbox(l, &bval);
-    if (changed)
-        *value = bval ? 1 : 0;
-    endField(pc(ctx));
-    return changed ? 1 : 0;
+    return uiField(ctx, "uiCheckbox", label, /*fillWidth*/ false, /*ownLabel*/ false, [&](const char *l) {
+        bool bval = *value != 0;
+        bool changed = ImGui::Checkbox(l, &bval);
+        if (changed)
+            *value = bval ? 1 : 0;
+        return changed;
+    });
 }
 
 int hostUiRadioButton(void *ctx, const char *label, int *value, int option) {
-    if (!checkMainThread(ctx, "uiRadioButton"))
-        return 0;
-    const char *l = beginField(pc(ctx), label, /*fillWidth*/ false, /*ownLabel*/ true);
-    bool clicked = ImGui::RadioButton(l, value, option);
-    endField(pc(ctx));
-    return clicked ? 1 : 0;
+    return uiField(ctx, "uiRadioButton", label, /*fillWidth*/ false, /*ownLabel*/ true,
+                   [&](const char *l) { return ImGui::RadioButton(l, value, option); });
 }
 
 int hostUiInputInt(void *ctx, const char *label, int *value, int step) {
-    if (!checkMainThread(ctx, "uiInputInt"))
-        return 0;
-    const char *l = beginField(pc(ctx), label, /*fillWidth*/ true, /*ownLabel*/ false);
-    bool changed = ImGui::InputInt(l, value, step);
-    endField(pc(ctx));
-    return changed ? 1 : 0;
+    return uiField(ctx, "uiInputInt", label, /*fillWidth*/ true, /*ownLabel*/ false,
+                   [&](const char *l) { return ImGui::InputInt(l, value, step); });
 }
 
 int hostUiInputFloat(void *ctx, const char *label, float *value, float step, int decimals) {
-    if (!checkMainThread(ctx, "uiInputFloat"))
-        return 0;
-    const char *l = beginField(pc(ctx), label, /*fillWidth*/ true, /*ownLabel*/ false);
-    char fmt[8];
-    floatFormat(fmt, decimals);
-    bool changed = ImGui::InputFloat(l, value, step, 0.f, fmt);
-    endField(pc(ctx));
-    return changed ? 1 : 0;
+    return uiField(ctx, "uiInputFloat", label, /*fillWidth*/ true, /*ownLabel*/ false, [&](const char *l) {
+        char fmt[8];
+        floatFormat(fmt, decimals);
+        return ImGui::InputFloat(l, value, step, 0.f, fmt);
+    });
 }
 
 int hostUiDragInt(void *ctx, const char *label, int *value, float speed, int min, int max) {
-    if (!checkMainThread(ctx, "uiDragInt"))
-        return 0;
-    const char *l = beginField(pc(ctx), label, /*fillWidth*/ true, /*ownLabel*/ false);
-    bool changed = ImGui::DragInt(l, value, speed, min, max);
-    endField(pc(ctx));
-    return changed ? 1 : 0;
+    return uiField(ctx, "uiDragInt", label, /*fillWidth*/ true, /*ownLabel*/ false,
+                   [&](const char *l) { return ImGui::DragInt(l, value, speed, min, max); });
 }
 
 int hostUiDragFloat(void *ctx, const char *label, float *value, float speed, float min, float max, int decimals) {
-    if (!checkMainThread(ctx, "uiDragFloat"))
-        return 0;
-    const char *l = beginField(pc(ctx), label, /*fillWidth*/ true, /*ownLabel*/ false);
-    char fmt[8];
-    floatFormat(fmt, decimals);
-    bool changed = ImGui::DragFloat(l, value, speed, min, max, fmt);
-    endField(pc(ctx));
-    return changed ? 1 : 0;
+    return uiField(ctx, "uiDragFloat", label, /*fillWidth*/ true, /*ownLabel*/ false, [&](const char *l) {
+        char fmt[8];
+        floatFormat(fmt, decimals);
+        return ImGui::DragFloat(l, value, speed, min, max, fmt);
+    });
 }
 
 int hostUiInputText(void *ctx, const char *label, char *buf, int bufSize, int password, int readOnly) {
@@ -1162,9 +1160,7 @@ void hostSetActiveAxis(void *ctx, int role) {
     if (!checkMainThread(ctx, "setActiveAxis"))
         return;
     auto *p = pc(ctx);
-    if (!p->project || !p->eventQueue || role < 0 || role >= static_cast<int>(kStandardAxisCount))
-        return;
-    if (!axisExists(*p->project, static_cast<size_t>(role)))
+    if (!p->eventQueue || !validAxis(p, role))
         return;
     p->eventQueue->push(AxisSelectedEvent{static_cast<StandardAxis>(role)});
 }
@@ -1172,21 +1168,15 @@ void hostSetActiveAxis(void *ctx, int role) {
 int hostIsAxisVisible(void *ctx, int role) {
     if (!checkMainThread(ctx, "isAxisVisible"))
         return -1;
-    auto *p = pc(ctx);
-    if (!p->project || role < 0 || role >= static_cast<int>(kStandardAxisCount))
-        return -1;
-    const auto &a = p->project->axes[role];
-    return axisExists(*p->project, static_cast<size_t>(role)) ? (a.isVisible ? 1 : 0) : -1;
+    const AxisState *a = validAxis(pc(ctx), role);
+    return a ? (a->isVisible ? 1 : 0) : -1;
 }
 
 int hostIsAxisLocked(void *ctx, int role) {
     if (!checkMainThread(ctx, "isAxisLocked"))
         return -1;
-    auto *p = pc(ctx);
-    if (!p->project || role < 0 || role >= static_cast<int>(kStandardAxisCount))
-        return -1;
-    const auto &a = p->project->axes[role];
-    return axisExists(*p->project, static_cast<size_t>(role)) ? (a.isLocked ? 1 : 0) : -1;
+    const AxisState *a = validAxis(pc(ctx), role);
+    return a ? (a->isLocked ? 1 : 0) : -1;
 }
 
 int hostGetAxisName(void *ctx, int role, char *buf, int bufSize) {
@@ -1241,14 +1231,9 @@ void hostSetProjectData(void *ctx, const char *key, const char *jsonUtf8) {
     auto *p = pc(ctx);
     if (!p->eventQueue || !p->currentPluginName || !key || key[0] == '\0')
         return;
-    nlohmann::json value; // null → the handler erases the key
-    if (jsonUtf8 && jsonUtf8[0] != '\0') {
-        value = nlohmann::json::parse(jsonUtf8, nullptr, /*allow_exceptions=*/false);
-        if (value.is_discarded()) {
-            OFS_CORE_WARN("[Plugin] '{}' setProjectData('{}'): invalid JSON, ignored.", p->currentPluginName, key);
-            return;
-        }
-    }
+    nlohmann::json value;
+    if (!parsePluginJson("setProjectData", p->currentPluginName, key, jsonUtf8, value))
+        return;
     p->eventQueue->push(
         SetPluginProjectDataEvent{.pluginName = p->currentPluginName, .key = key, .value = std::move(value)});
 }
@@ -1271,94 +1256,68 @@ void hostSetAppData(void *ctx, const char *key, const char *jsonUtf8) {
     auto *p = pc(ctx);
     if (!p->manager || !p->currentPluginName || !key || key[0] == '\0')
         return;
-    nlohmann::json value; // null → the setter erases the key
-    if (jsonUtf8 && jsonUtf8[0] != '\0') {
-        value = nlohmann::json::parse(jsonUtf8, nullptr, /*allow_exceptions=*/false);
-        if (value.is_discarded()) {
-            OFS_CORE_WARN("[Plugin] '{}' setAppData('{}'): invalid JSON, ignored.", p->currentPluginName, key);
-            return;
-        }
-    }
+    nlohmann::json value;
+    if (!parsePluginJson("setAppData", p->currentPluginName, key, jsonUtf8, value))
+        return;
     p->manager->setAppSetting(p->currentPluginName, key, std::move(value));
 }
 
 int hostGetChapterCount(void *ctx) {
-    if (!checkMainThread(ctx, "getChapterCount"))
-        return 0;
-    auto *p = pc(ctx);
-    return (p->project) ? static_cast<int>(p->project->bookmarks.chapters.size()) : 0;
+    ScriptProject *pr = guardedProject(ctx, "getChapterCount");
+    return pr ? static_cast<int>(pr->bookmarks.chapters.size()) : 0;
 }
 
 int hostGetChapter(void *ctx, int index, double *startOut, double *endOut, unsigned int *colorOut, char *nameBuf,
                    int nameBufSize, int *nameReqOut) {
     fillNameOut(nameBuf, nameBufSize, nameReqOut, {}); // clear name out-params before any early return
-    if (!checkMainThread(ctx, "getChapter"))
+    ScriptProject *pr = guardedProject(ctx, "getChapter");
+    const auto *c = pr ? itemAt(pr->bookmarks.chapters, index) : nullptr;
+    if (!c)
         return 0;
-    auto *p = pc(ctx);
-    if (!p->project)
-        return 0;
-    const auto &chapters = p->project->bookmarks.chapters;
-    if (index < 0 || index >= static_cast<int>(chapters.size()))
-        return 0;
-    const auto &c = chapters[static_cast<size_t>(index)];
     if (startOut)
-        *startOut = c.startTime;
+        *startOut = c->startTime;
     if (endOut)
-        *endOut = c.endTime;
+        *endOut = c->endTime;
     if (colorOut)
-        *colorOut = c.color;
-    fillNameOut(nameBuf, nameBufSize, nameReqOut, c.name);
+        *colorOut = c->color;
+    fillNameOut(nameBuf, nameBufSize, nameReqOut, c->name);
     return 1;
 }
 
 int hostGetBookmarkCount(void *ctx) {
-    if (!checkMainThread(ctx, "getBookmarkCount"))
-        return 0;
-    auto *p = pc(ctx);
-    return (p->project) ? static_cast<int>(p->project->bookmarks.bookmarks.size()) : 0;
+    ScriptProject *pr = guardedProject(ctx, "getBookmarkCount");
+    return pr ? static_cast<int>(pr->bookmarks.bookmarks.size()) : 0;
 }
 
 int hostGetBookmark(void *ctx, int index, double *timeOut, char *nameBuf, int nameBufSize, int *nameReqOut) {
     fillNameOut(nameBuf, nameBufSize, nameReqOut, {}); // clear name out-params before any early return
-    if (!checkMainThread(ctx, "getBookmark"))
+    ScriptProject *pr = guardedProject(ctx, "getBookmark");
+    const auto *b = pr ? itemAt(pr->bookmarks.bookmarks, index) : nullptr;
+    if (!b)
         return 0;
-    auto *p = pc(ctx);
-    if (!p->project)
-        return 0;
-    const auto &bms = p->project->bookmarks.bookmarks;
-    if (index < 0 || index >= static_cast<int>(bms.size()))
-        return 0;
-    const auto &b = bms[static_cast<size_t>(index)];
     if (timeOut)
-        *timeOut = b.time;
-    fillNameOut(nameBuf, nameBufSize, nameReqOut, b.name);
+        *timeOut = b->time;
+    fillNameOut(nameBuf, nameBufSize, nameReqOut, b->name);
     return 1;
 }
 
 int hostGetRegionCount(void *ctx) {
-    if (!checkMainThread(ctx, "getRegionCount"))
-        return 0;
-    auto *p = pc(ctx);
-    return (p->project) ? static_cast<int>(p->project->regions.size()) : 0;
+    ScriptProject *pr = guardedProject(ctx, "getRegionCount");
+    return pr ? static_cast<int>(pr->regions.size()) : 0;
 }
 
 int hostGetRegion(void *ctx, int index, double *startOut, double *endOut, char *nameBuf, int nameBufSize,
                   int *nameReqOut) {
     fillNameOut(nameBuf, nameBufSize, nameReqOut, {}); // clear name out-params before any early return
-    if (!checkMainThread(ctx, "getRegion"))
+    ScriptProject *pr = guardedProject(ctx, "getRegion");
+    const auto *r = pr ? itemAt(pr->regions, index) : nullptr;
+    if (!r)
         return 0;
-    auto *p = pc(ctx);
-    if (!p->project)
-        return 0;
-    const auto &regions = p->project->regions;
-    if (index < 0 || index >= static_cast<int>(regions.size()))
-        return 0;
-    const auto &r = regions[static_cast<size_t>(index)];
     if (startOut)
-        *startOut = r.startTime;
+        *startOut = r->startTime;
     if (endOut)
-        *endOut = r.endTime;
-    fillNameOut(nameBuf, nameBufSize, nameReqOut, r.name);
+        *endOut = r->endTime;
+    fillNameOut(nameBuf, nameBufSize, nameReqOut, r->name);
     return 1;
 }
 
@@ -2428,9 +2387,8 @@ const nlohmann::json *PluginManager::appSettingValue(const std::string &pluginNa
 void PluginManager::setAppSetting(const std::string &pluginName, const std::string &key, nlohmann::json value) {
     nlohmann::json &obj = loadedAppSettings(pluginName);
     if (value.is_null()) {
-        if (obj.find(key) == obj.end())
-            return; // nothing to erase → nothing changed, stay clean
-        obj.erase(key);
+        if (obj.erase(key) == 0)
+            return;
     } else {
         obj[key] = std::move(value);
     }

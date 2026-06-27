@@ -3,6 +3,7 @@
 #include "Util/JsonUtil.h"
 #include "Util/Log.h"
 #include "Util/PathUtil.h"
+#include <algorithm>
 #include <cmath>
 
 namespace ofs {
@@ -163,13 +164,8 @@ static Funscript buildMultiAxis(const std::vector<std::pair<std::string, VectorS
         return fs;
 
     // L0 is canonical primary; fall back to first entry
-    size_t primaryIdx = 0;
-    for (size_t i = 0; i < axes.size(); ++i) {
-        if (axes[i].first == "L0") {
-            primaryIdx = i;
-            break;
-        }
-    }
+    const auto l0 = std::ranges::find_if(axes, [](const auto &ax) { return ax.first == "L0"; });
+    const size_t primaryIdx = l0 != axes.end() ? static_cast<size_t>(std::distance(axes.begin(), l0)) : 0;
 
     fs.actions = toActionVec(axes[primaryIdx].second);
 

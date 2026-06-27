@@ -119,6 +119,36 @@ TEST_CASE("VectorSet range-constructor produces sorted unique set") {
     CHECK(vs[2].at == doctest::Approx(3.0));
 }
 
+TEST_CASE("VectorSet closest returns the nearest element by projection") {
+    VectorSet<ScriptAxisAction> vs;
+    auto at = [](const ScriptAxisAction &a) { return a.at; };
+
+    CHECK(vs.closest({5.0, 0}, at) == vs.end()); // empty set ⇒ end()
+
+    for (double t : {1.0, 4.0, 9.0})
+        vs.insert({t, 0});
+
+    CHECK(vs.closest({-3.0, 0}, at)->at == doctest::Approx(1.0));  // before the first ⇒ first
+    CHECK(vs.closest({100.0, 0}, at)->at == doctest::Approx(9.0)); // past the last ⇒ last
+    CHECK(vs.closest({4.0, 0}, at)->at == doctest::Approx(4.0));   // exact hit
+    CHECK(vs.closest({3.4, 0}, at)->at == doctest::Approx(4.0));   // nearer the upper neighbour
+    CHECK(vs.closest({1.9, 0}, at)->at == doctest::Approx(1.0));   // nearer the lower neighbour
+
+    // Exactly equidistant (2.5 between 1.0 and 4.0) favours the element at-or-after the query.
+    CHECK(vs.closest({2.5, 0}, at)->at == doctest::Approx(4.0));
+}
+
+TEST_CASE("closestActionByTime mirrors VectorSet::closest with a pointer result") {
+    using ofs::closestActionByTime;
+    VectorSet<ScriptAxisAction> vs;
+    CHECK(closestActionByTime(vs, 5.0) == nullptr); // empty ⇒ null
+
+    vs.insert({2.0, 20});
+    vs.insert({8.0, 80});
+    CHECK(closestActionByTime(vs, 3.0)->pos == 20);
+    CHECK(closestActionByTime(vs, 7.0)->pos == 80);
+}
+
 TEST_CASE("VectorSet eraseRange removes the inclusive [lo,hi] span only") {
     VectorSet<ScriptAxisAction> vs;
     for (double t : {0.0, 1.0, 1.5, 2.0, 3.0})

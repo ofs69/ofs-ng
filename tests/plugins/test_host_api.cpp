@@ -474,6 +474,29 @@ TEST_CASE("setProjectData pushes a namespaced, parsed event and rejects malforme
     CHECK(fx.pluginData.received.size() == 3);
 }
 
+TEST_CASE("getAppData/setAppData round-trip a value and clear it (incl. a no-op clear)") {
+    HostApiFixture fx;
+    char buf[64] = {};
+
+    // Unset key → empty read, zero required length. (No test flushes, so no settings file exists.)
+    CHECK(fx.h().getAppData(fx.cv(), "ofs_clear_probe", buf, sizeof(buf)) == 0);
+    CHECK(buf[0] == '\0');
+
+    // Set a value → it reads back as the dumped JSON.
+    fx.h().setAppData(fx.cv(), "ofs_clear_probe", "42");
+    CHECK(fx.h().getAppData(fx.cv(), "ofs_clear_probe", buf, sizeof(buf)) == 2);
+    CHECK(std::string(buf) == "42");
+
+    // Clearing with an empty payload erases the key (setAppSetting's erase-hit branch).
+    fx.h().setAppData(fx.cv(), "ofs_clear_probe", "");
+    CHECK(fx.h().getAppData(fx.cv(), "ofs_clear_probe", buf, sizeof(buf)) == 0);
+    CHECK(buf[0] == '\0');
+
+    // Clearing an already-absent key is a no-op (setAppSetting's erase-miss early return) — no crash.
+    fx.h().setAppData(fx.cv(), "ofs_clear_probe", nullptr);
+    CHECK(fx.h().getAppData(fx.cv(), "ofs_clear_probe", buf, sizeof(buf)) == 0);
+}
+
 TEST_CASE("registerCommand reports a distinct code for each failure mode") {
     HostApiFixture fx;
     PluginManagerTestAccess::pluginCtx(fx.pm).inOnLoad = true;

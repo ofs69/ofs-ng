@@ -12,34 +12,11 @@
 #include "Util/Log.h"
 
 #include <algorithm>
-#include <cmath>
-#include <iterator>
-#include <limits>
 #include <vector>
 
 namespace ofs {
 
 namespace {
-// The action nearest `time` on an axis, or null on an empty axis. Mirrors ProjectManager's own helper —
-// the router needs it to resolve a no-selection nudge to the single point ProjectManager would move.
-const ScriptAxisAction *closestAction(const VectorSet<ScriptAxisAction> &actions, double time) {
-    if (actions.empty())
-        return nullptr;
-    auto it = actions.lowerBound(ScriptAxisAction{time, 0});
-    const ScriptAxisAction *best = nullptr;
-    double bestDist = std::numeric_limits<double>::max();
-    if (it != actions.end()) {
-        best = &(*it);
-        bestDist = std::abs(it->at - time);
-    }
-    if (it != actions.begin()) {
-        auto prev = std::prev(it);
-        if (std::abs(prev->at - time) < bestDist)
-            best = &(*prev);
-    }
-    return best;
-}
-
 // EditIntent ↔ OfsEditIntent. The ABI struct mirrors the host EditIntent field-for-field, so both
 // directions are a plain copy (plus the kind/axis casts and an axis bounds-clamp on the way in).
 OfsEditIntent toAbi(const EditIntent &i) {
@@ -175,14 +152,14 @@ bool EditIntentRouter::isSingleActionNudge(const EditIntent &intent) const {
     if (selN == 1)
         return true; // exactly one selected action
     // No selection: ProjectManager's nudge falls back to the action nearest the playhead — single iff one exists.
-    return closestAction(a.actions, project.playback.cursorPos) != nullptr;
+    return closestActionByTime(a.actions, project.playback.cursorPos) != nullptr;
 }
 
 EditIntent EditIntentRouter::synthesizeSingleMove(const EditIntent &intent) const {
     const AxisState &a = project.axes[static_cast<size_t>(intent.axis)];
     // isSingleActionNudge guarantees one of these is non-null.
     const ScriptAxisAction *src =
-        a.selection.size() == 1 ? &(*a.selection.begin()) : closestAction(a.actions, project.playback.cursorPos);
+        a.selection.size() == 1 ? &(*a.selection.begin()) : closestActionByTime(a.actions, project.playback.cursorPos);
 
     EditIntent mp{};
     mp.kind = EditIntentKind::MovePoint;

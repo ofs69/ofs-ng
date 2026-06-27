@@ -1902,7 +1902,7 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
     // Hz is the discretization rate applied wherever the graph turns a functional signal discrete;
     // the "%d Hz" format renders the unit inside the drag, so no label.
     ImGui::SameLine();
-    ImGui::SetNextItemWidth(70.0f);
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 3.0f);
     int hz = region.hz;
     if (ImGui::DragInt("##regionhz", &hz, 1.0f, 1, 120, "%d Hz", ImGuiSliderFlags_AlwaysClamp)) {
         ProcessingRegion updated = region;

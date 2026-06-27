@@ -1,7 +1,9 @@
 #pragma once
 
 #include <algorithm>
+#include <cmath>
 #include <concepts>
+#include <functional>
 #include <iterator>
 #include <vector>
 
@@ -145,6 +147,22 @@ template <typename T, typename Compare = std::less<T>> class VectorSet {
 
     [[nodiscard]] const_iterator lowerBound(const T &value) const {
         return std::ranges::lower_bound(storage, value, comp);
+    }
+
+    // Iterator to the element nearest `value`, measured by |proj(elem) - proj(value)|, or end() if empty.
+    // `proj` projects an element to the scalar key the set is sorted on, so the nearer of `value`'s two
+    // lower_bound neighbours is the true nearest element. Ties favour the element at-or-after `value`.
+    template <typename Proj> [[nodiscard]] const_iterator closest(const T &value, Proj proj) const {
+        if (storage.empty())
+            return end();
+        auto it = lowerBound(value);
+        if (it == begin())
+            return it; // value sorts at or before the first element
+        if (it == end())
+            return std::prev(it); // value sorts past the last element
+        auto lo = std::prev(it);
+        const auto key = std::invoke(proj, value);
+        return std::abs(std::invoke(proj, *lo) - key) < std::abs(std::invoke(proj, *it) - key) ? lo : it;
     }
 
     [[nodiscard]] iterator upperBound(const T &value) { return std::ranges::upper_bound(storage, value, comp); }
