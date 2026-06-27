@@ -44,10 +44,10 @@ bool isNodeOutputFunctional(int nodeId, const ProcessingNodeGraph &graph, const 
         }
         return true;
     };
-    if (node->type == GraphNodeType::PluginNode)
-        return dynamicFunctional(node->pluginSignal, node->pluginInputCount);
-    if (node->type == GraphNodeType::Script)
-        return dynamicFunctional(node->scriptSignal, node->scriptInputCount);
+    if (node->type == GraphNodeType::PluginNode || node->type == GraphNodeType::Script) {
+        const uint8_t signal = node->type == GraphNodeType::PluginNode ? node->pluginSignal : node->scriptSignal;
+        return dynamicFunctional(signal, nodeInputPinCount(*node));
+    }
     if (isMathNode(node->type)) {
         const auto *linkA = graph.findLinkToPin(node->id, 0);
         const auto *linkB = graph.findLinkToPin(node->id, 1);

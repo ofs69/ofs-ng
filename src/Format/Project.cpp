@@ -685,41 +685,14 @@ static bool validateGraph(const ProcessingNodeGraph &g, std::string &error) {
             error = fmt::format("link {} is a self-loop", l.id);
             return false;
         }
-        // Output pin count by node type — drives the valid fromPin range. Every node has at least one
-        // output; only plugin/script nodes can declare more than one.
-        int outputCount = 1;
-        if (from->type == GraphNodeType::PluginNode)
-            outputCount = from->pluginOutputCount;
-        else if (from->type == GraphNodeType::Script)
-            outputCount = from->scriptOutputCount;
+        // Output pin count drives the valid fromPin range (canonical arity — see ProcessingRegion.h).
+        const int outputCount = nodeOutputPinCount(*from);
         if (l.fromPin < 0 || l.fromPin >= outputCount) {
             error = fmt::format("link {} has an invalid output pin {}", l.id, l.fromPin);
             return false;
         }
-        // Input pin count by node type — drives the valid toPin range. A node with no inputs accepts no link.
-        int inputCount = 0;
-        switch (to->type) {
-        case GraphNodeType::Output:
-        case GraphNodeType::Effect:
-        case GraphNodeType::Discretize:
-            inputCount = 1;
-            break;
-        case GraphNodeType::Add:
-        case GraphNodeType::Subtract:
-        case GraphNodeType::Multiply:
-        case GraphNodeType::Divide:
-            inputCount = 2;
-            break;
-        case GraphNodeType::PluginNode:
-            inputCount = to->pluginInputCount;
-            break;
-        case GraphNodeType::Script:
-            inputCount = to->scriptInputCount;
-            break;
-        default: // Input, Constant
-            inputCount = 0;
-            break;
-        }
+        // Input pin count drives the valid toPin range. A node with no inputs accepts no link.
+        const int inputCount = nodeInputPinCount(*to);
         if (inputCount == 0) {
             error = fmt::format("link {} targets a node with no inputs", l.id);
             return false;

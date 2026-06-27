@@ -85,6 +85,45 @@ struct ProcessingGraphLink {
     bool operator==(const ProcessingGraphLink &) const = default;
 };
 
+// Canonical per-node pin arity — the one definition every site reads (link validator, editor pin
+// drawing, functional-signal analysis). Input/Output/Effect/Discretize have a fixed shape; the math
+// nodes take two inputs; plugin and script nodes carry their declared counts, cached on the node so a
+// disabled plugin or a missing script file still reports the right pins.
+[[nodiscard]] inline int nodeInputPinCount(const ProcessingGraphNode &n) {
+    switch (n.type) {
+    case GraphNodeType::Output:
+    case GraphNodeType::Effect:
+    case GraphNodeType::Discretize:
+        return 1;
+    case GraphNodeType::Add:
+    case GraphNodeType::Subtract:
+    case GraphNodeType::Multiply:
+    case GraphNodeType::Divide:
+        return 2;
+    case GraphNodeType::PluginNode:
+        return n.pluginInputCount;
+    case GraphNodeType::Script:
+        return n.scriptInputCount;
+    case GraphNodeType::Input:
+    case GraphNodeType::Constant:
+        break;
+    }
+    return 0; // Input / Constant — pure sources, no inputs
+}
+
+[[nodiscard]] inline int nodeOutputPinCount(const ProcessingGraphNode &n) {
+    switch (n.type) {
+    case GraphNodeType::Output:
+        return 0; // sink — no outputs
+    case GraphNodeType::PluginNode:
+        return n.pluginOutputCount;
+    case GraphNodeType::Script:
+        return n.scriptOutputCount;
+    default:
+        return 1; // Input / Effect / math / Constant / Discretize — single output
+    }
+}
+
 // The single 32-bit imnodes id space, shared by node bodies, pins (input/output), static attributes,
 // and links. imnodes keys nodes, attributes and links from one int id space, so every id we hand it
 // must be globally unique within the editor context. A fixed N*4 stride can't express a variable pin

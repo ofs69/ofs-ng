@@ -72,10 +72,6 @@ Line numbers are approximate — several files moved during the cleanup. Locate 
 
 ## Remaining duplication
 
-- **Per-node-type pin arity restated in validator vs evaluator** — `src/Format/Project.cpp` (+
-  `ProcessingSystem` / `ProcessingGraphOps`). Add a canonical `nodeInput/OutputPinCount(...)` next to
-  `GraphNodeType` and have all sites call it.
-
 - **Hit-test fade/decimation duplicated from the dot renderer** — `src/UI/ScriptTimeline.cpp` (the
   hit-test path vs the dot-draw path; already drifted — hit-test omits `skipAt`/hidden-region filters).
   One shared visible-dot enumeration helper used by both. (The dot-draw side now also precomputes hidden
