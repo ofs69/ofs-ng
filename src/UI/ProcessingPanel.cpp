@@ -350,15 +350,15 @@ static void removeNodeAndLinks(ProcessingNodeGraph &graph, int nodeId) {
 
 // ── Node rendering ─────────────────────────────────────────────────────────────
 
-// Node-param column widths, font-relative so they track font/DPI instead of staying raw pixels (was
-// 160/120 px). These size the imnodes node body, whose param labels come from registry/plugin data
+// Node-param column widths, font-relative so they track font/DPI instead of staying raw pixels. These
+// size the imnodes node body, whose param labels come from registry/plugin data
 // (kept English for now), so a longer translation can't clip here — the conversion is purely for DPI.
 static float nodeWidgetW() {
-    return ImGui::GetFontSize() * 10.0f;
-} // ≈160 px at the 16 px reference
-static float nodeLabelW() {
     return ImGui::GetFontSize() * 7.5f;
 } // ≈120 px at the 16 px reference
+static float nodeLabelW() {
+    return ImGui::GetFontSize() * 6.0f;
+} // ≈96 px at the 16 px reference
 
 static bool beginNodeParamTable(const char *id) {
     if (!ImGui::BeginTable(id, 2, ImGuiTableFlags_None, {nodeLabelW() + nodeWidgetW(), 0.f}))
