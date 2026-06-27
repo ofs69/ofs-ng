@@ -834,6 +834,95 @@ VectorSet<ScriptAxisAction> evaluateGraph(const ProcessingNodeGraph &graph, cons
     return source;
 }
 
+// Worker-thread body of an axis evaluation. Runs on a JobSystem thread over a value-copied AxisSnapshot
+// (never ScriptProject); evaluates each region driving the axis and pushes the merged result back through
+// the event queue. Cancellation is cooperative — checked at every region boundary — and a superseded
+// job returns without pushing, leaving its captures for abandonEval to release.
+void runAxisEval(const std::shared_ptr<EvalJob> &job, AxisSnapshot snap, EventQueue &eq,
+                 const EffectRegistryState &effectReg) {
+    const auto roleIdx = static_cast<size_t>(snap.role);
+    const auto &actions = snap.axes[roleIdx].actions;
+
+    const auto t0 = std::chrono::steady_clock::now();
+
+    std::unordered_map<int, NodeOutputs> evalCache;
+    VectorSet<ScriptAxisAction> resolved;
+    resolved.reserve(actions.size());
+
+    auto actionIt = actions.begin();
+    const auto actionEnd = actions.end();
+
+    for (const auto &region : snap.regions) {
+        if (job->isCancelled())
+            return;
+
+        if (!region.axisRoles.test(roleIdx))
+            continue;
+
+        auto beforeStart = actionIt;
+        actionIt = std::ranges::lower_bound(actionIt, actionEnd, region.startTime, {}, &ScriptAxisAction::at);
+        for (const auto &action : std::ranges::subrange(beforeStart, actionIt))
+            resolved.insert(action);
+
+        auto inStart = actionIt;
+        actionIt = std::ranges::upper_bound(actionIt, actionEnd, region.endTime, {}, &ScriptAxisAction::at);
+        VectorSet<ScriptAxisAction> input(inStart, actionIt);
+
+        // Script call info for this region (nodeId -> ref), resolved on the main thread.
+        static const NodeRefMap kEmptyRefs;
+        auto refsIt = snap.nodeRefs.find(region.id);
+        const NodeRefMap &nodeRefs = (refsIt != snap.nodeRefs.end()) ? refsIt->second : kEmptyRefs;
+
+        VectorSet<ScriptAxisAction> output;
+        if (region.axisRoles.count() > 1) {
+            AxisSourceMap sources;
+            for (size_t i = 0; i < kStandardAxisCount; ++i) {
+                if (!region.axisRoles.test(i))
+                    continue;
+                const auto axisRole = static_cast<StandardAxis>(i);
+                if (axisRole == snap.role) {
+                    sources[axisRole] = input;
+                } else {
+                    const auto &otherActions = snap.axes[i].actions;
+                    auto lo = std::ranges::lower_bound(otherActions, region.startTime, {}, &ScriptAxisAction::at);
+                    auto hi = std::ranges::upper_bound(otherActions, region.endTime, {}, &ScriptAxisAction::at);
+                    sources[axisRole] = VectorSet<ScriptAxisAction>(lo, hi);
+                }
+            }
+            auto results = evaluateMultiAxisGraph(region.nodeGraph, effectReg, nodeRefs, sources, region.startTime,
+                                                  region.endTime, static_cast<float>(region.hz), evalCache, job.get());
+            auto it = results.find(snap.role);
+            if (it != results.end())
+                output = std::move(it->second);
+            else
+                output = input;
+        } else {
+            output = evaluateGraph(region.nodeGraph, effectReg, nodeRefs, input, region.startTime, region.endTime,
+                                   static_cast<float>(region.hz), evalCache, job.get());
+        }
+
+        for (const auto &action : output)
+            resolved.insert(action);
+    }
+
+    if (job->isCancelled())
+        return;
+
+    for (const auto &action : std::ranges::subrange(actionIt, actionEnd))
+        resolved.insert(action);
+
+    const auto ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
+
+    job->currentNodeId.store(-1);
+    eq.push(EvalCompleteEvent{
+        .role = snap.role,
+        .job = job,
+        .resolvedActions = std::move(resolved),
+        .evalMs = ms,
+        .hasResult = true,
+    });
+}
+
 } // anonymous namespace
 
 // ── ProcessingSystem ──────────────────────────────────────────────────────────
@@ -922,6 +1011,18 @@ void ProcessingSystem::evaluateAxis(StandardAxis role) {
     for (size_t i = 0; i < kStandardAxisCount; ++i)
         snap.axes[i].actions = project.axes[i].actions;
 
+    const int captureGeneration = buildNodeRefs(snap);
+
+    auto job = std::make_shared<EvalJob>();
+    job->captureGeneration = captureGeneration;
+    axis.pendingEval = job;
+
+    jobSystem.submit(job, std::move(snap), [job, &eq = this->eq, &effectReg = this->effectReg](AxisSnapshot snap) {
+        runAxisEval(job, std::move(snap), eq, effectReg);
+    });
+}
+
+int ProcessingSystem::buildNodeRefs(AxisSnapshot &snap) {
     // Resolve every dynamic node — script AND plugin — to its call info HERE, on the main thread, and
     // copy the refs into the snapshot. The worker then reads a structure it solely owns; the fnPtr is
     // process-lifetime-stable, so neither a concurrent recompile (scripts) nor a plugin unload (plugin
@@ -969,95 +1070,7 @@ void ProcessingSystem::evaluateAxis(StandardAxis role) {
             }
         }
     }
-
-    auto job = std::make_shared<EvalJob>();
-    job->captureGeneration = captureGeneration;
-    axis.pendingEval = job;
-
-    jobSystem.submit(job, std::move(snap), [job, &eq = this->eq, &effectReg = this->effectReg](AxisSnapshot snap) {
-        const auto roleIdx = static_cast<size_t>(snap.role);
-        const auto &actions = snap.axes[roleIdx].actions;
-
-        const auto t0 = std::chrono::steady_clock::now();
-
-        std::unordered_map<int, NodeOutputs> evalCache;
-        VectorSet<ScriptAxisAction> resolved;
-        resolved.reserve(actions.size());
-
-        auto actionIt = actions.begin();
-        const auto actionEnd = actions.end();
-
-        for (const auto &region : snap.regions) {
-            if (job->isCancelled())
-                return;
-
-            if (!region.axisRoles.test(roleIdx))
-                continue;
-
-            auto beforeStart = actionIt;
-            actionIt = std::ranges::lower_bound(actionIt, actionEnd, region.startTime, {}, &ScriptAxisAction::at);
-            for (const auto &action : std::ranges::subrange(beforeStart, actionIt))
-                resolved.insert(action);
-
-            auto inStart = actionIt;
-            actionIt = std::ranges::upper_bound(actionIt, actionEnd, region.endTime, {}, &ScriptAxisAction::at);
-            VectorSet<ScriptAxisAction> input(inStart, actionIt);
-
-            // Script call info for this region (nodeId -> ref), resolved on the main thread.
-            static const NodeRefMap kEmptyRefs;
-            auto refsIt = snap.nodeRefs.find(region.id);
-            const NodeRefMap &nodeRefs = (refsIt != snap.nodeRefs.end()) ? refsIt->second : kEmptyRefs;
-
-            VectorSet<ScriptAxisAction> output;
-            if (region.axisRoles.count() > 1) {
-                AxisSourceMap sources;
-                for (size_t i = 0; i < kStandardAxisCount; ++i) {
-                    if (!region.axisRoles.test(i))
-                        continue;
-                    const auto axisRole = static_cast<StandardAxis>(i);
-                    if (axisRole == snap.role) {
-                        sources[axisRole] = input;
-                    } else {
-                        const auto &otherActions = snap.axes[i].actions;
-                        auto lo = std::ranges::lower_bound(otherActions, region.startTime, {}, &ScriptAxisAction::at);
-                        auto hi = std::ranges::upper_bound(otherActions, region.endTime, {}, &ScriptAxisAction::at);
-                        sources[axisRole] = VectorSet<ScriptAxisAction>(lo, hi);
-                    }
-                }
-                auto results =
-                    evaluateMultiAxisGraph(region.nodeGraph, effectReg, nodeRefs, sources, region.startTime,
-                                           region.endTime, static_cast<float>(region.hz), evalCache, job.get());
-                auto it = results.find(snap.role);
-                if (it != results.end())
-                    output = std::move(it->second);
-                else
-                    output = input;
-            } else {
-                output = evaluateGraph(region.nodeGraph, effectReg, nodeRefs, input, region.startTime, region.endTime,
-                                       static_cast<float>(region.hz), evalCache, job.get());
-            }
-
-            for (const auto &action : output)
-                resolved.insert(action);
-        }
-
-        if (job->isCancelled())
-            return;
-
-        for (const auto &action : std::ranges::subrange(actionIt, actionEnd))
-            resolved.insert(action);
-
-        const auto ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
-
-        job->currentNodeId.store(-1);
-        eq.push(EvalCompleteEvent{
-            .role = snap.role,
-            .job = job,
-            .resolvedActions = std::move(resolved),
-            .evalMs = ms,
-            .hasResult = true,
-        });
-    });
+    return captureGeneration;
 }
 
 void ProcessingSystem::releaseCaptures(int generation) const {

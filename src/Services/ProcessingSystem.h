@@ -29,6 +29,11 @@ class ProcessingSystem {
     // (AxisModifiedEvent) and manual (RequestAxisEvalEvent) paths.
     void evaluateAxis(StandardAxis role);
 
+    // Resolve every dynamic node (script + plugin) in the snapshot's regions to its call ref on the main
+    // thread, populating snap.nodeRefs and value-capturing each state-bearing plugin node's TState.
+    // Returns the capture generation grouping this eval's captures (-1 if none), for later release.
+    int buildNodeRefs(AxisSnapshot &snap);
+
     // Cancel + release the captures of an axis's in-flight job and clear its pendingEval. Used by the
     // supersede (evaluateAxis) and halt (onSetAutoEvalEnabled) paths so a job that never completes
     // does not leak its TState captures.
