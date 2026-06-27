@@ -16,17 +16,4 @@ Line numbers are approximate — several files moved during the cleanup. Locate 
   extract methods, thread the frame-local state through params). Highest-risk of the three — heavy
   ImGui/draw-list ordering.
 
-## Router / registry templating
-
-> C# changes need a managed rebuild and are higher-risk (the public `Ofs.Api` surface is the plugin
-> stabilization contract — keep these internal/non-breaking).
-
-## C# marshaling / loops
-
-## Remaining duplication
-
-- **Hit-test fade/decimation duplicated from the dot renderer** — `src/UI/ScriptTimeline.cpp` (the
-  hit-test path vs the dot-draw path; already drifted — hit-test omits `skipAt`/hidden-region filters).
-  One shared visible-dot enumeration helper used by both. (The dot-draw side now also precomputes hidden
-  intervals — fold that in.)
 

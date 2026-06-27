@@ -85,23 +85,42 @@ static double dotBucketDuration(double visibleTime, float width) {
     return kLadderUnit * std::exp2(step);
 }
 
-static const ScriptAxisAction *findNearestAction(const VectorSet<ScriptAxisAction> &actions, float mouseX, float mouseY,
-                                                 double visibleTime, double offsetTime, const ImVec2 &pos,
-                                                 const ImVec2 &size, float radius = 12.0f) {
-    const ScriptAxisAction *closest = nullptr;
-    float closestDist2 = radius * radius;
+// Enumerate the *visible* source dots of `role`'s axis — exactly the set the renderer draws, so a
+// clickable dot is always a drawn dot. Applies, in order: the zoom-out fade gate (nothing once the dots
+// have faded away), the zoom/pan-stable bucket decimation (one dot per bucket, see dotBucketDuration),
+// and suppression inside regions that hide source points. `fn(action)` runs for each surviving dot in
+// time order. Both the dot renderer (Pass 4) and findNearestAction iterate this, which is what keeps the
+// hit-test from matching a dot the renderer culled (a hidden-region point) — the two used to drift.
+template <class Fn>
+static void forEachVisibleDot(const ScriptProject &project, StandardAxis role,
+                              const VectorSet<ScriptAxisAction> &actions, double visibleTime, double offsetTime,
+                              float width, Fn &&fn) {
     auto fadeT =
         static_cast<float>(std::clamp((visibleTime - kDotFadeStart) / (kDotFadeEnd - kDotFadeStart), 0.0, 1.0));
-    float dotAlpha = 1.0f - fadeT * fadeT;
-    if (dotAlpha <= 0.1f)
-        return nullptr;
+    if (1.0f - fadeT * fadeT <= 0.1f) // faded out entirely — no dots are drawn, so none are clickable
+        return;
+
+    // Precompute this axis's hidden source-point intervals (regions that hide points) overlapping the
+    // visible window once, instead of rescanning every region per dot. Frame arena (main-thread only).
+    const double winEnd = offsetTime + visibleTime;
+    struct HiddenIv {
+        double start, end;
+    };
+    auto *hidden = ofs::FrameAllocator::instance().allocArray<HiddenIv>(
+        project.regions.empty() ? 1 : project.regions.size());
+    size_t hiddenCount = 0;
+    for (const auto &reg : project.regions)
+        if (reg.axisRoles.test(static_cast<size_t>(role)) && !reg.showSourceActions && reg.endTime >= offsetTime &&
+            reg.startTime <= winEnd)
+            hidden[hiddenCount++] = {.start = reg.startTime, .end = reg.endTime};
+
     auto itStart = actions.lowerBound(ScriptAxisAction{offsetTime, 0});
     if (itStart != actions.begin())
         --itStart;
     auto itEnd = actions.upperBound(ScriptAxisAction{offsetTime + visibleTime, 0});
     if (itEnd != actions.end())
         ++itEnd;
-    double timeBucketDuration = dotBucketDuration(visibleTime, size.x);
+    const double timeBucketDuration = dotBucketDuration(visibleTime, width);
     int lastBucket = -1;
     if (itStart != actions.begin())
         lastBucket = static_cast<int>(std::prev(itStart)->at / timeBucketDuration);
@@ -110,16 +129,35 @@ static const ScriptAxisAction *findNearestAction(const VectorSet<ScriptAxisActio
         if (bucket == lastBucket)
             continue;
         lastBucket = bucket;
-        float sx = timeToScreenX(it->at, visibleTime, offsetTime, pos, size);
-        float sy = posToScreenY(it->pos, pos, size);
+        bool inHiddenRegion = false;
+        for (size_t h = 0; h < hiddenCount; ++h)
+            if (it->at >= hidden[h].start && it->at <= hidden[h].end) {
+                inHiddenRegion = true;
+                break;
+            }
+        if (inHiddenRegion)
+            continue;
+        fn(*it);
+    }
+}
+
+static const ScriptAxisAction *findNearestAction(const ScriptProject &project, StandardAxis role,
+                                                 const VectorSet<ScriptAxisAction> &actions, float mouseX, float mouseY,
+                                                 double visibleTime, double offsetTime, const ImVec2 &pos,
+                                                 const ImVec2 &size, float radius = 12.0f) {
+    const ScriptAxisAction *closest = nullptr;
+    float closestDist2 = radius * radius;
+    forEachVisibleDot(project, role, actions, visibleTime, offsetTime, size.x, [&](const ScriptAxisAction &a) {
+        float sx = timeToScreenX(a.at, visibleTime, offsetTime, pos, size);
+        float sy = posToScreenY(a.pos, pos, size);
         float dx = mouseX - sx;
         float dy = mouseY - sy;
         float dist2 = dx * dx + dy * dy;
         if (dist2 < closestDist2) {
             closestDist2 = dist2;
-            closest = &(*it);
+            closest = &a;
         }
-    }
+    });
     return closest;
 }
 
@@ -510,60 +548,21 @@ void ScriptTimelineWindow::renderTimeline(const ScriptProject &project, EventQue
                 float dotAlpha = 1.0f - fadeT * fadeT;
                 if (dotAlpha > 0.1f) {
                     auto alpha = static_cast<ImU32>(255.0f * dotAlpha);
-                    double timeBucketDuration = dotBucketDuration(viewState.visibleTime, curveSize.x);
-
-                    // Precompute this axis's hidden source-point intervals (regions that hide points)
-                    // overlapping the visible window, once — instead of rescanning every region per dot.
-                    const double winEnd = offsetTime + viewState.visibleTime;
-                    struct HiddenIv {
-                        double start, end;
-                    };
-                    auto *hidden = ofs::FrameAllocator::instance().allocArray<HiddenIv>(
-                        project.regions.empty() ? 1 : project.regions.size());
-                    size_t hiddenCount = 0;
-                    for (const auto &reg : project.regions)
-                        if (reg.axisRoles.test(static_cast<size_t>(ax.role)) && !reg.showSourceActions &&
-                            reg.endTime >= offsetTime && reg.startTime <= winEnd)
-                            hidden[hiddenCount++] = {.start = reg.startTime, .end = reg.endTime};
-
-                    auto dotStart = ax.actions.lowerBound(ScriptAxisAction{offsetTime, 0});
-                    if (dotStart != ax.actions.begin())
-                        --dotStart;
-                    auto dotEnd = ax.actions.upperBound(ScriptAxisAction{offsetTime + viewState.visibleTime, 0});
-                    if (dotEnd != ax.actions.end())
-                        ++dotEnd;
-                    int lastBucket = -1;
-                    if (dotStart != ax.actions.begin())
-                        lastBucket = static_cast<int>(std::prev(dotStart)->at / timeBucketDuration);
-                    for (auto it = dotStart; it != dotEnd; ++it) {
-                        if (it->at == skipAt)
-                            continue;
-                        int bucket = static_cast<int>(it->at / timeBucketDuration);
-                        if (bucket == lastBucket)
-                            continue;
-                        lastBucket = bucket;
-                        // Suppress dots inside regions that hide source points (precomputed above).
-                        bool inHiddenRegion = false;
-                        for (size_t h = 0; h < hiddenCount; ++h)
-                            if (it->at >= hidden[h].start && it->at <= hidden[h].end) {
-                                inHiddenRegion = true;
-                                break;
-                            }
-                        if (inHiddenRegion)
-                            continue;
-
-                        ImVec2 p(timeToScreenX(it->at, viewState.visibleTime, offsetTime, curvePos, curveSize),
-                                 posToScreenY(it->pos, curvePos, curveSize));
-                        bool selected = ax.selection.contains(*it);
-                        const ImU32 outlineCol =
-                            (ofs::theme::GetColorU32(AppCol_TimelineOutline) & 0x00FFFFFFU) | (alpha << 24);
-                        const ImU32 innerCol =
-                            (ofs::theme::GetColorU32(selected ? AppCol_TimelinePointSelected : AppCol_TimelinePoint) &
-                             0x00FFFFFFU) |
-                            (alpha << 24);
-                        drawList->AddCircleFilled(p, kDotR, outlineCol, 4);
-                        drawList->AddCircleFilled(p, kDotR * 0.7f, innerCol, 4);
-                    }
+                    forEachVisibleDot(
+                        project, ax.role, ax.actions, viewState.visibleTime, offsetTime, curveSize.x,
+                        [&](const ScriptAxisAction &a) {
+                            ImVec2 p(timeToScreenX(a.at, viewState.visibleTime, offsetTime, curvePos, curveSize),
+                                     posToScreenY(a.pos, curvePos, curveSize));
+                            bool selected = ax.selection.contains(a);
+                            const ImU32 outlineCol =
+                                (ofs::theme::GetColorU32(AppCol_TimelineOutline) & 0x00FFFFFFU) | (alpha << 24);
+                            const ImU32 innerCol =
+                                (ofs::theme::GetColorU32(selected ? AppCol_TimelinePointSelected : AppCol_TimelinePoint) &
+                                 0x00FFFFFFU) |
+                                (alpha << 24);
+                            drawList->AddCircleFilled(p, kDotR, outlineCol, 4);
+                            drawList->AddCircleFilled(p, kDotR * 0.7f, innerCol, 4);
+                        });
                 }
             }
         }
@@ -616,8 +615,8 @@ void ScriptTimelineWindow::renderTimeline(const ScriptProject &project, EventQue
         if (project.state.activeAxis >= StandardAxis::Count)
             return best;
         const auto &activeAx = project.axes[static_cast<size_t>(project.state.activeAxis)];
-        const auto *near =
-            findNearestAction(activeAx.actions, mouseX, mouseY, viewState.visibleTime, offsetTime, curvePos, curveSize);
+        const auto *near = findNearestAction(project, project.state.activeAxis, activeAx.actions, mouseX, mouseY,
+                                             viewState.visibleTime, offsetTime, curvePos, curveSize);
         if (near) {
             best.axis = project.state.activeAxis;
             best.action = near;
