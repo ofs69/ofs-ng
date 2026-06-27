@@ -62,8 +62,32 @@ class ScriptTimelineWindow {
         int anchorRow = -1;
     };
 
+    // One axis row's render inputs, resolved once by renderTimeline and threaded into renderStrip /
+    // renderCurves. `isActive` is the lead axis; `inEditSet` is membership in the active edit group.
+    struct AxisEntry {
+        StandardAxis role = StandardAxis::Count;
+        ImU32 color = 0;
+        bool isActive = false;
+        bool inEditSet = false;
+    };
+
     void renderTimeline(const ScriptProject &project, EventQueue &eq, VideoPlayer &videoPlayer,
                         WaveformRenderer &waveform, const ImVec2 &pos, const ImVec2 &size);
+    // Left strip: per-axis rows (label, lock/eye, group chips) plus their click/Ctrl-click/double-click/
+    // drag interaction. Opens the shared ##timeline_ctx popup (latching ctxAxis) on a right-click.
+    void renderStrip(const ScriptProject &project, EventQueue &eq, ImDrawList *drawList, const ImVec2 &pos,
+                     const ImVec2 &size, const ImVec2 &stripPos, const ImVec2 &stripSize, const ImVec2 &curvePos,
+                     const AxisEntry *stripEntries, int numRows, bool hasGroup);
+    // Curve area: background gradient, waveform, grid, the per-axis polylines + active-axis dots, the
+    // in-progress selection box, and the outer border. Read-only; all interaction stays in renderTimeline.
+    void renderCurves(const ScriptProject &project, ImDrawList *drawList, WaveformRenderer &waveform,
+                      const ImVec2 &pos, const ImVec2 &size, const ImVec2 &curvePos, const ImVec2 &curveSize,
+                      double offsetTime, const AxisEntry *curveEntries, int curveCount, bool windowHovered);
+    // The ##timeline_ctx popup body (axis lock/visibility/delete/add-region, view toggles, overlay
+    // submenu). Begun and ended here; the matching OpenPopup calls live in the strip/curve interaction.
+    void renderContextMenu(const ScriptProject &project, EventQueue &eq, VideoPlayer &videoPlayer);
+    // The Scripting-overlay (Frame/Tempo) settings submenu, nested inside renderContextMenu.
+    void renderOverlayMenu(const ScriptProject &project, EventQueue &eq, VideoPlayer &videoPlayer) const;
     void renderOverlay(const ScriptProject &project, const ImVec2 &pos, const ImVec2 &size, double offsetTime) const;
     void renderPlayhead(VideoPlayer &videoPlayer, const ImVec2 &pos, const ImVec2 &size, double offsetTime) const;
     void renderRegionBar(VideoPlayer &videoPlayer, const ScriptProject &project, EventQueue &eq, const ImVec2 &barMin,

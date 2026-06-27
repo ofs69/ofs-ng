@@ -163,66 +163,12 @@ static const ScriptAxisAction *findNearestAction(const ScriptProject &project, S
 
 ScriptTimelineWindow::ScriptTimelineWindow() = default;
 
-void ScriptTimelineWindow::renderTimeline(const ScriptProject &project, EventQueue &eq, VideoPlayer &videoPlayer,
-                                          WaveformRenderer &waveform, const ImVec2 &pos, const ImVec2 &size) {
-    ImDrawList *drawList = ImGui::GetWindowDrawList();
-    double offsetTime = project.playback.cursorPos - viewState.visibleTime / 2.0;
-
-    // IsMouseHoveringRect only clips to this window's rect; it ignores windows stacked on top.
-    // Gate the visual-only hover highlights on IsWindowHovered so they don't leak through a popup
-    // or another window covering the timeline. (Click paths already use IsItemHovered, which is safe.)
-    const bool windowHovered = ImGui::IsWindowHovered();
-
-    const float stripW = stripWidth();
-    const ImVec2 stripPos = pos;
-    // Trim the strip's right edge by one item-spacing and let the curve fill the freed column, so the
-    // strip and curve sit flush with no bare seam. The same trimmed edge is the left of the region bar
-    // (render()), keeping the curve, overlay grid, and bands aligned. The gear keeps a margin of its own.
-    const float stripMargin = ImGui::GetStyle().ItemSpacing.x;
-    const ImVec2 stripSize = {stripW - stripMargin, size.y};
-    const ImVec2 curvePos = {pos.x + stripW - stripMargin, pos.y};
-    const ImVec2 curveSize = {size.x - stripW + stripMargin, size.y};
-
-    // The multi-axis edit set (active group, or just {activeAxis}). Members beyond the lead render
-    // their selection + dots and stay in the curve list even when hidden, so a fanned-out edit is
-    // visible while it happens. hasGroup gates the strip's group bracket/fill.
-    const AxisRoles editSet = project.effectiveEditSet();
-    const bool hasGroup = project.state.axesGrouping.count() > 1;
-
-    struct AxisEntry {
-        StandardAxis role = StandardAxis::Count;
-        ImU32 color = 0;
-        bool isActive = false;
-        bool inEditSet = false;
-    };
-
-    std::array<AxisEntry, kStandardAxisCount> stripEntries{};
-    int stripCount = 0;
-    for (const auto &ax : project.axes) {
-        if (!ax.showInStrip)
-            continue;
-        ImU32 color = standardAxisColor(ax.role);
-        stripEntries[stripCount++] = {.role = ax.role,
-                                      .color = color,
-                                      .isActive = project.state.activeAxis == ax.role,
-                                      .inEditSet = editSet.test(static_cast<size_t>(ax.role))};
-    }
-
-    std::array<AxisEntry, kStandardAxisCount> curveEntries{};
-    int curveCount = 0;
-    for (int si = 0; si < stripCount; ++si) {
-        const auto &e = stripEntries[si];
-        const auto &ax = project.axes[static_cast<size_t>(e.role)];
-        if (e.isActive || ax.isVisible || e.inEditSet)
-            curveEntries[curveCount++] = e;
-    }
-    std::stable_sort(curveEntries.begin(), curveEntries.begin() + curveCount,
-                     [](const AxisEntry &a, const AxisEntry &b) { return !a.isActive && b.isActive; });
-
-    // ── Left strip ──────────────────────────────────────────────────────────
+void ScriptTimelineWindow::renderStrip(const ScriptProject &project, EventQueue &eq, ImDrawList *drawList,
+                                       const ImVec2 &pos, const ImVec2 &size, const ImVec2 &stripPos,
+                                       const ImVec2 &stripSize, const ImVec2 &curvePos, const AxisEntry *stripEntries,
+                                       int numRows, bool hasGroup) {
     drawList->AddRectFilled(stripPos, stripPos + stripSize, ofs::theme::GetColorU32(AppCol_StripBg));
 
-    int numRows = stripCount;
     float rowH = numRows > 0 ? size.y / static_cast<float>(numRows) : size.y;
     float fontH = ImGui::GetFontSize();
 
@@ -364,8 +310,12 @@ void ScriptTimelineWindow::renderTimeline(const ScriptProject &project, EventQue
     }
     if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
         stripDrag.anchorRow = -1;
+}
 
-    // ── Curve area ──────────────────────────────────────────────────────────
+void ScriptTimelineWindow::renderCurves(const ScriptProject &project, ImDrawList *drawList, WaveformRenderer &waveform,
+                                        const ImVec2 &pos, const ImVec2 &size, const ImVec2 &curvePos,
+                                        const ImVec2 &curveSize, double offsetTime, const AxisEntry *curveEntries,
+                                        int curveCount, bool windowHovered) {
     {
         ImU32 bgTop = ofs::theme::GetColorU32(AppCol_CurveBgTop);
         ImU32 bgBottom = ofs::theme::GetColorU32(AppCol_CurveBgBottom);
@@ -593,6 +543,64 @@ void ScriptTimelineWindow::renderTimeline(const ScriptProject &project, EventQue
             borderColor = ofs::theme::GetColorU32(ImGuiCol_SliderGrabActive);
     }
     drawList->AddRect(pos, pos + size, borderColor, 0.0f, 1.0f, 0);
+}
+
+void ScriptTimelineWindow::renderTimeline(const ScriptProject &project, EventQueue &eq, VideoPlayer &videoPlayer,
+                                          WaveformRenderer &waveform, const ImVec2 &pos, const ImVec2 &size) {
+    ImDrawList *drawList = ImGui::GetWindowDrawList();
+    double offsetTime = project.playback.cursorPos - viewState.visibleTime / 2.0;
+
+    // IsMouseHoveringRect only clips to this window's rect; it ignores windows stacked on top.
+    // Gate the visual-only hover highlights on IsWindowHovered so they don't leak through a popup
+    // or another window covering the timeline. (Click paths already use IsItemHovered, which is safe.)
+    const bool windowHovered = ImGui::IsWindowHovered();
+
+    const float stripW = stripWidth();
+    const ImVec2 stripPos = pos;
+    // Trim the strip's right edge by one item-spacing and let the curve fill the freed column, so the
+    // strip and curve sit flush with no bare seam. The same trimmed edge is the left of the region bar
+    // (render()), keeping the curve, overlay grid, and bands aligned. The gear keeps a margin of its own.
+    const float stripMargin = ImGui::GetStyle().ItemSpacing.x;
+    const ImVec2 stripSize = {stripW - stripMargin, size.y};
+    const ImVec2 curvePos = {pos.x + stripW - stripMargin, pos.y};
+    const ImVec2 curveSize = {size.x - stripW + stripMargin, size.y};
+
+    // The multi-axis edit set (active group, or just {activeAxis}). Members beyond the lead render
+    // their selection + dots and stay in the curve list even when hidden, so a fanned-out edit is
+    // visible while it happens. hasGroup gates the strip's group bracket/fill.
+    const AxisRoles editSet = project.effectiveEditSet();
+    const bool hasGroup = project.state.axesGrouping.count() > 1;
+
+    std::array<AxisEntry, kStandardAxisCount> stripEntries{};
+    int stripCount = 0;
+    for (const auto &ax : project.axes) {
+        if (!ax.showInStrip)
+            continue;
+        ImU32 color = standardAxisColor(ax.role);
+        stripEntries[stripCount++] = {.role = ax.role,
+                                      .color = color,
+                                      .isActive = project.state.activeAxis == ax.role,
+                                      .inEditSet = editSet.test(static_cast<size_t>(ax.role))};
+    }
+
+    std::array<AxisEntry, kStandardAxisCount> curveEntries{};
+    int curveCount = 0;
+    for (int si = 0; si < stripCount; ++si) {
+        const auto &e = stripEntries[si];
+        const auto &ax = project.axes[static_cast<size_t>(e.role)];
+        if (e.isActive || ax.isVisible || e.inEditSet)
+            curveEntries[curveCount++] = e;
+    }
+    std::stable_sort(curveEntries.begin(), curveEntries.begin() + curveCount,
+                     [](const AxisEntry &a, const AxisEntry &b) { return !a.isActive && b.isActive; });
+
+    // ── Left strip ──────────────────────────────────────────────────────────
+    renderStrip(project, eq, drawList, pos, size, stripPos, stripSize, curvePos, stripEntries.data(), stripCount,
+                hasGroup);
+
+    // ── Curve area ──────────────────────────────────────────────────────────
+    renderCurves(project, drawList, waveform, pos, size, curvePos, curveSize, offsetTime, curveEntries.data(),
+                 curveCount, windowHovered);
 
     // ── Curve area interaction ───────────────────────────────────────────────
     ImGui::SetCursorScreenPos(curvePos);
@@ -679,6 +687,10 @@ void ScriptTimelineWindow::renderTimeline(const ScriptProject &project, EventQue
         }
     }
 
+    renderContextMenu(project, eq, videoPlayer);
+}
+
+void ScriptTimelineWindow::renderContextMenu(const ScriptProject &project, EventQueue &eq, VideoPlayer &videoPlayer) {
     // The gear sits on the window's bottom edge: pin the popup's bottom-left to the gear's top-left
     // (pivot {0,1}) so it grows upward over the timeline instead of off the bottom. Right-click opens
     // are left to ImGui's default cursor placement.
@@ -726,75 +738,80 @@ void ScriptTimelineWindow::renderTimeline(const ScriptProject &project, EventQue
 
         // Scripting overlay settings (Frame/Tempo), folded into the timeline's own context menu.
         ImGui::Separator();
-        if (ImGui::BeginMenu(Str::TlOverlay.id("tl_overlay_menu"))) {
-            auto ov = project.overlay;
-            bool changed = false;
+        renderOverlayMenu(project, eq, videoPlayer);
+        ImGui::EndPopup();
+    }
+}
 
-            // Font-relative field width (was a fixed 160 px) so a longer translated combo entry fits
-            // and the column scales with font/DPI inside the auto-sizing popup.
-            const float fieldW = ImGui::GetFontSize() * 10.f;
+void ScriptTimelineWindow::renderOverlayMenu(const ScriptProject &project, EventQueue &eq,
+                                             VideoPlayer &videoPlayer) const {
+    if (ImGui::BeginMenu(Str::TlOverlay.id("tl_overlay_menu"))) {
+        auto ov = project.overlay;
+        bool changed = false;
 
-            const char *overlayNames[] = {Str::TlOverlayFrame, Str::TlOverlayTempo};
-            int currentOverlay = static_cast<int>(ov.overlay);
-            ImGui::TextUnformatted(Str::TlOverlay);
+        // Font-relative field width (was a fixed 160 px) so a longer translated combo entry fits
+        // and the column scales with font/DPI inside the auto-sizing popup.
+        const float fieldW = ImGui::GetFontSize() * 10.f;
+
+        const char *overlayNames[] = {Str::TlOverlayFrame, Str::TlOverlayTempo};
+        int currentOverlay = static_cast<int>(ov.overlay);
+        ImGui::TextUnformatted(Str::TlOverlay);
+        ImGui::SetNextItemWidth(fieldW);
+        if (ImGui::Combo("##overlay", &currentOverlay, overlayNames, IM_ARRAYSIZE(overlayNames))) {
+            ov.overlay = static_cast<ScriptingOverlay>(currentOverlay);
+            changed = true;
+        }
+
+        if (ov.overlay == ScriptingOverlay::Frame) {
+            const char *fpsStr = fmtScratch("{:.3f}", videoPlayer.getFps());
+            ImGui::TextUnformatted(Str::TlVideoFps.fmt(fpsStr));
+
+            constexpr float kCommonFpss[] = {23.976f, 24.0f, 25.0f, 29.97f, 30.0f, 48.0f, 50.0f, 59.94f, 60.0f};
+            const char *kCommonFpsNames[] = {"23.976", "24", "25", "29.97", "30", "48", "50", "59.94", "60"};
+            int currentFpsIdx = -1;
+            for (int i = 0; i < IM_ARRAYSIZE(kCommonFpss); ++i) {
+                if (std::abs(ov.frameFps - kCommonFpss[i]) < 0.001f) {
+                    currentFpsIdx = i;
+                    break;
+                }
+            }
+
+            ImGui::TextUnformatted(Str::TlScriptFps);
             ImGui::SetNextItemWidth(fieldW);
-            if (ImGui::Combo("##overlay", &currentOverlay, overlayNames, IM_ARRAYSIZE(overlayNames))) {
-                ov.overlay = static_cast<ScriptingOverlay>(currentOverlay);
+            if (ImGui::Combo("##fps_preset", &currentFpsIdx, kCommonFpsNames, IM_ARRAYSIZE(kCommonFpsNames))) {
+                ov.frameFps = kCommonFpss[currentFpsIdx];
                 changed = true;
             }
 
-            if (ov.overlay == ScriptingOverlay::Frame) {
-                const char *fpsStr = fmtScratch("{:.3f}", videoPlayer.getFps());
-                ImGui::TextUnformatted(Str::TlVideoFps.fmt(fpsStr));
+            ImGui::TextUnformatted(Str::TlCustomFps);
+            ImGui::SetNextItemWidth(fieldW);
+            changed |= ImGui::DragFloat("##custom_fps", &ov.frameFps, 0.1f, 1.0f, 240.0f);
+        } else if (ov.overlay == ScriptingOverlay::Tempo) {
+            ImGui::TextUnformatted(Str::TlBpm);
+            ImGui::SetNextItemWidth(fieldW);
+            changed |= ImGui::DragFloat("##bpm", &ov.tempoBpm, 0.1f, 10.0f, 500.0f);
 
-                constexpr float kCommonFpss[] = {23.976f, 24.0f, 25.0f, 29.97f, 30.0f, 48.0f, 50.0f, 59.94f, 60.0f};
-                const char *kCommonFpsNames[] = {"23.976", "24", "25", "29.97", "30", "48", "50", "59.94", "60"};
-                int currentFpsIdx = -1;
-                for (int i = 0; i < IM_ARRAYSIZE(kCommonFpss); ++i) {
-                    if (std::abs(ov.frameFps - kCommonFpss[i]) < 0.001f) {
-                        currentFpsIdx = i;
-                        break;
-                    }
-                }
+            ImGui::TextUnformatted(Str::TlOffsetSeconds);
+            ImGui::SetNextItemWidth(fieldW);
+            changed |= ImGui::DragFloat("##tempo_offset", &ov.tempoOffsetSeconds, 0.001f, -10.0f, 10.0f, "%.3f",
+                                        ImGuiSliderFlags_AlwaysClamp);
 
-                ImGui::TextUnformatted(Str::TlScriptFps);
-                ImGui::SetNextItemWidth(fieldW);
-                if (ImGui::Combo("##fps_preset", &currentFpsIdx, kCommonFpsNames, IM_ARRAYSIZE(kCommonFpsNames))) {
-                    ov.frameFps = kCommonFpss[currentFpsIdx];
-                    changed = true;
-                }
+            // kTempoSubdivisionNames index 0 ("1/1 (measure)") carries the only translatable word;
+            // the rest are numeric fractions. Localize just that entry into the frame arena.
+            auto **snapNames = ofs::FrameAllocator::instance().allocArray<const char *>(kTempoSubdivisionCount);
+            for (int i = 0; i < kTempoSubdivisionCount; ++i)
+                snapNames[i] = kTempoSubdivisionNames[i];
+            snapNames[0] = fmtScratch("1/1 ({})", Str::TlMeasure.c_str());
 
-                ImGui::TextUnformatted(Str::TlCustomFps);
-                ImGui::SetNextItemWidth(fieldW);
-                changed |= ImGui::DragFloat("##custom_fps", &ov.frameFps, 0.1f, 1.0f, 240.0f);
-            } else if (ov.overlay == ScriptingOverlay::Tempo) {
-                ImGui::TextUnformatted(Str::TlBpm);
-                ImGui::SetNextItemWidth(fieldW);
-                changed |= ImGui::DragFloat("##bpm", &ov.tempoBpm, 0.1f, 10.0f, 500.0f);
-
-                ImGui::TextUnformatted(Str::TlOffsetSeconds);
-                ImGui::SetNextItemWidth(fieldW);
-                changed |= ImGui::DragFloat("##tempo_offset", &ov.tempoOffsetSeconds, 0.001f, -10.0f, 10.0f, "%.3f",
-                                            ImGuiSliderFlags_AlwaysClamp);
-
-                // kTempoSubdivisionNames index 0 ("1/1 (measure)") carries the only translatable word;
-                // the rest are numeric fractions. Localize just that entry into the frame arena.
-                auto **snapNames = ofs::FrameAllocator::instance().allocArray<const char *>(kTempoSubdivisionCount);
-                for (int i = 0; i < kTempoSubdivisionCount; ++i)
-                    snapNames[i] = kTempoSubdivisionNames[i];
-                snapNames[0] = fmtScratch("1/1 ({})", Str::TlMeasure.c_str());
-
-                ImGui::TextUnformatted(Str::TlSnap);
-                ImGui::SetNextItemWidth(fieldW);
-                changed |= ImGui::Combo("##tempo_snap", &ov.tempoMeasureIndex, snapNames, kTempoSubdivisionCount);
-            }
-
-            if (changed)
-                eq.push(OverlaySettingsChangedEvent{ov});
-
-            ImGui::EndMenu();
+            ImGui::TextUnformatted(Str::TlSnap);
+            ImGui::SetNextItemWidth(fieldW);
+            changed |= ImGui::Combo("##tempo_snap", &ov.tempoMeasureIndex, snapNames, kTempoSubdivisionCount);
         }
-        ImGui::EndPopup();
+
+        if (changed)
+            eq.push(OverlaySettingsChangedEvent{ov});
+
+        ImGui::EndMenu();
     }
 }
 
