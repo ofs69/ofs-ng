@@ -498,6 +498,20 @@ NodeOutputs evaluateGraphNode(int nodeId, const ProcessingNodeGraph &graph, cons
         break;
     }
 
+    case GraphNodeType::Functionalize: {
+        NodeSignal in = getInputSignal(nodeId, 0, graph, effectReg, nodeRefs, sources, startTime, endTime, hz, cache,
+                                       inProgress, job);
+        if (job)
+            job->currentNodeId.store(nodeId);
+        // The explicit inverse of Discretize: carry the input through as a continuous functional signal
+        // (linear interpolation for a discrete input) so downstream nodes — and ultimately the Output's
+        // single discretization point — treat it as continuous rather than inheriting an upstream grid.
+        result.functional =
+            in.isFunctional ? in.functional : (in.discrete ? graphSampleToFn(*in.discrete) : ActionFn{});
+        result.isFunctional = static_cast<bool>(result.functional);
+        break;
+    }
+
     case GraphNodeType::Add:
     case GraphNodeType::Subtract:
     case GraphNodeType::Multiply:

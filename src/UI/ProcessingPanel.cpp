@@ -587,6 +587,8 @@ void ProcessingPanel::renderNode(const ProcessingGraphNode &node, const EffectRe
             titleCol = AppCol_NodeMath;
         } else if (node.type == GraphNodeType::Discretize) {
             titleCol = AppCol_LinkDiscrete; // output is always discrete
+        } else if (node.type == GraphNodeType::Functionalize) {
+            titleCol = AppCol_LinkFunctional; // output is always functional
         }
         tBase = ofs::theme::GetColorU32(titleCol);
     }
@@ -822,6 +824,24 @@ void ProcessingPanel::renderNode(const ProcessingGraphNode &node, const EffectRe
             snapshotOnDragStart(eq, regionId, region);
             ImGui::EndTable();
         }
+        ImNodes::EndStaticAttribute();
+
+        renderOutputPin(node.id);
+        break;
+    }
+
+    case GraphNodeType::Functionalize: {
+        ImNodes::BeginNodeTitleBar();
+        ImGui::TextUnformatted(fmtScratch("{}  Functionalize", ICON_CHART_SPLINE));
+        ImNodes::EndNodeTitleBar();
+
+        ImNodes::BeginInputAttribute(GraphId::inPin(node.id, 0));
+        ImGui::TextUnformatted("in");
+        ImNodes::EndInputAttribute();
+
+        // No params; pin the body width so imnodes doesn't re-measure the title bar wider each frame.
+        ImNodes::BeginStaticAttribute(GraphId::staticAttr(node.id));
+        ImGui::Dummy({nodeWidgetW(), 0.0f});
         ImNodes::EndStaticAttribute();
 
         renderOutputPin(node.id);
@@ -1323,6 +1343,10 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
                          n.effect.params = {1.0f, 30.0f};
                      });
         m_pendingLinkPin = -1;
+    } else if (addReq.type == GraphNodeType::Functionalize) {
+        placeNewNode(eq, region, selId, newNodePos, m_pendingLinkPin, /*ignoresInput=*/false,
+                     [](ProcessingGraphNode &n) { n.type = GraphNodeType::Functionalize; });
+        m_pendingLinkPin = -1;
     } else if (addReq.type == GraphNodeType::Constant) {
         // A Constant is a generator (no input), so ignoresInput=true: a drop on an output pin makes no
         // splice, a drop on an input pin just feeds the Constant into it — exactly the old hand-rolled case.
@@ -1535,6 +1559,17 @@ ProcessingPanel::AddNodeRequest ProcessingPanel::renderAddNodeMenu(const EffectR
             ImGui::EndTooltip();
         };
 
+        auto renderFunctionalizeTooltip = [] {
+            if (!ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+                return;
+            ImGui::BeginTooltip();
+            ImGui::PushTextWrapPos(ImGui::GetFontSize() * 22.0f);
+            ImGui::TextUnformatted(Str::ProcFunctionalizeDesc.c_str());
+            ImGui::TextDisabled("%s", Str::ProcFunctional.c_str());
+            ImGui::PopTextWrapPos();
+            ImGui::EndTooltip();
+        };
+
         auto renderScriptTooltip = [](const ScriptCatalogEntry &e) {
             if (!ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
                 return;
@@ -1604,6 +1639,11 @@ ProcessingPanel::AddNodeRequest ProcessingPanel::renderAddNodeMenu(const EffectR
                         req.type = GraphNodeType::Discretize;
                     ImGui::PopStyleColor();
                     renderDiscretizeTooltip();
+                    ImGui::PushStyleColor(ImGuiCol_Text, funcCol);
+                    if (ImGui::MenuItem(fmtScratch("{}  Functionalize", ICON_CHART_SPLINE)))
+                        req.type = GraphNodeType::Functionalize;
+                    ImGui::PopStyleColor();
+                    renderFunctionalizeTooltip();
                 }
                 for (const auto &key : effectReg.orderedKeys) {
                     const auto &def = effectReg.effects.at(key);
@@ -1716,6 +1756,17 @@ ProcessingPanel::AddNodeRequest ProcessingPanel::renderAddNodeMenu(const EffectR
                     }
                     ImGui::PopStyleColor();
                     renderDiscretizeTooltip();
+                }
+                if (category == NodeCategory::Modify &&
+                    ofs::util::fuzzyMatchAny(m_nodeFilter, {"Functionalize", catLabel}).matched) {
+                    header();
+                    ImGui::PushStyleColor(ImGuiCol_Text, funcCol);
+                    if (ImGui::MenuItem(fmtScratch("{}  Functionalize", ICON_CHART_SPLINE))) {
+                        req.type = GraphNodeType::Functionalize;
+                        ImGui::CloseCurrentPopup();
+                    }
+                    ImGui::PopStyleColor();
+                    renderFunctionalizeTooltip();
                 }
                 for (const auto &key : effectReg.orderedKeys) {
                     const auto &def = effectReg.effects.at(key);

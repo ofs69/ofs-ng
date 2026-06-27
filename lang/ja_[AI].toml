@@ -1873,8 +1873,12 @@ english     = "Sampling rate for any node that turns a continuous signal into di
 translation = "連続信号を離散アクションに変換するノードのサンプリングレートです。"
 
 [ProcDiscretizeDesc]
-english     = "Resample any input onto a uniform Hz grid, producing one action per sample."
-translation = "任意の入力を一定のHzグリッドで再サンプリングし、サンプルごとに1つのアクションを生成します。"
+english     = "Resample any input onto a uniform Hz grid, one action per sample. Rarely needed — the graph discretizes implicitly at the output."
+translation = "任意の入力を一定のHzグリッドで再サンプリングし、サンプルごとに1つのアクションを生成します。ほとんど不要です — グラフは出力で暗黙的に離散化します。"
+
+[ProcFunctionalizeDesc]
+english     = "Treat any input as a continuous signal, deferring discretization to the output Hz. Rarely needed — inputs are functionalized implicitly where required."
+translation = "任意の入力を連続信号として扱い、離散化を出力Hzまで先送りします。ほとんど不要です — 入力は必要に応じて暗黙的に関数化されます。"
 
 [ProcEvalPrefix]
 english     = "eval: "

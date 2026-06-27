@@ -1981,8 +1981,12 @@ english     = "Sampling rate for any node that turns a continuous signal into di
 description = "Processing: tooltip on the region Hz drag."
 
 [ProcDiscretizeDesc]
-english     = "Resample any input onto a uniform Hz grid, producing one action per sample."
+english     = "Resample any input onto a uniform Hz grid, one action per sample. Rarely needed — the graph discretizes implicitly at the output."
 description = "Processing: description tooltip for the built-in Discretize node in the add-node menu."
+
+[ProcFunctionalizeDesc]
+english     = "Treat any input as a continuous signal, deferring discretization to the output Hz. Rarely needed — inputs are functionalized implicitly where required."
+description = "Processing: description tooltip for the built-in Functionalize node in the add-node menu."
 
 [ProcEvalPrefix]
 english     = "eval: "

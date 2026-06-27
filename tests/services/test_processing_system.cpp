@@ -1770,6 +1770,34 @@ TEST_CASE("ProcessingSystem: Discretize samples at its own Hz, overriding the re
         CHECK(a.pos == 60);
 }
 
+// Functionalize marks a discrete input continuous, so the Output's single discretization point
+// re-samples it at the region Hz. A sparse discrete input {0:0, 2:100} would otherwise reach the
+// Output verbatim (2 actions); routed through Functionalize over [0,2] at a region rate of 2 Hz it
+// becomes the interpolated grid t = 0,0.5,1,1.5,2 → 0,25,50,75,100.
+TEST_CASE("ProcessingSystem: Functionalize defers discretization to the region Hz") {
+    PsFixture f;
+    ProcessingNodeGraph g;
+    const int inId = g.allocId(), funcId = g.allocId(), outId = g.allocId();
+    g.nodes.push_back({.id = inId, .type = GraphNodeType::Input, .role = StandardAxis::L0});
+    g.nodes.push_back({.id = funcId, .type = GraphNodeType::Functionalize, .role = StandardAxis::L0});
+    g.nodes.push_back({.id = outId, .type = GraphNodeType::Output, .role = StandardAxis::L0});
+    g.links.push_back({.id = g.allocId(), .fromNode = inId, .toNode = funcId, .toPin = 0});
+    g.links.push_back({.id = g.allocId(), .fromNode = funcId, .toNode = outId, .toPin = 0});
+
+    f.addRegion(g, {StandardAxis::L0}, 0.0, 2.0);
+    f.tp.project.regions[0].hz = 2; // coarse region rate so the resampled grid is easy to enumerate
+    f.start();
+    f.seed(StandardAxis::L0, acts({{0.0, 0}, {2.0, 100}}));
+    const auto &r = f.eval(StandardAxis::L0);
+
+    REQUIRE(r.size() == 5); // grid {0,0.5,1,1.5,2}, not the 2 sparse input actions
+    CHECK(r[0].pos == 0);
+    CHECK(r[1].pos == 25);
+    CHECK(r[2].pos == 50);
+    CHECK(r[3].pos == 75);
+    CHECK(r[4].pos == 100);
+}
+
 // ── Multi-output nodes (1 → 2 outputs; fromPin selects the source slot) ────────────────────────
 namespace {
 

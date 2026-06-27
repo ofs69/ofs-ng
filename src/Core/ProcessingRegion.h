@@ -17,19 +17,22 @@ using AxisRoles = std::bitset<kStandardAxisCount>;
 inline constexpr int kDefaultRegionHz = 30;
 
 enum class GraphNodeType : uint8_t {
-    Input,      // source signal — no inputs, 1 output
-    Output,     // sink — 1 input, no outputs
-    Effect,     // wraps a ProcessingEffect — 1 input, 1 output
-    Add,        // A + B — 2 inputs, 1 output
-    Subtract,   // A - B — 2 inputs, 1 output
-    Multiply,   // A * B — 2 inputs, 1 output
-    Divide,     // A / B — 2 inputs, 1 output (B=0 → 0)
-    Constant,   // fixed value — no inputs, 1 output (functional)
-    PluginNode, // plugin-defined — 0/1/2 inputs depending on kind, 1 output
-    Script,     // Roslyn-compiled .cs file — 0/1/2 inputs depending on scriptInputCount, 1 output
-    Discretize, // resample any input onto a uniform Hz grid — 1 input, 1 output (always discrete).
-                // effect.params[0] (0/1) keeps the original input action times so peaks survive aliasing;
-                // effect.params[1] is the node's own sampling rate (Hz, 1–120) independent of the region
+    Input,         // source signal — no inputs, 1 output
+    Output,        // sink — 1 input, no outputs
+    Effect,        // wraps a ProcessingEffect — 1 input, 1 output
+    Add,           // A + B — 2 inputs, 1 output
+    Subtract,      // A - B — 2 inputs, 1 output
+    Multiply,      // A * B — 2 inputs, 1 output
+    Divide,        // A / B — 2 inputs, 1 output (B=0 → 0)
+    Constant,      // fixed value — no inputs, 1 output (functional)
+    PluginNode,    // plugin-defined — 0/1/2 inputs depending on kind, 1 output
+    Script,        // Roslyn-compiled .cs file — 0/1/2 inputs depending on scriptInputCount, 1 output
+    Discretize,    // resample any input onto a uniform Hz grid — 1 input, 1 output (always discrete).
+                   // effect.params[0] (0/1) keeps the original input action times so peaks survive aliasing;
+                   // effect.params[1] is the node's own sampling rate (Hz, 1–120) independent of the region
+    Functionalize, // mark any input as a continuous functional signal (linear interp for a discrete input)
+                   // — 1 input, 1 output (always functional). The explicit inverse of Discretize: no params,
+                   // it just defers discretization downstream to the graph's single Hz point (the Output).
 };
 
 struct ProcessingGraphNode {
@@ -86,7 +89,7 @@ struct ProcessingGraphLink {
 };
 
 // Canonical per-node pin arity — the one definition every site reads (link validator, editor pin
-// drawing, functional-signal analysis). Input/Output/Effect/Discretize have a fixed shape; the math
+// drawing, functional-signal analysis). Input/Output/Effect/Discretize/Functionalize have a fixed shape; the math
 // nodes take two inputs; plugin and script nodes carry their declared counts, cached on the node so a
 // disabled plugin or a missing script file still reports the right pins.
 [[nodiscard]] inline int nodeInputPinCount(const ProcessingGraphNode &n) {
@@ -94,6 +97,7 @@ struct ProcessingGraphLink {
     case GraphNodeType::Output:
     case GraphNodeType::Effect:
     case GraphNodeType::Discretize:
+    case GraphNodeType::Functionalize:
         return 1;
     case GraphNodeType::Add:
     case GraphNodeType::Subtract:

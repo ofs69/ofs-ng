@@ -273,6 +273,7 @@ NLOHMANN_JSON_SERIALIZE_ENUM(GraphNodeType, {
                                                 {GraphNodeType::PluginNode, "PluginNode"},
                                                 {GraphNodeType::Script, "Script"},
                                                 {GraphNodeType::Discretize, "Discretize"},
+                                                {GraphNodeType::Functionalize, "Functionalize"},
                                             })
 
 void to_json(nlohmann::json &j, const ProcessingGraphNode &n) {

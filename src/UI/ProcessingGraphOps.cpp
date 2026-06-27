@@ -17,6 +17,8 @@ bool isNodeOutputFunctional(int nodeId, const ProcessingNodeGraph &graph, const 
         return false;
     if (node->type == GraphNodeType::Discretize)
         return false; // resamples onto the Hz grid — its output is always discrete, whatever the input
+    if (node->type == GraphNodeType::Functionalize)
+        return true; // marks its input continuous — its output is always functional, whatever the input
     if (node->type == GraphNodeType::Effect) {
         auto it = effectReg.effects.find(node->effect.type);
         if (it == effectReg.effects.end() || it->second.kind != EffectKind::Functional)
