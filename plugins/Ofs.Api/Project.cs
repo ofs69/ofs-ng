@@ -37,6 +37,32 @@ namespace Ofs
             _api = api;
         }
 
+        // Reads record `i`'s scalar fields (stashed by the caller's closure) plus its name into `nameBuf`,
+        // reporting the name's required length in `*nameReq`. Returns 0 to skip the record. The same reader
+        // serves the right-sized re-read on overflow, so it must be idempotent.
+        private delegate int ReadRecord(int i, byte* nameBuf, int bufSize, int* nameReq);
+
+        // Shared count/loop/stack-buffer/overflow-reread for the name-bearing record getters (Chapters /
+        // Bookmarks / Regions). For each of `count` records `read` fills the reused stack buffer; the name
+        // is taken inline when it fits, else re-read exactly against a right-sized buffer. `build(name)`
+        // turns the scalars `read` stashed plus the resolved name into the element.
+        private List<T> ReadNamedRecords<T>(int count, ReadRecord read, Func<string, T> build)
+        {
+            var list = new List<T>(count > 0 ? count : 0);
+            byte* nameBuf = stackalloc byte[NameBufSize]; // reused each iteration; host re-NUL-terminates per call
+            for (int i = 0; i < count; i++)
+            {
+                int nameReq;
+                if (read(i, nameBuf, NameBufSize, &nameReq) == 0) continue;
+                int idx = i; // capture by value for the overflow reread closure
+                string name = nameReq < NameBufSize
+                    ? Marshal.PtrToStringUTF8((IntPtr)nameBuf) ?? string.Empty
+                    : OfsHost.RereadName(nameReq, (buf, size) => { int nr; return read(idx, buf, size, &nr); });
+                list.Add(build(name));
+            }
+            return list;
+        }
+
         /// <summary>True if the project has unsaved changes.</summary>
         public bool IsDirty
         {
@@ -67,23 +93,16 @@ namespace Ofs
             get
             {
                 _host.AssertMainThread(nameof(Chapters));
-                int n = _api->GetChapterCount(_api->Ctx);
-                var list = new List<ProjectChapter>(n > 0 ? n : 0);
-                byte* nameBuf = stackalloc byte[NameBufSize]; // reused each iteration; host re-NUL-terminates per call
-                for (int i = 0; i < n; i++)
-                {
-                    double start, end; uint color; int nameReq;
-                    if (_api->GetChapter(_api->Ctx, i, &start, &end, &color, nameBuf, NameBufSize, &nameReq) == 0) continue;
-                    string name = nameReq < NameBufSize
-                        ? Marshal.PtrToStringUTF8((IntPtr)nameBuf) ?? string.Empty
-                        : OfsHost.RereadName(nameReq, (buf, size) =>
-                        {
-                            double s, e; uint c; int nr;
-                            return _api->GetChapter(_api->Ctx, i, &s, &e, &c, buf, size, &nr);
-                        });
-                    list.Add(new ProjectChapter(start, end, color, name));
-                }
-                return list;
+                double start = 0, end = 0; uint color = 0;
+                return ReadNamedRecords(_api->GetChapterCount(_api->Ctx),
+                    (int i, byte* buf, int size, int* nameReq) =>
+                    {
+                        double s, e; uint c;
+                        int ok = _api->GetChapter(_api->Ctx, i, &s, &e, &c, buf, size, nameReq);
+                        start = s; end = e; color = c;
+                        return ok;
+                    },
+                    name => new ProjectChapter(start, end, color, name));
             }
         }
 
@@ -93,23 +112,16 @@ namespace Ofs
             get
             {
                 _host.AssertMainThread(nameof(Bookmarks));
-                int n = _api->GetBookmarkCount(_api->Ctx);
-                var list = new List<ProjectBookmark>(n > 0 ? n : 0);
-                byte* nameBuf = stackalloc byte[NameBufSize]; // reused each iteration; host re-NUL-terminates per call
-                for (int i = 0; i < n; i++)
-                {
-                    double time; int nameReq;
-                    if (_api->GetBookmark(_api->Ctx, i, &time, nameBuf, NameBufSize, &nameReq) == 0) continue;
-                    string name = nameReq < NameBufSize
-                        ? Marshal.PtrToStringUTF8((IntPtr)nameBuf) ?? string.Empty
-                        : OfsHost.RereadName(nameReq, (buf, size) =>
-                        {
-                            double t; int nr;
-                            return _api->GetBookmark(_api->Ctx, i, &t, buf, size, &nr);
-                        });
-                    list.Add(new ProjectBookmark(time, name));
-                }
-                return list;
+                double time = 0;
+                return ReadNamedRecords(_api->GetBookmarkCount(_api->Ctx),
+                    (int i, byte* buf, int size, int* nameReq) =>
+                    {
+                        double t;
+                        int ok = _api->GetBookmark(_api->Ctx, i, &t, buf, size, nameReq);
+                        time = t;
+                        return ok;
+                    },
+                    name => new ProjectBookmark(time, name));
             }
         }
 
@@ -119,23 +131,16 @@ namespace Ofs
             get
             {
                 _host.AssertMainThread(nameof(Regions));
-                int n = _api->GetRegionCount(_api->Ctx);
-                var list = new List<ProjectRegion>(n > 0 ? n : 0);
-                byte* nameBuf = stackalloc byte[NameBufSize]; // reused each iteration; host re-NUL-terminates per call
-                for (int i = 0; i < n; i++)
-                {
-                    double start, end; int nameReq;
-                    if (_api->GetRegion(_api->Ctx, i, &start, &end, nameBuf, NameBufSize, &nameReq) == 0) continue;
-                    string name = nameReq < NameBufSize
-                        ? Marshal.PtrToStringUTF8((IntPtr)nameBuf) ?? string.Empty
-                        : OfsHost.RereadName(nameReq, (buf, size) =>
-                        {
-                            double s, e; int nr;
-                            return _api->GetRegion(_api->Ctx, i, &s, &e, buf, size, &nr);
-                        });
-                    list.Add(new ProjectRegion(start, end, name));
-                }
-                return list;
+                double start = 0, end = 0;
+                return ReadNamedRecords(_api->GetRegionCount(_api->Ctx),
+                    (int i, byte* buf, int size, int* nameReq) =>
+                    {
+                        double s, e;
+                        int ok = _api->GetRegion(_api->Ctx, i, &s, &e, buf, size, nameReq);
+                        start = s; end = e;
+                        return ok;
+                    },
+                    name => new ProjectRegion(start, end, name));
             }
         }
 

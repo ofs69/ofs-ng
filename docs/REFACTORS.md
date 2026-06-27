@@ -35,9 +35,6 @@ Line numbers are approximate — several files moved during the cleanup. Locate 
 - **Per-widget UTF-8 marshaling boilerplate (~20 sites)** — `plugins/Ofs.Api/Ui.cs`. A caller-allocated
   span + a helper centralizing the stackalloc-vs-heap / `+1` NUL policy.
 
-- **Three name-overflow reread loops in `Project` getters** — `plugins/Ofs.Api/Project.cs`. A generic
-  count/loop/stack-buffer/reread helper taking a per-record read delegate.
-
 ## Remaining duplication
 
 - **Hit-test fade/decimation duplicated from the dot renderer** — `src/UI/ScriptTimeline.cpp` (the
