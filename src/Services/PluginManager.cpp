@@ -1,6 +1,7 @@
 #include "PluginManager.h"
 #include "Core/EventQueue.h"
 #include "Core/ScriptProject.h"
+#include "Format/Funscript.h"
 #include "Localization/Translator.h"
 #include "Services/ManagedAssemblyTrust.h" // verify managed host DLLs against baked-in hashes
 #include "Services/PluginNodeIO.h"
@@ -1180,6 +1181,54 @@ int hostGetProjectMetadata(void *ctx, char *buf, int bufSize) {
     return fillBuf(buf, bufSize, j.dump());
 }
 
+int hostGetFunscriptJson(void *ctx, const int *roles, int count, int version, char *buf, int bufSize) {
+    if (!checkMainThread(ctx, "getFunscriptJson"))
+        return emptyBuf(buf, bufSize);
+    auto *p = pc(ctx);
+    if (!p->project || !roles || count <= 0)
+        return emptyBuf(buf, bufSize);
+
+    // Mirror exportMultiAxisFunscript: collect (funscript tag, actions) per requested role, skipping
+    // absent/scratch/empty and any duplicate tag. The host carries the same raw `actions` getAxisActions
+    // exposes, so the JSON matches what a plugin reads back action-for-action. 1.0 is single-axis, so stop
+    // after the first valid role.
+    std::vector<std::pair<std::string, VectorSet<ScriptAxisAction>>> axisData;
+    for (int i = 0; i < count; ++i) {
+        const AxisState *axis = validAxis(p, roles[i]);
+        if (!axis || axis->actions.empty())
+            continue;
+        const auto role = static_cast<StandardAxis>(roles[i]);
+        if (isScratchAxis(role)) // scratch axes (S0–S9) have no funscript tag
+            continue;
+        std::string tag(standardAxisTag(role));
+        if (std::ranges::any_of(axisData, [&](const auto &e) { return e.first == tag; }))
+            continue;
+        axisData.emplace_back(std::move(tag), axis->actions);
+        if (version == OfsFunscript10) // 1.0 is single-axis: the first valid role is the whole document
+            break;
+    }
+    if (axisData.empty())
+        return emptyBuf(buf, bufSize);
+
+    Funscript fs;
+    switch (version) {
+    case OfsFunscript20:
+        fs = Funscript::fromAxes20(axisData);
+        fs.version = "2.0";
+        break;
+    case OfsFunscript11:
+        fs = Funscript::fromAxes11(axisData);
+        fs.version = "1.1";
+        break;
+    default: // OfsFunscript10 — single axis
+        fs = Funscript::fromActions(axisData.front().second);
+        fs.version = "1.0";
+        break;
+    }
+    fs.metadata = p->project->metadata;
+    return fillBuf(buf, bufSize, nlohmann::json(fs).dump());
+}
+
 int hostGetProjectData(void *ctx, const char *key, char *buf, int bufSize) {
     if (!checkMainThread(ctx, "getProjectData"))
         return emptyBuf(buf, bufSize);
@@ -1529,6 +1578,7 @@ PluginManager::PluginManager(ScriptProject &project, EventQueue &eq, std::shared
     hostApi.uiTooltip = &hostUiTooltip;
     hostApi.uiPushDisabledTooltip = &hostUiPushDisabledTooltip;
     hostApi.uiPopDisabledTooltip = &hostUiPopDisabledTooltip;
+    hostApi.getFunscriptJson = &hostGetFunscriptJson;
 
     // Node-body custom-UI invoker. Runs synchronously during the
     // ProcessingPanel node render, so ImGui state is live and the host UI widgets draw into the

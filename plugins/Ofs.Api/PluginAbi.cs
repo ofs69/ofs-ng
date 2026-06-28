@@ -307,6 +307,10 @@ namespace Ofs
         // Disabled block whose greyed widgets show `tooltip` on hover while disabled. Host copies the string.
         public delegate* unmanaged[Cdecl]<void*, int, byte*, void> UiPushDisabledTooltip;
         public delegate* unmanaged[Cdecl]<void*, void> UiPopDisabledTooltip;
+        // Funscript document (UTF-8 JSON) for one or more axes: (roles*, count, version, buf, size) →
+        // required len. version is OfsFunscriptVersion (0=1.0 single-axis, 1=1.1 "axes", 2=2.0 "channels").
+        // Absent/scratch/empty/duplicate roles skipped; carries the project metadata block. GrowAndRead.
+        public delegate* unmanaged[Cdecl]<void*, int*, int, int, byte*, int, int> GetFunscriptJson;
     }
 
     [StructLayout(LayoutKind.Sequential)]

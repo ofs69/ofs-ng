@@ -38,6 +38,7 @@ namespace {
 
 constexpr int kL0 = static_cast<int>(StandardAxis::L0);
 constexpr int kR0 = static_cast<int>(StandardAxis::R0);
+constexpr int kS0 = static_cast<int>(StandardAxis::S0);
 
 // Builds a PluginManager and exposes its wired hostApi + ctx via the friend test seam. init() is never
 // called: the dispatch path needs only what the constructor sets up. Event captures are attached before
@@ -410,6 +411,85 @@ TEST_CASE("chapter/bookmark/region reads guard on index and report counts") {
     char meta[256];
     fx.h().getProjectMetadata(fx.cv(), meta, sizeof(meta));
     CHECK(std::string(meta).find("Title") != std::string::npos);
+}
+
+TEST_CASE("getFunscriptJson serializes axes per the requested format version") {
+    HostApiFixture fx;
+    fx.axis(kL0).showInStrip = true;
+    fx.axis(kR0).showInStrip = true;
+    fx.tp.project.mutate(
+        StandardAxis::L0, [](AxisState &a) { a.actions.insert({1.0, 40}); a.actions.insert({2.0, 60}); }, fx.tp.eq);
+    fx.tp.project.mutate(StandardAxis::R0, [](AxisState &a) { a.actions.insert({0.5, 10}); }, fx.tp.eq);
+    fx.tp.project.metadata.title = "MyTitle";
+    fx.drain();
+
+    const int l0[] = {kL0};
+    const int both[] = {kL0, kR0};
+    char buf[1024];
+
+    // 1.0 single axis: root actions in ms, project metadata carried, version stamped, no axes/channels.
+    REQUIRE(fx.h().getFunscriptJson(fx.cv(), l0, 1, OfsFunscript10, buf, sizeof(buf)) > 0);
+    const auto j10 = nlohmann::json::parse(buf);
+    CHECK(j10["actions"].size() == 2);
+    CHECK(j10["actions"][0]["at"] == 1000); // 1.0 s → 1000 ms
+    CHECK(j10["actions"][0]["pos"] == 40);
+    CHECK(j10["metadata"]["title"] == "MyTitle");
+    CHECK(j10["metadata"]["version"] == "1.0");
+    CHECK_FALSE(j10.contains("axes"));
+    CHECK_FALSE(j10.contains("channels"));
+
+    // 1.1 multi-axis: L0 stays the root, R0 goes under "axes".
+    REQUIRE(fx.h().getFunscriptJson(fx.cv(), both, 2, OfsFunscript11, buf, sizeof(buf)) > 0);
+    const auto j11 = nlohmann::json::parse(buf);
+    CHECK(j11["actions"].size() == 2);
+    REQUIRE(j11.contains("axes"));
+    CHECK(j11["axes"][0]["id"] == "R0");
+    CHECK(j11["axes"][0]["actions"].size() == 1);
+    CHECK(j11["metadata"]["version"] == "1.1");
+
+    // 2.0 multi-axis: the secondary axis goes under "channels" instead.
+    REQUIRE(fx.h().getFunscriptJson(fx.cv(), both, 2, OfsFunscript20, buf, sizeof(buf)) > 0);
+    const auto j20 = nlohmann::json::parse(buf);
+    REQUIRE(j20.contains("channels"));
+    CHECK(j20["channels"].contains("R0"));
+    CHECK(j20["metadata"]["version"] == "2.0");
+
+    // 1.0 with several roles is still single-axis: only the first valid axis is serialized.
+    REQUIRE(fx.h().getFunscriptJson(fx.cv(), both, 2, OfsFunscript10, buf, sizeof(buf)) > 0);
+    const auto j10multi = nlohmann::json::parse(buf);
+    CHECK(j10multi["actions"].size() == 2);
+    CHECK_FALSE(j10multi.contains("axes"));
+}
+
+TEST_CASE("getFunscriptJson guards thread/args and skips absent, empty, and scratch axes") {
+    HostApiFixture fx;
+    fx.axis(kL0).showInStrip = true; // present, no actions
+
+    char buf[256] = {1};
+    const int l0[] = {kL0};
+    const int r0[] = {kR0};
+
+    // Present-but-empty and absent axes are both skipped → "" and 0 (NUL-terminated).
+    CHECK(fx.h().getFunscriptJson(fx.cv(), l0, 1, OfsFunscript10, buf, sizeof(buf)) == 0);
+    CHECK(std::string(buf).empty());
+    CHECK(fx.h().getFunscriptJson(fx.cv(), r0, 1, OfsFunscript11, buf, sizeof(buf)) == 0);
+
+    // A scratch axis has no funscript tag, so it is skipped even with actions.
+    fx.axis(kS0).showInStrip = true;
+    fx.tp.project.mutate(StandardAxis::S0, [](AxisState &a) { a.actions.insert({1.0, 50}); }, fx.tp.eq);
+    fx.drain();
+    const int s0[] = {kS0};
+    CHECK(fx.h().getFunscriptJson(fx.cv(), s0, 1, OfsFunscript11, buf, sizeof(buf)) == 0);
+
+    // Bad args: null roles / non-positive count → empty.
+    CHECK(fx.h().getFunscriptJson(fx.cv(), nullptr, 1, OfsFunscript10, buf, sizeof(buf)) == 0);
+    CHECK(fx.h().getFunscriptJson(fx.cv(), l0, 0, OfsFunscript10, buf, sizeof(buf)) == 0);
+
+    // Off the main thread → empty fallback, never touches project state.
+    int ret = -1;
+    std::thread worker([&] { ret = fx.h().getFunscriptJson(fx.cv(), l0, 1, OfsFunscript10, buf, sizeof(buf)); });
+    worker.join();
+    CHECK(ret == 0);
 }
 
 TEST_CASE("getProjectData reads this plugin's own namespaced slot and guards absence/thread") {

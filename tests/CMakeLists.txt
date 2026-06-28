@@ -352,6 +352,8 @@ add_executable(ofs-plugin-tests
         ${CMAKE_SOURCE_DIR}/src/Services/PluginManager.cpp
         ${CMAKE_SOURCE_DIR}/src/Services/ManagedAssemblyTrust.cpp
         ${CMAKE_SOURCE_DIR}/src/Services/ScriptSystem.cpp
+        # getFunscriptJson serializes axes through the funscript format helpers.
+        ${CMAKE_SOURCE_DIR}/src/Format/Funscript.cpp
         # The interaction-intent routers: the plugin dispatch test drives a plugin edit mode / navigator /
         # selection mode through them (Pass/Drop/Replace, Seek/None), so the plugin binary links them too.
         ${CMAKE_SOURCE_DIR}/src/Services/EditIntentRouter.cpp

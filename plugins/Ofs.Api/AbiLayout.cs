@@ -68,7 +68,7 @@ namespace Ofs
             // table is the layout most likely to drift: every new HostApi function appends a pointer, so a
             // mirror that adds it out of order reads every later pointer at the wrong offset. Pinning the
             // size catches a missing/extra/misplaced field.
-            Size<HostApi>(728);
+            Size<HostApi>(736);
             Size<PluginApi>(120);
 
             _verified = true;

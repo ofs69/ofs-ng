@@ -15,6 +15,17 @@ namespace Ofs
     /// <summary>A processing region: a named time range with its own node graph.</summary>
     public readonly record struct ProjectRegion(double Start, double End, string Name);
 
+    /// <summary>The funscript on-disk format version selectable in <see cref="Project.FunscriptJson(FunscriptVersion, StandardAxis[])"/>.</summary>
+    public enum FunscriptVersion
+    {
+        /// <summary>Funscript 1.0 — single axis only (root <c>actions</c>).</summary>
+        V10 = 0,
+        /// <summary>Funscript 1.1 — multi-axis via an <c>axes</c> array (primary axis at the root).</summary>
+        V11 = 1,
+        /// <summary>Funscript 2.0 — multi-axis via a <c>channels</c> object (primary axis at the root).</summary>
+        V20 = 2,
+    }
+
     /// <summary>
     /// Access to project-level state: unsaved status, metadata, chapters, bookmarks and processing
     /// regions (all read-only snapshots), plus this plugin's own per-project data store
@@ -85,6 +96,44 @@ namespace Ofs
                 using var doc = JsonDocument.Parse(json);
                 return doc.RootElement.Clone(); // Clone owns its memory independently of the document
             }
+        }
+
+        /// <summary>
+        /// The funscript document for a single axis, as a UTF-8 JSON string, in the given format version
+        /// (default 1.0). A convenience over <see cref="FunscriptJson(FunscriptVersion, StandardAxis[])"/>
+        /// for the common single-axis case. Returns an empty string when the axis is absent, empty, or a
+        /// scratch axis. Main-thread only.
+        /// </summary>
+        public string FunscriptJson(StandardAxis role, FunscriptVersion version = FunscriptVersion.V10)
+            => FunscriptJson(version, role);
+
+        /// <summary>
+        /// The funscript document for one or more axes, as a UTF-8 JSON string, in the given format version.
+        /// <see cref="FunscriptVersion.V10"/> is single-axis only — pass exactly one role, or it throws.
+        /// <see cref="FunscriptVersion.V11"/>/<see cref="FunscriptVersion.V20"/> carry the primary axis's
+        /// actions at the root and the rest under <c>"axes"</c>/<c>"channels"</c>. Absent, empty, scratch
+        /// (S0–S9), and duplicate roles are skipped; the document carries the project metadata block and
+        /// action times are in milliseconds, matching the host's own export. Returns an empty string when no
+        /// requested axis is exportable. Main-thread only.
+        /// </summary>
+        /// <exception cref="ArgumentException"><paramref name="version"/> is 1.0 but more than one role was
+        /// passed — the 1.0 format cannot carry multiple axes.</exception>
+        public string FunscriptJson(FunscriptVersion version, params StandardAxis[] roles)
+        {
+            _host.AssertMainThread(nameof(FunscriptJson));
+            if (roles == null || roles.Length == 0) return string.Empty;
+            if (version == FunscriptVersion.V10 && roles.Length != 1)
+                throw new ArgumentException(
+                    "Funscript 1.0 is a single-axis format; pass exactly one axis (use V1_1 or V2_0 for " +
+                    "multiple axes).", nameof(roles));
+            int count = roles.Length;
+            int[] roleInts = new int[count];
+            for (int i = 0; i < count; i++) roleInts[i] = (int)roles[i];
+            return OfsHost.GrowAndRead((b, size) =>
+            {
+                fixed (int* rp = roleInts)
+                    return _api->GetFunscriptJson(_api->Ctx, rp, count, (int)version, b, size);
+            });
         }
 
         /// <summary>The chapters, in project order (by start time).</summary>

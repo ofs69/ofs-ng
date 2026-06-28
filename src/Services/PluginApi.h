@@ -55,6 +55,11 @@ typedef struct {
 
 typedef enum { OfsSignalDiscrete = 0, OfsSignalFunctional = 1 } OfsSignalKind;
 
+// Funscript on-disk format selected by getFunscriptJson. 1.0 is single-axis (root "actions" only); 1.1
+// carries extra axes in an "axes" array; 2.0 in a "channels" object. Mirrored as FunscriptVersion in
+// Ofs.Api (Project.cs).
+typedef enum { OfsFunscript10 = 0, OfsFunscript11 = 1, OfsFunscript20 = 2 } OfsFunscriptVersion;
+
 // A node declares N input pins and M output pins (see OfsNodeDef). Both directions are capped at 16 so
 // every imnodes pin id fits the 6-bit slot field of the host's GraphId encoding (see ProcessingRegion.h).
 #define OFS_MAX_NODE_PINS 16
@@ -677,6 +682,18 @@ struct HostApi {
     // copies `tooltip`, so the caller need not keep it alive past the call. Main thread.
     void (*uiPushDisabledTooltip)(void *ctx, int disabled, const char *tooltip);
     void (*uiPopDisabledTooltip)(void *ctx);
+
+    // ── Funscript export (read) ───────────────────────────────────────────────
+    // Build a funscript document for one or more axes and write it as UTF-8 JSON into buf. `roles` points
+    // to `count` StandardAxis values (as int); `version` is an OfsFunscriptVersion selecting the format:
+    // 1.0 serializes a SINGLE axis (the first valid role; extra roles ignored) as {actions, metadata};
+    // 1.1 carries the primary axis's actions at top level and the rest under "axes":[{id,actions},…];
+    // 2.0 is the same shape but under a "channels" object. Absent, empty, scratch (S0–S9, which have no
+    // funscript tag), and duplicate roles are skipped; an empty result (no exportable axis) writes "" and
+    // returns 0. The document carries the project metadata block (with its version field set to match) and
+    // action times are milliseconds, matching the host's own export. Returns the required byte length
+    // (excl NUL); GrowAndRead contract. Main thread.
+    int (*getFunscriptJson)(void *ctx, const int *roles, int count, int version, char *buf, int bufSize);
 };
 
 struct PluginApi {
@@ -713,7 +730,7 @@ struct PluginApi {
 // appends a pointer, and a managed mirror that adds it in the wrong place (or not at all) reads every
 // later pointer at the wrong offset. These pin the native size so a table edit that forgets to update
 // the count fails the native build; the C# AbiLayout.Verify() self-test pins the managed side.
-static_assert(sizeof(HostApi) == 728, "HostApi layout drift (mirror: Ofs.Api/PluginAbi.cs HostApi)");
+static_assert(sizeof(HostApi) == 736, "HostApi layout drift (mirror: Ofs.Api/PluginAbi.cs HostApi)");
 static_assert(sizeof(PluginApi) == 120, "PluginApi layout drift (mirror: Ofs.Api/PluginAbi.cs PluginApi)");
 
 } // namespace ofs
