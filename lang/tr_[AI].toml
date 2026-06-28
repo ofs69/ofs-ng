@@ -457,12 +457,12 @@ english     = "Check for updates on startup"
 translation = "Başlangıçta güncellemeleri kontrol et"
 
 [PrefOpenAppDataFolder]
-english     = "Open App Data Folder"
-translation = "Uygulama Veri Klasörünü Aç"
+english     = "App Data"
+translation = "Uygulama Verisi"
 
 [PrefOpenBackupFolder]
-english     = "Open Backup Folder"
-translation = "Yedekleme Klasörünü Aç"
+english     = "Backups"
+translation = "Yedekler"
 
 [PrefBackupKeepCountHint]
 english     = "How many dated backups to keep per project before the oldest is removed."
@@ -569,8 +569,8 @@ english     = "{0} (shipped)"
 translation = "{0} (yerleşik)"
 
 [PrefRevealInFolder]
-english     = "Reveal in Folder"
-translation = "Klasörde Göster"
+english     = "Folder"
+translation = "Klasör"
 
 [ShowInFileBrowser]
 english     = "Show in File Explorer"
@@ -1860,6 +1860,18 @@ translation = "Sona Git"
 [CmdOptimizeIntra]
 english     = "Optimize Video for Seeking"
 translation = "Videoyu Arama için Optimize Et"
+
+[CmdResetVideoView]
+english     = "Reset Video View"
+translation = "Video görünümünü sıfırla"
+
+[CmdResetOverlay]
+english     = "Reset Simulator Overlay"
+translation = "Simülatör yer paylaşımını sıfırla"
+
+[CmdResetView]
+english     = "Reset View & Overlay"
+translation = "Görünümü ve yer paylaşımını sıfırla"
 
 # ─────────────────────────────────────────────────────────────────────────────────────────────
 # Processing panel (src/UI/ProcessingPanel.cpp) — node-graph editor chrome

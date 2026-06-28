@@ -457,12 +457,12 @@ english     = "Check for updates on startup"
 translation = "起動時に更新を確認"
 
 [PrefOpenAppDataFolder]
-english     = "Open App Data Folder"
-translation = "アプリデータフォルダを開く"
+english     = "App Data"
+translation = "アプリデータ"
 
 [PrefOpenBackupFolder]
-english     = "Open Backup Folder"
-translation = "バックアップフォルダを開く"
+english     = "Backups"
+translation = "バックアップ"
 
 [PrefBackupKeepCountHint]
 english     = "How many dated backups to keep per project before the oldest is removed."
@@ -569,8 +569,8 @@ english     = "{0} (shipped)"
 translation = "{0}（同梱）"
 
 [PrefRevealInFolder]
-english     = "Reveal in Folder"
-translation = "フォルダで表示"
+english     = "Folder"
+translation = "フォルダー"
 
 [ShowInFileBrowser]
 english     = "Show in File Explorer"
@@ -1860,6 +1860,18 @@ translation = "末尾へ移動"
 [CmdOptimizeIntra]
 english     = "Optimize Video for Seeking"
 translation = "シークのために動画を最適化"
+
+[CmdResetVideoView]
+english     = "Reset Video View"
+translation = "ビデオ表示をリセット"
+
+[CmdResetOverlay]
+english     = "Reset Simulator Overlay"
+translation = "シミュレーターオーバーレイをリセット"
+
+[CmdResetView]
+english     = "Reset View & Overlay"
+translation = "表示とオーバーレイをリセット"
 
 # ─────────────────────────────────────────────────────────────────────────────────────────────
 # Processing panel (src/UI/ProcessingPanel.cpp) — node-graph editor chrome

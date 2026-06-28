@@ -457,12 +457,12 @@ english     = "Check for updates on startup"
 translation = "Verificar atualizações ao iniciar"
 
 [PrefOpenAppDataFolder]
-english     = "Open App Data Folder"
-translation = "Abrir Pasta de Dados do Aplicativo"
+english     = "App Data"
+translation = "Dados do app"
 
 [PrefOpenBackupFolder]
-english     = "Open Backup Folder"
-translation = "Abrir Pasta de Backup"
+english     = "Backups"
+translation = "Backups"
 
 [PrefBackupKeepCountHint]
 english     = "How many dated backups to keep per project before the oldest is removed."
@@ -569,8 +569,8 @@ english     = "{0} (shipped)"
 translation = "{0} (incluído)"
 
 [PrefRevealInFolder]
-english     = "Reveal in Folder"
-translation = "Revelar na Pasta"
+english     = "Folder"
+translation = "Pasta"
 
 [ShowInFileBrowser]
 english     = "Show in File Explorer"
@@ -1860,6 +1860,18 @@ translation = "Ir para o Fim"
 [CmdOptimizeIntra]
 english     = "Optimize Video for Seeking"
 translation = "Otimizar Vídeo para Navegação"
+
+[CmdResetVideoView]
+english     = "Reset Video View"
+translation = "Redefinir visualização de vídeo"
+
+[CmdResetOverlay]
+english     = "Reset Simulator Overlay"
+translation = "Redefinir sobreposição do simulador"
+
+[CmdResetView]
+english     = "Reset View & Overlay"
+translation = "Redefinir visualização e sobreposição"
 
 # ─────────────────────────────────────────────────────────────────────────────────────────────
 # Processing panel (src/UI/ProcessingPanel.cpp) — node-graph editor chrome

@@ -17,7 +17,8 @@ class EventQueue;
 
 class ScriptSimulator {
   public:
-    ScriptSimulator();
+    // Takes the EventQueue to register its ResetOverlayAnchorEvent handler (must be before freeze()).
+    explicit ScriptSimulator(EventQueue &eq);
 
     void render(const ScriptProject &project, EventQueue &eq, bool &open, bool vpHovered);
     // Draws the overlay onto the video and runs the 2D bar interaction (which lives here, not in
@@ -36,6 +37,11 @@ class ScriptSimulator {
     // runs earlier in the frame, in the Simulator window) can project/unproject the anchor. One frame
     // stale is fine — the video transform moves smoothly.
     OverlayViewport overlayVp_{};
+
+    // Set by the ResetOverlayAnchorEvent handler (command / menu); consumed in renderOverlay where the
+    // live viewport + current anchor are known to compute the centered anchor, exactly as the
+    // middle-double-click gesture does. The gesture sets nothing here — it is read inline.
+    bool overlayResetPending_ = false;
 
     // 2D bar drag state. The anchor + mouse position (normalized) at gesture start let endpoint and
     // center drags apply a delta in content space, preserving the grab offset. In VR, center drags

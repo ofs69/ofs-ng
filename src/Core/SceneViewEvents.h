@@ -34,4 +34,17 @@ struct CaptureSimInvertedEvent {
     bool inverted;
 };
 
+// Reset intents — the command/menu counterpart of the middle-double-click "reset view" gesture, kept
+// as one-shot intents (not the resolved value) because the reset target depends on live window state
+// the command's run(EventQueue&) can't reach: the video framing reset must snap VideoPlayerWindow's
+// transient camera, and the overlay reset needs the current viewport (VR projection) + lock state held
+// by ScriptSimulator. Each window subscribes and does its own half, exactly as the gesture does.
+
+// → VideoPlayerWindow: recenter pan/zoom (2D) or VR camera to the default framing.
+struct ResetVideoFramingEvent {};
+
+// → ScriptSimulator: recenter the simulator overlay (2D bar or 3D model). A locked overlay ignores it,
+// same as the drag path, so a "reset both" doesn't drag a pinned overlay out from under the video.
+struct ResetOverlayAnchorEvent {};
+
 } // namespace ofs

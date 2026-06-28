@@ -457,12 +457,12 @@ english     = "Check for updates on startup"
 translation = "启动时检查更新"
 
 [PrefOpenAppDataFolder]
-english     = "Open App Data Folder"
-translation = "打开应用数据文件夹"
+english     = "App Data"
+translation = "应用数据"
 
 [PrefOpenBackupFolder]
-english     = "Open Backup Folder"
-translation = "打开备份文件夹"
+english     = "Backups"
+translation = "备份"
 
 [PrefBackupKeepCountHint]
 english     = "How many dated backups to keep per project before the oldest is removed."
@@ -569,8 +569,8 @@ english     = "{0} (shipped)"
 translation = "{0}（内置）"
 
 [PrefRevealInFolder]
-english     = "Reveal in Folder"
-translation = "在文件夹中显示"
+english     = "Folder"
+translation = "文件夹"
 
 [ShowInFileBrowser]
 english     = "Show in File Explorer"
@@ -1860,6 +1860,18 @@ translation = "跳到末尾"
 [CmdOptimizeIntra]
 english     = "Optimize Video for Seeking"
 translation = "优化视频以便跳帧"
+
+[CmdResetVideoView]
+english     = "Reset Video View"
+translation = "重置视频视图"
+
+[CmdResetOverlay]
+english     = "Reset Simulator Overlay"
+translation = "重置模拟器叠加层"
+
+[CmdResetView]
+english     = "Reset View & Overlay"
+translation = "重置视图和叠加层"
 
 # ─────────────────────────────────────────────────────────────────────────────────────────────
 # Processing panel (src/UI/ProcessingPanel.cpp) — node-graph editor chrome

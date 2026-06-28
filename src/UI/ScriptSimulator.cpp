@@ -358,7 +358,11 @@ void ScriptSimulator::glCallbackFunc(const ImDrawList * /*parentList*/, const Im
     }
 }
 
-ScriptSimulator::ScriptSimulator() {
+ScriptSimulator::ScriptSimulator(EventQueue &eq) {
+    // "Reset Simulator Overlay" command / palette / context menu — same recenter as the middle-double-
+    // click gesture; the work runs in renderOverlay where the viewport + anchor + lock state are known.
+    eq.on<ResetOverlayAnchorEvent>([this](const ResetOverlayAnchorEvent &) { overlayResetPending_ = true; });
+
     // The glTF load uploads meshes/shaders to the GPU (Mesh::uploadToGPU, SceneShader ctor). Under the
     // null backend there is no GL context, so skip it: the scene renders only inside the dropped draw
     // callback (glCallbackFunc), and a null gltfScene is already a supported state (asset-missing path).
@@ -752,6 +756,9 @@ void ScriptSimulator::render3D(const ScriptProject &project, EventQueue &eq, dou
         if (ImGui::MenuItem(Str::SimLocked.iconId(state.lockedPosition ? ICON_LOCK : ICON_LOCK_OPEN, "sim_locked_3d"),
                             nullptr, state.lockedPosition))
             eq.push(ModifyEvent<SimulatorState>{[](SimulatorState &s) { s.lockedPosition = !s.lockedPosition; }});
+        // Disabled while locked: a locked overlay ignores the recenter (matches the gesture/command path).
+        if (ImGui::MenuItem(Str::CmdResetOverlay.id("sim_reset_pos_3d"), nullptr, false, !state.lockedPosition))
+            eq.push(ResetOverlayAnchorEvent{});
         if (ImGui::MenuItem(Str::Sim3D.id("sim_3d_menu_3d"), nullptr, state.use3dSimulator))
             eq.push(ModifyEvent<SimulatorState>{[](SimulatorState &s) { s.use3dSimulator = !s.use3dSimulator; }});
         const bool inverted = project.activeSceneView.inverted;
@@ -811,11 +818,14 @@ bool ScriptSimulator::renderOverlay(ImDrawList *dl, const ScriptProject &project
     const auto &state = project.simulator;
     const OverlayAnchor &anchor = project.activeSceneView.anchor;
 
-    // Middle double-click anywhere on the video recenters the overlay (2D bar or 3D model), alongside
-    // the video player's own middle double-click reset of pan/zoom — one "reset view" gesture. A locked
-    // overlay stays put (same as drag), so the video reset doesn't drag the overlay out from under it.
-    if (vpHovered && !state.lockedPosition && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Middle))
+    // Recenter the overlay (2D bar or 3D model). The middle double-click anywhere on the video is the
+    // gesture half of the "reset view" pairing (alongside the video player's own pan/zoom reset); the
+    // command / context menu route the same recenter through overlayResetPending_. A locked overlay
+    // stays put (same as drag), so a "reset both" doesn't drag the overlay out from under the video.
+    const bool resetGesture = vpHovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Middle);
+    if ((resetGesture || overlayResetPending_) && !state.lockedPosition)
         eq.push(CaptureOverlayAnchorEvent{centeredAnchor(anchor, vp)});
+    overlayResetPending_ = false; // consumed (also dropped when locked, so it can't linger)
 
     if (state.use3dSimulator) {
         if (strokerNode == nullptr)
@@ -1249,6 +1259,9 @@ bool ScriptSimulator::renderOverlay(ImDrawList *dl, const ScriptProject &project
             if (ImGui::MenuItem(Str::SimLocked.iconId(state.lockedPosition ? ICON_LOCK : ICON_LOCK_OPEN, "sim_locked"),
                                 nullptr, state.lockedPosition))
                 eq.push(ModifyEvent<SimulatorState>{[](SimulatorState &s) { s.lockedPosition = !s.lockedPosition; }});
+            // Disabled while locked: a locked overlay ignores the recenter (matches the gesture/command path).
+            if (ImGui::MenuItem(Str::CmdResetOverlay.id("sim_reset_pos_2d"), nullptr, false, !state.lockedPosition))
+                eq.push(ResetOverlayAnchorEvent{});
             if (ImGui::MenuItem(Str::Sim3D.id("sim_3d_menu_2d"), nullptr, state.use3dSimulator))
                 eq.push(ModifyEvent<SimulatorState>{[](SimulatorState &s) { s.use3dSimulator = !s.use3dSimulator; }});
             const bool inverted = project.activeSceneView.inverted;

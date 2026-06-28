@@ -332,7 +332,7 @@ bool OfsApp::init() {
     videoPreview->init();
     if (appSettings.showTimelinePreview)
         eventQueue.push(ofs::SetPreviewEnabledEvent{true});
-    scriptSimulator = std::make_unique<ofs::ScriptSimulator>();
+    scriptSimulator = std::make_unique<ofs::ScriptSimulator>(eventQueue);
     scriptStatisticsWindow = std::make_unique<ofs::ScriptStatisticsWindow>();
     logWindow = std::make_unique<ofs::LogWindow>();
     aboutWindow = std::make_unique<ofs::AboutWindow>();

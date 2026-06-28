@@ -119,7 +119,11 @@ in the key-binding editor; this page covers the pointer.
 | Drag | Pan | Rotate (yaw + pitch) |
 | Middle double-click | Reset pan & zoom + recenter overlay | Reset view + recenter overlay |
 | Scroll | Zoom | Zoom |
-| Right-click | Context menu | Context menu |
+| Right-click | Context menu (incl. *Reset Video View*) | Context menu (incl. *Reset Video View*) |
+
+The middle double-click also has command-palette / rebindable forms: **Reset Video View**, **Reset
+Simulator Overlay**, and **Reset View & Overlay** (the combined gesture). A locked view/overlay ignores
+its reset, the same as a drag.
 
 ---
 
@@ -136,7 +140,10 @@ in the key-binding editor; this page covers the pointer.
 | Drag bar endpoint (2D) | Adjust range |
 | Alt+drag | Cancel drag, snap back |
 | Middle double-click (on video) | Recenter overlay |
-| Right-click | Context menu (lock, 2D/3D, invert, …) |
+| Right-click | Context menu (lock, 2D/3D, invert, *Reset Simulator Overlay*, …) |
+
+Recentering is also reachable as the **Reset Simulator Overlay** command (palette / rebindable); a
+locked overlay ignores it.
 
 ---
 

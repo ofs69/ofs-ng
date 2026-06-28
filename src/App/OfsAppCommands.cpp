@@ -7,6 +7,7 @@
 
 #include "Core/Events.h"
 #include "Core/IntentEvents.h"
+#include "Core/SceneViewEvents.h"
 #include "Core/ScriptProject.h"
 #include "Core/StandardAxis.h"
 #include "Core/TranscodeEvents.h"
@@ -571,4 +572,27 @@ void OfsApp::initCommands() {
         .run = [](ofs::EventQueue &eq) { eq.push(ofs::OpenTranscodeDialogEvent{}); },
         .isEnabled = [this] { return canOptimizeIntra(); },
     });
+
+    // --- View resets ---
+    // The discoverable shortcut is the middle-double-click over the video (resets framing + overlay
+    // together — see VideoPlayerWindow / ScriptSimulator). These surface the same resets in the palette
+    // and as rebindable commands, split so each half is reachable on its own. A KeyChord can't express a
+    // mouse double-click, so they ship with no default key. Each pushes a one-shot intent the owning
+    // window resolves against its live state (camera transients / viewport + lock); see SceneViewEvents.h.
+    reg(
+        "view.reset-video", "Video", Str::CmdResetVideoView,
+        [](ofs::EventQueue &eq) { eq.push(ofs::ResetVideoFramingEvent{}); }, SDLK_UNKNOWN, SDL_KMOD_NONE,
+        "recenter pan zoom framing");
+    reg(
+        "simulator.reset-overlay", "Simulator", Str::CmdResetOverlay,
+        [](ofs::EventQueue &eq) { eq.push(ofs::ResetOverlayAnchorEvent{}); }, SDLK_UNKNOWN, SDL_KMOD_NONE,
+        "recenter position bar model");
+    // Both halves — two independent resets, not one mutation split in two, so two pushes is correct.
+    reg(
+        "view.reset-both", "Video", Str::CmdResetView,
+        [](ofs::EventQueue &eq) {
+            eq.push(ofs::ResetVideoFramingEvent{});
+            eq.push(ofs::ResetOverlayAnchorEvent{});
+        },
+        SDLK_UNKNOWN, SDL_KMOD_NONE, "recenter reset view overlay");
 }

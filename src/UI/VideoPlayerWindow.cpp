@@ -31,8 +31,14 @@ VideoPlayerWindow::VideoPlayerWindow(EventQueue &eq) {
     targetZoomFactor = zoomFactor;
     targetVrZoom = vrZoom;
     // Snap the live camera when the cursor crosses into a scene with remembered framing. Applied
-    // next render (pendingFraming), where contentSize is known to denormalize the stored pan.
-    eq.on<RestoreSceneViewEvent>([this](const RestoreSceneViewEvent &e) { pendingFraming = e.framing; });
+    // next render (pendingFraming), where contentSize is known to denormalize the stored pan. A restore
+    // is the newer intent, so it cancels any still-pending reset (and is never treated as one).
+    eq.on<RestoreSceneViewEvent>([this](const RestoreSceneViewEvent &e) {
+        pendingFraming = e.framing;
+        framingResetPending_ = false;
+    });
+    // "Reset Video View" command / palette / context menu — same path as the middle-double-click gesture.
+    eq.on<ResetVideoFramingEvent>([this](const ResetVideoFramingEvent &) { requestFramingReset(); });
 }
 
 VideoPlayerWindow::~VideoPlayerWindow() = default;
@@ -110,15 +116,33 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
     ImVec2 imageMin = contentScreenMin;
     ImVec2 imageSize = contentSize;
 
-    // Snap the camera to a freshly-restored scene framing (translation was stored normalized).
+    // Snap the camera to a freshly-restored scene framing (translation was stored normalized). A
+    // pending view-reset rides the same path with the defaults, then persists the recentered framing.
+    // A locked view ignores the reset (gesture, command, or "reset both"), mirroring the overlay's
+    // locked-position behavior — but a chapter-crossing *restore* still applies, locked or not.
     if (pendingFraming) {
-        const VideoFraming &f = *pendingFraming;
-        zoomFactor = targetZoomFactor = f.zoomFactor;
-        vrZoom = targetVrZoom = f.vrZoom;
-        vrRotation = f.vrRotation;
-        translation = {f.translation.x * contentSize.x, f.translation.y * contentSize.y};
-        pendingFraming.reset();
+        if (framingResetPending_ && state.locked) {
+            framingResetPending_ = false;
+            pendingFraming.reset();
+        } else {
+            const VideoFraming &f = *pendingFraming;
+            zoomFactor = targetZoomFactor = f.zoomFactor;
+            vrZoom = targetVrZoom = f.vrZoom;
+            vrRotation = f.vrRotation;
+            translation = {f.translation.x * contentSize.x, f.translation.y * contentSize.y};
+            pendingFraming.reset();
+            if (framingResetPending_) {
+                framingResetPending_ = false;
+                eq.push(CaptureVideoFramingEvent{currentFraming(contentSize)});
+            }
+        }
     }
+
+    // Middle double-click resets the view (2D pan/zoom or VR camera). Routed through requestFramingReset
+    // so the gesture, the command, and the context menu share one path (lock enforced at apply time
+    // above). The default-framing snap applies next render — one-frame latency, as for a restore.
+    if (windowHovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Middle))
+        requestFramingReset();
 
     float baseScaleFactor =
         std::min(contentSize.x / (float)player.getWidth(), contentSize.y / (float)player.getHeight());
@@ -194,13 +218,6 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
             }
             if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && dragging) {
                 dragging = false;
-                framingChanged = true;
-            }
-
-            if (windowHovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Middle)) {
-                vrZoom = 0.5f;
-                targetVrZoom = 0.5f;
-                vrRotation = {0.5f, 0.5f};
                 framingChanged = true;
             }
         } else {
@@ -288,13 +305,6 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
                 dragging = false;
                 framingChanged = true;
             }
-
-            if (windowHovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Middle)) {
-                zoomFactor = 1.0f;
-                targetZoomFactor = 1.0f;
-                translation = {0.0f, 0.0f};
-                framingChanged = true;
-            }
         } else {
             dragging = false;
         }
@@ -360,6 +370,10 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
         if (ImGui::MenuItem(Str::VpwLocked.iconId(state.locked ? ICON_LOCK : ICON_LOCK_OPEN, "vpw_locked"), nullptr,
                             state.locked))
             eq.push(ModifyEvent<VideoPlayerState>{[](VideoPlayerState &s) { s.locked = !s.locked; }});
+        ImGui::Separator();
+        // Disabled while locked: a reset is ignored for a locked view (matches the apply-time guard).
+        if (ImGui::MenuItem(Str::CmdResetVideoView.id("vpw_reset_view"), nullptr, false, !state.locked))
+            eq.push(ResetVideoFramingEvent{});
         ImGui::EndPopup();
     }
 

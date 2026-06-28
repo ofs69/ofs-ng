@@ -457,12 +457,12 @@ english     = "Check for updates on startup"
 translation = "시작 시 업데이트 확인"
 
 [PrefOpenAppDataFolder]
-english     = "Open App Data Folder"
-translation = "앱 데이터 폴더 열기"
+english     = "App Data"
+translation = "앱 데이터"
 
 [PrefOpenBackupFolder]
-english     = "Open Backup Folder"
-translation = "백업 폴더 열기"
+english     = "Backups"
+translation = "백업"
 
 [PrefBackupKeepCountHint]
 english     = "How many dated backups to keep per project before the oldest is removed."
@@ -569,8 +569,8 @@ english     = "{0} (shipped)"
 translation = "{0} (기본 제공)"
 
 [PrefRevealInFolder]
-english     = "Reveal in Folder"
-translation = "폴더에서 표시"
+english     = "Folder"
+translation = "폴더"
 
 [ShowInFileBrowser]
 english     = "Show in File Explorer"
@@ -1860,6 +1860,18 @@ translation = "끝으로 이동"
 [CmdOptimizeIntra]
 english     = "Optimize Video for Seeking"
 translation = "탐색을 위한 비디오 최적화"
+
+[CmdResetVideoView]
+english     = "Reset Video View"
+translation = "비디오 보기 초기화"
+
+[CmdResetOverlay]
+english     = "Reset Simulator Overlay"
+translation = "시뮬레이터 오버레이 초기화"
+
+[CmdResetView]
+english     = "Reset View & Overlay"
+translation = "보기 및 오버레이 초기화"
 
 # ─────────────────────────────────────────────────────────────────────────────────────────────
 # Processing panel (src/UI/ProcessingPanel.cpp) — node-graph editor chrome

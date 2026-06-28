@@ -66,6 +66,17 @@ class VideoPlayerWindow {
     // Set by the RestoreSceneViewEvent handler; applied to the live camera transients on the next
     // render (where contentSize is known to denormalize the pan). Cleared once applied.
     std::optional<VideoFraming> pendingFraming;
+    // True while a view-reset (middle-double-click gesture or the "Reset Video View" command) is
+    // pending: pendingFraming is set to the defaults, and once applied next render we also push a
+    // CaptureVideoFramingEvent to persist it. Distinguishes the reset path from a RestoreSceneView
+    // (which sets pendingFraming too, but restores *from* storage and must not re-persist).
+    bool framingResetPending_ = false;
+    // Snap the live camera to the default framing and mark it for persistence. Shared by the gesture
+    // and the ResetVideoFramingEvent handler so both reset through one path.
+    void requestFramingReset() {
+        pendingFraming = VideoFraming{};
+        framingResetPending_ = true;
+    }
     // Build a VideoFraming snapshot of the current camera (pan stored as a fraction of contentSize,
     // zoom as the lerp target = the user's intent) to push as a CaptureVideoFramingEvent. Video mode is
     // project-level, not part of the framing, so it is not a parameter here.

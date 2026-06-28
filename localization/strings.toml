@@ -499,12 +499,12 @@ english     = "Check for updates on startup"
 description = "Preferences › Application: toggle for the silent update check shortly after launch."
 
 [PrefOpenAppDataFolder]
-english     = "Open App Data Folder"
-description = "Preferences › Application: button that opens the app's data folder in the file browser."
+english     = "App Data"
+description = "Preferences › Application: button (with a folder-open icon) that opens the app's data folder in the file browser."
 
 [PrefOpenBackupFolder]
-english     = "Open Backup Folder"
-description = "Preferences › Application: button that opens the backup folder in the file browser."
+english     = "Backups"
+description = "Preferences › Application: button (with a folder-open icon) that opens the backup folder in the file browser."
 
 [PrefBackupKeepCountHint]
 english     = "How many dated backups to keep per project before the oldest is removed."
@@ -614,8 +614,8 @@ placeholders = [
 ]
 
 [PrefRevealInFolder]
-english     = "Reveal in Folder"
-description = "Preferences › Theme: button that opens the themes folder in the file browser."
+english     = "Folder"
+description = "Preferences › Theme: button (with a folder-open icon) that opens the themes folder in the file browser."
 
 [ShowInFileBrowser]
 english     = "Show in File Explorer"
@@ -1985,6 +1985,18 @@ description = "Command title: seek to the end of the video."
 [CmdOptimizeIntra]
 english     = "Optimize Video for Seeking"
 description = "Command title: transcode the current video into an all-keyframe (intra-frame) copy for faster frame stepping/seeking."
+
+[CmdResetVideoView]
+english     = "Reset Video View"
+description = "Command title / Video Player right-click menu: recenter the video pan/zoom (or VR camera) to the default framing."
+
+[CmdResetOverlay]
+english     = "Reset Simulator Overlay"
+description = "Command title / simulator overlay right-click menu: recenter the simulator overlay (2D bar or 3D model) over the video."
+
+[CmdResetView]
+english     = "Reset View & Overlay"
+description = "Command title: recenter both the video view and the simulator overlay at once (the middle-double-click gesture's command form)."
 
 # ─────────────────────────────────────────────────────────────────────────────────────────────
 # Processing panel (src/UI/ProcessingPanel.cpp) — node-graph editor chrome
