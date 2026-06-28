@@ -124,6 +124,22 @@ translation = "シーク時に一時停止"
 english     = "Pause video playback whenever you seek (timeline click, bookmark or chapter jump, frame step). Loading a project always pauses regardless of this setting."
 translation = "シーク（タイムラインのクリック、ブックマークやチャプターへのジャンプ、フレームステップ）するたびにビデオ再生を一時停止します。プロジェクトの読み込み時はこの設定に関係なく常に一時停止します。"
 
+[PrefSound]
+english     = "Sound"
+translation = "サウンド"
+
+[PrefUiSounds]
+english     = "UI Sounds"
+translation = "UI サウンド"
+
+[PrefUiSoundsHint]
+english     = "Play a short sound for notifications: a cue on success, a distinct alert on a warning or error."
+translation = "通知時に短いサウンドを再生します。成功時には合図音、警告やエラー時には別のアラート音が鳴ります。"
+
+[PrefUiSoundVolume]
+english     = "Volume"
+translation = "音量"
+
 [PrefIntraSection]
 english     = "Optimized Video"
 translation = "最適化された動画"

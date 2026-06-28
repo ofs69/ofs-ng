@@ -132,6 +132,22 @@ description = "Preferences › Application › Video: toggle that pauses playbac
 english     = "Pause video playback whenever you seek (timeline click, bookmark or chapter jump, frame step). Loading a project always pauses regardless of this setting."
 description = "Preferences › Application › Video: help-marker tooltip explaining the Pause on Seek toggle."
 
+[PrefSound]
+english     = "Sound"
+description = "Preferences › Application: section header for UI sound-effect settings."
+
+[PrefUiSounds]
+english     = "UI Sounds"
+description = "Preferences › Application › Sound: toggle that enables short sound-effect feedback for notifications (success, warning, error)."
+
+[PrefUiSoundsHint]
+english     = "Play a short sound for notifications: a cue on success, a distinct alert on a warning or error."
+description = "Preferences › Application › Sound: help-marker tooltip explaining the UI Sounds toggle."
+
+[PrefUiSoundVolume]
+english     = "Volume"
+description = "Preferences › Application › Sound: slider label for the UI sound-effect volume (separate from the video volume)."
+
 [PrefIntraSection]
 english     = "Optimized Video"
 description = "Preferences › Application: section header for intra-frame (all-keyframe) video optimization settings."

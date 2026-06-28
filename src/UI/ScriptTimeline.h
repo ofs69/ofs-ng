@@ -60,6 +60,10 @@ class ScriptTimelineWindow {
     // started on (-1 = no drag in progress); the spanned run becomes the group each frame.
     struct StripDragState {
         int anchorRow = -1;
+        // Last spanned run pushed as a group this drag, so an unchanged span isn't re-pushed every frame.
+        // -1 = nothing pushed yet.
+        int spanLo = -1;
+        int spanHi = -1;
     };
 
     // One axis row's render inputs, resolved once by renderTimeline and threaded into renderStrip /

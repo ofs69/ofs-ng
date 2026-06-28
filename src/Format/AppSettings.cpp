@@ -142,6 +142,8 @@ void to_json(nlohmann::json &j, const AppSettings &s) {
                                 {"holdRepeat", s.holdRepeat},
                                 {"metadataPresets", s.metadataPresets},
                                 {"volume", s.volume},
+                                {"uiSoundsEnabled", s.uiSoundsEnabled},
+                                {"uiSoundVolume", s.uiSoundVolume},
                                 {"fontSizeBase", s.fontSizeBase},
                                 {"showSimulator", s.showSimulator},
                                 {"showStatistics", s.showStatistics},
@@ -169,6 +171,8 @@ void from_json(const nlohmann::json &j, AppSettings &s) {
     s.holdRepeat = j.value("holdRepeat", HoldRepeatSettings{});
     s.metadataPresets = j.value("metadataPresets", std::vector<MetadataPreset>{});
     s.volume = j.value("volume", 1.0f);
+    s.uiSoundsEnabled = j.value("uiSoundsEnabled", true);
+    s.uiSoundVolume = j.value("uiSoundVolume", 0.25f);
     s.fontSizeBase = j.value("fontSizeBase", 18.0f);
     s.showSimulator = j.value("showSimulator", true);
     s.showStatistics = j.value("showStatistics", true);

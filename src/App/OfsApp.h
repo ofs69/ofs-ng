@@ -65,6 +65,7 @@ class WelcomeScreen;
 class WaveformService;
 class WaveformRenderer;
 class UpdateChecker;
+class UiSoundService;
 } // namespace ofs
 
 class OfsApp : public ofs::Application {
@@ -280,6 +281,10 @@ class OfsApp : public ofs::Application {
     // Polls the GitHub releases feed and compares it to this build's version. Registers its event
     // handlers in its ctor (before freeze); the actual GET runs on a JobSystem worker.
     std::unique_ptr<ofs::UpdateChecker> updateChecker;
+
+    // Plays short UI feedback SFX in response to NotifyEvent. Owns an SDL audio device + decoded PCM;
+    // independent of the GL context, so its destruction order among the GL services doesn't matter.
+    std::unique_ptr<ofs::UiSoundService> uiSoundService;
 
     // Audio waveform behind the timeline: the service extracts/caches peaks and owns the GL texture; the
     // renderer (declared after, so it destructs first — it holds a reference to the service) owns the

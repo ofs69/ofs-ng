@@ -53,6 +53,15 @@ struct ModifyBookmarkChapterEvent {
     bool snapshot = true;
 };
 
+// Emitted by ProjectManager after a ModifyBookmarkChapterEvent that changed the marker count, so
+// observers (the audio-feedback cue) can react to a discrete add/remove without inspecting project state
+// or the opaque mutator. `added` = a bookmark or chapter was inserted; false = one was removed. An
+// in-place edit (rename, recolor, time drag) leaves the count unchanged and emits nothing. Derived/
+// informational only — not undoable (the originating edit already is).
+struct BookmarkChapterCountChangedEvent {
+    bool added = false;
+};
+
 // A plugin wrote its per-project custom data (HostApi::setProjectData). ProjectManager applies it to
 // ScriptProject::pluginData[pluginName][key] and marks the project dirty. Metadata-like: NOT undoable
 // (UndoSystem does not subscribe), so it survives undo/redo of unrelated edits unchanged. A null

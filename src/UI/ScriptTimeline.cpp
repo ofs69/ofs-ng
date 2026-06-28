@@ -300,7 +300,11 @@ void ScriptTimelineWindow::renderStrip(const ScriptProject &project, EventQueue 
             int row = std::clamp(static_cast<int>((mY - stripPos.y) / rowH), 0, numRows - 1);
             int lo = std::min(stripDrag.anchorRow, row);
             int hi = std::max(stripDrag.anchorRow, row);
-            if (hi > lo) { // a real span of ≥2 rows
+            // IsMouseDragging is true every frame, so only push when the spanned run actually changes —
+            // re-pushing an identical group each frame re-applies it and re-fires its observers needlessly.
+            if (hi > lo && (lo != stripDrag.spanLo || hi != stripDrag.spanHi)) { // a real span of ≥2 rows
+                stripDrag.spanLo = lo;
+                stripDrag.spanHi = hi;
                 AxisRoles roles;
                 for (int r = lo; r <= hi; ++r)
                     roles.set(static_cast<size_t>(stripEntries[r].role));
@@ -308,8 +312,10 @@ void ScriptTimelineWindow::renderStrip(const ScriptProject &project, EventQueue 
             }
         }
     }
-    if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+    if (ImGui::IsMouseReleased(ImGuiMouseButton_Left)) {
         stripDrag.anchorRow = -1;
+        stripDrag.spanLo = stripDrag.spanHi = -1;
+    }
 }
 
 void ScriptTimelineWindow::renderCurves(const ScriptProject &project, ImDrawList *drawList, WaveformRenderer &waveform,

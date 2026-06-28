@@ -6,8 +6,17 @@ target_include_directories(glad2 SYSTEM PUBLIC "glad2/include/")
 add_subdirectory("glm" SYSTEM)
 
 # = STB / cgltf =
-add_library(stb STATIC stb/cgltf_impl.c stb/stb_snprintf_impl.c stb/stb_image_write_impl.c)
+# stb_vorbis.c is the full implementation TU (UiSoundService forward-declares the single decode symbol it
+# needs rather than including the header, so it's compiled here once). It is third-party and emits a lot
+# of MSVC/clang warnings, so silence them on just that file — the app target's /WX never reaches this lib,
+# but a clean build log is worth the per-file flag.
+add_library(stb STATIC stb/cgltf_impl.c stb/stb_snprintf_impl.c stb/stb_image_write_impl.c stb/stb_vorbis.c)
 target_include_directories(stb SYSTEM PUBLIC "stb/")
+if (MSVC)
+    set_source_files_properties(stb/stb_vorbis.c PROPERTIES COMPILE_OPTIONS "/w")
+else ()
+    set_source_files_properties(stb/stb_vorbis.c PROPERTIES COMPILE_OPTIONS "-w")
+endif ()
 
 # = IMGUI =
 # Shared Dear ImGui configuration applied to both the plain `imgui` lib (the shipped app links this) and
@@ -69,15 +78,16 @@ endif ()
 
 # Trim SDL to what OFS uses. We keep Video + Events (always built), the Joystick/HIDAPI stack the
 # gamepad input path needs (Window.cpp inits VIDEO|EVENTS|GAMEPAD; OfsApp opens gamepads via HIDAPI for
-# non-XInput controllers), and Dialog (the native file/folder pickers — ModalManager uses
-# SDL_ShowOpen/Save/OpenFolderDialog). Everything below is unused: audio and video decode go through
-# libmpv, and the UI renders through OpenGL (ImGui_ImplSDL3_InitForOpenGL — never the
-# SDL_Renderer/GPU/Vulkan paths). Dropping them shrinks the binary and the build.
+# non-XInput controllers), Dialog (the native file/folder pickers — ModalManager uses
+# SDL_ShowOpen/Save/OpenFolderDialog), and Audio (UiSoundService plays short UI feedback SFX through an
+# SDL audio device — video soundtrack still decodes through libmpv). Everything below is unused: the UI
+# renders through OpenGL (ImGui_ImplSDL3_InitForOpenGL — never the SDL_Renderer/GPU/Vulkan paths).
+# Dropping them shrinks the binary and the build.
 set(SDL_TEST_LIBRARY OFF CACHE BOOL "" FORCE)
 set(SDL_TESTS OFF CACHE BOOL "" FORCE)
 set(SDL_EXAMPLES OFF CACHE BOOL "" FORCE)
 set(SDL_INSTALL OFF CACHE BOOL "" FORCE)
-set(SDL_AUDIO OFF CACHE BOOL "" FORCE)
+set(SDL_AUDIO ON CACHE BOOL "" FORCE)
 set(SDL_RENDER OFF CACHE BOOL "" FORCE)
 set(SDL_GPU OFF CACHE BOOL "" FORCE)
 set(SDL_CAMERA OFF CACHE BOOL "" FORCE)

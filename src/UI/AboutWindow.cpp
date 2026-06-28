@@ -87,6 +87,15 @@ constexpr Attribution kAttributions[] = {
      .license = "OFL-1.1",
      .copyright = "(c) 2014-2021 Adobe",
      .asset = "data/fonts/NotoSansCJKjp-LICENSE.txt"},
+    {.name = "Kenney UI SFX Set",
+     .license = "CC0-1.0",
+     .copyright = "(c) Kenney (kenney.nl)",
+     .asset = "data/audio/kenney-ui-sfx-set-LICENSE.txt"},
+    // CC BY 4.0 requires attribution, so this credit is mandatory, not courtesy.
+    {.name = "Universal UI Soundpack",
+     .license = "CC-BY-4.0",
+     .copyright = "(c) Nathan Gibson (nathangibson.myportfolio.com)",
+     .asset = "data/audio/universal-ui-soundpack-LICENSE.txt"},
 };
 
 // Compile-time build environment, assembled once. The OS / arch / config are fixed at compile time;

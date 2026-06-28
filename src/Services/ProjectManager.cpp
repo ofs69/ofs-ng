@@ -155,12 +155,18 @@ ProjectManager::ProjectManager(ScriptProject &project, EventQueue &eq, const App
         setDirty();
     });
     eq.on<ModifyBookmarkChapterEvent>([this](const ModifyBookmarkChapterEvent &e) {
+        const size_t before = this->project.bookmarks.bookmarks.size() + this->project.bookmarks.chapters.size();
         e.apply(this->project.bookmarks);
         // The opaque mutator may have appended or edited out of order; re-assert the sorted-by-time
         // invariant that the rest of the app relies on.
         this->project.bookmarks.sortBookmarks();
         this->project.bookmarks.sortChapters();
         setDirty();
+        // Detect a discrete add/remove here (the one place that sees the mutation) so observers don't have
+        // to classify every call site. An in-place edit leaves the count unchanged and emits nothing.
+        const size_t after = this->project.bookmarks.bookmarks.size() + this->project.bookmarks.chapters.size();
+        if (after != before)
+            this->eq.push(BookmarkChapterCountChangedEvent{.added = after > before});
     });
     // Simulator settings intentionally do NOT setDirty(): they are app-level prefs mirrored into
     // project.simulator for rendering and persisted via AppSettings, not part of project dirty state.

@@ -72,6 +72,10 @@ struct AppSettings {
     HoldRepeatSettings holdRepeat;
     std::vector<MetadataPreset> metadataPresets;
     float volume = 1.0f;
+    // UI sound feedback: short SFX played for notifications (success/error/warning). Independent of
+    // `volume` (the video-soundtrack master) — UiSoundService reads these live on each play.
+    bool uiSoundsEnabled = true;
+    float uiSoundVolume = 0.25f; // 0..1
     float fontSizeBase = 18.0f;
     bool showSimulator = true;
     bool showStatistics = true;

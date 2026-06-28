@@ -287,6 +287,28 @@ void ConfigurationWindow::renderApplicationTab(EventQueue &eq) {
     ImGui::PopTextWrapPos();
     ImGui::Spacing();
 
+    // --- Sound (UI feedback SFX) ---
+    ImGui::SeparatorText(Str::PrefSound);
+    {
+        bool uiSounds = appSettings.uiSoundsEnabled;
+        ImGui::TextUnformatted(Str::PrefUiSounds);
+        ImGui::SameLine();
+        if (ImGui::Checkbox("##ui_sounds", &uiSounds))
+            eq.push(ModifyEvent<AppSettings>{[uiSounds](AppSettings &s) { s.uiSoundsEnabled = uiSounds; }});
+        ImGui::SameLine();
+        ofs::ui::helpMarker(Str::PrefUiSoundsHint.c_str());
+        if (uiSounds) {
+            ImGui::SameLine(0.0f, ImGui::GetFontSize() * 1.5f);
+            ImGui::TextUnformatted(Str::PrefUiSoundVolume);
+            ImGui::SameLine();
+            ImGui::SetNextItemWidth(-FLT_MIN);
+            float volPct = appSettings.uiSoundVolume * 100.0f;
+            if (ImGui::SliderFloat("##ui_sound_volume", &volPct, 0.0f, 100.0f, "%.0f%%", ImGuiSliderFlags_AlwaysClamp))
+                eq.push(ModifyEvent<AppSettings>{[volPct](AppSettings &s) { s.uiSoundVolume = volPct / 100.0f; }});
+        }
+    }
+    ImGui::Spacing();
+
     // --- Optimized Video (intra-frame transcoding) ---
     // The shared destination for intra-optimized videos. Mandatory and without a default: the
     // optimize command stays disabled until this is set. Cleanup is the

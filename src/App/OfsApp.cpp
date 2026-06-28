@@ -16,6 +16,7 @@
 #include "Services/ProjectManager.h"
 #include "Services/ScriptSystem.h"
 #include "Services/SelectIntentRouter.h"
+#include "Services/UiSoundService.h"
 #include "Services/UndoSystem.h"
 #include "Services/UpdateChecker.h"
 #include "Services/VideoTranscoder.h"
@@ -300,6 +301,9 @@ bool OfsApp::init() {
         videoTranscoder = std::make_unique<ofs::VideoTranscoder>(scriptProject, eventQueue, jobSystem);
         // Audio-waveform extraction — registers handlers before freeze(); runs ffmpeg on JobSystem workers.
         waveformService = std::make_unique<ofs::WaveformService>(scriptProject, eventQueue, jobSystem);
+        // UI feedback sounds — subscribes to NotifyEvent before freeze(); reads enable/volume from
+        // appSettings live, so it must outlive nothing but the event queue.
+        uiSoundService = std::make_unique<ofs::UiSoundService>(eventQueue, appSettings);
 
         // reopenLastProject is cleared by an explicit user close, so a deliberately-closed project stays
         // closed across a restart (it remains in lastProjectPaths for the welcome screen's recent list).
