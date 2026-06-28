@@ -52,6 +52,7 @@ class ScriptSimulator;
 class ScriptStatisticsWindow;
 class LogWindow;
 class AboutWindow;
+class BackupRestoreWindow;
 class ScriptTimelineWindow;
 class VideoControlsWindow;
 class ShortcutWindow;
@@ -269,6 +270,7 @@ class OfsApp : public ofs::Application {
     std::unique_ptr<ofs::ScriptStatisticsWindow> scriptStatisticsWindow;
     std::unique_ptr<ofs::LogWindow> logWindow;
     std::unique_ptr<ofs::AboutWindow> aboutWindow;
+    std::unique_ptr<ofs::BackupRestoreWindow> backupRestoreWindow;
     std::unique_ptr<ofs::ShortcutWindow> shortcutWindow;
     std::unique_ptr<ofs::ProcessingSystem> processingSystem;
     std::unique_ptr<ofs::ScriptSystem> scriptSystem;

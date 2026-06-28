@@ -4,6 +4,7 @@
 #include "Util/Log.h"
 #include "Util/PathUtil.h"
 #include <SDL3/SDL.h>
+#include <algorithm>
 
 namespace ofs {
 static std::filesystem::path getSettingsPath() {
@@ -151,6 +152,7 @@ void to_json(nlohmann::json &j, const AppSettings &s) {
                                 {"pauseOnSeek", s.pauseOnSeek},
                                 {"maxFps", s.maxFps},
                                 {"autoBackupEnabled", s.autoBackupEnabled},
+                                {"backupKeepCount", s.backupKeepCount},
                                 {"checkForUpdatesOnStartup", s.checkForUpdatesOnStartup},
                                 {"undoMemoryLimitMb", s.undoMemoryLimitMb},
                                 {"language", s.language},
@@ -177,6 +179,7 @@ void from_json(const nlohmann::json &j, AppSettings &s) {
     s.pauseOnSeek = j.value("pauseOnSeek", true);
     s.maxFps = j.value("maxFps", 0);
     s.autoBackupEnabled = j.value("autoBackupEnabled", true);
+    s.backupKeepCount = std::max(1, j.value("backupKeepCount", 20));
     s.checkForUpdatesOnStartup = j.value("checkForUpdatesOnStartup", true);
     s.undoMemoryLimitMb = j.value("undoMemoryLimitMb", 256);
     s.language = j.value("language", std::string{});

@@ -13,6 +13,7 @@
 #include "Util/Coro.h"
 #include <array>
 #include <chrono>
+#include <cstdint>
 #include <filesystem>
 #include <functional>
 #include <future>
@@ -85,6 +86,7 @@ class ProjectManager {
     void onChangeMediaPath(const ChangeMediaPathEvent &event);
     void onDeclineOptimize();
     void onCloseProjectRequest(const CloseProjectRequestEvent &);
+    void onRestoreBackupRequest(const RestoreBackupRequestEvent &event);
     void onRequestExit(const RequestExitEvent &);
     void onImportFunscriptRequest(const ImportFunscriptRequestEvent &);
     // Applies a parsed import (pushed by importFunscript() after I/O). Places each axis, then notifies:
@@ -166,6 +168,16 @@ class ProjectManager {
     // JobAwait, then applied (clearProject + loadFromProject + events) on the main thread when it
     // resumes. Takes the path by value — the frame outlives the caller's argument across the await.
     co::Fire loadProjectInternal(std::filesystem::path path);
+    // Load a dated auto-backup as a recovery of `target` (the project the backup belongs to; may be
+    // empty for an unnamed project). Same worker-read + main-thread-apply shape as loadProjectInternal,
+    // but the applied project keeps `target` as its file association and is left dirty so the user must
+    // Save to commit the recovered state over the real file. Caller runs doClose() first.
+    co::Fire restoreBackupInternal(std::filesystem::path backupPath, std::filesystem::path target);
+    // Shared apply path for an opened/restored Project: clearProject + loadFromProject, set the file
+    // association to `filePath` (empty → untitled), seed the session-edit baseline, select the saved
+    // axis, arm the resume seek, and drive the media load. `markDirty` leaves the project unsaved (the
+    // restore path); a plain open leaves it clean.
+    void applyLoadedProject(const Project &loaded, const std::filesystem::path &filePath, bool markDirty);
     bool saveProjectInternal(const std::filesystem::path &path);
     void scheduleWrite(Project p, const std::filesystem::path &path, bool isUserSave, long long captureMs);
     void finalizePendingWrite(bool ok);
@@ -217,7 +229,12 @@ class ProjectManager {
     const EffectRegistryState &effectReg;
     std::optional<PendingWrite> pendingWrite;
     std::optional<std::chrono::steady_clock::time_point> lastSaveTime;
-    std::array<double, 5> backupElapsed{};
+    // Time accumulated toward the next auto-backup tick. A backup fires only when the project's
+    // editRevision has advanced past backupRevision (i.e. something actually changed since the last
+    // snapshot), so an idle/clean project never burns backup slots on duplicates — the whole point of
+    // moving off the fixed-name rolling slots.
+    double backupElapsed = 0.0;
+    std::uint64_t backupRevision = 0; // project.editRevision at the last backup / clean state
     std::unordered_set<std::string> trustedGraphHashes;
     std::unordered_set<std::string> shippedScriptHashes; // content hashes of data.pak data/scripts/lib/* (auto-trusted)
     // Multi-axis action clipboard (internal service state, not project document state). One AxisClip per

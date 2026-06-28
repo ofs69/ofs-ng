@@ -2749,10 +2749,10 @@ TEST_CASE("SaveEmbeddedScript promotes an embedded node to a file node") {
 
 // ── Auto-backup timer (update) ──────────────────────────────────────────────────
 
-TEST_CASE("update() fires the 1-minute auto-backup once its interval elapses") {
+TEST_CASE("update() writes a dated auto-backup once the interval elapses on a changed project") {
     TestProject tp;
     AppSettings appSettings;
-    appSettings.autoBackupEnabled = true; // arm the backup timers
+    appSettings.autoBackupEnabled = true; // arm the backup timer
     JobSystem jobSystem;
     EffectRegistryState effectReg;
     ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
@@ -2760,25 +2760,82 @@ TEST_CASE("update() fires the 1-minute auto-backup once its interval elapses") {
     jobSystem.start();
 
     tp.project.axes[0].showInStrip = true;
-    tp.project.mutate(StandardAxis::L0, [](AxisState &a) { a.actions.insert({1.0, 50}); }, tp.eq);
     auto filePath = std::filesystem::temp_directory_path() / "ofs_backup_proj.ofp";
     tp.project.state.filePath = filePath.string();
+    // A real edit event marks the project changed-since-backup; the dated backup is dirty-gated, so a
+    // clean project never produces one.
+    tp.eq.push(AddActionAtTimeEvent{.axis = StandardAxis::L0, .time = 1.0, .pos = 50});
     tp.eq.drain();
 
-    const auto backupFile = ofs::util::getPrefPath() / "backup" / "ofs_backup_proj" / "1min.ofp";
-    std::filesystem::remove(backupFile);
+    const auto backupDir = ofs::util::getPrefPath() / "backup" / "ofs_backup_proj";
+    std::error_code ec;
+    std::filesystem::remove_all(backupDir, ec);
 
-    pm.update(61.0f); // crosses the 60s slot-0 interval -> schedules the backup write
+    auto countBackups = [&]() {
+        int n = 0;
+        std::error_code it;
+        for (const auto &e : std::filesystem::directory_iterator(backupDir, it))
+            if (e.path().extension() == ".ofp" && ofs::util::toUtf8(e.path().filename()).starts_with("backup-"))
+                ++n;
+        return n;
+    };
+
+    pm.update(61.0f); // crosses the 60s interval -> schedules the backup write
 
     // The write runs on a worker; update() finalizes it once the future is ready.
     auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
-    while (!std::filesystem::exists(backupFile) && std::chrono::steady_clock::now() < deadline) {
+    while (countBackups() == 0 && std::chrono::steady_clock::now() < deadline) {
         pm.update(0.0f);
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
-    CHECK(std::filesystem::exists(backupFile));
+    CHECK(countBackups() == 1);
 
-    std::filesystem::remove(backupFile);
+    // A second interval with no edit in between must not add another (duplicate) backup — the dirty-gate
+    // keeps the rolling window full of distinct snapshots, not idle copies.
+    pm.update(61.0f);
+    for (int i = 0; i < 50; ++i) {
+        pm.update(0.0f);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    CHECK(countBackups() == 1);
+
+    std::filesystem::remove_all(backupDir, ec);
+}
+
+TEST_CASE("update() skips the auto-backup when the project is unchanged") {
+    TestProject tp;
+    AppSettings appSettings;
+    appSettings.autoBackupEnabled = true;
+    JobSystem jobSystem;
+    EffectRegistryState effectReg;
+    ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    tp.eq.freeze();
+    jobSystem.start();
+
+    tp.project.axes[0].showInStrip = true;
+    auto filePath = std::filesystem::temp_directory_path() / "ofs_backup_clean.ofp";
+    tp.project.state.filePath = filePath.string();
+    tp.eq.drain();
+
+    const auto backupDir = ofs::util::getPrefPath() / "backup" / "ofs_backup_clean";
+    std::error_code ec;
+    std::filesystem::remove_all(backupDir, ec);
+
+    pm.update(61.0f); // interval elapses, but nothing changed (editRevision == backupRevision == 0)
+    for (int i = 0; i < 50; ++i) {
+        pm.update(0.0f);
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+
+    // No backup directory/files were created for an untouched project.
+    int n = 0;
+    std::error_code it;
+    for (const auto &e : std::filesystem::directory_iterator(backupDir, it))
+        if (e.path().extension() == ".ofp")
+            ++n;
+    CHECK(n == 0);
+
+    std::filesystem::remove_all(backupDir, ec);
 }
 
 // ── Graph dialog-flow early returns and remap error branches ────────────────────

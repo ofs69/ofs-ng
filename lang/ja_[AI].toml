@@ -467,6 +467,46 @@ translation = "アプリデータフォルダを開く"
 english     = "Open Backup Folder"
 translation = "バックアップフォルダを開く"
 
+[PrefBackupKeepCount]
+english     = "Backups to keep"
+translation = "保持するバックアップ数"
+
+[PrefBackupKeepCountHint]
+english     = "How many dated backups to keep per project before the oldest is removed."
+translation = "プロジェクトごとに保持する日付き backup の数。古いものから削除されます。"
+
+[BackupRestoreTitle]
+english     = "Restore from Backup"
+translation = "バックアップから復元"
+
+[BackupRestoreHint]
+english     = "Restoring loads the selected snapshot into the current project. Save afterward to keep it."
+translation = "選択したスナップショットを現在のプロジェクトに読み込みます。保持するには後で保存してください。"
+
+[BackupRestoreColDate]
+english     = "Date"
+translation = "日時"
+
+[BackupRestoreColSize]
+english     = "Size"
+translation = "サイズ"
+
+[BackupRestoreRestore]
+english     = "Restore"
+translation = "復元"
+
+[BackupRestoreRefresh]
+english     = "Refresh"
+translation = "更新"
+
+[BackupRestoreEmpty]
+english     = "No backups for this project yet."
+translation = "このプロジェクトのバックアップはまだありません。"
+
+[BackupRestoreDone]
+english     = "Restored from backup."
+translation = "バックアップから復元しました。"
+
 [PrefSoftwareDecodingHint]
 english     = "Software decoding uses less RAM but more CPU."
 translation = "ソフトウェアデコードはRAM使用量が少ない代わりにCPU負荷が高くなります。"
@@ -2530,8 +2570,8 @@ english     = "Tip: drag a video or .ofp file onto the window to open it."
 translation = "ヒント: 動画または .ofp ファイルをウィンドウにドラッグして開きます。"
 
 [WelSecurityNote]
-english     = "Don't share .ofp files or open ones from others. They can hold identifying info like file paths containing usernames and run untrusted code."
-translation = ".ofp ファイルを共有したり、他人のものを開いたりしないでください。ユーザー名を含むファイルパスなどの個人を特定できる情報が含まれ、信頼できないコードを実行する場合があります。"
+english     = "Only open .ofp files you trust — they can run embedded code and may expose personal info like file paths."
+translation = "信頼できる .ofp ファイルのみを開いてください。埋め込まれたコードを実行することがあり、ファイルパスなどの個人情報が漏れる可能性があります。"
 
 [AppMenuFile]
 english     = "File"
@@ -2540,6 +2580,10 @@ translation = "ファイル"
 [AppMenuOpenNew]
 english     = "Open or New Project..."
 translation = "プロジェクトを開く/新規作成..."
+
+[AppMenuRestoreBackup]
+english     = "Restore from Backup..."
+translation = "バックアップから復元..."
 
 [AppMenuCloseProject]
 english     = "Close Project"

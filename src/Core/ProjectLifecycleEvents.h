@@ -53,6 +53,15 @@ struct RememberRecentProjectEvent {
     std::string path; // UTF-8 absolute path to the .ofp
 };
 
+// Restore a chosen auto-backup into the current editing session (the Restore-from-Backup window). The
+// backup's contents replace the project, but its file association is retargeted to the project the
+// backup belongs to (the path open at request time) so a following Save writes back to the real file,
+// not the dated backup. Goes through the unsaved-changes guard like any other open. Empty path → the
+// backup was made for an unnamed project; the restore stays untitled until the user saves.
+struct RestoreBackupRequestEvent {
+    std::string backupPath; // UTF-8 absolute path to the dated backup .ofp to load
+};
+
 struct CloseProjectRequestEvent {};
 
 // A project was explicitly closed by the user (the close went through, unsaved guard cleared). Pushed by

@@ -490,6 +490,46 @@ description = "Preferences › Application: button that opens the app's data fol
 english     = "Open Backup Folder"
 description = "Preferences › Application: button that opens the backup folder in the file browser."
 
+[PrefBackupKeepCount]
+english     = "Backups to keep"
+description = "Preferences › Application: slider for how many timestamped backups to retain per project."
+
+[PrefBackupKeepCountHint]
+english     = "How many dated backups to keep per project before the oldest is removed."
+description = "Preferences › Application: help-marker tooltip on the 'Backups to keep' slider."
+
+[BackupRestoreTitle]
+english     = "Restore from Backup"
+description = "Title of the window that lists a project's auto-backups for restoring."
+
+[BackupRestoreHint]
+english     = "Restoring loads the selected snapshot into the current project. Save afterward to keep it."
+description = "Restore-from-Backup window: explanation shown above the list of backups."
+
+[BackupRestoreColDate]
+english     = "Date"
+description = "Restore-from-Backup window: table column header for a backup's creation date and time."
+
+[BackupRestoreColSize]
+english     = "Size"
+description = "Restore-from-Backup window: table column header for a backup file's size."
+
+[BackupRestoreRestore]
+english     = "Restore"
+description = "Restore-from-Backup window: button that loads the selected backup into the project."
+
+[BackupRestoreRefresh]
+english     = "Refresh"
+description = "Restore-from-Backup window: button that rescans the backup folder for new files."
+
+[BackupRestoreEmpty]
+english     = "No backups for this project yet."
+description = "Restore-from-Backup window: shown when the project has no auto-backups."
+
+[BackupRestoreDone]
+english     = "Restored from backup."
+description = "Toast confirming a backup was restored into the current project."
+
 [PrefSoftwareDecodingHint]
 english     = "Software decoding uses less RAM but more CPU."
 description = "Preferences › Application: help-marker tooltip on the Hardware Decoding toggle, shown when it is off."
@@ -2668,7 +2708,7 @@ english     = "Tip: drag a video or .ofp file onto the window to open it."
 description = "Welcome screen — footer hint about drag-and-drop opening."
 
 [WelSecurityNote]
-english     = "Don't share .ofp files or open ones from others. They can hold identifying info like file paths containing usernames and run untrusted code."
+english     = "Only open .ofp files you trust — they can run embedded code and may expose personal info like file paths."
 description = "Welcome screen security warning: .ofp projects can leak identifying info (e.g. file paths) and can carry untrusted code that executes on open."
 
 # ── App shell: menu bar + export/layout modals (App/OfsApp.cpp) ───────────────
@@ -2684,6 +2724,10 @@ description = "Main menu bar — File menu."
 [AppMenuOpenNew]
 english     = "Open or New Project..."
 description = "File menu — open an existing project or start a new one (via the picker)."
+
+[AppMenuRestoreBackup]
+english     = "Restore from Backup..."
+description = "File menu — open the window that lists the current project's auto-backups for restoring."
 
 [AppMenuCloseProject]
 english     = "Close Project"

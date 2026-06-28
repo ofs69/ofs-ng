@@ -21,6 +21,7 @@
 #include "Services/VideoTranscoder.h"
 #include "Services/WaveformService.h"
 #include "UI/AboutWindow.h"
+#include "UI/BackupRestoreWindow.h"
 #include "UI/ConfigurationWindow.h"
 #include "UI/DockLayout.h"
 #include "UI/FooterBar.h"
@@ -331,6 +332,7 @@ bool OfsApp::init() {
     scriptStatisticsWindow = std::make_unique<ofs::ScriptStatisticsWindow>();
     logWindow = std::make_unique<ofs::LogWindow>();
     aboutWindow = std::make_unique<ofs::AboutWindow>();
+    backupRestoreWindow = std::make_unique<ofs::BackupRestoreWindow>();
     welcomeScreen = std::make_unique<ofs::WelcomeScreen>();
     // Register the custom-command kind menu (step / move-position / move-time) before the store and the
     // Shortcut window, both of which hold the registry by const reference. project & appSettings are
@@ -921,6 +923,8 @@ void OfsApp::onImGuiRender() {
         configWindow->render(scriptProject, eventQueue, appState.showConfigWindow);
     if (aboutWindow)
         aboutWindow->render(appState.showAboutWindow, updateChecker->status(), eventQueue);
+    if (backupRestoreWindow)
+        backupRestoreWindow->render(appState.showBackupRestoreWindow, scriptProject, eventQueue);
 
     // One top-level branch: the editor (dockspace + windows) only renders with an active project;
     // otherwise the welcome screen takes the body. Every editor window may therefore assume a project
@@ -1055,6 +1059,8 @@ void OfsApp::renderMainMenuBar() {
             if (ImGui::MenuItem(Str::AppMenuOpenNew.id("menu_open_new")))
                 eventQueue.push(ofs::OpenOrNewProjectRequestEvent{});
             ImGui::BeginDisabled(!hasProject);
+            if (ImGui::MenuItem(Str::AppMenuRestoreBackup.id("menu_restore_backup")))
+                appState.showBackupRestoreWindow = true;
             if (ImGui::MenuItem(Str::AppMenuCloseProject.id("menu_close_project")))
                 eventQueue.push(ofs::CloseProjectRequestEvent{});
             ImGui::EndDisabled();

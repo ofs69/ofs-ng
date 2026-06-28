@@ -186,8 +186,15 @@ struct ScriptProject {
     std::string storedEditMode = "native";
     std::string storedSelectionMode = "native";
 
-    // Apply fn to the named axis, sync selection, set axis.dirty, push AxisModifiedEvent.
-    // Main thread only.
+    // Monotonic counter bumped on every document edit — every mutate() (axis edits) and every
+    // ProjectManager::setDirty(true) (non-axis edits route through that one funnel). Transient, not
+    // serialized. Lets a consumer cheaply tell "did anything change since I last looked" by snapshotting
+    // the value; the auto-backup uses it to skip writing an unchanged project. NOT cleared on save — a
+    // saved project is still distinct from the previous backup — so it is not a dirty flag.
+    std::uint64_t editRevision = 0;
+
+    // Apply fn to the named axis, sync selection, set axis.dirty, bump editRevision, push
+    // AxisModifiedEvent. Main thread only.
     void mutate(StandardAxis role, const std::function<void(AxisState &)> &fn, EventQueue &eq);
 
     // Replace axis selection, sync against actions, push SelectionChangedEvent.

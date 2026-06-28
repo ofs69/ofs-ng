@@ -25,6 +25,7 @@ void ScriptProject::mutate(StandardAxis role, const std::function<void(AxisState
     if (!axis.selection.empty())
         axis.selection = selectionWithinActions(axis.selection, axis.actions);
     axis.dirty = true;
+    ++editRevision;
     eq.push(AxisModifiedEvent{role});
 }
 

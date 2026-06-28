@@ -30,6 +30,7 @@
 #include <array>
 #include <chrono>
 #include <cmath>
+#include <ctime>
 #include <limits>
 #include <nlohmann/json.hpp>
 #include <picosha2.h>
@@ -41,22 +42,43 @@
 
 namespace ofs {
 
-static constexpr double kBackupIntervals[5] = {60.0, 300.0, 600.0, 1800.0, 3600.0};
-static constexpr const char *kBackupNames[5] = {"1min.ofp", "5min.ofp", "10min.ofp", "30min.ofp", "60min.ofp"};
+static constexpr double kBackupIntervalSeconds = 60.0;
+// Dated backups are named "backup-<sortable timestamp>.ofp" so a lexicographic sort is chronological —
+// pruning and the restore list both rely on that ordering.
+static constexpr std::string_view kBackupPrefix = "backup-";
 
-// Fan the freshly written primary backup (slot 0) out to every longer-interval slot that also fired this
-// tick, by file copy rather than a re-serialize. Slot 0 is the source, so it is skipped. Runs on the
-// write worker, off the main thread.
-static void copyBackupSlots(const std::filesystem::path &backupDir, const std::vector<int> &fired) {
-    for (int slot : fired) {
-        if (slot == 0)
+// Local wall-clock stamp for a backup filename: "backup-YYYY-MM-DD_HH-MM-SS.ofp". Filesystem-safe (no
+// ':') and lexicographically sortable. Computed on the main thread — localtime is not thread-safe.
+static std::string backupFileName() {
+    std::time_t t = std::time(nullptr);
+    std::tm tm{};
+#ifdef _WIN32
+    localtime_s(&tm, &t);
+#else
+    localtime_r(&t, &tm);
+#endif
+    return fmt::format("{}{:04}-{:02}-{:02}_{:02}-{:02}-{:02}.ofp", kBackupPrefix, tm.tm_year + 1900, tm.tm_mon + 1,
+                       tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
+}
+
+// Delete the oldest dated backups in `dir` beyond `keepCount`, so the rolling window never grows without
+// bound. Only our own "backup-*.ofp" files are touched. Runs on the write worker, off the main thread.
+static void pruneBackups(const std::filesystem::path &dir, int keepCount) {
+    keepCount = std::max(1, keepCount);
+    std::error_code ec;
+    std::vector<std::filesystem::path> files;
+    for (const auto &entry : std::filesystem::directory_iterator(dir, ec)) {
+        if (!entry.is_regular_file())
             continue;
-        std::error_code ec;
-        std::filesystem::copy_file(backupDir / kBackupNames[0], backupDir / kBackupNames[slot],
-                                   std::filesystem::copy_options::overwrite_existing, ec);
-        if (!ec)
-            OFS_CORE_INFO("[Backup] {} (copied)", kBackupNames[slot]);
+        const auto &p = entry.path();
+        if (p.extension() == ".ofp" && ofs::util::toUtf8(p.filename()).starts_with(kBackupPrefix))
+            files.push_back(p);
     }
+    if (static_cast<int>(files.size()) <= keepCount)
+        return;
+    std::ranges::sort(files); // sortable timestamp ⇒ oldest first
+    for (size_t i = 0; i + static_cast<size_t>(keepCount) < files.size(); ++i)
+        std::filesystem::remove(files[i], ec);
 }
 
 // SHA-256 over a graph's embedded script sources — the only trust-relevant, code-executing content.
@@ -107,6 +129,7 @@ ProjectManager::ProjectManager(ScriptProject &project, EventQueue &eq, const App
     eq.on<ChangeMediaPathEvent>([this](const ChangeMediaPathEvent &e) { onChangeMediaPath(e); });
     eq.on<DeclineOptimizeEvent>([this](const DeclineOptimizeEvent &) { onDeclineOptimize(); });
     eq.on<CloseProjectRequestEvent>([this](const CloseProjectRequestEvent &e) { onCloseProjectRequest(e); });
+    eq.on<RestoreBackupRequestEvent>([this](const RestoreBackupRequestEvent &e) { onRestoreBackupRequest(e); });
     eq.on<RequestExitEvent>([this](const RequestExitEvent &e) { onRequestExit(e); });
     eq.on<ImportFunscriptRequestEvent>([this](const ImportFunscriptRequestEvent &e) { onImportFunscriptRequest(e); });
     eq.on<ImportFunscriptDataEvent>([this](const ImportFunscriptDataEvent &e) { onImportFunscriptData(e); });
@@ -1040,10 +1063,17 @@ void ProjectManager::setDirty(bool dirty) {
     // the stale flag at its source, so isDirty() can't raise a spurious save prompt.
     if (dirty && !hasActiveProject())
         return;
-    if (dirty)
+    if (dirty) {
         project.state.settingsDirty = true;
-    else
+        // Non-axis edits funnel through here; axis edits bump editRevision in mutate(). Either way the
+        // counter advances past backupRevision, arming the next auto-backup tick.
+        ++project.editRevision;
+    } else {
         project.clearDirtyFlags();
+        // A clean project (just saved) matches a file on disk, so there is nothing an auto-backup would
+        // preserve until the next edit advances editRevision again.
+        backupRevision = project.editRevision;
+    }
 }
 
 bool ProjectManager::hasActiveProject() const {
@@ -1069,6 +1099,48 @@ const char *ProjectManager::getProjectTitle() const {
     return fmtScratch("{}", filename);
 }
 
+void ProjectManager::applyLoadedProject(const Project &loaded, const std::filesystem::path &filePath, bool markDirty) {
+    clearProject();
+    loadFromProject(loaded);
+    // Baseline the backup counter against the just-loaded state so a plain open is never re-backed-up.
+    // A restore then calls setDirty(true) below, advancing editRevision past this so its recovered (and
+    // as-yet-unsaved) content is captured on the next tick.
+    backupRevision = project.editRevision;
+    project.state.filePath = filePath.empty() ? std::string{} : ofs::util::toUtf8(filePath);
+    // This open is a new editing session. Bump the persisted count and snapshot the current action
+    // total as the baseline for the Info tab's "this session" net-edits delta.
+    project.state.editSessionCount += 1;
+    int baseline = 0;
+    for (const auto &ax : project.axes)
+        baseline += static_cast<int>(ax.resolved ? ax.resolved->actions.size() : ax.actions.size());
+    project.state.sessionBaselineActions = baseline;
+    if (!project.state.filePath.empty())
+        eq.push(RememberRecentProjectEvent{project.state.filePath});
+
+    // Select the saved active axis, or fall back to L0 if it's out of range.
+    StandardAxis toSelect = loaded.activeAxisRole;
+    if (toSelect >= StandardAxis::Count)
+        toSelect = StandardAxis::L0;
+    eq.push(AxisSelectedEvent{toSelect});
+
+    // Arm the saved resume position before the (async) media load. onDurationChanged consumes it once
+    // the opened media — real video or the media-less dummy — reports its true length. Only a positive
+    // position needs restoring; 0 is the natural default a fresh open already lands on.
+    if (loaded.playbackPosition > 0.0)
+        pendingResumeSeek = loaded.playbackPosition;
+
+    // A restore loads content that differs from the file on disk, so it must come up dirty (and armed
+    // for the next auto-backup). A plain open is clean. Set this before the media load; resolveMediaPath
+    // may start an async relocate that should not be mistaken for a clean state.
+    if (markDirty)
+        setDirty(true);
+
+    // If media is missing, resolveMediaPath starts an async relocate prompt that loads the video
+    // itself; only drive the load here when it resolved synchronously.
+    if (resolveMediaPath())
+        openProjectVideo();
+}
+
 co::Fire ProjectManager::loadProjectInternal(std::filesystem::path path) {
     // Read + CBOR-decode the .ofp on a worker; the caller already ran doClose(), so the project sits
     // empty until this resumes. Project::load catches its own errors and returns nullopt.
@@ -1077,35 +1149,20 @@ co::Fire ProjectManager::loadProjectInternal(std::filesystem::path path) {
         showError(eq, Str::PmErrorTitle.c_str(), Str::PmErrLoadFailed.c_str());
         co_return;
     }
+    applyLoadedProject(*loaded, path, /*markDirty=*/false);
+}
 
-    clearProject();
-    loadFromProject(*loaded);
-    project.state.filePath = ofs::util::toUtf8(path);
-    // This open is a new editing session. Bump the persisted count and snapshot the current action
-    // total as the baseline for the Info tab's "this session" net-edits delta.
-    project.state.editSessionCount += 1;
-    int baseline = 0;
-    for (const auto &ax : project.axes)
-        baseline += static_cast<int>(ax.resolved ? ax.resolved->actions.size() : ax.actions.size());
-    project.state.sessionBaselineActions = baseline;
-    eq.push(RememberRecentProjectEvent{project.state.filePath});
-
-    // Select the saved active axis, or fall back to L0 if it's out of range.
-    StandardAxis toSelect = loaded->activeAxisRole;
-    if (toSelect >= StandardAxis::Count)
-        toSelect = StandardAxis::L0;
-    eq.push(AxisSelectedEvent{toSelect});
-
-    // Arm the saved resume position before the (async) media load. onDurationChanged consumes it once
-    // the opened media — real video or the media-less dummy — reports its true length. Only a positive
-    // position needs restoring; 0 is the natural default a fresh open already lands on.
-    if (loaded->playbackPosition > 0.0)
-        pendingResumeSeek = loaded->playbackPosition;
-
-    // If media is missing, resolveMediaPath starts an async relocate prompt that loads the video
-    // itself; only drive the load here when it resolved synchronously.
-    if (resolveMediaPath())
-        openProjectVideo();
+co::Fire ProjectManager::restoreBackupInternal(std::filesystem::path backupPath, std::filesystem::path target) {
+    auto loaded =
+        co_await JobAwait<std::optional<Project>>{jobSystem, eq, [backupPath] { return Project::load(backupPath); }};
+    if (!loaded) {
+        showError(eq, Str::PmErrorTitle.c_str(), Str::PmErrLoadFailed.c_str());
+        co_return;
+    }
+    // Keep the file association on the real project, not the dated backup, and leave it dirty so a Save
+    // commits the recovered state over the original file.
+    applyLoadedProject(*loaded, target, /*markDirty=*/true);
+    eq.push(NotifyEvent{.level = NotifyLevel::Success, .message = Str::BackupRestoreDone.c_str()});
 }
 
 bool ProjectManager::saveProjectInternal(const std::filesystem::path &path) {
@@ -1186,52 +1243,46 @@ void ProjectManager::update(float dt) {
     if (pendingWrite.has_value())
         return;
 
-    std::vector<int> fired;
-    for (int i = 0; i < 5; ++i) {
-        backupElapsed[i] += dt;
-        if (backupElapsed[i] >= kBackupIntervals[i]) {
-            backupElapsed[i] = 0.0;
-            fired.push_back(i);
-        }
-    }
+    backupElapsed += dt;
+    if (backupElapsed < kBackupIntervalSeconds)
+        return;
+    backupElapsed = 0.0;
 
-    if (fired.empty())
+    // Dirty-gate: nothing changed since the last backup, so a new snapshot would only be a duplicate that
+    // evicts an older, genuinely distinct one. Skip it — the rolling window keeps real edit history, not
+    // copies of an idle project.
+    if (project.editRevision == backupRevision)
         return;
 
     auto stem = project.state.filePath.empty() ? "_unnamed_"
                                                : ofs::util::toUtf8(ofs::util::fromUtf8(project.state.filePath).stem());
     auto backupDir = ofs::util::getPrefPath() / "backup" / stem;
     std::filesystem::create_directories(backupDir);
+    auto backupPath = backupDir / ofs::util::fromUtf8(backupFileName());
 
-    if (fired[0] == 0) {
-        auto captureStart = std::chrono::steady_clock::now();
-        Project p;
-        saveToProject(p);
-        auto captureMs =
-            std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - captureStart)
-                .count();
+    auto captureStart = std::chrono::steady_clock::now();
+    Project p;
+    saveToProject(p);
+    auto captureMs =
+        std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - captureStart).count();
+    backupRevision = project.editRevision;
+    int keepCount = appSettings.backupKeepCount;
 
-        pendingWrite = PendingWrite{
-            .future = jobSystem.submitTask([p = std::move(p), backupDir, fired, captureMs]() mutable -> bool {
-                auto writeStart = std::chrono::steady_clock::now();
-                bool ok = p.save(backupDir / kBackupNames[0]);
-                auto writeMs =
-                    std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - writeStart)
-                        .count();
-                OFS_CORE_INFO("[Backup] {} — capture {}ms, write {}ms", kBackupNames[0], captureMs, writeMs);
-                copyBackupSlots(backupDir, fired);
-                return ok;
-            }),
-            .path = backupDir / kBackupNames[0],
-            .isUserSave = false};
-    } else {
-        pendingWrite = PendingWrite{.future = jobSystem.submitTask([backupDir, fired]() -> bool {
-                                        copyBackupSlots(backupDir, fired);
-                                        return true;
+    pendingWrite = PendingWrite{.future = jobSystem.submitTask(
+                                    [p = std::move(p), backupDir, backupPath, keepCount, captureMs]() mutable -> bool {
+                                        auto writeStart = std::chrono::steady_clock::now();
+                                        bool ok = p.save(backupPath);
+                                        auto writeMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+                                                           std::chrono::steady_clock::now() - writeStart)
+                                                           .count();
+                                        OFS_CORE_INFO("[Backup] {} — capture {}ms, write {}ms",
+                                                      ofs::util::toUtf8(backupPath.filename()), captureMs, writeMs);
+                                        if (ok)
+                                            pruneBackups(backupDir, keepCount);
+                                        return ok;
                                     }),
-                                    .path = {},
-                                    .isUserSave = false};
-    }
+                                .path = backupPath,
+                                .isUserSave = false};
 }
 
 bool ProjectManager::resolveMediaPath() {
@@ -1340,7 +1391,9 @@ void ProjectManager::clearProject() {
     // Drop any resume seek still waiting on a duration from a prior load (e.g. one whose media the user
     // declined to relocate, so it never arrived) — it must not fire against the next project.
     pendingResumeSeek.reset();
-    backupElapsed.fill(0.0);
+    backupElapsed = 0.0;
+    project.editRevision = 0;
+    backupRevision = 0;
     lastSaveTime.reset();
     eq.push(LoadProjectEvent{});
 }
@@ -2689,6 +2742,16 @@ void ProjectManager::onOpenProjectRequest(const OpenProjectRequestEvent &event) 
             doClose();
             loadProjectInternal(path);
         });
+}
+
+void ProjectManager::onRestoreBackupRequest(const RestoreBackupRequestEvent &event) {
+    // Capture the current file association now, before guardUnsaved/doClose clears it: the restored
+    // backup must re-adopt the project it belongs to so a later Save targets the real file.
+    std::filesystem::path target = ofs::util::fromUtf8(project.state.filePath);
+    guardUnsaved([this, backupPath = ofs::util::fromUtf8(event.backupPath), target] {
+        doClose();
+        restoreBackupInternal(backupPath, target);
+    });
 }
 
 void ProjectManager::onCloseProjectRequest(const CloseProjectRequestEvent &) {

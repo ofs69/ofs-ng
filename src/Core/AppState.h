@@ -15,6 +15,7 @@ struct AppState {
     bool showProjectConfigWindow = false;
     bool showLogWindow = false;
     bool showAboutWindow = false;
+    bool showBackupRestoreWindow = false;
 };
 
 struct ProcessingSelectionState {

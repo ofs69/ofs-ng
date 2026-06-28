@@ -447,6 +447,16 @@ void ConfigurationWindow::renderApplicationTab(EventQueue &eq) {
         ImGui::SameLine();
         if (ImGui::Button(Str::PrefOpenBackupFolder.icon(ICON_FOLDER_OPEN), {btnW, 0.f}))
             ofs::util::openInFileBrowser(ofs::util::getPrefPath() / "backup");
+
+        // How many timestamped backups to retain per project before the oldest is pruned.
+        ImGui::BeginDisabled(!appSettings.autoBackupEnabled);
+        int keepCount = appSettings.backupKeepCount;
+        ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
+        if (ImGui::SliderInt(Str::PrefBackupKeepCount.id("backup_keep_count"), &keepCount, 1, 100))
+            eq.push(ModifyEvent<AppSettings>{[keepCount](AppSettings &s) { s.backupKeepCount = keepCount; }});
+        ImGui::SameLine();
+        ofs::ui::helpMarker(Str::PrefBackupKeepCountHint.c_str());
+        ImGui::EndDisabled();
     }
 
     ImGui::Spacing();
