@@ -517,8 +517,11 @@ void appendTracksFromFunscript(std::vector<ImportTrack> &out, const Funscript &f
 // Restore every confirmed import track onto its mapped axis (dirty + selected, no undo snapshot). Shared
 // tail of both new-project import flows; every confirmed track carries a resolved role at this point.
 void restoreImportedTracks(ScriptProject &project, std::vector<ImportTrack> &confirmed) {
-    for (auto &t : confirmed)
+    for (auto &t : confirmed) {
+        if (!t.role)
+            continue; // every confirmed track carries a resolved role; guard keeps the deref checked
         project.restoreAxis(*t.role, true, true, false, true, std::move(t.actions), {});
+    }
 }
 
 // Build the editable import picker. One row per track; each row defaults to its auto-detected axis or —
