@@ -52,7 +52,12 @@ jobs:
         run: |
           version=$(sed -n 's/.*<Version>\([^<]*\)<\/Version>.*/\1/p' managed/Ofs.Api/Ofs.Api.csproj | head -1)
           echo "Stamping Ofs.Api v$version"
-          printf '%s\n' "> 📦 This reference documents **\`Ofs.Api\` v$version** — the assembly version your plugin builds against." > docs/apidocs/includes/_apiversion.md
+          {
+            printf '%s\n' '<!-- GENERATED — do not edit. The Docs workflow regenerates this from <Version> in'
+            printf '%s\n' '     managed/Ofs.Api/Ofs.Api.csproj before every publish, so the published site always'
+            printf '%s\n' '     matches the assembly. This committed copy is the fallback for local `docfx` builds. -->'
+            printf '%s\n' "> 📦 This reference documents **\`Ofs.Api\` v$version** — the assembly version your plugin builds against."
+          } > docs/apidocs/includes/_apiversion.md
           {
             printf '%s\n' '<!-- GENERATED from managed/plugins/StarterPlugin/README.md — do not edit. The Docs workflow'
             printf '%s\n' '     regenerates this before every publish; this committed copy is the local-build fallback. -->'

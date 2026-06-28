@@ -386,11 +386,13 @@ public sealed class ProbePlugin : OfsPlugin
         // resolved SeekEvent back unambiguously) and the ActionAllAxes channel (seek to 55s AND activate
         // R0, exercising the explicit axis-activation result field). Pass every other granularity, proving
         // the per-granularity native fallback works. onEnter/onExit bump counters read via "intentlifecycle".
+        // The seeks go through the Nav.Seek(ScriptAction[, axis]) overloads — the idiomatic "seek to this
+        // action" form a real navigator uses — so the resolved time is the action's At (42/7/55, unchanged).
         Host.Navigation.RegisterMode("fixedstep", "Probe Fixed Step",
             step => step.Granularity switch
             {
-                NavGranularity.Frame => Nav.Seek(step.Direction == StepDirection.Forward ? 42.0 : 7.0),
-                NavGranularity.ActionAllAxes => Nav.Seek(55.0, StandardAxis.R0),
+                NavGranularity.Frame => Nav.Seek(new ScriptAction(step.Direction == StepDirection.Forward ? 42.0 : 7.0, 0)),
+                NavGranularity.ActionAllAxes => Nav.Seek(new ScriptAction(55.0, 0), StandardAxis.R0),
                 _ => Nav.Pass,
             },
             onEnter: () => s_navEnters++,

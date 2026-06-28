@@ -340,6 +340,7 @@ add_executable(ofs-plugin-tests
         helpers/TestProject.cpp
         plugins/test_plugin_dispatch.cpp
         plugins/test_plugin_load.cpp
+        plugins/test_plugin_compat.cpp
         plugins/test_plugin_install.cpp
         plugins/test_script_compile.cpp
         plugins/test_host_api.cpp
@@ -473,9 +474,43 @@ else ()
             COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:ofs-plugin-tests>/plugins")
 endif ()
 
-add_test(NAME plugins COMMAND ofs-plugin-tests)
-# Runs from its own dir so init() finds managed/ and loadPlugins() scans the staged plugins/.
-set_tests_properties(plugins PROPERTIES
+# --- Plugin API back-compat fixture (reproduced from the most recent release tag) ---
+# A plugin recompiled against the current Ofs.Api can never reveal an API break — it just rebinds to
+# whatever surface Ofs.Api now exposes. The only honest witness for the PluginBootstrapper back-compat
+# guarantee (same Ofs.Api MAJOR + plugin <= host) is a plugin binary built against an OLDER Ofs.Api and
+# NOT recompiled. Rather than commit such a binary, tools/build_compat_plugin.py reproduces one from git:
+# it git-archives the most recent release tag's Ofs.Api + Ofs.TestPlugin (selecting the newest tag whose
+# Ofs.Api AssemblyVersion MAJOR matches the working tree's) and dotnet-builds them into plugins-compat/.
+# test_plugin_compat.cpp then loads that binary against the CURRENT host. The script is non-fatal and
+# no-ops cleanly until such a tag exists (mirroring the update checker's no-git-tags gotcha), so this
+# block is inert pre-release. find_package(Git) already ran in the root CMakeLists (GIT_EXECUTABLE).
+if (DOTNET_EXECUTABLE AND TARGET Ofs.PluginHost AND Python3_FOUND AND GIT_EXECUTABLE)
+    set(OFS_COMPAT_PLUGIN_STAGE "${OFS_TEST_BIN_DIR}/plugin-tests/plugins-compat")
+    # ALL custom target (like ofs_build_info): re-run every build so a freshly-cut tag is picked up
+    # without a reconfigure. The script self-skips via its marker when the selected tag is already built,
+    # so steady-state builds only pay a couple of cheap git calls.
+    add_custom_target(Ofs.CompatPlugin ALL
+            COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tools/build_compat_plugin.py"
+            --repo "${CMAKE_SOURCE_DIR}"
+            --dotnet "${DOTNET_EXECUTABLE}"
+            --git "${GIT_EXECUTABLE}"
+            --config $<IF:$<CONFIG:Debug>,Debug,Release>
+            --out "${OFS_COMPAT_PLUGIN_STAGE}"
+            COMMENT "Reproducing back-compat plugin from the latest release tag (build_compat_plugin.py)"
+            VERBATIM)
+    add_dependencies(ofs-plugin-tests Ofs.CompatPlugin)
+    target_compile_definitions(ofs-plugin-tests PRIVATE
+            OFS_COMPAT_PLUGIN_DIR="${OFS_COMPAT_PLUGIN_STAGE}")
+endif ()
+
+# The API back-compat case lives in its own doctest suite (plugin-compat) and runs as the dedicated
+# `plugin-compat` ctest entry below; exclude it here so it isn't run twice.
+add_test(NAME plugins COMMAND ofs-plugin-tests --test-suite-exclude=plugin-compat)
+# Dedicated entry for the back-compat fixture (own suite). Always registered: it self-skips (passes) when
+# no same-major release tag baseline is staged, so CI can track it separately. See test_plugin_compat.cpp.
+add_test(NAME plugin-compat COMMAND ofs-plugin-tests --test-suite=plugin-compat)
+# Both run from the binary dir so init() finds managed/ and the staged plugins/ + plugins-compat/.
+set_tests_properties(plugins plugin-compat PROPERTIES
         WORKING_DIRECTORY $<TARGET_FILE_DIR:ofs-plugin-tests>)
 
 # --- UI automation tests (full window + imgui_test_engine) ---
@@ -516,6 +551,7 @@ set(OFS_UI_TEST_SUITE_SRC
         ui/suite_project_settings.cpp
         ui/suite_menus.cpp
         ui/suite_shortcuts.cpp
+        ui/suite_commands.cpp
         ui/suite_multiaxis.cpp
         ui/suite_transcode.cpp
         ui/suite_updates.cpp)

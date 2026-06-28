@@ -24,7 +24,7 @@ class DummyVideoPlayer : public VideoPlayer {
 
     float getPlaybackSpeed() const override { return speed; }
 
-    float getVolume() const override { return 1.0f; }
+    float getVolume() const override { return volume; }
 
     uint32_t getFrameTexture() const override { return 0; }
     int getWidth() const override { return 0; }
@@ -45,7 +45,7 @@ class DummyVideoPlayer : public VideoPlayer {
   private:
     void openVideo(const std::string &) override {}
     void closeVideo() override {}
-    void setVolume(float) override {}
+    void setVolume(float v) override { volume = std::clamp(v, 0.0f, 1.0f); }
 
     void setPaused(bool p) override { paused = p; }
 
@@ -58,6 +58,7 @@ class DummyVideoPlayer : public VideoPlayer {
     double position = 0.0;
     bool paused = true;
     float speed = 1.0f;
+    float volume = 1.0f;
 
     EventQueue &eventQueue;
 };

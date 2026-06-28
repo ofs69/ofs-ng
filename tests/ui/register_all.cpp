@@ -24,6 +24,7 @@ void RegisterConfigTests(ImGuiTestEngine *);
 void RegisterProjectSettingsTests(ImGuiTestEngine *);
 void RegisterMenusTests(ImGuiTestEngine *);
 void RegisterShortcutTests(ImGuiTestEngine *);
+void RegisterCommandsTests(ImGuiTestEngine *);
 void RegisterMultiAxisTests(ImGuiTestEngine *);
 void RegisterTranscodeTests(ImGuiTestEngine *);
 void RegisterUpdatesTests(ImGuiTestEngine *);
@@ -54,6 +55,7 @@ void RegisterAllTests(ImGuiTestEngine *engine) {
     RegisterProjectSettingsTests(engine);
     RegisterMenusTests(engine);
     RegisterShortcutTests(engine);
+    RegisterCommandsTests(engine);
     RegisterMultiAxisTests(engine);
     RegisterTranscodeTests(engine);
     RegisterUpdatesTests(engine);

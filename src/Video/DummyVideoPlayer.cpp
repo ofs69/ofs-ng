@@ -41,6 +41,12 @@ bool DummyVideoPlayer::init() {
         eventQueue.push(SpeedChangedEvent{speed});
     });
 
+    eventQueue.on<VolumeChangedEvent>([this](const VolumeChangedEvent &e) {
+        if (!active)
+            return;
+        setVolume(e.volume);
+    });
+
     return true;
 }
 

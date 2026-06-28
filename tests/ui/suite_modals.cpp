@@ -195,7 +195,8 @@ void RegisterModalsTests(ImGuiTestEngine *e) {
         ctx->Yield();
 
         auto outDir = std::filesystem::temp_directory_path() / "ofs_ui_quick_export";
-        std::filesystem::remove_all(outDir);
+        std::error_code ec;
+        std::filesystem::remove_all(outDir, ec);
         proj.state.lastExport =
             ofs::ExportConfig{.format = 0, .axes = {ofs::StandardAxis::L0}, .outputPath = outDir.string()};
 
@@ -206,7 +207,14 @@ void RegisterModalsTests(ImGuiTestEngine *e) {
             yieldUntil(ctx, [&] { return std::filesystem::exists(outDir) && !std::filesystem::is_empty(outDir); }));
         IM_CHECK(!anyModalOpen()); // silent replay — no picker
 
-        std::filesystem::remove_all(outDir);
+        // The file can appear on disk a frame before the worker closes its handle; a throwing remove_all
+        // then hits a Windows sharing violation and crashes the run. Retry the non-throwing removal until
+        // the handle is released and the directory is gone.
+        IM_CHECK(yieldUntil(ctx, [&] {
+            std::error_code rmEc;
+            std::filesystem::remove_all(outDir, rmEc);
+            return !std::filesystem::exists(outDir);
+        }));
     };
 
     // Escape dismisses a spec modal by selecting the last button (the cancel/dismiss slot). Drives
