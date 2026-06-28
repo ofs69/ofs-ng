@@ -5,6 +5,10 @@ cmake-build-*/
 **/obj/
 plugins/Ofs.Core/Generated/
 
+# Transient translation work-orders from `tools/translations.py todo` (see docs/TRANSLATING.md).
+# The wip language files themselves are tracked; only these batch files are not.
+localization/wip/*.batch.toml
+
 # Generated theme preview artifacts
 data/themes/preview.html
 data/themes/palette.json

@@ -1,4 +1,4 @@
-# ja_[AI].toml — Japanese (日本語) translation for ofs-ng.
+# it_[AI].toml — Italian (Italiano) translation for ofs-ng.
 #
 # AI-generated translation. The "_[AI]" filename suffix is part of the language id and is
 # shown verbatim in the language picker, so users can tell machine translations from
@@ -10,7 +10,7 @@
 # strings the set of {N} placeholders in `translation` must match the source.
 
 [_meta]
-iso639 = "ja"
+iso639 = "it"
 
 # ─────────────────────────────────────────────────────────────────────────────────────────────
 # Preferences window (src/UI/ConfigurationWindow.cpp)
@@ -22,187 +22,187 @@ iso639 = "ja"
 
 [PrefTitle]
 english     = "Preferences"
-translation = "設定"
+translation = "Preferenze"
 
 [PrefTabApplication]
 english     = "Application"
-translation = "アプリケーション"
+translation = "Applicazione"
 
 [PrefSimulator]
 english     = "Simulator"
-translation = "シミュレーター"
+translation = "Simulatore"
 
 [PrefTheme]
 english     = "Theme"
-translation = "テーマ"
+translation = "Tema"
 
 # --- Simulator tab ---
 
 [PrefDisplay]
 english     = "Display"
-translation = "表示"
+translation = "Visualizzazione"
 
 [PrefIndicators]
 english     = "Indicators"
-translation = "インジケーター"
+translation = "Indicatori"
 
 [PrefShowPosition]
 english     = "Show Position"
-translation = "位置を表示"
+translation = "Mostra posizione"
 
 [PrefHeightLines]
 english     = "Height Lines"
-translation = "高さ線"
+translation = "Linee di altezza"
 
 [PrefExtraLines]
 english     = "Extra Lines"
-translation = "追加の線"
+translation = "Linee aggiuntive"
 
 [Pref3dLabels]
 english     = "3D Labels"
-translation = "3Dラベル"
+translation = "Etichette 3D"
 
 [Pref3dLabelUnits]
 english     = "3D Label Units"
-translation = "3Dラベルの単位"
+translation = "Unità etichette 3D"
 
 [PrefDegrees]
 english     = "Degrees"
-translation = "度"
+translation = "Gradi"
 
 [PrefPercent]
 english     = "Percent"
-translation = "パーセント"
+translation = "Percentuale"
 
 [PrefSim3dRanges]
 english     = "3D mapping ranges"
-translation = "3Dマッピング範囲"
+translation = "Intervalli mappatura 3D"
 
 [PrefStrokeL0]
 english     = "Stroke (L0)"
-translation = "ストローク (L0)"
+translation = "Corsa (L0)"
 
 [PrefSurgeL1]
 english     = "Surge (L1)"
-translation = "前後 (L1)"
+translation = "Avanzamento (L1)"
 
 [PrefSwayL2]
 english     = "Sway (L2)"
-translation = "左右 (L2)"
+translation = "Oscillazione (L2)"
 
 [PrefTwistR0]
 english     = "Twist (R0)"
-translation = "ひねり (R0)"
+translation = "Rotazione (R0)"
 
 [PrefRollR1]
 english     = "Roll (R1)"
-translation = "ロール (R1)"
+translation = "Rollio (R1)"
 
 [PrefPitchR2]
 english     = "Pitch (R2)"
-translation = "ピッチ (R2)"
+translation = "Beccheggio (R2)"
 
 # --- Application tab ---
 
 [PrefVideo]
 english     = "Video"
-translation = "ビデオ"
+translation = "Video"
 
 [PrefHwDecoding]
 english     = "HW Decoding"
-translation = "ハードウェアデコード"
+translation = "Decodifica HW"
 
 [PrefTimelinePreview]
 english     = "Timeline Preview"
-translation = "タイムラインプレビュー"
+translation = "Anteprima timeline"
 
 [PrefTimelinePreviewHint]
 english     = "Timeline Preview runs a second video player to decode hover frames, so it uses extra memory and CPU/GPU."
-translation = "タイムラインプレビューはホバー時のフレームをデコードするために2つ目のビデオプレーヤーを使用するため、追加のメモリとCPU/GPUを消費します。"
+translation = "L'anteprima timeline esegue un secondo lettore video per decodificare i fotogrammi al passaggio del cursore, quindi utilizza memoria e CPU/GPU aggiuntive."
 
 [PrefPauseOnSeek]
 english     = "Pause on Seek"
-translation = "シーク時に一時停止"
+translation = "Pausa durante la ricerca"
 
 [PrefPauseOnSeekHint]
 english     = "Pause video playback whenever you seek (timeline click, bookmark or chapter jump, frame step). Loading a project always pauses regardless of this setting."
-translation = "シーク（タイムラインのクリック、ブックマークやチャプターへのジャンプ、フレームステップ）するたびにビデオ再生を一時停止します。プロジェクトの読み込み時はこの設定に関係なく常に一時停止します。"
+translation = "Mette in pausa la riproduzione video quando si effettua una ricerca (clic sulla timeline, salto a segnalibro o capitolo, avanzamento fotogramma). Il caricamento di un progetto mette sempre in pausa indipendentemente da questa impostazione."
 
 [PrefSound]
 english     = "Sound"
-translation = "サウンド"
+translation = "Audio"
 
 [PrefUiSounds]
 english     = "UI Sounds"
-translation = "UI サウンド"
+translation = "Suoni interfaccia"
 
 [PrefUiSoundsHint]
 english     = "Play a short sound for notifications: a cue on success, a distinct alert on a warning or error."
-translation = "通知時に短いサウンドを再生します。成功時には合図音、警告やエラー時には別のアラート音が鳴ります。"
+translation = "Riproduce un breve suono per le notifiche: un segnale acustico in caso di successo, un avviso distinto in caso di avvertimento o errore."
 
 [PrefUiSoundVolume]
 english     = "Volume"
-translation = "音量"
+translation = "Volume"
 
 [PrefIntraSection]
 english     = "Optimized Video"
-translation = "最適化された動画"
+translation = "Video ottimizzato"
 
 [PrefIntraOutputDirNotSet]
 english     = "No output folder set — choose one to enable video optimization."
-translation = "出力フォルダーが設定されていません — 動画の最適化を有効にするには選択してください。"
+translation = "Nessuna cartella di output impostata — scegline una per abilitare l'ottimizzazione video."
 
 [PrefIntraChooseFolder]
 english     = "Choose Folder"
-translation = "フォルダーを選択"
+translation = "Scegli cartella"
 
 [PrefIntraChooseFolderTitle]
 english     = "Choose the optimized-video output folder"
-translation = "最適化された動画の出力フォルダーを選択"
+translation = "Scegli la cartella di output per il video ottimizzato"
 
 [PrefIntraOpenFolder]
 english     = "Open Folder"
-translation = "フォルダーを開く"
+translation = "Apri cartella"
 
 [PrefIntraClear]
 english     = "Clear"
-translation = "クリア"
+translation = "Cancella"
 
 [PrefIntraOutputDirHint]
 english     = "All optimized videos are written here. You manage this folder yourself — the app never deletes its contents."
-translation = "最適化されたすべての動画はここに書き込まれます。このフォルダーはご自身で管理してください — アプリが内容を削除することはありません。"
+translation = "Tutti i video ottimizzati vengono scritti qui. Gestisci tu stesso questa cartella — l'applicazione non elimina mai il suo contenuto."
 
 [PrefIntraStorageHint]
 english     = "Use fast local storage (an SSD) — not a network drive (NAS)."
-translation = "ネットワークドライブ (NAS) ではなく、高速なローカルストレージ (SSD) を使用してください。"
+translation = "Usa un'archiviazione locale veloce (SSD) — non un'unità di rete (NAS)."
 
 [TranscodeTitle]
 english     = "Optimize Video for Seeking"
-translation = "シーク向けに動画を最適化"
+translation = "Ottimizza video per la ricerca"
 
 [TranscodeIntro]
 english     = "Create an all-keyframe copy of this video so frame stepping and seeking are instant. The original is never changed."
-translation = "この動画の全フレームをキーフレーム化したコピーを作成し、フレーム送りとシークを瞬時にします。元ファイルは変更されません。"
+translation = "Crea una copia con tutti i fotogrammi chiave di questo video in modo che l'avanzamento fotogramma e la ricerca siano istantanei. L'originale non viene mai modificato."
 
 [TranscodeNoDirTitle]
 english     = "Output Folder Missing"
-translation = "出力フォルダが見つかりません"
+translation = "Cartella di output mancante"
 
 [TranscodeNoDirBody]
 english     = "The optimized-video output folder no longer exists:\n\n{0}\n\nChoose a new folder to continue."
-translation = "最適化動画の出力フォルダが存在しません:\n\n{0}\n\n続行するには新しいフォルダを選択してください。"
+translation = "La cartella di output per il video ottimizzato non esiste più:\n\n{0}\n\nScegli una nuova cartella per continuare."
 
 [TranscodeScale]
 english     = "Scale"
-translation = "スケール"
+translation = "Scala"
 
 [TranscodeResProbing]
 english     = "Reading source resolution…"
-translation = "ソース解像度を読み込み中…"
+translation = "Lettura risoluzione sorgente…"
 
 [TranscodeResSource]
 english     = "Source {0}"
-translation = "ソース {0}"
+translation = "Sorgente {0}"
 
 [TranscodeResOutput]
 english     = "→ {0}"
@@ -210,15 +210,15 @@ translation = "→ {0}"
 
 [TranscodeTiming]
 english     = "Timing"
-translation = "タイミング"
+translation = "Temporizzazione"
 
 [TranscodeTimingKeep]
 english     = "Keep original"
-translation = "元のまま"
+translation = "Mantieni originale"
 
 [TranscodeTimingCfr]
 english     = "Constant FPS"
-translation = "固定フレームレート"
+translation = "FPS costanti"
 
 [TranscodeFps]
 english     = "fps"
@@ -226,187 +226,187 @@ translation = "fps"
 
 [TranscodeCfrNote]
 english     = "Constant FPS resamples frames — the timeline is preserved but temporal granularity changes."
-translation = "固定フレームレートはフレームを再サンプリングします — タイムラインは保持されますが時間的な粒度は変わります。"
+translation = "FPS costanti ricampiona i fotogrammi — la timeline viene preservata ma la granularità temporale cambia."
 
 [TranscodeQuality]
 english     = "Quality"
-translation = "画質"
+translation = "Qualità"
 
 [TranscodeQualityHint]
 english     = "Lower is higher quality and a larger file."
-translation = "値が低いほど高画質でファイルは大きくなります。"
+translation = "Valori più bassi equivalgono a qualità più alta e file più grandi."
 
 [TranscodeCodec]
 english     = "Codec"
-translation = "コーデック"
+translation = "Codec"
 
 [TranscodeCodecH264]
 english     = "H.264 (all-intra)"
-translation = "H.264 (全イントラ)"
+translation = "H.264 (tutti i fotogrammi chiave)"
 
 [TranscodeCodecMjpeg]
 english     = "MJPEG (experimental)"
-translation = "MJPEG (実験的)"
+translation = "MJPEG (sperimentale)"
 
 [TranscodeMjpegNote]
 english     = "MJPEG re-encodes every frame as a full JPEG: the fastest possible seeking, but files run several times larger and demand fast local storage (SSD/NVMe). This is an expert option — if you're not sure, use H.264 instead. It's the right choice for almost everyone."
-translation = "MJPEG は各フレームを完全な JPEG として再エンコードします。シークは最速ですが、ファイルは数倍の大きさになり、高速なローカルストレージ (SSD/NVMe) が必要です。これは上級者向けの選択肢です — よくわからない場合は H.264 を使用してください。ほとんどの場合はそれが適切な選択です。"
+translation = "MJPEG ricodifica ogni fotogramma come JPEG completo: la ricerca è la più veloce possibile, ma i file risultano più volte più grandi e richiedono un'archiviazione locale veloce (SSD/NVMe). Questa è un'opzione avanzata — se non sei sicuro, usa H.264. È la scelta giusta per quasi tutti."
 
 [TranscodeFastDecode]
 english     = "Optimize for decode speed"
-translation = "デコード速度を優先する"
+translation = "Ottimizza per velocità di decodifica"
 
 [TranscodeFastDecodeTip]
 english     = "Drops CABAC and the deblocking filter so each frame decodes faster, improving seeking and frame stepping. Cost: a larger file and more visible block artifacts at the same quality."
-translation = "CABAC とデブロッキングフィルターを無効にして各フレームのデコードを高速化し、シークとフレーム送りを改善します。代償: 同じ画質でもファイルが大きくなり、ブロックノイズが目立ちやすくなります。"
+translation = "Rimuove CABAC e il filtro di deblocking in modo che ogni fotogramma si decodifichi più velocemente, migliorando la ricerca e l'avanzamento fotogramma. Costo: un file più grande e artefatti a blocchi più visibili alla stessa qualità."
 
 [TranscodeForceYuv420p]
 english     = "Force 8-bit 4:2:0 (yuv420p)"
-translation = "8ビット 4:2:0 (yuv420p) を強制する"
+translation = "Forza 8 bit 4:2:0 (yuv420p)"
 
 [TranscodeMjpegWarnTitle]
 english     = "Use MJPEG?"
-translation = "MJPEG を使用しますか？"
+translation = "Usare MJPEG?"
 
 [TranscodeMjpegWarnAccept]
 english     = "Use MJPEG anyway"
-translation = "それでも MJPEG を使用"
+translation = "Usa MJPEG comunque"
 
 [TranscodeMjpegWarnDecline]
 english     = "Use H.264 instead"
-translation = "代わりに H.264 を使用"
+translation = "Usa H.264 invece"
 
 [TranscodeResWarnTitle]
 english     = "Very high resolution"
-translation = "非常に高い解像度"
+translation = "Risoluzione molto elevata"
 
 [TranscodeResWarnBody]
 english     = "This source is {0}. An all-keyframe copy at this resolution will be extremely large. Reducing the output to 50% or 25% first is strongly recommended. Optimize at this size anyway?"
-translation = "このソースは {0} です。この解像度の全キーフレームコピーは非常に大きくなります。先に出力を 50% または 25% に縮小することを強く推奨します。このサイズのまま最適化しますか？"
+translation = "Questa sorgente è {0}. Una copia con tutti i fotogrammi chiave a questa risoluzione sarà estremamente grande. Si raccomanda vivamente di ridurre l'output al 50% o al 25% prima. Ottimizzare comunque a questa dimensione?"
 
 [TranscodeResWarnReduce]
 english     = "Reduce resolution"
-translation = "解像度を下げる"
+translation = "Riduci risoluzione"
 
 [TranscodeResWarnProceed]
 english     = "Optimize anyway"
-translation = "このまま最適化"
+translation = "Ottimizza comunque"
 
 [TranscodeForceYuv420pTip]
 english     = "Forces 8-bit 4:2:0 output so playback stays on the hardware-decode fast path. Cost: 10-bit and HDR sources lose color accuracy (banding, and HDR is not tone-mapped)."
-translation = "出力を 8ビット 4:2:0 に強制し、再生がハードウェアデコードの高速パスを維持するようにします。代償: 10ビットや HDR のソースは色精度が低下します (バンディングが発生し、HDR はトーンマッピングされません)。"
+translation = "Forza l'output a 8 bit 4:2:0 in modo che la riproduzione rimanga sul percorso rapido di decodifica hardware. Costo: le sorgenti a 10 bit e HDR perdono accuratezza del colore (banding, e l'HDR non viene mappato al tono)."
 
 [TranscodeSwitchAfter]
 english     = "Switch to the optimized copy when finished"
-translation = "完了したら最適化コピーに切り替える"
+translation = "Passa alla copia ottimizzata al termine"
 
 [TranscodeExists]
 english     = "An optimized copy already exists for this video."
-translation = "この動画の最適化コピーは既に存在します。"
+translation = "Esiste già una copia ottimizzata per questo video."
 
 [TranscodeUseExisting]
 english     = "Use Existing"
-translation = "既存を使用"
+translation = "Usa esistente"
 
 [TranscodeReoptimize]
 english     = "Re-optimize"
-translation = "再最適化"
+translation = "Riottimizza"
 
 [TranscodeStart]
 english     = "Start"
-translation = "開始"
+translation = "Avvia"
 
 [TranscodeCancel]
 english     = "Cancel"
-translation = "キャンセル"
+translation = "Annulla"
 
 [OptimizePromptTitle]
 english     = "Optimize this video?"
-translation = "この動画を最適化しますか？"
+translation = "Ottimizzare questo video?"
 
 [OptimizePromptBody]
 english     = "This video isn't optimized for seeking. Creating an all-keyframe copy makes frame stepping and seeking much faster — the original is never changed."
-translation = "この動画はシーク向けに最適化されていません。全キーフレームのコピーを作成すると、フレーム送りとシークが大幅に高速化されます — 元ファイルは変更されません。"
+translation = "Questo video non è ottimizzato per la ricerca. La creazione di una copia con tutti i fotogrammi chiave rende l'avanzamento fotogramma e la ricerca molto più veloci — l'originale non viene mai modificato."
 
 [OptimizePromptOptimize]
 english     = "Optimize…"
-translation = "最適化…"
+translation = "Ottimizza…"
 
 [OptimizePromptNotNow]
 english     = "Not now"
-translation = "後で"
+translation = "Non ora"
 
 [TranscodeTaskLabel]
 english     = "Optimizing video"
-translation = "動画を最適化中"
+translation = "Ottimizzazione video"
 
 [TranscodeDone]
 english     = "Video optimization complete"
-translation = "動画の最適化が完了しました"
+translation = "Ottimizzazione video completata"
 
 [TranscodePhaseProbing]
 english     = "Analyzing…"
-translation = "解析中…"
+translation = "Analisi in corso…"
 
 [TranscodePhaseEncoding]
 english     = "Encoding…"
-translation = "エンコード中…"
+translation = "Codifica in corso…"
 
 [TranscodePhaseVerifying]
 english     = "Verifying…"
-translation = "検証中…"
+translation = "Verifica in corso…"
 
 [TranscodeStats]
 english     = "{0}× · {1} remaining"
-translation = "{0}× · 残り {1}"
+translation = "{0}× · {1} rimanenti"
 
 [TranscodeFailed]
 english     = "Optimization failed"
-translation = "最適化に失敗しました"
+translation = "Ottimizzazione non riuscita"
 
 [TranscodeErrCantStart]
 english     = "Could not start ffmpeg"
-translation = "ffmpeg を起動できませんでした"
+translation = "Impossibile avviare ffmpeg"
 
 [TranscodeErrExitCode]
 english     = "ffmpeg failed (exit code {0})"
-translation = "ffmpeg が失敗しました (終了コード {0})"
+translation = "ffmpeg non riuscito (codice di uscita {0})"
 
 [TranscodeErrDuration]
 english     = "Output duration {0}s differs from source {1}s"
-translation = "出力の長さ {0}秒 がソース {1}秒 と異なります"
+translation = "Durata output {0}s diversa dalla sorgente {1}s"
 
 [WaveformTaskLabel]
 english     = "Audio waveform"
-translation = "音声波形"
+translation = "Forma d'onda audio"
 
 [WaveformProbing]
 english     = "Analyzing audio…"
-translation = "音声を解析中…"
+translation = "Analisi audio in corso…"
 
 [WaveformExtracting]
 english     = "Extracting waveform…"
-translation = "波形を抽出中…"
+translation = "Estrazione forma d'onda…"
 
 [WaveformEta]
 english     = "About {0} remaining"
-translation = "残り約 {0}"
+translation = "Circa {0} rimanenti"
 
 [WaveformFailed]
 english     = "Could not extract audio — the media may have no audio track."
-translation = "音声を抽出できませんでした — メディアに音声トラックがない可能性があります。"
+translation = "Impossibile estrarre l'audio — il file multimediale potrebbe non avere traccia audio."
 
 [TaskCancel]
 english     = "Cancel"
-translation = "キャンセル"
+translation = "Annulla"
 
 [TaskHide]
 english     = "Hide"
-translation = "非表示"
+translation = "Nascondi"
 
 [TaskShow]
 english     = "Show"
-translation = "表示"
+translation = "Mostra"
 
 [TlpDelta]
 english     = "Δ {0}"
@@ -414,15 +414,15 @@ translation = "Δ {0}"
 
 [PrefPerformance]
 english     = "Performance"
-translation = "パフォーマンス"
+translation = "Prestazioni"
 
 [PrefMaxFps]
 english     = "Max Frame Rate"
-translation = "最大フレームレート"
+translation = "Frequenza massima fotogrammi"
 
 [PrefMaxFpsMatchDisplay]
 english     = "Match Display ({0} Hz)"
-translation = "ディスプレイに合わせる ({0} Hz)"
+translation = "Adatta al display ({0} Hz)"
 
 [PrefMaxFpsValue]
 english     = "{0} FPS"
@@ -430,11 +430,11 @@ translation = "{0} FPS"
 
 [PrefMaxFpsHint]
 english     = "Caps the interface frame rate to save power on high-refresh displays. The cap applies during video playback too."
-translation = "高リフレッシュレートのディスプレイで電力を節約するため、インターフェースのフレームレートを制限します。この制限はビデオ再生中にも適用されます。"
+translation = "Limita la frequenza fotogrammi dell'interfaccia per risparmiare energia su display ad alta frequenza. Il limite si applica anche durante la riproduzione video."
 
 [PrefUndoMemory]
 english     = "Undo Memory"
-translation = "元に戻すメモリ"
+translation = "Memoria annullamento"
 
 [PrefUndoMemoryValue]
 english     = "{0} MB"
@@ -442,283 +442,283 @@ translation = "{0} MB"
 
 [PrefUndoMemoryHint]
 english     = "Limits the RAM used by the undo/redo history. Older steps are dropped once the limit is reached; the most recent edit always stays undoable."
-translation = "元に戻す／やり直し履歴が使用するRAMを制限します。上限に達すると古いステップから破棄されますが、直近の編集は常に元に戻せます。"
+translation = "Limita la RAM utilizzata dalla cronologia annulla/ripristina. I passaggi più vecchi vengono eliminati una volta raggiunto il limite; la modifica più recente rimane sempre annullabile."
 
 [PrefBackup]
 english     = "Backup"
-translation = "バックアップ"
+translation = "Backup"
 
 [PrefAutoBackup]
 english     = "Auto Backup"
-translation = "自動バックアップ"
+translation = "Backup automatico"
 
 [PrefCheckUpdates]
 english     = "Check for updates on startup"
-translation = "起動時に更新を確認"
+translation = "Controlla aggiornamenti all'avvio"
 
 [PrefOpenAppDataFolder]
 english     = "Open App Data Folder"
-translation = "アプリデータフォルダを開く"
+translation = "Apri cartella dati applicazione"
 
 [PrefOpenBackupFolder]
 english     = "Open Backup Folder"
-translation = "バックアップフォルダを開く"
+translation = "Apri cartella backup"
 
 [PrefBackupKeepCountHint]
 english     = "How many dated backups to keep per project before the oldest is removed."
-translation = "プロジェクトごとに保持する日付き backup の数。古いものから削除されます。"
+translation = "Quanti backup datati conservare per progetto prima che venga rimosso il più vecchio."
 
 [BackupRestoreTitle]
 english     = "Restore from Backup"
-translation = "バックアップから復元"
+translation = "Ripristina da backup"
 
 [BackupRestoreHint]
 english     = "Restoring loads the selected snapshot into the current project. Save afterward to keep it."
-translation = "選択したスナップショットを現在のプロジェクトに読み込みます。保持するには後で保存してください。"
+translation = "Il ripristino carica lo snapshot selezionato nel progetto corrente. Salva dopo per mantenerlo."
 
 [BackupRestoreColDate]
 english     = "Date"
-translation = "日時"
+translation = "Data"
 
 [BackupRestoreColSize]
 english     = "Size"
-translation = "サイズ"
+translation = "Dimensione"
 
 [BackupRestoreRestore]
 english     = "Restore"
-translation = "復元"
+translation = "Ripristina"
 
 [BackupRestoreRefresh]
 english     = "Refresh"
-translation = "更新"
+translation = "Aggiorna"
 
 [BackupRestoreEmpty]
 english     = "No backups for this project yet."
-translation = "このプロジェクトのバックアップはまだありません。"
+translation = "Nessun backup per questo progetto ancora."
 
 [BackupRestoreDone]
 english     = "Restored from backup."
-translation = "バックアップから復元しました。"
+translation = "Ripristinato da backup."
 
 [PrefSoftwareDecodingHint]
 english     = "Software decoding uses less RAM but more CPU."
-translation = "ソフトウェアデコードはRAM使用量が少ない代わりにCPU負荷が高くなります。"
+translation = "La decodifica software utilizza meno RAM ma più CPU."
 
 [PrefHardwareDecodingHint]
 english     = "Hardware decoding offloads work to the GPU but can use more memory."
-translation = "ハードウェアデコードは処理をGPUに任せますが、メモリの使用量が増えることがあります。"
+translation = "La decodifica hardware scarica il lavoro sulla GPU ma può usare più memoria."
 
 [PrefRestartHint]
 english     = "Restart required for changes to take effect."
-translation = "変更を反映するには再起動が必要です。"
+translation = "Riavvio necessario per applicare le modifiche."
 
 [PrefView]
 english     = "View"
-translation = "表示"
+translation = "Vista"
 
 [PrefBgAxes]
 english     = "BG Axes"
-translation = "背景の軸"
+translation = "Assi sfondo"
 
 [PrefFontSize]
 english     = "Font Size"
-translation = "フォントサイズ"
+translation = "Dimensione font"
 
 [PrefLocalization]
 english     = "Localization"
-translation = "ローカリゼーション"
+translation = "Localizzazione"
 
 [PrefLanguage]
 english     = "Language"
-translation = "言語"
+translation = "Lingua"
 
 [PrefLiveReload]
 english     = "Live Reload"
-translation = "ライブリロード"
+translation = "Ricaricamento live"
 
 [PrefLiveReloadHint]
 english     = "Live Reload re-applies a translation file when it changes on disk (translator aid)."
-translation = "ライブリロードは翻訳ファイルがディスク上で変更されると再適用します（翻訳作業の補助）。"
+translation = "Il ricaricamento live riapplica un file di traduzione quando cambia su disco (ausilio per i traduttori)."
 
 [PrefLanguagePluginReloadHint]
 english     = "Changing the language reloads all plugins so they re-register their text in the new language."
-translation = "言語を変更すると、すべてのプラグインが再読み込みされ、新しい言語でテキストが再登録されます。"
+translation = "La modifica della lingua ricarica tutti i plugin in modo che registrino il loro testo nella nuova lingua."
 
 [PrefExportCatalog]
 english     = "Export Catalog..."
-translation = "カタログをエクスポート…"
+translation = "Esporta catalogo..."
 
 [PrefExportCatalogTitle]
 english     = "Export Catalog"
-translation = "カタログをエクスポート"
+translation = "Esporta catalogo"
 
 # --- Restart-required notice ---
 
 [PrefRestartTitle]
 english     = "Restart Required"
-translation = "再起動が必要"
+translation = "Riavvio necessario"
 
 [PrefRestartBody]
 english     = "Please restart the application for all preference changes to take full effect."
-translation = "すべての設定変更を完全に反映するには、アプリケーションを再起動してください。"
+translation = "Riavvia l'applicazione affinché tutte le modifiche alle preferenze abbiano pieno effetto."
 
 # --- Theme tab: browser chrome ---
 
 [PrefThemeShippedSuffix]
 english     = "{0} (shipped)"
-translation = "{0}（同梱）"
+translation = "{0} (incluso)"
 
 [PrefRevealInFolder]
 english     = "Reveal in Folder"
-translation = "フォルダで表示"
+translation = "Mostra nella cartella"
 
 [ShowInFileBrowser]
 english     = "Show in File Explorer"
-translation = "エクスプローラーで表示"
+translation = "Mostra in Esplora file"
 
 [WelRemoveRecent]
 english     = "Remove from List"
-translation = "リストから削除"
+translation = "Rimuovi dall'elenco"
 
 [PrefResetToDefaults]
 english     = "Reset to Defaults"
-translation = "既定値にリセット"
+translation = "Ripristina predefiniti"
 
 [PrefNewThemeNameHint]
 english     = "new theme name"
-translation = "新しいテーマ名"
+translation = "nome nuovo tema"
 
 [PrefSaveAs]
 english     = "Save As"
-translation = "名前を付けて保存"
+translation = "Salva come"
 
 [PrefDelete]
 english     = "Delete"
-translation = "削除"
+translation = "Elimina"
 
 [PrefExport]
 english     = "Export..."
-translation = "エクスポート…"
+translation = "Esporta..."
 
 [PrefImport]
 english     = "Import..."
-translation = "インポート…"
+translation = "Importa..."
 
 [PrefExportThemeTitle]
 english     = "Export Theme"
-translation = "テーマをエクスポート"
+translation = "Esporta tema"
 
 [PrefImportThemeTitle]
 english     = "Import Theme"
-translation = "テーマをインポート"
+translation = "Importa tema"
 
 [PrefShippedReadOnlyHint]
 english     = "Shipped theme is read-only — edits apply live; use Save As to keep them."
-translation = "同梱テーマは読み取り専用です。編集は即座に反映されますが、保持するには「名前を付けて保存」を使用してください。"
+translation = "Il tema predefinito è di sola lettura — le modifiche si applicano in tempo reale; usa Salva come per conservarle."
 
 [PrefThemeSaved]
 english     = "Theme \"{0}\" saved."
-translation = "テーマ「{0}」を保存しました。"
+translation = "Tema \"{0}\" salvato."
 
 [PrefThemeSaveFailed]
 english     = "Failed to save theme \"{0}\"."
-translation = "テーマ「{0}」の保存に失敗しました。"
+translation = "Impossibile salvare il tema \"{0}\"."
 
 [PrefThemeExported]
 english     = "Theme exported."
-translation = "テーマをエクスポートしました。"
+translation = "Tema esportato."
 
 [PrefThemeExportFailed]
 english     = "Failed to export theme."
-translation = "テーマのエクスポートに失敗しました。"
+translation = "Impossibile esportare il tema."
 
 [PrefThemeImported]
 english     = "Theme \"{0}\" imported."
-translation = "テーマ「{0}」をインポートしました。"
+translation = "Tema \"{0}\" importato."
 
 [PrefThemeImportFailed]
 english     = "Failed to import theme."
-translation = "テーマのインポートに失敗しました。"
+translation = "Impossibile importare il tema."
 
 # --- Theme tab: search + section headers ---
 
 [PrefFilterHint]
 english     = "Filter…  (Ctrl+F)"
-translation = "フィルター…  (Ctrl+F)"
+translation = "Filtra…  (Ctrl+F)"
 
 [PrefSecAxisColors]
 english     = "Axis Colors"
-translation = "軸の色"
+translation = "Colori assi"
 
 [PrefSecHeatmap]
 english     = "Heatmap"
-translation = "ヒートマップ"
+translation = "Mappa di calore"
 
 [PrefSecTimeline]
 english     = "Timeline"
-translation = "タイムライン"
+translation = "Timeline"
 
 [PrefSecVideoControls]
 english     = "Video Controls"
-translation = "ビデオコントロール"
+translation = "Controlli video"
 
 [PrefSecBookmarksMisc]
 english     = "Bookmarks & Misc"
-translation = "ブックマークとその他"
+translation = "Segnalibri e varie"
 
 [PrefSecProcessing]
 english     = "Processing"
-translation = "処理"
+translation = "Elaborazione"
 
 [PrefSecGeometry]
 english     = "Geometry"
-translation = "ジオメトリ"
+translation = "Geometria"
 
 [PrefSecNodeEditor]
 english     = "Node Editor"
-translation = "ノードエディター"
+translation = "Editor nodi"
 
 [PrefSecImguiColors]
 english     = "ImGui Colors"
-translation = "ImGuiの色"
+translation = "Colori ImGui"
 
 [PrefHeatmapColorsCaption]
 english     = "Colors (slow → fast)"
-translation = "色（遅い → 速い）"
+translation = "Colori (lento → veloce)"
 
 [PrefHeatmapMaxSpeedCaption]
 english     = "Max speed (pos/s)"
-translation = "最大速度 (pos/s)"
+translation = "Velocità massima (pos/s)"
 
 [PrefSim3dViews]
 english     = "3D views"
-translation = "3Dビュー"
+translation = "Viste 3D"
 
 [PrefSim2dColors]
 english     = "2D bar colors"
-translation = "2Dバーの色"
+translation = "Colori barra 2D"
 
 [PrefSim2dMetrics]
 english     = "2D bar metrics"
-translation = "2Dバーの寸法"
+translation = "Metriche barra 2D"
 
 # --- Theme tab: tooltips + status ---
 
 [PrefResetToDefaultTip]
 english     = "Reset to default"
-translation = "既定値にリセット"
+translation = "Ripristina il valore predefinito"
 
 [PrefResetGradientTip]
 english     = "Reset gradient to default"
-translation = "グラデーションを既定値にリセット"
+translation = "Ripristina la sfumatura predefinita"
 
 [PrefResetMaxSpeedTip]
 english     = "Reset max speed to default (400)"
-translation = "最大速度を既定値にリセット (400)"
+translation = "Ripristina la velocità massima predefinita (400)"
 
 [PrefNoThemeMatch]
 english     = "No theme settings match \"{0}\"."
-translation = "「{0}」に一致するテーマ設定はありません。"
+translation = "Nessuna impostazione del tema corrisponde a \"{0}\"."
 
 # =============================================================================
 # Window 2 — ProjectConfigWindow (src/UI/ProjectConfigWindow.cpp). Prefix: Pcf*
@@ -728,229 +728,229 @@ translation = "「{0}」に一致するテーマ設定はありません。"
 
 [PcfTitle]
 english     = "Project"
-translation = "プロジェクト"
+translation = "Progetto"
 
 [PcfTabSettings]
 english     = "Settings"
-translation = "設定"
+translation = "Impostazioni"
 
 [PcfTabMetadata]
 english     = "Metadata"
-translation = "メタデータ"
+translation = "Metadati"
 
 [PcfTabInfo]
 english     = "Info"
-translation = "情報"
+translation = "Info"
 
 # --- Info tab ---
 
 [PcfWorkTime]
 english     = "Work Time"
-translation = "作業時間"
+translation = "Tempo di lavoro"
 
 [PcfSession]
 english     = "Session"
-translation = "セッション"
+translation = "Sessione"
 
 [PcfTotal]
 english     = "Total"
-translation = "合計"
+translation = "Totale"
 
 [PcfSessions]
 english     = "Sessions"
-translation = "セッション数"
+translation = "Sessioni"
 
 [PcfAvgSession]
 english     = "Avg / Session"
-translation = "平均 / セッション"
+translation = "Media / Sessione"
 
 [PcfHistory]
 english     = "History"
-translation = "履歴"
+translation = "Cronologia"
 
 [PcfCreated]
 english     = "Created"
-translation = "作成日"
+translation = "Creato"
 
 [PcfModified]
 english     = "Last Modified"
-translation = "最終更新"
+translation = "Ultima modifica"
 
 [PcfNotSaved]
 english     = "Not saved yet"
-translation = "未保存"
+translation = "Non ancora salvato"
 
 [PcfContent]
 english     = "Content"
-translation = "コンテンツ"
+translation = "Contenuto"
 
 [PcfActions]
 english     = "Actions"
-translation = "アクション数"
+translation = "Azioni"
 
 [PcfThisSession]
 english     = "This Session"
-translation = "今回のセッション"
+translation = "Questa sessione"
 
 [PcfActionsPerHour]
 english     = "Actions / Hour"
-translation = "アクション / 時間"
+translation = "Azioni / Ora"
 
 [PcfAxesScripted]
 english     = "Axes Scripted"
-translation = "作成済み軸"
+translation = "Assi scriptati"
 
 [PcfCoverage]
 english     = "Coverage"
-translation = "カバレッジ"
+translation = "Copertura"
 
 [PcfStructure]
 english     = "Structure"
-translation = "構成"
+translation = "Struttura"
 
 [PcfChapters]
 english     = "Chapters"
-translation = "チャプター数"
+translation = "Capitoli"
 
 [PcfRegions]
 english     = "Regions"
-translation = "リージョン数"
+translation = "Regioni"
 
 [PcfBookmarks]
 english     = "Bookmarks"
-translation = "ブックマーク数"
+translation = "Segnalibri"
 
 # --- Markers tab ---
 
 [PcfTabChapters]
 english     = "Chapters"
-translation = "チャプター"
+translation = "Capitoli"
 
 [PcfMarkerName]
 english     = "Name"
-translation = "名前"
+translation = "Nome"
 
 [PcfMarkerStart]
 english     = "Start"
-translation = "開始"
+translation = "Inizio"
 
 [PcfMarkerEnd]
 english     = "End"
-translation = "終了"
+translation = "Fine"
 
 [PcfMarkerDuration]
 english     = "Duration"
-translation = "長さ"
+translation = "Durata"
 
 [PcfMarkerTime]
 english     = "Time"
-translation = "時間"
+translation = "Tempo"
 
 [PcfNoChapters]
 english     = "No chapters."
-translation = "チャプターがありません。"
+translation = "Nessun capitolo."
 
 [PcfNoBookmarks]
 english     = "No bookmarks."
-translation = "ブックマークがありません。"
+translation = "Nessun segnalibro."
 
 # --- Metadata tab: presets ---
 
 [PcfPresets]
 english     = "Presets"
-translation = "プリセット"
+translation = "Predefiniti"
 
 [PcfSelectPreset]
 english     = "— select preset —"
-translation = "— プリセットを選択 —"
+translation = "— seleziona predefinito —"
 
 [PcfLoad]
 english     = "Load"
-translation = "読み込み"
+translation = "Carica"
 
 [PcfDelete]
 english     = "Delete"
-translation = "削除"
+translation = "Elimina"
 
 [PcfPresetLoaded]
 english     = "Preset \"{0}\" loaded."
-translation = "プリセット「{0}」を読み込みました。"
+translation = "Predefinito \"{0}\" caricato."
 
 [PcfPresetNameHint]
 english     = "Preset name..."
-translation = "プリセット名…"
+translation = "Nome predefinito..."
 
 [PcfSave]
 english     = "Save"
-translation = "保存"
+translation = "Salva"
 
 [PcfPresetSaved]
 english     = "Preset \"{0}\" saved."
-translation = "プリセット「{0}」を保存しました。"
+translation = "Predefinito \"{0}\" salvato."
 
 [PcfReset]
 english     = "Reset"
-translation = "リセット"
+translation = "Reimposta"
 
 [PcfClearAllTip]
 english     = "Clear all metadata fields"
-translation = "すべてのメタデータ項目をクリア"
+translation = "Cancella tutti i campi dei metadati"
 
 # --- Metadata tab: script info ---
 
 [PcfScriptInfo]
 english     = "Script Info"
-translation = "スクリプト情報"
+translation = "Info script"
 
 [PcfFieldTitle]
 english     = "Title"
-translation = "タイトル"
+translation = "Titolo"
 
 [PcfCreator]
 english     = "Creator"
-translation = "作成者"
+translation = "Autore"
 
 [PcfScriptUrl]
 english     = "Script URL"
-translation = "スクリプトURL"
+translation = "URL script"
 
 [PcfVideoUrl]
 english     = "Video URL"
-translation = "動画URL"
+translation = "URL video"
 
 [PcfLicense]
 english     = "License"
-translation = "ライセンス"
+translation = "Licenza"
 
 [PcfLicenseFree]
 english     = "Free"
-translation = "無料"
+translation = "Gratuito"
 
 [PcfLicensePaid]
 english     = "Paid"
-translation = "有料"
+translation = "A pagamento"
 
 [PcfDescription]
 english     = "Description"
-translation = "説明"
+translation = "Descrizione"
 
 [PcfNotes]
 english     = "Notes"
-translation = "メモ"
+translation = "Note"
 
 [PcfTags]
 english     = "Tags"
-translation = "タグ"
+translation = "Tag"
 
 [PcfPerformers]
 english     = "Performers"
-translation = "出演者"
+translation = "Interpreti"
 
 # --- Metadata tab: custom fields ---
 
 [PcfCustomFields]
 english     = "Custom Fields"
-translation = "カスタムフィールド"
+translation = "Campi personalizzati"
 
 [PcfTypeNull]
 english     = "Null"
@@ -958,23 +958,23 @@ translation = "Null"
 
 [PcfTypeBool]
 english     = "Bool"
-translation = "ブール"
+translation = "Bool"
 
 [PcfTypeNumber]
 english     = "Number"
-translation = "数値"
+translation = "Numero"
 
 [PcfTypeString]
 english     = "String"
-translation = "文字列"
+translation = "Stringa"
 
 [PcfTypeArray]
 english     = "Array"
-translation = "配列"
+translation = "Array"
 
 [PcfTypeObject]
 english     = "Object"
-translation = "オブジェクト"
+translation = "Oggetto"
 
 [PcfNullValue]
 english     = "(null)"
@@ -982,87 +982,87 @@ translation = "(null)"
 
 [PcfInvalidJson]
 english     = "invalid JSON"
-translation = "無効なJSON"
+translation = "JSON non valido"
 
 [PcfFieldNameHint]
 english     = "Field name..."
-translation = "フィールド名…"
+translation = "Nome campo..."
 
 # --- Settings tab: media ---
 
 [PcfMedia]
 english     = "Media"
-translation = "メディア"
+translation = "Media"
 
 [PcfBrowse]
 english     = "Browse..."
-translation = "参照…"
+translation = "Sfoglia..."
 
 [PcfUnload]
 english     = "Unload"
-translation = "解除"
+translation = "Scarica"
 
 [PcfNoVideo]
 english     = "No video"
-translation = "動画なし"
+translation = "Nessun video"
 
 [PcfSource]
 english     = "Source"
-translation = "ソース"
+translation = "Sorgente"
 
 [PcfSourceOriginal]
 english     = "Original"
-translation = "オリジナル"
+translation = "Originale"
 
 [PcfSourceOptimized]
 english     = "Optimized"
-translation = "最適化済み"
+translation = "Ottimizzato"
 
 [PcfOptimize]
 english     = "Optimize"
-translation = "最適化"
+translation = "Ottimizza"
 
 [CmdOptimizeIntraNoFfmpeg]
 english     = "ffmpeg / ffprobe not found."
-translation = "ffmpeg / ffprobe が見つかりません。"
+translation = "ffmpeg / ffprobe non trovato."
 
 [PcfStartWithoutVideo]
 english     = "Start without video"
-translation = "動画なしで開始"
+translation = "Avvia senza video"
 
 [PcfDurationLabel]
 english     = "Duration (HH:MM:SS or seconds):"
-translation = "長さ（HH:MM:SS または秒）:"
+translation = "Durata (HH:MM:SS o secondi):"
 
 [PcfApply]
 english     = "Apply"
-translation = "適用"
+translation = "Applica"
 
 [PcfInvalid]
 english     = "Invalid"
-translation = "無効"
+translation = "Non valido"
 
 [PcfOpenMediaTitle]
 english     = "Open Media"
-translation = "メディアを開く"
+translation = "Apri media"
 
 [PcfMediaFilesDesc]
 english     = "Media files"
-translation = "メディアファイル"
+translation = "File multimediali"
 
 # --- Settings tab: video player ---
 
 [PcfVideoPlayer]
 english     = "Video Player"
-translation = "動画プレーヤー"
+translation = "Lettore video"
 
 [PcfMode]
 english     = "Mode"
-translation = "モード"
+translation = "Modalità"
 
 [PcfModeFull]
 english     = "Full"
-translation = "フル"
+translation = "Intero"
 
 [PcfModeVr]
 english     = "VR"
@@ -1070,25 +1070,25 @@ translation = "VR"
 
 [PcfResolution]
 english     = "Resolution"
-translation = "解像度"
+translation = "Risoluzione"
 
 # --- Settings tab: overlay ---
 
 [PcfOverlay]
 english     = "Overlay"
-translation = "オーバーレイ"
+translation = "Sovrapposizione"
 
 [PcfType]
 english     = "Type"
-translation = "種類"
+translation = "Tipo"
 
 [PcfOverlayFrame]
 english     = "Frame"
-translation = "フレーム"
+translation = "Fotogramma"
 
 [PcfOverlayTempo]
 english     = "Tempo"
-translation = "テンポ"
+translation = "Tempo"
 
 [PcfFps]
 english     = "FPS"
@@ -1100,11 +1100,11 @@ translation = "BPM"
 
 [PcfOffset]
 english     = "Offset"
-translation = "オフセット"
+translation = "Offset"
 
 [PcfSnap]
 english     = "Snap"
-translation = "スナップ"
+translation = "Snap"
 
 # ─────────────────────────────────────────────────────────────────────────────────────────────
 # Shortcut Bindings window (src/UI/ShortcutWindow.cpp)
@@ -1117,409 +1117,409 @@ translation = "スナップ"
 
 [ScTitle]
 english     = "Shortcut Bindings"
-translation = "ショートカット割り当て"
+translation = "Scorciatoie da tastiera"
 
 [ScResetToDefaults]
 english     = "Reset to Defaults"
-translation = "既定値に戻す"
+translation = "Ripristina predefiniti"
 
 [ScResetTip]
 english     = "Restore every shortcut to its built-in default"
-translation = "すべてのショートカットを組み込みの既定値に戻します"
+translation = "Ripristina tutte le scorciatoie ai valori predefiniti"
 
 [ScOnlyBound]
 english     = "Only bound"
-translation = "割り当て済みのみ"
+translation = "Solo assegnate"
 
 [ScOnlyBoundTip]
 english     = "Show only commands that currently have at least one binding"
-translation = "現在少なくとも1つの割り当てがあるコマンドのみを表示します"
+translation = "Mostra solo i comandi con almeno una scorciatoia assegnata"
 
 [ScFilterHint]
 english     = "Filter…  (Ctrl+F)"
-translation = "フィルター…  (Ctrl+F)"
+translation = "Filtra…  (Ctrl+F)"
 
 [ScNoMatch]
 english     = "No commands match the filter."
-translation = "フィルターに一致するコマンドがありません。"
+translation = "Nessun comando corrisponde al filtro."
 
 [ScNone]
 english     = "(none)"
-translation = "(なし)"
+translation = "(nessuna)"
 
 # --- Gamepad / Analog and Hold Repeat sections ---
 
 [ScGamepadAnalog]
 english     = "Gamepad / Analog"
-translation = "ゲームパッド / アナログ"
+translation = "Gamepad / Analogico"
 
 [ScDeadzone]
 english     = "Deadzone"
-translation = "デッドゾーン"
+translation = "Zona morta"
 
 [ScDeadzoneTip]
 english     = "Stick/trigger travel below this reads as idle — raise it to kill drift."
-translation = "この値より小さいスティック/トリガーの動きは無入力として扱われます。ドリフトを抑えるには上げてください。"
+translation = "Il movimento dello stick/grilletto al di sotto di questo valore viene ignorato — aumentarlo per eliminare il drift."
 
 [ScSmoothing]
 english     = "Smoothing"
-translation = "スムージング"
+translation = "Smussamento"
 
 [ScSmoothingTip]
 english     = "Low-pass time constant — larger smooths jitter but adds lag."
-translation = "ローパスの時定数。大きいほど揺れを抑えますが遅延が増えます。"
+translation = "Costante di tempo passa-basso — un valore più alto riduce il jitter ma aggiunge ritardo."
 
 [ScHoldRepeat]
 english     = "Hold Repeat"
-translation = "長押しリピート"
+translation = "Ripetizione tasto tenuto"
 
 [ScInitialDelay]
 english     = "Initial delay"
-translation = "初期遅延"
+translation = "Ritardo iniziale"
 
 [ScInitialDelayTip]
 english     = "Pause after the first fire before a held key starts repeating."
-translation = "最初の発火後、キーを押し続けてリピートが始まるまでの待ち時間。"
+translation = "Pausa dopo il primo evento prima che il tasto tenuto inizi a ripetersi."
 
 [ScRepeatSpeed]
 english     = "Repeat speed"
-translation = "リピート速度"
+translation = "Velocità di ripetizione"
 
 [ScRepeatSpeedTip]
 english     = "How fast a held key repeats before acceleration, in repeats per second. Higher is faster."
-translation = "加速前の、キーを押し続けたときのリピート速度（1秒あたりの回数）。大きいほど速くなります。"
+translation = "Velocità con cui un tasto tenuto premuto si ripete prima dell'accelerazione, in ripetizioni al secondo. Più alto è più veloce."
 
 [ScAcceleration]
 english     = "Acceleration"
-translation = "加速"
+translation = "Accelerazione"
 
 [ScAccelerationTip]
 english     = "How much repeats speed up the longer you hold. 0% keeps a steady cadence; higher ramps up toward the maximum rate."
-translation = "押し続けるほどリピートがどれだけ速くなるか。0% は一定のリズムを保ち、大きいほど最大速度まで加速します。"
+translation = "Quanto le ripetizioni accelerano più a lungo si tiene premuto. 0% mantiene un ritmo costante; valori più alti aumentano gradualmente fino alla velocità massima."
 
 [ScMaxSpeed]
 english     = "Maximum speed"
-translation = "最大速度"
+translation = "Velocità massima"
 
 [ScMaxSpeedTip]
 english     = "The fastest a held key can repeat once acceleration ramps up, in repeats per second. Higher is faster."
-translation = "加速しきったときにキーを押し続けてリピートできる最高速度（回/秒）。大きいほど速くなります。"
+translation = "La velocità massima con cui un tasto tenuto premuto può ripetersi una volta raggiunta l'accelerazione, in ripetizioni al secondo. Più alto è più veloce."
 
 [ScHoldRepeatPreview]
 english     = "Holding ramps ~{0} → {1} /s over ~{2}s"
-translation = "押し続けると約{2}秒かけて約{0}→{1}回/秒まで加速します"
+translation = "Tenendo premuto aumenta da ~{0} → {1} /s in ~{2}s"
 
 [ScHoldRepeatPreviewSteady]
 english     = "Steady ~{0} /s while held"
-translation = "押し続けている間は約{0}回/秒で一定"
+translation = "Costante ~{0} /s mentre tenuto premuto"
 
 # --- Per-command binding table ---
 
 [ScColAction]
 english     = "Action"
-translation = "アクション"
+translation = "Azione"
 
 [ScColBinding]
 english     = "Binding"
-translation = "割り当て"
+translation = "Associazione"
 
 [ScColMode]
 english     = "Mode"
-translation = "モード"
+translation = "Modalità"
 
 [ScChangeModifier]
 english     = "Change modifier..."
-translation = "修飾子を変更..."
+translation = "Cambia modificatore..."
 
 [ScClearModifier]
 english     = "Clear modifier"
-translation = "修飾子をクリア"
+translation = "Rimuovi modificatore"
 
 [ScModChipTip]
 english     = "Hold-modifier — this binding drives only while {0} is held. Click to change or clear."
-translation = "長押し修飾子 — この割り当ては {0} を押している間のみ動作します。クリックで変更またはクリアします。"
+translation = "Modificatore di pressione prolungata — questa associazione si attiva solo mentre {0} è tenuto premuto. Clicca per cambiare o rimuovere."
 
 [ScAddModifierTip]
 english     = "Add a hold-modifier (a held gamepad button, trigger, or stick): this binding then fires only while the modifier is held"
-translation = "長押し修飾子（押し続けるゲームパッドのボタン・トリガー・スティック）を追加します。この割り当ては修飾子を押している間のみ発火します"
+translation = "Aggiungi un modificatore di pressione prolungata (un pulsante del gamepad, trigger o levetta): questa associazione si attiva solo mentre il modificatore è tenuto premuto"
 
 [ScRemoveBindingTip]
 english     = "Remove this binding"
-translation = "この割り当てを削除"
+translation = "Rimuovi questa associazione"
 
 [ScRebindBindingTip]
 english     = "Re-capture this binding — listen for a new key or gamepad input and overwrite it"
-translation = "この割り当てを取り直す — 新しいキーまたはゲームパッド入力を受け付けて上書きします"
+translation = "Riassocia questa combinazione — rileva un nuovo tasto o input del gamepad e sovrascrivila"
 
 [ScPress]
 english     = "Press"
-translation = "押す"
+translation = "Premi"
 
 [ScHold]
 english     = "Hold"
-translation = "長押し"
+translation = "Tieni premuto"
 
 [ScModeDisabledTip]
 english     = "This command fires once — it has no while-held behavior"
-translation = "このコマンドは一度だけ発火します — 長押し時の動作はありません"
+translation = "Questo comando si attiva una volta sola — non ha comportamento durante la pressione prolungata"
 
 [ScModeTip]
 english     = "Press: fire once. Hold: repeat / drive while held down."
-translation = "押す: 一度発火。長押し: 押している間リピート/駆動します。"
+translation = "Premi: attiva una volta. Tieni premuto: ripeti/aziona mentre tenuto premuto."
 
 [ScAddBindingTip]
 english     = "Add a key or gamepad binding"
-translation = "キーまたはゲームパッドの割り当てを追加"
+translation = "Aggiungi un'associazione da tastiera o gamepad"
 
 # --- Capture modal ---
 
 [ScAddBindingTitle]
 english     = "Add Binding"
-translation = "割り当てを追加"
+translation = "Aggiungi Associazione"
 
 [ScRebindTitle]
 english     = "Rebind"
-translation = "割り当てを変更"
+translation = "Riassocia"
 
 [ScSetModifierTitle]
 english     = "Set Modifier"
-translation = "修飾子を設定"
+translation = "Imposta Modificatore"
 
 [ScModifierFor]
 english     = "Modifier for: {0} ({1})"
-translation = "修飾子の対象: {0} ({1})"
+translation = "Modificatore per: {0} ({1})"
 
 [ScCaptureBinding]
 english     = "Binding: {0}"
-translation = "割り当て: {0}"
+translation = "Associazione: {0}"
 
 [ScCaptured]
 english     = "Captured: {0}"
-translation = "取得: {0}"
+translation = "Acquisito: {0}"
 
 [ScCapturedConflict]
 english     = "Currently bound to \"{0}\" — applying will reassign it."
-translation = "現在「{0}」に割り当てられています — 適用すると再割り当てされます。"
+translation = "Attualmente associato a \"{0}\" — applicando verrà riassegnato."
 
 [ScApply]
 english     = "Apply"
-translation = "適用"
+translation = "Applica"
 
 [ScRecapture]
 english     = "Re-capture"
-translation = "再取得"
+translation = "Ri-acquisisci"
 
 [ScCancel]
 english     = "Cancel"
-translation = "キャンセル"
+translation = "Annulla"
 
 [ScModifierPrompt]
 english     = "Hold a gamepad button or push a stick/trigger to use as the modifier...  (Escape to cancel)"
-translation = "修飾子として使うゲームパッドのボタンを押し続けるか、スティック/トリガーを動かしてください...  (Escape でキャンセル)"
+translation = "Tieni premuto un pulsante del gamepad o spingi una levetta/trigger da usare come modificatore...  (Escape per annullare)"
 
 [ScCapturePrompt]
 english     = "Press any key or gamepad button, or push a stick/trigger...  (Escape to cancel)"
-translation = "任意のキーまたはゲームパッドのボタンを押すか、スティック/トリガーを動かしてください...  (Escape でキャンセル)"
+translation = "Premi un tasto o pulsante del gamepad, oppure spingi una levetta/trigger...  (Escape per annullare)"
 
 # --- Reset-to-defaults confirmation ---
 
 [ScResetTitle]
 english     = "Reset Shortcuts?"
-translation = "ショートカットをリセットしますか？"
+translation = "Ripristinare le scorciatoie?"
 
 [ScResetBody]
 english     = "Restore all shortcut bindings, the gamepad/analog tunables, and the hold-repeat settings to their defaults? Your customizations will be lost."
-translation = "すべてのショートカット割り当て、ゲームパッド/アナログの調整値、長押しリピート設定を既定値に戻しますか？ カスタマイズは失われます。"
+translation = "Ripristinare tutte le associazioni delle scorciatoie, le impostazioni analogiche/gamepad e quelle di ripetizione alla pressione prolungata ai valori predefiniti? Le personalizzazioni andranno perse."
 
 [ScReset]
 english     = "Reset"
-translation = "リセット"
+translation = "Ripristina"
 
 # --- Preset bar and its modals ---
 
 [ScSelectPreset]
 english     = "(select preset)"
-translation = "(プリセットを選択)"
+translation = "(seleziona predefinito)"
 
 [ScBuiltinSuffix]
 english     = "{0} (built-in)"
-translation = "{0} (組み込み)"
+translation = "{0} (integrato)"
 
 [ScLoad]
 english     = "Load"
-translation = "読み込み"
+translation = "Carica"
 
 [ScPresetLoadTip]
 english     = "Replace the active bindings with this preset"
-translation = "アクティブな割り当てをこのプリセットで置き換えます"
+translation = "Sostituisci le associazioni attive con questo predefinito"
 
 [ScSaveAs]
 english     = "Save As..."
-translation = "名前を付けて保存..."
+translation = "Salva come..."
 
 [ScPresetSaveAsTip]
 english     = "Save the current bindings as a new preset"
-translation = "現在の割り当てを新しいプリセットとして保存します"
+translation = "Salva le associazioni correnti come nuovo predefinito"
 
 [ScDelete]
 english     = "Delete"
-translation = "削除"
+translation = "Elimina"
 
 [ScPresetDeleteTip]
 english     = "Delete this user preset"
-translation = "このユーザープリセットを削除します"
+translation = "Elimina questo predefinito utente"
 
 [ScPresetDeleteDisabledTip]
 english     = "Built-in presets can't be deleted"
-translation = "組み込みプリセットは削除できません"
+translation = "I predefiniti integrati non possono essere eliminati"
 
 [ScSavePresetTitle]
 english     = "Save Binding Preset"
-translation = "割り当てプリセットを保存"
+translation = "Salva Predefinito Associazioni"
 
 [ScPresetNameLabel]
 english     = "Preset name:"
-translation = "プリセット名:"
+translation = "Nome predefinito:"
 
 [ScSave]
 english     = "Save"
-translation = "保存"
+translation = "Salva"
 
 [ScAddCommand]
 english     = "Add command…"
-translation = "コマンドを追加…"
+translation = "Aggiungi comando…"
 
 [ScAddCommandTip]
 english     = "Create a custom command, or assign a key to a command not listed by default (mode switches, window openers)"
-translation = "カスタムコマンドを作成するか、既定では一覧にないコマンド（モード切り替え、ウィンドウを開く操作）にキーを割り当てます"
+translation = "Crea un comando personalizzato, oppure assegna un tasto a un comando non elencato per impostazione predefinita (cambi modalità, apertura finestre)"
 
 [ScAddProviderPrompt]
 english     = "Pick one to bind — you'll choose a key next."
-translation = "割り当てる対象を選択してください。次にキーを選びます。"
+translation = "Selezionane uno da associare — sceglierai il tasto successivamente."
 
 [ScCustomNewTitle]
 english     = "New Custom Command"
-translation = "新しいカスタムコマンド"
+translation = "Nuovo Comando Personalizzato"
 
 [ScCustomEditTitle]
 english     = "Edit Custom Command"
-translation = "カスタムコマンドを編集"
+translation = "Modifica Comando Personalizzato"
 
 [ScCustomName]
 english     = "Name"
-translation = "名前"
+translation = "Nome"
 
 [ScCustomNameHint]
 english     = "e.g. Jump 5 frames forward"
-translation = "例: 5フレーム前に進む"
+translation = "es. Avanza di 5 fotogrammi"
 
 [ScCustomKindStep]
 english     = "Step (seek)"
-translation = "ステップ（シーク）"
+translation = "Passo (posizione)"
 
 [ScCustomKindMovePos]
 english     = "Move position"
-translation = "位置を移動"
+translation = "Sposta posizione"
 
 [ScCustomKindMoveTime]
 english     = "Move time"
-translation = "時間を移動"
+translation = "Sposta tempo"
 
 [ScCustomDirection]
 english     = "Direction"
-translation = "方向"
+translation = "Direzione"
 
 [ScCustomDirForward]
 english     = "Forward"
-translation = "前へ"
+translation = "Avanti"
 
 [ScCustomDirBackward]
 english     = "Backward"
-translation = "後ろへ"
+translation = "Indietro"
 
 [ScCustomCount]
 english     = "Count"
-translation = "回数"
+translation = "Conteggio"
 
 [ScCustomGranularity]
 english     = "Step by"
-translation = "ステップ単位"
+translation = "Passo di"
 
 [ScCustomGranFrame]
 english     = "Frame / grid"
-translation = "フレーム / グリッド"
+translation = "Fotogramma / griglia"
 
 [ScCustomGranAction]
 english     = "Action"
-translation = "アクション"
+translation = "Azione"
 
 [ScCustomGranActionAll]
 english     = "Action (all axes)"
-translation = "アクション（全軸）"
+translation = "Azione (tutti gli assi)"
 
 [ScCustomAmount]
 english     = "Amount"
-translation = "量"
+translation = "Quantità"
 
 [ScCustomSeekAfter]
 english     = "Seek after move"
-translation = "移動後にシーク"
+translation = "Vai alla posizione dopo lo spostamento"
 
 [ScCustomSummaryStep]
 english     = "Step {0} ×{1} ({2})"
-translation = "ステップ {0} ×{1}（{2}）"
+translation = "Passo {0} ×{1} ({2})"
 
 [ScCustomSummaryMovePos]
 english     = "Move position {0}"
-translation = "位置を移動 {0}"
+translation = "Sposta posizione {0}"
 
 [ScCustomSummaryMoveTime]
 english     = "Move time {0} ×{1}{2}"
-translation = "時間を移動 {0} ×{1}{2}"
+translation = "Sposta tempo {0} ×{1}{2}"
 
 [ScCustomSummarySeekSuffix]
 english     = "  + seek"
-translation = "  + シーク"
+translation = "  + vai a"
 
 [ScCustomEditTip]
 english     = "Edit this custom command"
-translation = "このカスタムコマンドを編集"
+translation = "Modifica questo comando personalizzato"
 
 [ScCustomDeleteTip]
 english     = "Delete this custom command"
-translation = "このカスタムコマンドを削除"
+translation = "Elimina questo comando personalizzato"
 
 [ScCustomDeleteTitle]
 english     = "Delete Custom Command?"
-translation = "カスタムコマンドを削除しますか？"
+translation = "Eliminare il Comando Personalizzato?"
 
 [ScCustomDeleteBody]
 english     = "Delete the custom command \"{0}\"? Any keys bound to it are removed."
-translation = "カスタムコマンド「{0}」を削除しますか？割り当てられたキーも削除されます。"
+translation = "Eliminare il comando personalizzato \"{0}\"? Tutti i tasti associati verranno rimossi."
 
 [ScLoadTitle]
 english     = "Load Preset?"
-translation = "プリセットを読み込みますか？"
+translation = "Caricare il Predefinito?"
 
 [ScLoadBody]
 english     = "Load \"{0}\"? This replaces your current bindings."
-translation = "「{0}」を読み込みますか？ 現在の割り当てが置き換えられます。"
+translation = "Caricare \"{0}\"? Questo sostituirà le associazioni correnti."
 
 [ScPresetLoaded]
 english     = "Loaded shortcut preset \"{0}\"."
-translation = "ショートカットプリセット「{0}」を読み込みました。"
+translation = "Predefinito scorciatoie \"{0}\" caricato."
 
 [ScPresetLoadedPartial]
 english     = "Loaded \"{0}\" — {1} binding(s) couldn't be applied because their commands aren't available here."
-translation = "「{0}」を読み込みました — {1} 件の割り当てはコマンドがこの環境に存在しないため適用できませんでした。"
+translation = "Caricato \"{0}\" — {1} associazione/i non ha/hanno potuto essere applicata/e perché i relativi comandi non sono disponibili qui."
 
 [ScDeleteTitle]
 english     = "Delete Preset?"
-translation = "プリセットを削除しますか？"
+translation = "Eliminare il Predefinito?"
 
 [ScDeleteBody]
 english     = "Delete the preset \"{0}\"? This cannot be undone."
-translation = "プリセット「{0}」を削除しますか？ この操作は元に戻せません。"
+translation = "Eliminare il predefinito \"{0}\"? Questa operazione non può essere annullata."
 
 # ─────────────────────────────────────────────────────────────────────────────────────────────
 # Command group names (CmdGrp*)
@@ -1532,87 +1532,87 @@ translation = "プリセット「{0}」を削除しますか？ この操作は�
 
 [CmdGrpCore]
 english     = "Core"
-translation = "基本"
+translation = "Base"
 
 [CmdGrpCustom]
 english     = "Custom"
-translation = "カスタム"
+translation = "Personalizzato"
 
 [CmdGrpEdit]
 english     = "Edit"
-translation = "編集"
+translation = "Modifica"
 
 [CmdGrpMoving]
 english     = "Moving"
-translation = "移動"
+translation = "Spostamento"
 
 [CmdGrpNavigation]
 english     = "Navigation"
-translation = "ナビゲーション"
+translation = "Navigazione"
 
 [CmdGrpSimulator]
 english     = "Simulator"
-translation = "シミュレーター"
+translation = "Simulatore"
 
 [CmdGrpPlayer]
 english     = "Player"
-translation = "プレーヤー"
+translation = "Lettore"
 
 [CmdGrpVideo]
 english     = "Video"
-translation = "動画"
+translation = "Video"
 
 [CmdGrpAxis]
 english     = "Axis"
-translation = "軸"
+translation = "Asse"
 
 [CmdGrpView]
 english     = "View"
-translation = "表示"
+translation = "Vista"
 
 [CmdGrpSelectAxis]
 english     = "Select Axis"
-translation = "軸を選択"
+translation = "Seleziona Asse"
 
 [CmdGrpGoToChapter]
 english     = "Go to Chapter"
-translation = "チャプターへ移動"
+translation = "Vai al Capitolo"
 
 [CmdGrpGoToBookmark]
 english     = "Go to Bookmark"
-translation = "ブックマークへ移動"
+translation = "Vai al Segnalibro"
 
 [CmdGrpTogglePanel]
 english     = "Toggle in Panel"
-translation = "パネルで表示切替"
+translation = "Attiva/disattiva nel Pannello"
 
 [CmdGrpDeleteScratchAxis]
 english     = "Delete Scratch Axis"
-translation = "スクラッチ軸を削除"
+translation = "Elimina Asse Scratch"
 
 [CmdGrpSwitchEditMode]
 english     = "Switch Edit Mode"
-translation = "編集モードを切り替え"
+translation = "Cambia Modalità di Modifica"
 
 [CmdGrpSwitchNavigator]
 english     = "Switch Navigator"
-translation = "ナビゲーターを切り替え"
+translation = "Cambia Navigatore"
 
 [CmdGrpSwitchSelectionMode]
 english     = "Switch Selection Mode"
-translation = "選択モードを切り替え"
+translation = "Cambia Modalità di Selezione"
 
 [CmdGrpEditModeOptions]
 english     = "Edit Mode Options"
-translation = "編集モードオプション"
+translation = "Opzioni Modalità di Modifica"
 
 [CmdGrpNavigatorOptions]
 english     = "Navigator Options"
-translation = "ナビゲーターオプション"
+translation = "Opzioni Navigatore"
 
 [CmdGrpSelectionModeOptions]
 english     = "Selection Mode Options"
-translation = "選択モードオプション"
+translation = "Opzioni Modalità di Selezione"
 
 # ─────────────────────────────────────────────────────────────────────────────────────────────
 # Command titles (Cmd*)
@@ -1627,239 +1627,239 @@ translation = "選択モードオプション"
 
 [CmdDynChapterFallback]
 english     = "Chapter {0}"
-translation = "チャプター {0}"
+translation = "Capitolo {0}"
 
 [CmdDynBookmarkFallback]
 english     = "Bookmark {0}"
-translation = "ブックマーク {0}"
+translation = "Segnalibro {0}"
 
 [CmdPaletteOpen]
 english     = "Open Command Palette"
-translation = "コマンドパレットを開く"
+translation = "Apri Riquadro Comandi"
 
 [CmdCoreOpenPreferences]
 english     = "Open Preferences"
-translation = "設定を開く"
+translation = "Apri Preferenze"
 
 [CmdCoreOpenProjectSettings]
 english     = "Open Project Settings"
-translation = "プロジェクト設定を開く"
+translation = "Apri Impostazioni Progetto"
 
 [CmdCoreOpenKeybindings]
 english     = "Open Keyboard Shortcuts"
-translation = "キーボードショートカットを開く"
+translation = "Apri Scorciatoie Tastiera"
 
 [CmdCoreOpenAbout]
 english     = "About ofs-ng"
-translation = "ofs-ng について"
+translation = "Informazioni su ofs-ng"
 
 [CmdCoreCheckUpdates]
 english     = "Check for Updates"
-translation = "更新を確認"
+translation = "Controlla Aggiornamenti"
 
 [CmdCoreSave]
 english     = "Save Project"
-translation = "プロジェクトを保存"
+translation = "Salva Progetto"
 
 [CmdCoreQuickExport]
 english     = "Quick Export"
-translation = "クイックエクスポート"
+translation = "Esportazione Rapida"
 
 [CmdCoreSyncTimestamps]
 english     = "Sync Timestamps"
-translation = "タイムスタンプを同期"
+translation = "Sincronizza Timestamp"
 
 [CmdViewToggleFullscreen]
 english     = "Toggle Fullscreen"
-translation = "全画面切り替え"
+translation = "Attiva/disattiva Schermo Intero"
 
 [CmdAxisAddScratch]
 english     = "Add Scratch Axis"
-translation = "スクラッチ軸を追加"
+translation = "Aggiungi Asse Scratch"
 
 [CmdEditRemoveAction]
 english     = "Remove Action"
-translation = "アクションを削除"
+translation = "Rimuovi Azione"
 
 [CmdEditAddAction0]
 english     = "Add Action at 0"
-translation = "アクションを0に追加"
+translation = "Aggiungi Azione a 0"
 
 [CmdEditAddAction10]
 english     = "Add Action at 10"
-translation = "アクションを10に追加"
+translation = "Aggiungi Azione a 10"
 
 [CmdEditAddAction20]
 english     = "Add Action at 20"
-translation = "アクションを20に追加"
+translation = "Aggiungi Azione a 20"
 
 [CmdEditAddAction30]
 english     = "Add Action at 30"
-translation = "アクションを30に追加"
+translation = "Aggiungi Azione a 30"
 
 [CmdEditAddAction40]
 english     = "Add Action at 40"
-translation = "アクションを40に追加"
+translation = "Aggiungi Azione a 40"
 
 [CmdEditAddAction50]
 english     = "Add Action at 50"
-translation = "アクションを50に追加"
+translation = "Aggiungi Azione a 50"
 
 [CmdEditAddAction60]
 english     = "Add Action at 60"
-translation = "アクションを60に追加"
+translation = "Aggiungi Azione a 60"
 
 [CmdEditAddAction70]
 english     = "Add Action at 70"
-translation = "アクションを70に追加"
+translation = "Aggiungi Azione a 70"
 
 [CmdEditAddAction80]
 english     = "Add Action at 80"
-translation = "アクションを80に追加"
+translation = "Aggiungi Azione a 80"
 
 [CmdEditAddAction90]
 english     = "Add Action at 90"
-translation = "アクションを90に追加"
+translation = "Aggiungi Azione a 90"
 
 [CmdEditAddAction100]
 english     = "Add Action at 100"
-translation = "アクションを100に追加"
+translation = "Aggiungi Azione a 100"
 
 [CmdEditUndo]
 english     = "Undo"
-translation = "元に戻す"
+translation = "Annulla"
 
 [CmdEditRedo]
 english     = "Redo"
-translation = "やり直し"
+translation = "Ripristina"
 
 [CmdEditCopy]
 english     = "Copy"
-translation = "コピー"
+translation = "Copia"
 
 [CmdEditPaste]
 english     = "Paste"
-translation = "貼り付け"
+translation = "Incolla"
 
 [CmdEditPasteExact]
 english     = "Paste Exact"
-translation = "正確に貼り付け"
+translation = "Incolla Esatto"
 
 [CmdEditCut]
 english     = "Cut"
-translation = "切り取り"
+translation = "Taglia"
 
 [CmdEditSelectAll]
 english     = "Select All"
-translation = "すべて選択"
+translation = "Seleziona Tutto"
 
 [CmdEditDeselectAll]
 english     = "Deselect All"
-translation = "すべて選択解除"
+translation = "Deseleziona Tutto"
 
 [CmdEditSelectAllLeft]
 english     = "Select All Left"
-translation = "左側をすべて選択"
+translation = "Seleziona Tutto a Sinistra"
 
 [CmdEditSelectAllRight]
 english     = "Select All Right"
-translation = "右側をすべて選択"
+translation = "Seleziona Tutto a Destra"
 
 [CmdMoveActionsLeftSnapped]
 english     = "Move Actions Left (Snapped)"
-translation = "アクションを左へ移動（スナップ）"
+translation = "Sposta Azioni a Sinistra (Aggancio)"
 
 [CmdMoveActionsRightSnapped]
 english     = "Move Actions Right (Snapped)"
-translation = "アクションを右へ移動（スナップ）"
+translation = "Sposta Azioni a Destra (Aggancio)"
 
 [CmdMoveActionsLeft]
 english     = "Move Actions Left"
-translation = "アクションを左へ移動"
+translation = "Sposta azioni a sinistra"
 
 [CmdMoveActionsRight]
 english     = "Move Actions Right"
-translation = "アクションを右へ移動"
+translation = "Sposta azioni a destra"
 
 [CmdMoveActionsUp]
 english     = "Move Actions Up"
-translation = "アクションを上へ移動"
+translation = "Sposta azioni in su"
 
 [CmdMoveActionsDown]
 english     = "Move Actions Down"
-translation = "アクションを下へ移動"
+translation = "Sposta azioni in giù"
 
 [CmdMoveActionToPlayhead]
 english     = "Move Action to Playhead"
-translation = "アクションを再生ヘッドへ移動"
+translation = "Sposta azione sulla testina"
 
 [CmdNavPrevAction]
 english     = "Previous Action"
-translation = "前のアクション"
+translation = "Azione precedente"
 
 [CmdNavNextAction]
 english     = "Next Action"
-translation = "次のアクション"
+translation = "Azione successiva"
 
 [CmdNavPrevActionMulti]
 english     = "Previous Action (All Scripts)"
-translation = "前のアクション（全スクリプト）"
+translation = "Azione precedente (tutti gli script)"
 
 [CmdNavNextActionMulti]
 english     = "Next Action (All Scripts)"
-translation = "次のアクション（全スクリプト）"
+translation = "Azione successiva (tutti gli script)"
 
 [CmdNavCycleAxisForward]
 english     = "Cycle Axis Forward"
-translation = "軸を前方に切り替え"
+translation = "Cicla asse in avanti"
 
 [CmdNavCycleAxisBackward]
 english     = "Cycle Axis Backward"
-translation = "軸を後方に切り替え"
+translation = "Cicla asse indietro"
 
 [CmdNavPrevStep]
 english     = "Previous Step"
-translation = "前のステップ"
+translation = "Passo precedente"
 
 [CmdNavNextStep]
 english     = "Next Step"
-translation = "次のステップ"
+translation = "Passo successivo"
 
 [CmdPlayerPlayPause]
 english     = "Play / Pause"
-translation = "再生 / 一時停止"
+translation = "Play / Pausa"
 
 [CmdPlayerToggleMute]
 english     = "Toggle Mute"
-translation = "ミュート切り替え"
+translation = "Attiva/disattiva muto"
 
 [CmdPlayerVolumeUp]
 english     = "Volume Up"
-translation = "音量を上げる"
+translation = "Aumenta volume"
 
 [CmdPlayerVolumeDown]
 english     = "Volume Down"
-translation = "音量を下げる"
+translation = "Diminuisci volume"
 
 [CmdPlayerSpeedDown]
 english     = "Decrease Speed"
-translation = "速度を下げる"
+translation = "Diminuisci velocità"
 
 [CmdPlayerSpeedUp]
 english     = "Increase Speed"
-translation = "速度を上げる"
+translation = "Aumenta velocità"
 
 [CmdPlayerGotoStart]
 english     = "Go to Start"
-translation = "先頭へ移動"
+translation = "Vai all'inizio"
 
 [CmdPlayerGotoEnd]
 english     = "Go to End"
-translation = "末尾へ移動"
+translation = "Vai alla fine"
 
 [CmdOptimizeIntra]
 english     = "Optimize Video for Seeking"
-translation = "シークのために動画を最適化"
+translation = "Ottimizza video per la ricerca"
 
 # ─────────────────────────────────────────────────────────────────────────────────────────────
 # Processing panel (src/UI/ProcessingPanel.cpp) — node-graph editor chrome
@@ -1873,103 +1873,103 @@ translation = "シークのために動画を最適化"
 
 [ProcTitle]
 english     = "Processing"
-translation = "処理"
+translation = "Elaborazione"
 
 [ProcLockTip]
 english     = "Keep the panel open when focus is lost"
-translation = "フォーカスを失ってもパネルを開いたままにする"
+translation = "Mantieni il pannello aperto quando perde il fuoco"
 
 [ProcShowActionsTip]
 english     = "Show the source actions behind the processed result"
-translation = "処理結果の背後に元のアクションを表示"
+translation = "Mostra le azioni sorgente dietro il risultato elaborato"
 
 [ProcSaveGraph]
 english     = "Save Graph"
-translation = "グラフを保存"
+translation = "Salva grafo"
 
 [ProcLoadGraph]
 english     = "Load Graph"
-translation = "グラフを読み込み"
+translation = "Carica grafo"
 
 [ProcBake]
 english     = "Bake"
-translation = "ベイク"
+translation = "Applica"
 
 [ProcBakeTip]
 english     = "Write the processed result into the region's actions, then remove the graph. The bake is undoable."
-translation = "処理結果をリージョンのアクションに書き込み、グラフを削除します。ベイクは取り消し可能です。"
+translation = "Scrive il risultato elaborato nelle azioni della regione, poi rimuove il grafo. L'operazione è annullabile."
 
 [ProcRecompute]
 english     = "Recompute"
-translation = "再計算"
+translation = "Ricalcola"
 
 [ProcAuto]
 english     = "Auto"
-translation = "自動"
+translation = "Auto"
 
 [ProcAutoTip]
 english     = "Auto-recompute on edits. Uncheck to halt; Recompute runs it manually."
-translation = "編集時に自動で再計算します。停止するにはチェックを外します。「再計算」で手動実行します。"
+translation = "Ricalcolo automatico in caso di modifiche. Deseleziona per sospendere; Ricalcola lo esegue manualmente."
 
 [ProcHzTip]
 english     = "Sampling rate for any node that turns a continuous signal into discrete actions."
-translation = "連続信号を離散アクションに変換するノードのサンプリングレートです。"
+translation = "Frequenza di campionamento per i nodi che convertono un segnale continuo in azioni discrete."
 
 [ProcDiscretizeDesc]
 english     = "Resample any input onto a uniform Hz grid, one action per sample. Rarely needed — the graph discretizes implicitly at the output."
-translation = "任意の入力を一定のHzグリッドで再サンプリングし、サンプルごとに1つのアクションを生成します。ほとんど不要です — グラフは出力で暗黙的に離散化します。"
+translation = "Ricampiona qualsiasi input su una griglia Hz uniforme, un'azione per campione. Raramente necessario — il grafo discretizza implicitamente all'uscita."
 
 [ProcFunctionalizeDesc]
 english     = "Treat any input as a continuous signal, deferring discretization to the output Hz. Rarely needed — inputs are functionalized implicitly where required."
-translation = "任意の入力を連続信号として扱い、離散化を出力Hzまで先送りします。ほとんど不要です — 入力は必要に応じて暗黙的に関数化されます。"
+translation = "Tratta qualsiasi input come segnale continuo, rinviando la discretizzazione all'Hz di uscita. Raramente necessario — gli input vengono funzionalizzati implicitamente dove richiesto."
 
 [ProcEvalPrefix]
 english     = "eval: "
-translation = "評価: "
+translation = "eval: "
 
 [ProcEvalMs]
 english     = "eval: {0} ms"
-translation = "評価: {0} ms"
+translation = "eval: {0} ms"
 
 [ProcNotComputed]
 english     = "not computed"
-translation = "未計算"
+translation = "non calcolato"
 
 [ProcSaveToFolder]
 english     = "Fork script"
-translation = "スクリプトを複製"
+translation = "Crea fork dello script"
 
 [ProcLoadFromDisk]
 english     = "Load"
-translation = "読み込み"
+translation = "Carica"
 
 [ProcSelectCs]
 english     = "(select .cs)"
-translation = "(.cs を選択)"
+translation = "(seleziona .cs)"
 
 [ProcEdit]
 english     = "Edit"
-translation = "編集"
+translation = "Modifica"
 
 [ProcReload]
 english     = "Reload"
-translation = "再読み込み"
+translation = "Ricarica"
 
 [ProcFolder]
 english     = "Folder"
-translation = "フォルダ"
+translation = "Cartella"
 
 [ProcWatchTip]
 english     = "Recompile automatically when the file changes on disk"
-translation = "ディスク上のファイルが変更されたら自動的に再コンパイル"
+translation = "Ricompila automaticamente quando il file cambia su disco"
 
 [ProcNoScriptSelected]
 english     = "no script selected"
-translation = "スクリプト未選択"
+translation = "nessuno script selezionato"
 
 [ProcCompiling]
 english     = "compiling…"
-translation = "コンパイル中…"
+translation = "compilazione in corso…"
 
 [ProcCompileOk]
 english     = "OK"
@@ -1977,215 +1977,215 @@ translation = "OK"
 
 [ProcCompileError]
 english     = "compile error"
-translation = "コンパイルエラー"
+translation = "errore di compilazione"
 
 [ProcCompileErrorTitle]
 english     = "Compile Error"
-translation = "コンパイルエラー"
+translation = "Errore di compilazione"
 
 [ProcViewError]
 english     = "View error"
-translation = "エラーを表示"
+translation = "Visualizza errore"
 
 [ProcClose]
 english     = "Close"
-translation = "閉じる"
+translation = "Chiudi"
 
 [ProcPluginDisabled]
 english     = "plugin disabled"
-translation = "プラグインは無効"
+translation = "plugin disabilitato"
 
 [ProcAddScriptTitle]
 english     = "Add Script"
-translation = "スクリプトを追加"
+translation = "Aggiungi script"
 
 [ProcOpen]
 english     = "Open"
-translation = "開く"
+translation = "Apri"
 
 [ProcChooseExisting]
 english     = "(choose an existing script)"
-translation = "(既存のスクリプトを選択)"
+translation = "(scegli uno script esistente)"
 
 [ProcOrCreateNew]
 english     = "or create new"
-translation = "または新規作成"
+translation = "o crea nuovo"
 
 [ProcName]
 english     = "Name"
-translation = "名前"
+translation = "Nome"
 
 [ProcDisplayName]
 english     = "Display name"
-translation = "表示名"
+translation = "Nome visualizzato"
 
 [ProcDisplayNameHint]
 english     = "defaults to the file name"
-translation = "既定はファイル名"
+translation = "predefinito al nome del file"
 
 [ProcDescription]
 english     = "Description"
-translation = "説明"
+translation = "Descrizione"
 
 [ProcDescriptionHint]
 english     = "shown as the node's menu tooltip"
-translation = "ノードのメニューのツールチップとして表示"
+translation = "mostrata come tooltip del menu del nodo"
 
 [ProcSignal]
 english     = "Signal"
-translation = "信号"
+translation = "Segnale"
 
 [ProcFunctional]
 english     = "Functional"
-translation = "連続"
+translation = "Funzionale"
 
 [ProcDiscrete]
 english     = "Discrete"
-translation = "離散"
+translation = "Discreto"
 
 [ProcLibraryScript]
 english     = "Library script"
-translation = "ライブラリスクリプト"
+translation = "Script libreria"
 
 [ProcScript]
 english     = "Script"
-translation = "スクリプト"
+translation = "Script"
 
 [ProcEffectSmooth]
 english     = "Denoise"
-translation = "ノイズ除去"
+translation = "Riduzione rumore"
 
 [ProcEffectSmoothDesc]
 english     = "Averages each point with its neighbors to remove high-frequency noise. More passes remove more noise."
-translation = "各ポイントを隣接ポイントと平均化して高周波ノイズを除去します。パス数を増やすほどノイズが除去されます。"
+translation = "Calcola la media di ogni punto con i vicini per rimuovere il rumore ad alta frequenza. Più passate rimuovono più rumore."
 
 [ProcEffectRdp]
 english     = "RDP Simplification"
-translation = "RDP 簡略化"
+translation = "Semplificazione RDP"
 
 [ProcEffectRdpDesc]
 english     = "Removes redundant points using the Ramer-Douglas-Peucker algorithm. Higher epsilon removes more points."
-translation = "Ramer-Douglas-Peucker アルゴリズムを使用して冗長なポイントを削除します。イプシロンを大きくするほど多くのポイントが削除されます。"
+translation = "Rimuove i punti ridondanti usando l'algoritmo Ramer-Douglas-Peucker. Un epsilon più alto rimuove più punti."
 
 [ProcParamPasses]
 english     = "Passes"
-translation = "パス数"
+translation = "Passate"
 
 [ProcParamEpsilon]
 english     = "epsilon"
-translation = "イプシロン"
+translation = "epsilon"
 
 [ProcInputs]
 english     = "Inputs"
-translation = "入力"
+translation = "Ingressi"
 
 [ProcOutputs]
 english     = "Outputs"
-translation = "出力"
+translation = "Uscite"
 
 [ProcStubComments]
 english     = "Include guide comments"
-translation = "ガイドコメントを含める"
+translation = "Includi commenti guida"
 
 [ProcEnterFileName]
 english     = "Enter a file name."
-translation = "ファイル名を入力してください。"
+translation = "Inserisci un nome file."
 
 [ProcInvalidChars]
 english     = "Name has invalid characters."
-translation = "名前に使用できない文字が含まれています。"
+translation = "Il nome contiene caratteri non validi."
 
 [ProcAlreadyExists]
 english     = "{0} already exists."
-translation = "{0} は既に存在します。"
+translation = "{0} esiste già."
 
 [ProcCreates]
 english     = "Creates {0}"
-translation = "{0} を作成します"
+translation = "Crea {0}"
 
 [ProcCreate]
 english     = "Create"
-translation = "作成"
+translation = "Crea"
 
 [ProcCancel]
 english     = "Cancel"
-translation = "キャンセル"
+translation = "Annulla"
 
 [ProcSaveEmbeddedTitle]
 english     = "Save Embedded Script"
-translation = "埋め込みスクリプトを保存"
+translation = "Salva script incorporato"
 
 [ProcSaveEmbeddedBody]
 english     = "Save this embedded script into your scripts folder. The node becomes a normal file node referencing it."
-translation = "この埋め込みスクリプトをスクリプトフォルダに保存します。ノードはそれを参照する通常のファイルノードになります。"
+translation = "Salva questo script incorporato nella cartella degli script. Il nodo diventa un normale nodo file che vi fa riferimento."
 
 [ProcDifferentExists]
 english     = "A different {0} already exists — rename it."
-translation = "異なる {0} が既に存在します — 名前を変更してください。"
+translation = "Esiste già un {0} diverso — rinominalo."
 
 [ProcSaves]
 english     = "Saves {0}"
-translation = "{0} を保存します"
+translation = "Salva {0}"
 
 [ProcSave]
 english     = "Save"
-translation = "保存"
+translation = "Salva"
 
 [ProcTrustTitle]
 english     = "Trust Graph Scripts"
-translation = "グラフのスクリプトを信頼"
+translation = "Considera attendibili gli script del grafo"
 
 [ProcTrustBody]
 english     = "This graph contains scripts that run code on your machine. Only load it if you trust the author."
-translation = "このグラフにはあなたのマシンでコードを実行するスクリプトが含まれています。作者を信頼する場合のみ読み込んでください。"
+translation = "Questo grafo contiene script che eseguono codice sul tuo computer. Caricalo solo se ti fidi dell'autore."
 
 [ProcEmbeddedScript]
 english     = "embedded script"
-translation = "埋め込みスクリプト"
+translation = "script incorporato"
 
 [ProcTrustNote]
 english     = "These scripts stay embedded in the graph and run from there. Nothing is written to your scripts folder until you save a node to a file."
-translation = "これらのスクリプトはグラフに埋め込まれたまま、そこから実行されます。ノードをファイルに保存するまで、スクリプトフォルダには何も書き込まれません。"
+translation = "Questi script restano incorporati nel grafo ed eseguono da lì. Nulla viene scritto nella cartella degli script finché non salvi un nodo in un file."
 
 [ProcReviewCode]
 english     = "Review code..."
-translation = "コードを確認..."
+translation = "Esamina il codice..."
 
 [ProcLoadAndRun]
 english     = "Load and run scripts"
-translation = "スクリプトを読み込んで実行"
+translation = "Carica ed esegui gli script"
 
 [ProcRemapTitle]
 english     = "Remap Graph Axes"
-translation = "グラフの軸を再マッピング"
+translation = "Rimappa assi del grafo"
 
 [ProcRemap]
 english     = "Remap"
-translation = "再マッピング"
+translation = "Rimappa"
 
 [ProcRemapTip]
 english     = "Remap this graph's axes onto different axes."
-translation = "このグラフの軸を別の軸に再マッピングします。"
+translation = "Rimappa gli assi di questo grafo su assi diversi."
 
 [ProcRemapBody]
 english     = "Map each of the graph's axes onto the axis it should write to:"
-translation = "グラフの各軸を、書き込み先の軸に対応付けてください:"
+translation = "Associa ciascun asse del grafo all'asse su cui deve scrivere:"
 
 [ProcRemapDistinct]
 english     = "Each target axis must be distinct."
-translation = "各対象軸は重複してはいけません。"
+translation = "Ogni asse di destinazione deve essere distinto."
 
 [ProcLoad]
 english     = "Load"
-translation = "読み込み"
+translation = "Carica"
 
 [ProcSelectScriptTitle]
 english     = "Select Script"
-translation = "スクリプトを選択"
+translation = "Seleziona script"
 
 [ProcCsFilterDesc]
 english     = "C# script (*.cs)"
-translation = "C# スクリプト (*.cs)"
+translation = "Script C# (*.cs)"
 
 # --- Simulator window (src/UI/ScriptSimulator.cpp) ---
 # The on-video gizmo text is extracted too: the DOF axis words (Stroke/Surge/…), the ortho Top/Side
@@ -2195,11 +2195,11 @@ translation = "C# スクリプト (*.cs)"
 
 [SimTitle]
 english     = "Simulator"
-translation = "シミュレーター"
+translation = "Simulatore"
 
 [SimModelLoadFailed]
 english     = "3D model failed to load."
-translation = "3Dモデルの読み込みに失敗しました。"
+translation = "Caricamento del modello 3D non riuscito."
 
 [Sim3D]
 english     = "3D"
@@ -2207,91 +2207,91 @@ translation = "3D"
 
 [SimInvert]
 english     = "Invert"
-translation = "反転"
+translation = "Inverti"
 
 [Sim3dLabels]
 english     = "3D Labels"
-translation = "3Dラベル"
+translation = "Etichette 3D"
 
 [SimShowAll]
 english     = "Show all"
-translation = "すべて表示"
+translation = "Mostra tutto"
 
 [SimHideAll]
 english     = "Hide all"
-translation = "すべて非表示"
+translation = "Nascondi tutto"
 
 [SimRotationUnits]
 english     = "Rotation units"
-translation = "回転の単位"
+translation = "Unità di rotazione"
 
 [SimDegrees]
 english     = "Degrees"
-translation = "度"
+translation = "Gradi"
 
 [SimPercent]
 english     = "Percent"
-translation = "パーセント"
+translation = "Percentuale"
 
 [SimDisplay]
 english     = "Display"
-translation = "表示"
+translation = "Visualizzazione"
 
 [SimIndicators]
 english     = "Indicators"
-translation = "インジケーター"
+translation = "Indicatori"
 
 [SimPosition]
 english     = "Position"
-translation = "位置"
+translation = "Posizione"
 
 [SimHeightLines]
 english     = "Height Lines"
-translation = "高さ線"
+translation = "Linee di altezza"
 
 [SimExtraLines]
 english     = "Extra Lines"
-translation = "追加の線"
+translation = "Linee extra"
 
 [SimLocked]
 english     = "Locked"
-translation = "ロック中"
+translation = "Bloccato"
 
 [SimViewTop]
 english     = "Top"
-translation = "上"
+translation = "Alto"
 
 [SimViewSide]
 english     = "Side"
-translation = "横"
+translation = "Lato"
 
 [SimDofStroke]
 english     = "Stroke"
-translation = "ストローク"
+translation = "Stroke"
 
 [SimDofSurge]
 english     = "Surge"
-translation = "前後"
+translation = "Surge"
 
 [SimDofSway]
 english     = "Sway"
-translation = "左右"
+translation = "Sway"
 
 [SimDofTwist]
 english     = "Twist"
-translation = "ひねり"
+translation = "Twist"
 
 [SimDofRoll]
 english     = "Roll"
-translation = "ロール"
+translation = "Roll"
 
 [SimDofPitch]
 english     = "Pitch"
-translation = "ピッチ"
+translation = "Pitch"
 
 [SimDepth]
 english     = "(depth)"
-translation = "(奥行き)"
+translation = "(profondità)"
 
 # ── Timeline window (UI/ScriptTimeline.cpp) ──────────────────────────────────
 # Chrome only: window title, the curve right-click menu, and the region-bar right-click menu. The
@@ -2301,59 +2301,59 @@ translation = "(奥行き)"
 
 [TlTitle]
 english     = "Timeline"
-translation = "タイムライン"
+translation = "Timeline"
 
 [TlHideFromPanel]
 english     = "Hide from panel"
-translation = "パネルから非表示"
+translation = "Nascondi dal pannello"
 
 [TlLock]
 english     = "Lock"
-translation = "ロック"
+translation = "Blocca"
 
 [TlUnlock]
 english     = "Unlock"
-translation = "ロック解除"
+translation = "Sblocca"
 
 [TlDelete]
 english     = "Delete"
-translation = "削除"
+translation = "Elimina"
 
 [TlAddProcessingRegion]
 english     = "Add Processing Region"
-translation = "処理領域を追加"
+translation = "Aggiungi regione di elaborazione"
 
 [TlShowPoints]
 english     = "Show points"
-translation = "ポイントを表示"
+translation = "Mostra punti"
 
 [TlShowWaveform]
 english     = "Show audio waveform"
-translation = "音声波形を表示"
+translation = "Mostra forma d'onda audio"
 
 [TlOverlay]
 english     = "Overlay"
-translation = "オーバーレイ"
+translation = "Overlay"
 
 [TlOverlayFrame]
 english     = "Frame"
-translation = "フレーム"
+translation = "Frame"
 
 [TlOverlayTempo]
 english     = "Tempo"
-translation = "テンポ"
+translation = "Tempo"
 
 [TlVideoFps]
 english     = "Video FPS: {0}"
-translation = "動画FPS: {0}"
+translation = "FPS video: {0}"
 
 [TlScriptFps]
 english     = "Script FPS"
-translation = "スクリプトFPS"
+translation = "FPS script"
 
 [TlCustomFps]
 english     = "Custom FPS"
-translation = "カスタムFPS"
+translation = "FPS personalizzato"
 
 [TlBpm]
 english     = "BPM"
@@ -2361,47 +2361,47 @@ translation = "BPM"
 
 [TlOffsetSeconds]
 english     = "Offset (s)"
-translation = "オフセット (秒)"
+translation = "Offset (s)"
 
 [TlSnap]
 english     = "Snap"
-translation = "スナップ"
+translation = "Aggancia"
 
 [TlMeasure]
 english     = "measure"
-translation = "小節"
+translation = "battuta"
 
 [TlBake]
 english     = "Bake"
-translation = "ベイク"
+translation = "Consolida"
 
 [TlGrowLeft]
 english     = "Grow Left"
-translation = "左に拡張"
+translation = "Espandi a sinistra"
 
 [TlGrowRight]
 english     = "Grow Right"
-translation = "右に拡張"
+translation = "Espandi a destra"
 
 [TlGrowBoth]
 english     = "Grow Both Sides"
-translation = "両側に拡張"
+translation = "Espandi entrambi i lati"
 
 [TlAddRegionPlayhead]
 english     = "Add Region at Playhead"
-translation = "再生ヘッドに領域を追加"
+translation = "Aggiungi regione alla testina"
 
 [TlAddRegionHere]
 english     = "Add Region Here"
-translation = "ここに領域を追加"
+translation = "Aggiungi regione qui"
 
 [TlAddRegionSelection]
 english     = "Add Region over Selection"
-translation = "選択範囲に領域を追加"
+translation = "Aggiungi regione sulla selezione"
 
 [TlAddRegionDuration]
 english     = "Add Region over Entire Duration"
-translation = "全体に領域を追加"
+translation = "Aggiungi regione sull'intera durata"
 
 # ── Video Controls window (UI/VideoPlayerControls.cpp) ───────────────────────
 # Chrome: window title, the seek-bar heatmap right-click menu + export dialog, the bookmark/chapter
@@ -2410,79 +2410,79 @@ translation = "全体に領域を追加"
 
 [VpcTitle]
 english     = "Video Controls"
-translation = "動画コントロール"
+translation = "Controlli video"
 
 [VpcHeatmapHeight]
 english     = "Height"
-translation = "高さ"
+translation = "Altezza"
 
 [VpcHeatmapFade]
 english     = "Fade"
-translation = "フェード"
+translation = "Dissolvenza"
 
 [VpcExportPng]
 english     = "Export as PNG..."
-translation = "PNGとしてエクスポート..."
+translation = "Esporta come PNG..."
 
 [VpcExportHeatmapTitle]
 english     = "Export heatmap"
-translation = "ヒートマップをエクスポート"
+translation = "Esporta heatmap"
 
 [VpcPngImage]
 english     = "PNG image"
-translation = "PNG画像"
+translation = "Immagine PNG"
 
 [VpcChapterNoRoom]
 english     = "No room for a chapter here — the timeline is full at this point."
-translation = "ここにチャプターを追加する空きがありません — この位置はタイムラインが埋まっています。"
+translation = "Nessuno spazio per un capitolo qui — la timeline è piena in questo punto."
 
 [VpcBookmarkTip]
 english     = "Bookmark: {0}"
-translation = "ブックマーク: {0}"
+translation = "Segnalibro: {0}"
 
 [VpcUnnamed]
 english     = "(unnamed)"
-translation = "(名称未設定)"
+translation = "(senza nome)"
 
 [VpcAddBookmarkPlayhead]
 english     = "Add Bookmark at Playhead"
-translation = "再生ヘッドにブックマークを追加"
+translation = "Aggiungi segnalibro alla testina"
 
 [VpcAddChapterPlayhead]
 english     = "Add Chapter at Playhead"
-translation = "再生ヘッドにチャプターを追加"
+translation = "Aggiungi capitolo alla testina"
 
 [VpcAddBookmarkHere]
 english     = "Add Bookmark Here"
-translation = "ここにブックマークを追加"
+translation = "Aggiungi segnalibro qui"
 
 [VpcAddChapterHere]
 english     = "Add Chapter Here"
-translation = "ここにチャプターを追加"
+translation = "Aggiungi capitolo qui"
 
 [VpcSeekHere]
 english     = "Seek Here"
-translation = "ここにシーク"
+translation = "Vai qui"
 
 [VpcDelete]
 english     = "Delete"
-translation = "削除"
+translation = "Elimina"
 
 [VpcColor]
 english     = "Color"
-translation = "色"
+translation = "Colore"
 
 [VpcSeekToStart]
 english     = "Seek to Start"
-translation = "開始位置にシーク"
+translation = "Vai all'inizio"
 
 [VpcSeekToEnd]
 english     = "Seek to End"
-translation = "終了位置にシーク"
+translation = "Vai alla fine"
 
 [VpcSpeed]
 english     = "Speed"
-translation = "速度"
+translation = "Velocità"
 
 # ── Video Player window (UI/VideoPlayerWindow.cpp) ───────────────────────────
 # The video viewport. Chrome: window title, the two no-content placeholders, and the right-click
@@ -2491,55 +2491,55 @@ translation = "速度"
 
 [VpwTitle]
 english     = "Video Player"
-translation = "動画プレーヤー"
+translation = "Lettore video"
 
 [VpwNoVideo]
 english     = "No video loaded"
-translation = "動画が読み込まれていません"
+translation = "Nessun video caricato"
 
 [VpwAudioOnly]
 english     = "Audio only — no video"
-translation = "音声のみ — 動画なし"
+translation = "Solo audio — nessun video"
 
 [VpwFullMode]
 english     = "Full Mode"
-translation = "フルモード"
+translation = "Modalità intera"
 
 [VpwVrMode]
 english     = "VR Mode"
-translation = "VRモード"
+translation = "Modalità VR"
 
 [VpwResolution]
 english     = "Resolution"
-translation = "解像度"
+translation = "Risoluzione"
 
 [VpwResolutionTip]
 english     = "Changes the internal rendering resolution.\nmpv still decodes the full frame — for more performance, videos need to be re-encoded at a lower resolution."
-translation = "内部レンダリング解像度を変更します。\nmpvは引き続き全フレームをデコードします — パフォーマンスを上げるには、動画を低い解像度で再エンコードする必要があります。"
+translation = "Modifica la risoluzione di rendering interna.\nmpv decodifica comunque il fotogramma completo — per migliorare le prestazioni, i video devono essere ricodificati a una risoluzione inferiore."
 
 [VpwResFull]
 english     = "Full"
-translation = "フル"
+translation = "Intera"
 
 [VpwResHalf]
 english     = "Half"
-translation = "1/2"
+translation = "Metà"
 
 [VpwResThird]
 english     = "Third"
-translation = "1/3"
+translation = "Terzo"
 
 [VpwResQuarter]
 english     = "Quarter"
-translation = "1/4"
+translation = "Quarto"
 
 [VpwResEighth]
 english     = "Eighth"
-translation = "1/8"
+translation = "Ottavo"
 
 [VpwLocked]
 english     = "Locked"
-translation = "ロック中"
+translation = "Bloccato"
 
 # ── Welcome screen (UI/WelcomeScreen.cpp) ────────────────────────────────────
 # The no-project landing page. The build-identity header (versionTitle) and the recent-project file
@@ -2547,35 +2547,35 @@ translation = "ロック中"
 
 [WelTitle]
 english     = "Welcome"
-translation = "ようこそ"
+translation = "Benvenuto"
 
 [WelOpenProject]
 english     = "Open / New Project..."
-translation = "プロジェクトを開く / 新規..."
+translation = "Apri / Nuovo progetto..."
 
 [WelCreateEmpty]
 english     = "Create Empty Project"
-translation = "空のプロジェクトを作成"
+translation = "Crea progetto vuoto"
 
 [WelRecentProjects]
 english     = "Recent Projects"
-translation = "最近のプロジェクト"
+translation = "Progetti recenti"
 
 [WelClearRecentTip]
 english     = "Clear the recent-projects list"
-translation = "最近使用したプロジェクトの一覧をクリア"
+translation = "Cancella la lista dei progetti recenti"
 
 [WelNoRecent]
 english     = "No recent projects"
-translation = "最近のプロジェクトはありません"
+translation = "Nessun progetto recente"
 
 [WelTip]
 english     = "Tip: drag a video or .ofp file onto the window to open it."
-translation = "ヒント: 動画または .ofp ファイルをウィンドウにドラッグして開きます。"
+translation = "Suggerimento: trascina un video o un file .ofp sulla finestra per aprirlo."
 
 [WelSecurityNote]
 english     = "Only open .ofp files you trust — they can run embedded code and may expose personal info like file paths."
-translation = "信頼できる .ofp ファイルのみを開いてください。埋め込まれたコードを実行することがあり、ファイルパスなどの個人情報が漏れる可能性があります。"
+translation = "Apri solo file .ofp di cui ti fidi — possono eseguire codice incorporato e potrebbero esporre informazioni personali come i percorsi dei file."
 
 # ── App shell: menu bar + export/layout modals (App/OfsApp.cpp) ───────────────
 # The always-on main menu bar (File/Edit/View/Layout/Axes/Plugins), the right-aligned project-title
@@ -2585,31 +2585,31 @@ translation = "信頼できる .ofp ファイルのみを開いてください�
 
 [AppMenuFile]
 english     = "File"
-translation = "ファイル"
+translation = "File"
 
 [AppMenuOpenNew]
 english     = "Open or New Project..."
-translation = "プロジェクトを開く/新規作成..."
+translation = "Apri o nuovo progetto..."
 
 [AppMenuRestoreBackup]
 english     = "Restore from Backup..."
-translation = "バックアップから復元..."
+translation = "Ripristina da backup..."
 
 [AppMenuCloseProject]
 english     = "Close Project"
-translation = "プロジェクトを閉じる"
+translation = "Chiudi progetto"
 
 [AppMenuSaveProject]
 english     = "Save Project"
-translation = "プロジェクトを保存"
+translation = "Salva progetto"
 
 [AppMenuSaveProjectAs]
 english     = "Save Project As..."
-translation = "名前を付けてプロジェクトを保存..."
+translation = "Salva progetto come..."
 
 [AppMenuImport]
 english     = "Import"
-translation = "インポート"
+translation = "Importa"
 
 [AppMenuImportFunscript]
 english     = "Funscript..."
@@ -2617,187 +2617,187 @@ translation = "Funscript..."
 
 [AppMenuExportFunscript]
 english     = "Export Funscript..."
-translation = "Funscript をエクスポート..."
+translation = "Esporta Funscript..."
 
 [AppMenuExit]
 english     = "Exit"
-translation = "終了"
+translation = "Esci"
 
 [AppMenuEdit]
 english     = "Edit"
-translation = "編集"
+translation = "Modifica"
 
 [AppMenuPreferences]
 english     = "Preferences"
-translation = "設定"
+translation = "Preferenze"
 
 [AppMenuProject]
 english     = "Project"
-translation = "プロジェクト"
+translation = "Progetto"
 
 [AppMenuView]
 english     = "View"
-translation = "表示"
+translation = "Visualizza"
 
 [AppMenuShortcuts]
 english     = "Keyboard Shortcuts"
-translation = "キーボードショートカット"
+translation = "Scorciatoie da tastiera"
 
 [AppMenuSimulator]
 english     = "Simulator"
-translation = "シミュレーター"
+translation = "Simulatore"
 
 [AppMenuSimulatorShow]
 english     = "Show window"
-translation = "ウィンドウを表示"
+translation = "Mostra finestra"
 
 [AppMenuStatistics]
 english     = "Statistics"
-translation = "統計"
+translation = "Statistiche"
 
 [AppMenuToolOptions]
 english     = "Tool Options"
-translation = "ツールオプション"
+translation = "Opzioni strumento"
 
 [AppMenuLog]
 english     = "Log"
-translation = "ログ"
+translation = "Log"
 
 [AppMenuFullscreen]
 english     = "Fullscreen"
-translation = "全画面表示"
+translation = "Schermo intero"
 
 [AppMenuHelp]
 english     = "Help"
-translation = "ヘルプ"
+translation = "Guida"
 
 [AppMenuAbout]
 english     = "About ofs-ng"
-translation = "ofs-ng について"
+translation = "Informazioni su ofs-ng"
 
 [AppMenuLayout]
 english     = "Layout"
-translation = "レイアウト"
+translation = "Layout"
 
 [AppMenuAxes]
 english     = "Axes"
-translation = "軸"
+translation = "Assi"
 
 [AppMenuPlugins]
 english     = "Plugins"
-translation = "プラグイン"
+translation = "Plugin"
 
 [AppLayoutSave]
 english     = "Save Layout"
-translation = "レイアウトを保存"
+translation = "Salva layout"
 
 [AppLayoutSaveTip]
 english     = "The Default layout is read-only.\nUse \"+ New Layout...\" to save your changes."
-translation = "デフォルトのレイアウトは読み取り専用です。\n変更を保存するには「+ 新規レイアウト...」を使用してください。"
+translation = "Il layout Predefinito è di sola lettura.\nUsa \"+ Nuovo layout...\" per salvare le modifiche."
 
 [AppLayoutDelete]
 english     = "Delete"
-translation = "削除"
+translation = "Elimina"
 
 [AppLayoutReset]
 english     = "Reset Layout"
-translation = "レイアウトをリセット"
+translation = "Ripristina layout"
 
 [AppLayoutResetTipDefault]
 english     = "Rebuild the built-in Default arrangement."
-translation = "組み込みのデフォルト配置を再構築します。"
+translation = "Ricostruisce la disposizione Predefinita incorporata."
 
 [AppLayoutResetTipUser]
 english     = "Discard unsaved changes and reload the saved layout."
-translation = "未保存の変更を破棄し、保存済みのレイアウトを再読み込みします。"
+translation = "Annulla le modifiche non salvate e ricarica il layout salvato."
 
 [AppLayoutLock]
 english     = "Lock Layout"
-translation = "レイアウトをロック"
+translation = "Blocca layout"
 
 [AppLayoutLockTip]
 english     = "Prevents undocking windows (resizing still works)."
-translation = "ウィンドウのドッキング解除を防ぎます（サイズ変更は可能）。"
+translation = "Impedisce di sbloccare le finestre (il ridimensionamento funziona ancora)."
 
 [AppLayoutNew]
 english     = "New Layout..."
-translation = "新規レイアウト..."
+translation = "Nuovo layout..."
 
 [AppLayoutDefault]
 english     = "Default"
-translation = "デフォルト"
+translation = "Predefinito"
 
 [AppLayoutSaved]
 english     = "Layout \"{0}\" saved."
-translation = "レイアウト「{0}」を保存しました。"
+translation = "Layout \"{0}\" salvato."
 
 [AppLayoutDeleted]
 english     = "Layout \"{0}\" deleted."
-translation = "レイアウト「{0}」を削除しました。"
+translation = "Layout \"{0}\" eliminato."
 
 [AppLayoutCreated]
 english     = "Layout \"{0}\" created."
-translation = "レイアウト「{0}」を作成しました。"
+translation = "Layout \"{0}\" creato."
 
 [AppNewLayoutTitle]
 english     = "New Layout"
-translation = "新規レイアウト"
+translation = "Nuovo layout"
 
 [AppNewLayoutName]
 english     = "Name"
-translation = "名前"
+translation = "Nome"
 
 [AppNewLayoutEnterName]
 english     = "Enter a layout name."
-translation = "レイアウト名を入力してください。"
+translation = "Inserisci un nome per il layout."
 
 [AppNewLayoutDuplicate]
 english     = "A layout with that name already exists."
-translation = "その名前のレイアウトはすでに存在します。"
+translation = "Esiste già un layout con questo nome."
 
 [AppNewLayoutCreate]
 english     = "Create"
-translation = "作成"
+translation = "Crea"
 
 [AppCancel]
 english     = "Cancel"
-translation = "キャンセル"
+translation = "Annulla"
 
 [AppAxesAddScratch]
 english     = "Add Scratch Axis"
-translation = "スクラッチ軸を追加"
+translation = "Aggiungi asse scratch"
 
 [AppAxesMaxTip]
 english     = "Maximum of 10 scratch axes (S0–S9) reached."
-translation = "スクラッチ軸の上限（S0–S9 の 10 個）に達しました。"
+translation = "Raggiunto il massimo di 10 assi scratch (S0–S9)."
 
 [AppAxesMultiAxis]
 english     = "Show Main Axes"
-translation = "主要軸を表示"
+translation = "Mostra assi principali"
 
 [AppAxesMultiAxisTip]
 english     = "Shortcut to show all six main axes (L0–R2) at once. Axes always exist; this just reveals them."
-translation = "6 つの主要軸 (L0–R2) をまとめて表示するショートカット。軸は常に存在しており、これは表示するだけです。"
+translation = "Scorciatoia per mostrare tutti e sei gli assi principali (L0–R2) in una volta. Gli assi esistono sempre; questa opzione li rende semplicemente visibili."
 
 [AppAxesL0Only]
 english     = "Show L0 Only"
-translation = "L0 のみ表示"
+translation = "Mostra solo L0"
 
 [AppAxesL0OnlyTip]
 english     = "Shortcut to show only L0 in the strip, hiding every other axis. Scratch axes with data stay in the Axes menu."
-translation = "ストリップに L0 のみを表示し、他のすべての軸を非表示にするショートカット。データを持つスクラッチ軸は「軸」メニューに残ります。"
+translation = "Scorciatoia per mostrare solo L0 nella striscia, nascondendo tutti gli altri assi. Gli assi scratch con dati restano nel menu Assi."
 
 [AppAxesShowTimeline]
 english     = "Show in Timeline"
-translation = "タイムラインに表示"
+translation = "Mostra nella timeline"
 
 [AppAxesShowPanel]
 english     = "Show in Panel"
-translation = "パネルに表示"
+translation = "Mostra nel pannello"
 
 [AppAxesRemove]
 english     = "Remove"
-translation = "削除"
+translation = "Rimuovi"
 
 # --- Axis descriptors ---
 # The descriptive name shown in parentheses after an axis code in the Axes menu (and other axis
@@ -2806,155 +2806,155 @@ translation = "削除"
 
 [AxisDescL0]
 english     = "Stroke"
-translation = "ストローク"
+translation = "Corsa"
 
 [AxisDescL1]
 english     = "Surge"
-translation = "サージ"
+translation = "Avanzamento"
 
 [AxisDescL2]
 english     = "Sway"
-translation = "スウェイ"
+translation = "Traslazione laterale"
 
 [AxisDescR0]
 english     = "Twist"
-translation = "ツイスト"
+translation = "Rotazione"
 
 [AxisDescR1]
 english     = "Roll"
-translation = "ロール"
+translation = "Rollio"
 
 [AxisDescR2]
 english     = "Pitch"
-translation = "ピッチ"
+translation = "Beccheggio"
 
 [AxisDescV0]
 english     = "Vibe"
-translation = "バイブ"
+translation = "Vibrazione"
 
 [AxisDescV1]
 english     = "Vibe2"
-translation = "バイブ2"
+translation = "Vibrazione2"
 
 [AxisDescA0]
 english     = "Air"
-translation = "エア"
+translation = "Aria"
 
 [AxisDescA1]
 english     = "Air2"
-translation = "エア2"
+translation = "Aria2"
 
 [AppPluginsInstall]
 english     = "Install plugin from zip..."
-translation = "ZIP からプラグインをインストール..."
+translation = "Installa plugin da zip..."
 
 [AppPluginHotReload]
 english     = "Hot reload (developer)"
-translation = "ホットリロード（開発者向け）"
+translation = "Ricarica a caldo (sviluppatore)"
 
 [AppPluginHotReloadHint]
 english     = "While on, this plugin reloads automatically when you rebuild it. Developer aid; not saved between sessions."
-translation = "オンの間、このプラグインはリビルドすると自動的に再読み込みされます。開発者向けの補助機能で、セッション間では保存されません。"
+translation = "Quando attivo, questo plugin si ricarica automaticamente ad ogni ricompilazione. Strumento per sviluppatori; non salvato tra le sessioni."
 
 [AppPluginsNoneLoaded]
 english     = "No plugins loaded"
-translation = "プラグインが読み込まれていません"
+translation = "Nessun plugin caricato"
 
 [AppPluginEnabled]
 english     = "Enabled"
-translation = "有効"
+translation = "Abilitato"
 
 [AppPluginShowWindow]
 english     = "Show Window"
-translation = "ウィンドウを表示"
+translation = "Mostra finestra"
 
 [AppPluginUninstall]
 english     = "Uninstall..."
-translation = "アンインストール..."
+translation = "Disinstalla..."
 
 [AppNoProject]
 english     = "No Project"
-translation = "プロジェクトなし"
+translation = "Nessun progetto"
 
 [AppNoProjectOpen]
 english     = "No project open — open or create one to begin"
-translation = "プロジェクトが開いていません — 開くか作成して開始してください"
+translation = "Nessun progetto aperto — aprirne o crearne uno per iniziare"
 
 [AppUntitledProject]
 english     = "Untitled Project"
-translation = "無題のプロジェクト"
+translation = "Progetto senza titolo"
 
 [AppUnsavedTip]
 english     = "Unsaved changes"
-translation = "未保存の変更"
+translation = "Modifiche non salvate"
 
 [AppSavedTip]
 english     = "All changes saved"
-translation = "すべての変更を保存しました"
+translation = "Tutte le modifiche salvate"
 
 [AppSavedSecsAgo]
 english     = "saved {0}s ago"
-translation = "{0} 秒前に保存"
+translation = "salvato {0}s fa"
 
 [AppSavedMinsAgo]
 english     = "saved {0}m ago"
-translation = "{0} 分前に保存"
+translation = "salvato {0}m fa"
 
 [AppSavedHoursAgo]
 english     = "saved {0}h ago"
-translation = "{0} 時間前に保存"
+translation = "salvato {0}h fa"
 
 [AppExportTitle]
 english     = "Export Funscript"
-translation = "Funscript をエクスポート"
+translation = "Esporta Funscript"
 
 [AppExportFormat]
 english     = "Format:"
-translation = "形式:"
+translation = "Formato:"
 
 [AppExportFormat10]
 english     = "1.0 – one file per axis"
-translation = "1.0 – 軸ごとに 1 ファイル"
+translation = "1.0 – un file per asse"
 
 [AppExportFormat11]
 english     = "1.1 – single file (axes[])"
-translation = "1.1 – 単一ファイル (axes[])"
+translation = "1.1 – file unico (axes[])"
 
 [AppExportFormat20]
 english     = "2.0 – single file (channels{{}})"
-translation = "2.0 – 単一ファイル (channels{{}})"
+translation = "2.0 – file unico (channels{{}})"
 
 [AppExportAxesInclude]
 english     = "Axes to include:"
-translation = "含める軸:"
+translation = "Assi da includere:"
 
 [AppExportEmpty]
 english     = "(empty)"
-translation = "(空)"
+translation = "(vuoto)"
 
 [AppExportButton]
 english     = "Export"
-translation = "エクスポート"
+translation = "Esporta"
 
 [AppCatalogExported]
 english     = "Localization catalog exported."
-translation = "ローカライズカタログをエクスポートしました。"
+translation = "Catalogo di localizzazione esportato."
 
 [AppCatalogExportFailed]
 english     = "Failed to export localization catalog."
-translation = "ローカライズカタログのエクスポートに失敗しました。"
+translation = "Esportazione del catalogo di localizzazione non riuscita."
 
 [AppTranslationRefreshed]
 english     = "Translation refreshed."
-translation = "翻訳を再読み込みしました。"
+translation = "Traduzione aggiornata."
 
 [AppTranslationRefreshFailed]
 english     = "Failed to refresh translation."
-translation = "翻訳の再読み込みに失敗しました。"
+translation = "Aggiornamento della traduzione non riuscito."
 
 [AppScriptCompileFailed]
 english     = "Script '{0}' failed to compile: {1}"
-translation = "スクリプト '{0}' のコンパイルに失敗しました: {1}"
+translation = "Compilazione dello script '{0}' non riuscita: {1}"
 
 # ── Modal shell: axis-import picker (UI/ModalManager.cpp) ─────────────────────
 # The generic modal shell's own chrome. Only the combined axis-import picker carries hardcoded text;
@@ -2963,15 +2963,15 @@ translation = "スクリプト '{0}' のコンパイルに失敗しました: {1
 
 [ModalDuplicateAxis]
 english     = "Each axis can be used only once — two rows point at the same axis."
-translation = "各軸は一度だけ使用できます — 2 つの行が同じ軸を指しています。"
+translation = "Ogni asse può essere usato una sola volta — due righe puntano allo stesso asse."
 
 [ModalImport]
 english     = "Import"
-translation = "インポート"
+translation = "Importa"
 
 [ModalCancel]
 english     = "Cancel"
-translation = "キャンセル"
+translation = "Annulla"
 
 # ── Title bar: command palette (UI/TitleBar.cpp) ─────────────────────────────
 # The custom title bar's own chrome: the palette's query hint + empty-state. The centered box shows
@@ -2981,11 +2981,11 @@ translation = "キャンセル"
 
 [TbTypeCommand]
 english     = "Type a command..."
-translation = "コマンドを入力..."
+translation = "Digita un comando..."
 
 [TbNoMatch]
 english     = "No matching commands"
-translation = "一致するコマンドがありません"
+translation = "Nessun comando corrispondente"
 
 # ── Footer bar: notification center + status (UI/FooterBar.cpp) ───────────────
 # The bell popup chrome, the app-status tooltips, the background-evaluation status line, and the
@@ -2996,111 +2996,111 @@ translation = "一致するコマンドがありません"
 
 [FtNotifications]
 english     = "Notifications"
-translation = "通知"
+translation = "Notifiche"
 
 [FtRunningTasks]
 english     = "Running tasks"
-translation = "実行中のタスク"
+translation = "Attività in esecuzione"
 
 [FtClearAll]
 english     = "Clear all"
-translation = "すべてクリア"
+translation = "Cancella tutto"
 
 [FtNoNotifications]
 english     = "No notifications"
-translation = "通知はありません"
+translation = "Nessuna notifica"
 
 [FtIdleTip]
 english     = "Idle — UI throttled to save power"
-translation = "アイドル — 省電力のため UI を抑制中"
+translation = "Inattivo — interfaccia in modalità risparmio energetico"
 
 [FtActiveTip]
 english     = "Active — UI running at full rate"
-translation = "アクティブ — UI はフルレートで動作中"
+translation = "Attivo — interfaccia in esecuzione alla velocità massima"
 
 [FtEvaluating]
 english     = "Evaluating {0}"
-translation = "評価中: {0}"
+translation = "Elaborazione {0}"
 
 [FtEvaluatingMore]
 english     = "Evaluating {0} (+{1})"
-translation = "評価中: {0} (+{1})"
+translation = "Elaborazione {0} (+{1})"
 
 [FtAxisPoints]
 english     = "{0} · {1} pts"
-translation = "{0} · {1} 点"
+translation = "{0} · {1} pt"
 
 [FtSelection]
 english     = "{0} sel"
-translation = "{0} 選択"
+translation = "{0} sel"
 
 [FtSelectionSpan]
 english     = "{0} sel · {1}"
-translation = "{0} 選択 · {1}"
+translation = "{0} sel · {1}"
 
 [FtView]
 english     = "Visible window"
-translation = "表示範囲"
+translation = "Finestra visibile"
 
 [FtSourceOptimizedTip]
 english     = "Playing the optimized (all-keyframe) copy — frame stepping and seeking are fast."
-translation = "最適化された（全キーフレーム）コピーを再生中 — フレーム送りとシークが高速です。"
+translation = "Riproduzione della copia ottimizzata (tutti i fotogrammi chiave) — lo scorrimento fotogramma per fotogramma e la ricerca sono veloci."
 
 [FtSourceOriginalTip]
 english     = "Playing the original video. Optimize it (Project ▸ Media) for faster stepping and seeking."
-translation = "オリジナル動画を再生中。フレーム送りとシークを高速化するには最適化してください（プロジェクト ▸ メディア）。"
+translation = "Riproduzione del video originale. Ottimizzalo (Progetto ▸ Media) per uno scorrimento e una ricerca più veloci."
 
 [FtSourceOriginalClickTip]
 english     = "Playing the original video — click to optimize it for faster stepping and seeking."
-translation = "オリジナル動画を再生中 — クリックするとフレーム送りとシークを高速化するために最適化できます。"
+translation = "Riproduzione del video originale — clicca per ottimizzarlo e velocizzare lo scorrimento e la ricerca."
 
 [FtManagedHeapTip]
 english     = "Managed (.NET) heap, incl. uncollected garbage — a climbing value is normal, not a leak."
-translation = "マネージド（.NET）ヒープ（未回収のガベージを含む）— 値が増加するのは正常で、リークではありません。"
+translation = "Heap gestito (.NET), inclusa la memoria non ancora raccolta — un valore crescente è normale, non indica una perdita."
 
 [FtWorkersTip]
 english     = "Background evaluation workers currently running."
-translation = "現在実行中のバックグラウンド評価ワーカー。"
+translation = "Worker di elaborazione in background attualmente in esecuzione."
 
 [FtWorkerStuckTip]
 english     = "A worker has been running for over a minute — a processing node may be stuck in an endless loop. If this persists, disable the offending node or restart the app."
-translation = "ワーカーが1分以上実行されています — 処理ノードが無限ループに陥っている可能性があります。続く場合は、問題のノードを無効にするかアプリを再起動してください。"
+translation = "Un worker è in esecuzione da oltre un minuto — un nodo di elaborazione potrebbe essere bloccato in un ciclo infinito. Se il problema persiste, disabilita il nodo problematico o riavvia l'applicazione."
 
 [FtEditMode]
 english     = "Edit mode"
-translation = "編集モード"
+translation = "Modalità di modifica"
 
 [FtEditModeNative]
 english     = "Native"
-translation = "ネイティブ"
+translation = "Nativa"
 
 [FtStep]
 english     = "Step"
-translation = "ステップ"
+translation = "Passo"
 
 [FtStepNative]
 english     = "Native"
-translation = "ネイティブ"
+translation = "Nativa"
 
 [FtSelect]
 english     = "Select"
-translation = "選択"
+translation = "Seleziona"
 
 [FtSelectNative]
 english     = "Native"
-translation = "ネイティブ"
+translation = "Nativa"
 
 [FtToolOptions]
 english     = "Tool options"
-translation = "ツールオプション"
+translation = "Opzioni strumento"
 
 [ToolOptionsTitle]
 english     = "Tool Options"
-translation = "ツールオプション"
+translation = "Opzioni strumento"
 
 [ToolOptionsEmpty]
 english     = "The active tools have no options."
-translation = "アクティブなツールにはオプションがありません。"
+translation = "Gli strumenti attivi non hanno opzioni."
 
 # ── Statistics window (UI/ScriptStatistics.cpp) ──────────────────────────────
 # Playhead-relative metrics + action counts. Labels are laid out in a 2-column table (no hand-padded
@@ -3110,79 +3110,79 @@ translation = "アクティブなツールにはオプションがありませ�
 
 [LogTitle]
 english     = "Log"
-translation = "ログ"
+translation = "Log"
 
 [LogClear]
 english     = "Clear"
-translation = "クリア"
+translation = "Cancella"
 
 [LogCopy]
 english     = "Copy"
-translation = "コピー"
+translation = "Copia"
 
 [LogAutoScroll]
 english     = "Auto-scroll"
-translation = "自動スクロール"
+translation = "Scorrimento automatico"
 
 [LogFilter]
 english     = "Filter"
-translation = "フィルター"
+translation = "Filtro"
 
 [LogLevelAll]
 english     = "All"
-translation = "すべて"
+translation = "Tutti"
 
 [LogLevelInfo]
 english     = "Info+"
-translation = "情報以上"
+translation = "Info+"
 
 [LogLevelWarn]
 english     = "Warnings+"
-translation = "警告以上"
+translation = "Avvisi+"
 
 [LogLevelError]
 english     = "Errors+"
-translation = "エラー以上"
+translation = "Errori+"
 
 [LogEmpty]
 english     = "No log messages."
-translation = "ログメッセージはありません。"
+translation = "Nessun messaggio nel log."
 
 [StatTitle]
 english     = "Statistics"
-translation = "統計"
+translation = "Statistiche"
 
 [StatNoAxis]
 english     = "No axis selected."
-translation = "軸が選択されていません。"
+translation = "Nessun asse selezionato."
 
 [StatNoActions]
 english     = "No actions."
-translation = "アクションがありません。"
+translation = "Nessuna azione."
 
 [StatInterval]
 english     = "Interval:"
-translation = "間隔:"
+translation = "Intervallo:"
 
 [StatSpeed]
 english     = "Speed:"
-translation = "速度:"
+translation = "Velocità:"
 
 [StatDuration]
 english     = "Duration:"
-translation = "長さ:"
+translation = "Durata:"
 
 [StatDelta]
 english     = "Delta:"
-translation = "デルタ:"
+translation = "Delta:"
 
 [StatActionsAxis]
 english     = "Actions (this axis):"
-translation = "アクション (この軸):"
+translation = "Azioni (questo asse):"
 
 [StatActionsAll]
 english     = "Actions (all axes):"
-translation = "アクション (全軸):"
+translation = "Azioni (tutti gli assi):"
 
 [StatMs]
 english     = "{0} ms"
@@ -3190,7 +3190,7 @@ translation = "{0} ms"
 
 [StatUnitsPerSec]
 english     = "{0} units/s"
-translation = "{0} ユニット/秒"
+translation = "{0} unità/s"
 
 # ── Modal shell: shared single-OK button (UI/Modals.h) ───────────────────────
 
@@ -3202,17 +3202,17 @@ translation = "OK"
 
 [BandDragResize]
 english     = "Drag to resize"
-translation = "ドラッグでサイズ変更"
+translation = "Trascina per ridimensionare"
 
 [BandDragMove]
 english     = "Drag to move"
-translation = "ドラッグで移動"
+translation = "Trascina per spostare"
 
 # ── Processing panel: discretize-node option (UI/ProcessingPanel.cpp) ─────────
 
 [ProcKeepActionTimes]
 english     = "Keep the input's own action times so peaks aren't lost to grid aliasing"
-translation = "入力自身のアクション時刻を保持し、グリッドのエイリアシングでピークが失われないようにします"
+translation = "Mantieni i tempi delle azioni originali per non perdere i picchi per via dell'aliasing della griglia"
 
 # ─────────────────────────────────────────────────────────────────────────────────────────────
 # Project manager: file dialogs, modals, notifications (Services/ProjectManager.cpp)
@@ -3223,235 +3223,235 @@ translation = "入力自身のアクション時刻を保持し、グリッド�
 
 [PmDlgOpenProject]
 english     = "Open or New Project"
-translation = "プロジェクトを開く / 新規作成"
+translation = "Apri o Nuovo Progetto"
 
 [PmDlgSaveProject]
 english     = "Save Project"
-translation = "プロジェクトを保存"
+translation = "Salva Progetto"
 
 [PmDlgImportFunscript]
 english     = "Import Funscript"
-translation = "Funscript をインポート"
+translation = "Importa Funscript"
 
 [PmDlgExportFolder]
 english     = "Export Funscript 1.0 — Choose Output Folder"
-translation = "Funscript 1.0 をエクスポート — 出力フォルダーを選択"
+translation = "Esporta Funscript 1.0 — Scegli cartella di output"
 
 [PmDlgExport20]
 english     = "Export Funscript 2.0"
-translation = "Funscript 2.0 をエクスポート"
+translation = "Esporta Funscript 2.0"
 
 [PmDlgExport11]
 english     = "Export Funscript 1.1"
-translation = "Funscript 1.1 をエクスポート"
+translation = "Esporta Funscript 1.1"
 
 [PmDlgRelocateMedia]
 english     = "Relocate Media"
-translation = "メディアの場所を変更"
+translation = "Individua media"
 
 [PmDlgSaveGraph]
 english     = "Save Graph"
-translation = "グラフを保存"
+translation = "Salva grafico"
 
 [PmDlgLoadGraph]
 english     = "Load Graph"
-translation = "グラフを読み込み"
+translation = "Carica grafico"
 
 [PmFilterProjectsMedia]
 english     = "Projects, scripts & media"
-translation = "プロジェクト・スクリプト・メディア"
+translation = "Progetti, script e media"
 
 [PmFilterProject]
 english     = "OFS Project files"
-translation = "OFS プロジェクトファイル"
+translation = "File di progetto OFS"
 
 [PmFilterFunscript]
 english     = "Funscript files"
-translation = "Funscript ファイル"
+translation = "File Funscript"
 
 [PmFilterMedia]
 english     = "Media files"
-translation = "メディアファイル"
+translation = "File media"
 
 [PmFilterGraph]
 english     = "Graph files"
-translation = "グラフファイル"
+translation = "File grafico"
 
 [PmUnsavedTitle]
 english     = "Unsaved Changes"
-translation = "未保存の変更"
+translation = "Modifiche non salvate"
 
 [PmUnsavedBody]
 english     = "The current project has unsaved changes. Do you want to save them?"
-translation = "現在のプロジェクトに未保存の変更があります。保存しますか？"
+translation = "Il progetto corrente contiene modifiche non salvate. Vuoi salvarle?"
 
 [PmBtnSave]
 english     = "Save"
-translation = "保存"
+translation = "Salva"
 
 [PmBtnDontSave]
 english     = "Don't Save"
-translation = "保存しない"
+translation = "Non salvare"
 
 [PmBtnCancel]
 english     = "Cancel"
-translation = "キャンセル"
+translation = "Annulla"
 
 [PmNewProjectTitle]
 english     = "New Project"
-translation = "新規プロジェクト"
+translation = "Nuovo Progetto"
 
 [PmNewProjectBody]
 english     = "No file selected. Create an empty project?\nYou can load a video later via Project Configuration."
-translation = "ファイルが選択されていません。空のプロジェクトを作成しますか？\n動画は後からプロジェクト設定で読み込めます。"
+translation = "Nessun file selezionato. Creare un progetto vuoto?\nPuoi caricare un video in seguito tramite Configurazione progetto."
 
 [PmBtnYes]
 english     = "Yes"
-translation = "はい"
+translation = "Sì"
 
 [PmBtnNo]
 english     = "No"
-translation = "いいえ"
+translation = "No"
 
 [PmConfirmImportTitle]
 english     = "Set Up Funscripts"
-translation = "Funscript の設定"
+translation = "Configura Funscript"
 
 [PmConfirmImportPrompt]
 english     = "These funscripts will be added to your new project. Choose where each one goes — add or remove files as needed. Each axis can be used once."
-translation = "これらの funscript が新しいプロジェクトに追加されます。それぞれの割り当て先を選択してください（必要に応じてファイルを追加・削除できます）。各軸は一度だけ使用できます。"
+translation = "Questi funscript verranno aggiunti al nuovo progetto. Scegli dove collocare ciascuno — aggiungi o rimuovi file secondo necessità. Ogni asse può essere usato una sola volta."
 
 [PmImportPickTitle]
 english     = "Import Funscripts"
-translation = "Funscript をインポート"
+translation = "Importa Funscript"
 
 [PmImportPickPrompt]
 english     = "Choose where each funscript goes. You can add or remove files; each axis can be used once. Importing onto an axis that already has data replaces it."
-translation = "各 funscript の割り当て先を選択してください。ファイルの追加・削除が可能です。各軸は一度だけ使用できます。データがある軸にインポートすると置き換えられます。"
+translation = "Scegli dove collocare ciascun funscript. Puoi aggiungere o rimuovere file; ogni asse può essere usato una sola volta. Importare su un asse che contiene già dati li sostituisce."
 
 [PmImportAddFile]
 english     = "Add File"
-translation = "ファイルを追加"
+translation = "Aggiungi file"
 
 [PmImportRemoveRow]
 english     = "Remove"
-translation = "削除"
+translation = "Rimuovi"
 
 [PmMediaNotFoundTitle]
 english     = "Media Not Found"
-translation = "メディアが見つかりません"
+translation = "Media non trovato"
 
 [PmMediaNotFoundBody]
 english     = "Could not find media file:\n{0}\n\nWould you like to relocate it?"
-translation = "メディアファイルが見つかりませんでした：\n{0}\n\n場所を変更しますか？"
+translation = "Impossibile trovare il file media:\n{0}\n\nVuoi individuarlo?"
 
 [PmBtnRelocate]
 english     = "Relocate"
-translation = "場所を変更"
+translation = "Individua"
 
 [PmBtnSkip]
 english     = "Skip"
-translation = "スキップ"
+translation = "Salta"
 
 [PmErrorTitle]
 english     = "Error"
-translation = "エラー"
+translation = "Errore"
 
 [PmErrLoadFailed]
 english     = "Failed to load project file."
-translation = "プロジェクトファイルの読み込みに失敗しました。"
+translation = "Caricamento del file di progetto non riuscito."
 
 [PmErrSaveFailed]
 english     = "Failed to save project file."
-translation = "プロジェクトファイルの保存に失敗しました。"
+translation = "Salvataggio del file di progetto non riuscito."
 
 [PmErrSaveGraphFailed]
 english     = "Failed to save graph file."
-translation = "グラフファイルの保存に失敗しました。"
+translation = "Salvataggio del file grafico non riuscito."
 
 [PmErrLoadGraph]
 english     = "Could not load graph.\n{0}"
-translation = "グラフを読み込めませんでした。\n{0}"
+translation = "Impossibile caricare il grafico.\n{0}"
 
 [PmErrGraphNoAxes]
 english     = "Graph file has no input/output axes."
-translation = "グラフファイルに入力／出力軸がありません。"
+translation = "Il file grafico non contiene assi di ingresso/uscita."
 
 [PmErrDuplicateTarget]
 english     = "Two source axes map to the same target axis."
-translation = "2 つのソース軸が同じ対象軸に割り当てられています。"
+translation = "Due assi sorgente mappano allo stesso asse destinazione."
 
 [PmErrForkRead]
 english     = "Could not read the source script to fork."
-translation = "フォーク元のスクリプトを読み込めませんでした。"
+translation = "Impossibile leggere lo script sorgente per il fork."
 
 [PmErrScriptNameExists]
 english     = "A different script with that name already exists. Choose another name."
-translation = "その名前の別のスクリプトが既に存在します。別の名前を選んでください。"
+translation = "Esiste già uno script diverso con quel nome. Scegline un altro."
 
 [PmErrWriteScript]
 english     = "Could not write the script file."
-translation = "スクリプトファイルを書き込めませんでした。"
+translation = "Impossibile scrivere il file script."
 
 [PmMissingDepsTitle]
 english     = "Missing dependencies"
-translation = "依存関係の不足"
+translation = "Dipendenze mancanti"
 
 [PmMissingDepsHeader]
 english     = "Loaded, but this graph needs effects/plugins that are not installed:\n"
-translation = "読み込みましたが、このグラフには未インストールのエフェクト／プラグインが必要です：\n"
+translation = "Caricato, ma questo grafico richiede effetti/plugin non installati:\n"
 
 [PmMissingDepsFooter]
 english     = "\n\nThose nodes will be inactive."
-translation = "\n\nそれらのノードは無効になります。"
+translation = "\n\nQuei nodi saranno inattivi."
 
 [PmProjectSaved]
 english     = "Project saved."
-translation = "プロジェクトを保存しました。"
+translation = "Progetto salvato."
 
 [PmNoRoomRegion]
 english     = "No room for a region here — the timeline is full at this point."
-translation = "ここにはリージョンを作成する余地がありません — この位置のタイムラインは満杯です。"
+translation = "Nessuno spazio per una regione qui — la timeline è piena in questo punto."
 
 [PmImportReadFailed]
 english     = "Import failed: couldn't read {0}"
-translation = "インポート失敗：{0} を読み込めませんでした"
+translation = "Importazione non riuscita: impossibile leggere {0}"
 
 [PmImportNoActions]
 english     = "Import failed: {0} contains no actions."
-translation = "インポート失敗：{0} にアクションがありません。"
+translation = "Importazione non riuscita: {0} non contiene azioni."
 
 [PmImportOverwriteTitle]
 english     = "Overwrite Existing Scripts?"
-translation = "既存のスクリプトを上書きしますか？"
+translation = "Sovrascrivere gli script esistenti?"
 
 [PmImportOverwriteBody]
 english     = "These axes already contain actions that will be replaced: {0}. This can be undone."
-translation = "次の軸には既にアクションがあり、置き換えられます：{0}。元に戻すことができます。"
+translation = "Questi assi contengono già azioni che verranno sostituite: {0}. L'operazione può essere annullata."
 
 [PmImportDropped]
 english     = "Import incomplete: {0} axis(es) dropped — no free scratch axis (S0–S9 all in use)."
-translation = "インポート未完了：{0} 軸を破棄しました — 空きスクラッチ軸がありません（S0–S9 はすべて使用中）。"
+translation = "Importazione incompleta: {0} asse/i rimosso/i — nessun asse scratch libero (S0–S9 tutti in uso)."
 
 [PmImported]
 english     = "Imported {0} axis(es)."
-translation = "{0} 軸をインポートしました。"
+translation = "Importato/i {0} asse/i."
 
 [PmExportPartial]
 english     = "Exported {0} file(s), {1} failed."
-translation = "{0} 個のファイルをエクスポートし、{1} 個が失敗しました。"
+translation = "Esportati {0} file, {1} non riusciti."
 
 [PmExportDone]
 english     = "Exported {0} funscript file(s)."
-translation = "{0} 個の funscript ファイルをエクスポートしました。"
+translation = "Esportati {0} file funscript."
 
 [PmExportedOne]
 english     = "Exported {0}"
-translation = "{0} をエクスポートしました"
+translation = "Esportato {0}"
 
 [PmExportFailedOne]
 english     = "Export failed: {0}"
-translation = "エクスポート失敗：{0}"
+translation = "Esportazione non riuscita: {0}"
 
 # ─────────────────────────────────────────────────────────────────────────────────────────────
 # About window (src/UI/AboutWindow.cpp)
@@ -3464,72 +3464,72 @@ translation = "エクスポート失敗：{0}"
 
 [AboutTitle]
 english     = "About ofs-ng"
-translation = "ofs-ng について"
+translation = "Informazioni su ofs-ng"
 
 [AboutBuildInfo]
 english     = "Build Information"
-translation = "ビルド情報"
+translation = "Informazioni sulla build"
 
 [AboutUpdates]
 english     = "Updates"
-translation = "更新"
+translation = "Aggiornamenti"
 
 [AboutCheckNow]
 english     = "Check Now"
-translation = "今すぐ確認"
+translation = "Verifica ora"
 
 [AboutChecking]
 english     = "Checking for updates…"
-translation = "更新を確認しています…"
+translation = "Ricerca aggiornamenti in corso…"
 
 [AboutUpToDate]
 english     = "ofs-ng is up to date."
-translation = "ofs-ng は最新です。"
+translation = "ofs-ng è aggiornato."
 
 [AboutUpdateAvailable]
 english     = "Version {0} is available."
-translation = "バージョン {0} が利用可能です。"
+translation = "La versione {0} è disponibile."
 
 [AboutUpdateFailed]
 english     = "Could not check for updates."
-translation = "更新を確認できませんでした。"
+translation = "Impossibile verificare la presenza di aggiornamenti."
 
 [AboutOpenRelease]
 english     = "Open Release Page"
-translation = "リリースページを開く"
+translation = "Apri pagina della versione"
 
 [AboutCommit]
 english     = "Commit"
-translation = "コミット"
+translation = "Commit"
 
 [AboutBuilt]
 english     = "Built"
-translation = "ビルド日時"
+translation = "Compilato"
 
 [AboutPlatform]
 english     = "Platform"
-translation = "プラットフォーム"
+translation = "Piattaforma"
 
 [AboutThirdParty]
 english     = "Third-Party Software"
-translation = "サードパーティソフトウェア"
+translation = "Software di terze parti"
 
 [AboutLicenseNote]
 english     = "ofs-ng is free software, licensed under the GNU General Public License v3. It includes the third-party software listed below — select an entry to read its full license."
-translation = "ofs-ng は GNU General Public License v3 のもとで提供される自由ソフトウェアです。以下のサードパーティソフトウェアを利用しています。項目を選択すると、そのライセンス全文を表示できます。"
+translation = "ofs-ng è software libero, distribuito con licenza GNU General Public License v3. Include i componenti di terze parti elencati di seguito — seleziona una voce per leggere la licenza completa."
 
 [AboutColComponent]
 english     = "Component"
-translation = "コンポーネント"
+translation = "Componente"
 
 [AboutColLicense]
 english     = "License"
-translation = "ライセンス"
+translation = "Licenza"
 
 [AboutSelectPrompt]
 english     = "Select a component to view its license."
-translation = "コンポーネントを選択するとライセンスが表示されます。"
+translation = "Seleziona un componente per visualizzarne la licenza."
 
 [AboutCopyLicense]
 english     = "Copy"
-translation = "コピー"
+translation = "Copia"

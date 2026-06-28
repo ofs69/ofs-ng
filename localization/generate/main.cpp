@@ -80,8 +80,9 @@ std::uint64_t parsePlaceholders(const std::string &key, const std::string &text,
             ++j;
         }
         if (digits.empty() || j >= text.size() || text[j] != '}')
-            fail("key '" + key + "': placeholders must use explicit indices like {0}, {1} (got bare or malformed '{' in \"" +
-                 text + "\")");
+            fail("key '" + key +
+                 "': placeholders must use explicit indices like {0}, {1} (got bare or malformed '{' in \"" + text +
+                 "\")");
         unsigned long idx = std::stoul(digits);
         if (idx >= 64)
             fail("key '" + key + "': placeholder index {" + digits + "} exceeds the supported maximum (63)");
@@ -134,12 +135,24 @@ std::string cppEscape(const std::string &s) {
     out.reserve(s.size() + 8);
     for (char c : s) {
         switch (c) {
-        case '"': out += "\\\""; break;
-        case '\\': out += "\\\\"; break;
-        case '\n': out += "\\n"; break;
-        case '\r': out += "\\r"; break;
-        case '\t': out += "\\t"; break;
-        default: out += c; break;
+        case '"':
+            out += "\\\"";
+            break;
+        case '\\':
+            out += "\\\\";
+            break;
+        case '\n':
+            out += "\\n";
+            break;
+        case '\r':
+            out += "\\r";
+            break;
+        case '\t':
+            out += "\\t";
+            break;
+        default:
+            out += c;
+            break;
         }
     }
     return out;
@@ -211,14 +224,19 @@ std::vector<Entry> loadSource(const std::string &inPath) {
 
 // Validate every shipped translation file against the source catalog. A shipped language MUST be
 // complete and consistent: each source key present with a non-empty translation whose {N} placeholder
-// set matches the source, and no stray/unknown keys. Reports every problem (not just the first) and
-// returns non-zero so the build fails. This is the runtime acceptance rule (lenientMask) hoisted to
-// build time — anything that would silently fall back to English at runtime is caught here instead.
+// set matches the source, an `english` reference still equal to the source (no stale drift), and no
+// stray/unknown keys. Reports every problem (not just the first) and returns non-zero so the build
+// fails. This is the runtime acceptance rule (lenientMask) hoisted to build time — anything that would
+// silently fall back to English, or ship a translation made against an English string that has since
+// changed, is caught here instead.
 int runValidate(const std::string &srcPath, const std::vector<std::string> &langPaths) {
     const std::vector<Entry> entries = loadSource(srcPath);
-    std::map<std::string, std::uint64_t> sourceKeys; // key -> required placeholder mask
-    for (const auto &e : entries)
+    std::map<std::string, std::uint64_t> sourceKeys;  // key -> required placeholder mask
+    std::map<std::string, std::string> sourceEnglish; // key -> source English (drift sentinel)
+    for (const auto &e : entries) {
         sourceKeys.emplace(e.key, e.requiredMask);
+        sourceEnglish.emplace(e.key, e.english);
+    }
 
     bool ok = true;
     auto err = [&](const std::string &file, const std::string &msg) {
@@ -262,12 +280,25 @@ int runValidate(const std::string &srcPath, const std::vector<std::string> &lang
             }
             present.insert(k);
 
+            // Anti-drift: the `english` field is a stored copy of the source string the translation was
+            // made against. If it no longer matches, the source text changed and the translation is
+            // stale — it would ship silently outdated. Require the reference to be present and current;
+            // `tools/translations.py sync`/`apply` keep it in step.
+            auto eng = (*sub)["english"].value<std::string>();
+            if (!eng)
+                err(langPath, "key '" + k + "': missing 'english' reference (run tools/translations.py sync)");
+            else if (*eng != sourceEnglish[k])
+                err(langPath, "key '" + k +
+                                  "': stale — source English changed since this was translated; "
+                                  "re-translate (tools/translations.py todo/apply) to refresh it");
+
             auto tr = (*sub)["translation"].value<std::string>();
             if (!tr) {
                 err(langPath, "key '" + k + "': missing 'translation' field");
                 continue;
             }
-            if (std::all_of(tr->begin(), tr->end(), [](char c) { return std::isspace(static_cast<unsigned char>(c)); })) {
+            if (std::all_of(tr->begin(), tr->end(),
+                            [](char c) { return std::isspace(static_cast<unsigned char>(c)); })) {
                 err(langPath, "key '" + k + "': empty translation (incomplete)");
                 continue;
             }
@@ -284,8 +315,8 @@ int runValidate(const std::string &srcPath, const std::vector<std::string> &lang
         std::cerr << "localization_gen: translation validation failed\n";
         return 1;
     }
-    std::cout << "localization_gen: validated " << langPaths.size() << " translation file(s) against "
-              << entries.size() << " source keys\n";
+    std::cout << "localization_gen: validated " << langPaths.size() << " translation file(s) against " << entries.size()
+              << " source keys\n";
     return 0;
 }
 
@@ -414,7 +445,8 @@ void generate(const std::vector<Entry> &entries, const std::string &outHeader, c
         c << "    const auto *begin = std::begin(kSortedKeys);\n";
         c << "    const auto *end = std::end(kSortedKeys);\n";
         c << "    const auto *it =\n";
-        c << "        std::lower_bound(begin, end, key, [](const KeyEntry &e, std::string_view k) { return e.key < k; });\n";
+        c << "        std::lower_bound(begin, end, key, [](const KeyEntry &e, std::string_view k) { return e.key < k; "
+             "});\n";
         c << "    if (it != end && it->key == key)\n";
         c << "        return it->idx;\n";
         c << "    return 0;\n";

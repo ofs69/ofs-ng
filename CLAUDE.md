@@ -17,6 +17,7 @@ Deeper references live in `docs/`:
 | Doc | Covers |
 |-----|--------|
 | `docs/ARCHITECTURE.md` | The three-primitive design in prose, the interaction extension points, and the processing-node model |
+| `docs/TRANSLATING.md` | Maintaining translation catalogs and adding languages via `tools/translations.py` (the `sync`/`todo`/`apply`/`promote` workflow) |
 
 ## Build
 
@@ -168,10 +169,13 @@ mismatch, or unknown key fails the build).
   (`TextDisabled("%s", k.c_str())`). Use `key.icon(ICON)` to prefix an icon glyph, or
   `key.iconId(ICON, "slug")` when the icon+label widget also needs a stable `###id`.
 - **MUST** add the matching key (with `english` + `description`, and `placeholders` for formatted
-  strings) to `strings.toml` and to **every** `lang/*.toml`; an out-of-sync translation file fails the
-  build. AI-translated catalogs carry an `_[AI]` filename suffix (e.g. `lang/jp_[AI].toml`) so the
-  language picker shows machine translations as such. The full suite runs twice — built-in English and
-  `jp_[AI]` (ctest `ui-smoke` + `ui-smoke-loc`) — so a label that lost its `###id` is caught.
+  strings) to `strings.toml`, then run `python tools/translations.py sync` to propagate the change into
+  **every** language catalog — do not hand-edit the per-language files. An out-of-sync translation file
+  fails the build. Shipped catalogs live in `lang/*.toml` (strictly validated); in-progress ones live
+  in `localization/wip/` (not built) until `promote`d. AI-translated catalogs carry an `_[AI]` filename
+  suffix (e.g. `lang/jp_[AI].toml`) so the language picker shows machine translations as such. The full
+  suite runs twice — built-in English and `jp_[AI]` (ctest `ui-smoke` + `ui-smoke-loc`) — so a label
+  that lost its `###id` is caught. See `docs/TRANSLATING.md` for the full `sync`/`todo`/`apply` workflow.
 - Theme color/var **swatch** labels (the ~100 entries keyed off `kAxisColors` &c.) are intentionally
   left unlocalized — don't "fix" them ad hoc.
 
