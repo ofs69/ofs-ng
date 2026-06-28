@@ -93,7 +93,7 @@ struct AppSettings {
     // How many timestamped auto-backups to keep per project. Each interval the project is backed up to a
     // new dated file and the oldest are pruned down to this count, so a recent snapshot is never silently
     // overwritten — the rolling window spans the last `backupKeepCount` backed-up edits.
-    int backupKeepCount = 20;
+    int backupKeepCount = 10;
     // Check the GitHub releases feed for a newer version shortly after launch. A manual "Check for
     // updates" command is always available regardless; this only governs the silent startup check.
     bool checkForUpdatesOnStartup = true;

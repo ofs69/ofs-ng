@@ -1086,7 +1086,7 @@ void OfsApp::renderMainMenuBar() {
                 ImGui::EndMenu();
             }
             ImGui::BeginDisabled(!hasProject);
-            if (ImGui::MenuItem(Str::AppMenuExportFunscript.iconId(ICON_EXPORT, "menu_export")))
+            if (ImGui::MenuItem(Str::AppMenuExportFunscript.iconId(ICON_FILE_OUTPUT, "menu_export")))
                 openExportFunscriptModal();
             ImGui::EndDisabled();
             ImGui::Separator();

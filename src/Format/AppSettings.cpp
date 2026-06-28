@@ -183,7 +183,7 @@ void from_json(const nlohmann::json &j, AppSettings &s) {
     s.pauseOnSeek = j.value("pauseOnSeek", true);
     s.maxFps = j.value("maxFps", 0);
     s.autoBackupEnabled = j.value("autoBackupEnabled", true);
-    s.backupKeepCount = std::max(1, j.value("backupKeepCount", 20));
+    s.backupKeepCount = std::clamp(j.value("backupKeepCount", 10), 5, 20);
     s.checkForUpdatesOnStartup = j.value("checkForUpdatesOnStartup", true);
     s.undoMemoryLimitMb = j.value("undoMemoryLimitMb", 256);
     s.language = j.value("language", std::string{});

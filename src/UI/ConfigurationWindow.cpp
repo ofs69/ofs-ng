@@ -469,7 +469,7 @@ void ConfigurationWindow::renderApplicationTab(EventQueue &eq) {
         ImGui::BeginDisabled(!appSettings.autoBackupEnabled);
         int keepCount = appSettings.backupKeepCount;
         ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-        if (ImGui::SliderInt("##backup_keep_count", &keepCount, 1, 100))
+        if (ImGui::SliderInt("##backup_keep_count", &keepCount, 5, 20))
             eq.push(ModifyEvent<AppSettings>{[keepCount](AppSettings &s) { s.backupKeepCount = keepCount; }});
         ImGui::SameLine();
         ofs::ui::helpMarker(Str::PrefBackupKeepCountHint.c_str());
