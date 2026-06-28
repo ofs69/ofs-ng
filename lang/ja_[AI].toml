@@ -2600,24 +2600,24 @@ english     = "File"
 translation = "ファイル"
 
 [AppMenuOpenNew]
-english     = "Open or New Project..."
-translation = "プロジェクトを開く/新規作成..."
+english     = "Open or New..."
+translation = "開く / 新規..."
 
 [AppMenuRestoreBackup]
-english     = "Restore from Backup..."
-translation = "バックアップから復元..."
+english     = "Restore Backup..."
+translation = "バックアップ復元..."
 
 [AppMenuCloseProject]
-english     = "Close Project"
-translation = "プロジェクトを閉じる"
+english     = "Close"
+translation = "閉じる"
 
 [AppMenuSaveProject]
-english     = "Save Project"
-translation = "プロジェクトを保存"
+english     = "Save"
+translation = "保存"
 
 [AppMenuSaveProjectAs]
-english     = "Save Project As..."
-translation = "名前を付けてプロジェクトを保存..."
+english     = "Save As..."
+translation = "名前を付けて保存..."
 
 [AppMenuImport]
 english     = "Import"
@@ -2628,8 +2628,8 @@ english     = "Funscript..."
 translation = "Funscript..."
 
 [AppMenuExportFunscript]
-english     = "Export Funscript..."
-translation = "Funscript をエクスポート..."
+english     = "Export..."
+translation = "エクスポート..."
 
 [AppMenuExit]
 english     = "Exit"
@@ -2652,8 +2652,8 @@ english     = "View"
 translation = "表示"
 
 [AppMenuShortcuts]
-english     = "Keyboard Shortcuts"
-translation = "キーボードショートカット"
+english     = "Shortcuts"
+translation = "ショートカット"
 
 [AppMenuSimulator]
 english     = "Simulator"
@@ -2857,8 +2857,8 @@ english     = "Air2"
 translation = "エア2"
 
 [AppPluginsInstall]
-english     = "Install plugin from zip..."
-translation = "ZIP からプラグインをインストール..."
+english     = "Install from zip..."
+translation = "ZIP からインストール..."
 
 [AppPluginHotReload]
 english     = "Hot reload (developer)"

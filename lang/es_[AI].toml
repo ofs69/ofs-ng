@@ -2600,24 +2600,24 @@ english     = "File"
 translation = "Archivo"
 
 [AppMenuOpenNew]
-english     = "Open or New Project..."
-translation = "Abrir o nuevo proyecto..."
+english     = "Open or New..."
+translation = "Abrir o nuevo..."
 
 [AppMenuRestoreBackup]
-english     = "Restore from Backup..."
-translation = "Restaurar desde copia de seguridad..."
+english     = "Restore Backup..."
+translation = "Restaurar copia..."
 
 [AppMenuCloseProject]
-english     = "Close Project"
-translation = "Cerrar proyecto"
+english     = "Close"
+translation = "Cerrar"
 
 [AppMenuSaveProject]
-english     = "Save Project"
-translation = "Guardar proyecto"
+english     = "Save"
+translation = "Guardar"
 
 [AppMenuSaveProjectAs]
-english     = "Save Project As..."
-translation = "Guardar proyecto como..."
+english     = "Save As..."
+translation = "Guardar como..."
 
 [AppMenuImport]
 english     = "Import"
@@ -2628,8 +2628,8 @@ english     = "Funscript..."
 translation = "Funscript..."
 
 [AppMenuExportFunscript]
-english     = "Export Funscript..."
-translation = "Exportar Funscript..."
+english     = "Export..."
+translation = "Exportar..."
 
 [AppMenuExit]
 english     = "Exit"
@@ -2652,8 +2652,8 @@ english     = "View"
 translation = "Ver"
 
 [AppMenuShortcuts]
-english     = "Keyboard Shortcuts"
-translation = "Atajos de teclado"
+english     = "Shortcuts"
+translation = "Atajos"
 
 [AppMenuSimulator]
 english     = "Simulator"
@@ -2857,8 +2857,8 @@ english     = "Air2"
 translation = "Aire2"
 
 [AppPluginsInstall]
-english     = "Install plugin from zip..."
-translation = "Instalar complemento desde zip..."
+english     = "Install from zip..."
+translation = "Instalar desde ZIP..."
 
 [AppPluginHotReload]
 english     = "Hot reload (developer)"

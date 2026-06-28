@@ -136,7 +136,7 @@ bool VideoControlsWindow::drawTimelineWidget(const ScriptProject &project, Event
         ImGui::SetNextItemWidth(ImGui::GetFontSize() * 5.f);
         ImGui::DragInt(Str::VpcHeatmapHeight.id("vpc_export_height"), &exportHeight, 1.f, 32, 512);
         ImGui::Checkbox(Str::VpcHeatmapFade.id("vpc_export_fade"), &exportFade);
-        if (ImGui::MenuItem(Str::VpcExportPng.id("vpc_export_png"))) {
+        if (ImGui::MenuItem(Str::VpcExportPng.iconId(ICON_EXPORT, "vpc_export_png"))) {
             exportHeight = std::clamp(exportHeight, 32, 512);
             // Snapshot the export params + a heatmap handle into the callback; it runs on resume
             // (main thread, so renderToBitmap's GL is safe) and is decoupled from this window's life.

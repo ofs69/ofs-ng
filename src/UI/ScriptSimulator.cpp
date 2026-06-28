@@ -743,9 +743,9 @@ void ScriptSimulator::render3D(const ScriptProject &project, EventQueue &eq, dou
                 eq.push(ModifyEvent<SimulatorState>{[idx, on](SimulatorState &s) { s.labels3dMask.set(idx, !on); }});
         }
         ImGui::Separator();
-        if (ImGui::MenuItem(Str::SimShowAll.id("sim_show_all")))
+        if (ImGui::MenuItem(Str::SimShowAll.iconId(ICON_EYE, "sim_show_all")))
             eq.push(ModifyEvent<SimulatorState>{[](SimulatorState &s) { s.labels3dMask.set(); }});
-        if (ImGui::MenuItem(Str::SimHideAll.id("sim_hide_all")))
+        if (ImGui::MenuItem(Str::SimHideAll.iconId(ICON_EYE_OFF, "sim_hide_all")))
             eq.push(ModifyEvent<SimulatorState>{[](SimulatorState &s) { s.labels3dMask.reset(); }});
         ImGui::SeparatorText(Str::SimRotationUnits);
         if (ImGui::MenuItem(Str::SimDegrees.id("sim_degrees"), nullptr, state.labels3dInDegrees))
@@ -757,7 +757,8 @@ void ScriptSimulator::render3D(const ScriptProject &project, EventQueue &eq, dou
                             nullptr, state.lockedPosition))
             eq.push(ModifyEvent<SimulatorState>{[](SimulatorState &s) { s.lockedPosition = !s.lockedPosition; }});
         // Disabled while locked: a locked overlay ignores the recenter (matches the gesture/command path).
-        if (ImGui::MenuItem(Str::CmdResetOverlay.id("sim_reset_pos_3d"), nullptr, false, !state.lockedPosition))
+        if (ImGui::MenuItem(Str::CmdResetOverlay.iconId(ICON_RESET, "sim_reset_pos_3d"), nullptr, false,
+                            !state.lockedPosition))
             eq.push(ResetOverlayAnchorEvent{});
         if (ImGui::MenuItem(Str::Sim3D.id("sim_3d_menu_3d"), nullptr, state.use3dSimulator))
             eq.push(ModifyEvent<SimulatorState>{[](SimulatorState &s) { s.use3dSimulator = !s.use3dSimulator; }});
@@ -1260,7 +1261,8 @@ bool ScriptSimulator::renderOverlay(ImDrawList *dl, const ScriptProject &project
                                 nullptr, state.lockedPosition))
                 eq.push(ModifyEvent<SimulatorState>{[](SimulatorState &s) { s.lockedPosition = !s.lockedPosition; }});
             // Disabled while locked: a locked overlay ignores the recenter (matches the gesture/command path).
-            if (ImGui::MenuItem(Str::CmdResetOverlay.id("sim_reset_pos_2d"), nullptr, false, !state.lockedPosition))
+            if (ImGui::MenuItem(Str::CmdResetOverlay.iconId(ICON_RESET, "sim_reset_pos_2d"), nullptr, false,
+                                !state.lockedPosition))
                 eq.push(ResetOverlayAnchorEvent{});
             if (ImGui::MenuItem(Str::Sim3D.id("sim_3d_menu_2d"), nullptr, state.use3dSimulator))
                 eq.push(ModifyEvent<SimulatorState>{[](SimulatorState &s) { s.use3dSimulator = !s.use3dSimulator; }});

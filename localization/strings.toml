@@ -2746,23 +2746,23 @@ english     = "File"
 description = "Main menu bar — File menu."
 
 [AppMenuOpenNew]
-english     = "Open or New Project..."
+english     = "Open or New..."
 description = "File menu — open an existing project or start a new one (via the picker)."
 
 [AppMenuRestoreBackup]
-english     = "Restore from Backup..."
+english     = "Restore Backup..."
 description = "File menu — open the window that lists the current project's auto-backups for restoring."
 
 [AppMenuCloseProject]
-english     = "Close Project"
+english     = "Close"
 description = "File menu — close the current project and return to the welcome screen."
 
 [AppMenuSaveProject]
-english     = "Save Project"
+english     = "Save"
 description = "File menu — save the current project to its existing file."
 
 [AppMenuSaveProjectAs]
-english     = "Save Project As..."
+english     = "Save As..."
 description = "File menu — save the current project to a new file (picker)."
 
 [AppMenuImport]
@@ -2774,7 +2774,7 @@ english     = "Funscript..."
 description = "File-Import submenu — import a .funscript file."
 
 [AppMenuExportFunscript]
-english     = "Export Funscript..."
+english     = "Export..."
 description = "File menu — open the Export Funscript dialog."
 
 [AppMenuExit]
@@ -2798,7 +2798,7 @@ english     = "View"
 description = "Main menu bar — View menu."
 
 [AppMenuShortcuts]
-english     = "Keyboard Shortcuts"
+english     = "Shortcuts"
 description = "View menu — toggle the Keyboard Shortcuts window."
 
 [AppMenuSimulator]
@@ -3012,7 +3012,7 @@ english     = "Air2"
 description = "Axis descriptor for A1 — second air/suction channel. Shown as \"A1 (Air2)\"."
 
 [AppPluginsInstall]
-english     = "Install plugin from zip..."
+english     = "Install from zip..."
 description = "Plugins menu — install a plugin from a .zip archive (picker)."
 
 [AppPluginHotReload]

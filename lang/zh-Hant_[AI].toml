@@ -2600,24 +2600,24 @@ english     = "File"
 translation = "檔案"
 
 [AppMenuOpenNew]
-english     = "Open or New Project..."
-translation = "開啟或新增專案..."
+english     = "Open or New..."
+translation = "開啟或新增..."
 
 [AppMenuRestoreBackup]
-english     = "Restore from Backup..."
-translation = "從備份還原..."
+english     = "Restore Backup..."
+translation = "還原備份..."
 
 [AppMenuCloseProject]
-english     = "Close Project"
-translation = "關閉專案"
+english     = "Close"
+translation = "關閉"
 
 [AppMenuSaveProject]
-english     = "Save Project"
-translation = "儲存專案"
+english     = "Save"
+translation = "儲存"
 
 [AppMenuSaveProjectAs]
-english     = "Save Project As..."
-translation = "專案另存新檔..."
+english     = "Save As..."
+translation = "另存為..."
 
 [AppMenuImport]
 english     = "Import"
@@ -2628,8 +2628,8 @@ english     = "Funscript..."
 translation = "Funscript..."
 
 [AppMenuExportFunscript]
-english     = "Export Funscript..."
-translation = "匯出 Funscript..."
+english     = "Export..."
+translation = "匯出..."
 
 [AppMenuExit]
 english     = "Exit"
@@ -2652,8 +2652,8 @@ english     = "View"
 translation = "檢視"
 
 [AppMenuShortcuts]
-english     = "Keyboard Shortcuts"
-translation = "鍵盤快速鍵"
+english     = "Shortcuts"
+translation = "快捷鍵"
 
 [AppMenuSimulator]
 english     = "Simulator"
@@ -2857,8 +2857,8 @@ english     = "Air2"
 translation = "氣壓2"
 
 [AppPluginsInstall]
-english     = "Install plugin from zip..."
-translation = "從 ZIP 安裝外掛程式..."
+english     = "Install from zip..."
+translation = "從 ZIP 安裝..."
 
 [AppPluginHotReload]
 english     = "Hot reload (developer)"

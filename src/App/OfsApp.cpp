@@ -1060,76 +1060,81 @@ void OfsApp::renderMainMenuBar() {
     const bool hasProject = projectManager && projectManager->hasActiveProject();
     if (ImGui::BeginMainMenuBar()) {
         if (ImGui::BeginMenu(Str::AppMenuFile.id("menu_file"))) {
-            if (ImGui::MenuItem(Str::AppMenuOpenNew.id("menu_open_new")))
+            if (ImGui::MenuItem(Str::AppMenuOpenNew.iconId(ICON_FOLDER_OPEN, "menu_open_new")))
                 eventQueue.push(ofs::OpenOrNewProjectRequestEvent{});
             ImGui::BeginDisabled(!hasProject);
-            if (ImGui::MenuItem(Str::AppMenuRestoreBackup.id("menu_restore_backup")))
+            if (ImGui::MenuItem(Str::AppMenuRestoreBackup.iconId(ICON_ARCHIVE_RESTORE, "menu_restore_backup")))
                 appState.showBackupRestoreWindow = true;
-            if (ImGui::MenuItem(Str::AppMenuCloseProject.id("menu_close_project")))
+            if (ImGui::MenuItem(Str::AppMenuCloseProject.iconId(ICON_X, "menu_close_project")))
                 eventQueue.push(ofs::CloseProjectRequestEvent{});
             ImGui::EndDisabled();
             // The recent-projects list lives on the welcome screen (shown whenever no project is open).
             ImGui::Separator();
             ImGui::BeginDisabled(!hasProject);
-            if (ImGui::MenuItem(Str::AppMenuSaveProject.id("menu_save_project")))
+            if (ImGui::MenuItem(Str::AppMenuSaveProject.iconId(ICON_SAVE, "menu_save_project")))
                 eventQueue.push(ofs::SaveProjectEvent{false});
-            if (ImGui::MenuItem(Str::AppMenuSaveProjectAs.id("menu_save_project_as")))
+            if (ImGui::MenuItem(Str::AppMenuSaveProjectAs.iconId(ICON_SAVE_ALL, "menu_save_project_as")))
                 eventQueue.push(ofs::SaveProjectEvent{true});
             ImGui::EndDisabled();
             ImGui::Separator();
-            if (ImGui::BeginMenu(Str::AppMenuImport.id("menu_import"), hasProject)) {
-                if (ImGui::MenuItem(Str::AppMenuImportFunscript.id("menu_import_funscript")))
+            if (ImGui::BeginMenu(Str::AppMenuImport.iconId(ICON_IMPORT, "menu_import"), hasProject)) {
+                if (ImGui::MenuItem(Str::AppMenuImportFunscript.iconId(ICON_FILE, "menu_import_funscript")))
                     eventQueue.push(ofs::ImportFunscriptRequestEvent{});
                 ImGui::EndMenu();
             }
             ImGui::BeginDisabled(!hasProject);
-            if (ImGui::MenuItem(Str::AppMenuExportFunscript.id("menu_export")))
+            if (ImGui::MenuItem(Str::AppMenuExportFunscript.iconId(ICON_EXPORT, "menu_export")))
                 openExportFunscriptModal();
             ImGui::EndDisabled();
             ImGui::Separator();
-            if (ImGui::MenuItem(Str::AppMenuExit.id("menu_exit")))
+            if (ImGui::MenuItem(Str::AppMenuExit.iconId(ICON_LOG_OUT, "menu_exit")))
                 eventQueue.push(ofs::RequestExitEvent{});
             ImGui::EndMenu();
         }
 
         if (ImGui::BeginMenu(Str::AppMenuEdit.id("menu_edit"))) {
-            if (ImGui::MenuItem(Str::AppMenuPreferences.id("menu_preferences")))
+            if (ImGui::MenuItem(Str::AppMenuPreferences.iconId(ICON_SETTINGS, "menu_preferences")))
                 appState.showConfigWindow = true;
             // Gate on hasProject, not filePath: a fresh untitled project (no file yet) still needs
             // Project Configuration to load its video — the New Project dialog points users here.
             ImGui::BeginDisabled(!hasProject);
-            if (ImGui::MenuItem(Str::AppMenuProject.id("menu_project_config")))
+            if (ImGui::MenuItem(Str::AppMenuProject.iconId(ICON_SLIDERS_HORIZONTAL, "menu_project_config")))
                 appState.showProjectConfigWindow = true;
             ImGui::EndDisabled();
             ImGui::EndMenu();
         }
 
         if (ImGui::BeginMenu(Str::AppMenuView.id("menu_view"))) {
-            ImGui::MenuItem(Str::AppMenuShortcuts.id("menu_shortcuts"), nullptr, &appState.showShortcutWindow);
-            if (ImGui::BeginMenu(Str::AppMenuSimulator.id("menu_view_simulator"))) {
+            ImGui::MenuItem(Str::AppMenuShortcuts.iconId(ICON_KEYBOARD, "menu_shortcuts"), nullptr,
+                            &appState.showShortcutWindow);
+            if (ImGui::BeginMenu(Str::AppMenuSimulator.iconId(ICON_AXIS_3D, "menu_view_simulator"))) {
                 if (ImGui::MenuItem(Str::AppMenuSimulatorShow.id("menu_view_simulator_show"), nullptr,
                                     &appSettings.showSimulator))
                     appSettingsDirty_ = true;
                 // Lock lives on the project's SimulatorState (mutated via event, like the overlay's
                 // own right-click menu), so this is just another entry point to the same toggle.
                 const bool simLocked = scriptProject.simulator.lockedPosition;
-                if (ImGui::MenuItem(Str::SimLocked.id("menu_view_simulator_lock"), nullptr, simLocked))
+                if (ImGui::MenuItem(
+                        Str::SimLocked.iconId(simLocked ? ICON_LOCK : ICON_LOCK_OPEN, "menu_view_simulator_lock"),
+                        nullptr, simLocked))
                     eventQueue.push(ofs::ModifyEvent<ofs::SimulatorState>{
                         [](ofs::SimulatorState &s) { s.lockedPosition = !s.lockedPosition; }});
                 ImGui::EndMenu();
             }
-            if (ImGui::MenuItem(Str::AppMenuStatistics.id("menu_view_statistics"), nullptr,
+            if (ImGui::MenuItem(Str::AppMenuStatistics.iconId(ICON_CHART_LINE, "menu_view_statistics"), nullptr,
                                 &appSettings.showStatistics))
                 appSettingsDirty_ = true;
-            if (ImGui::MenuItem(Str::AppMenuToolOptions.id("menu_view_tooloptions"), nullptr,
+            if (ImGui::MenuItem(Str::AppMenuToolOptions.iconId(ICON_SETTINGS_2, "menu_view_tooloptions"), nullptr,
                                 &appSettings.showToolOptions))
                 appSettingsDirty_ = true;
-            ImGui::MenuItem(Str::AppMenuLog.id("menu_view_log"), nullptr, &appState.showLogWindow);
+            ImGui::MenuItem(Str::AppMenuLog.iconId(ICON_SCROLL_TEXT, "menu_view_log"), nullptr,
+                            &appState.showLogWindow);
             ImGui::Separator();
             // Live checkmark reflects the actual window flag; dispatches directly (main-thread UI),
             // exactly as the title-bar minimize/maximize do. F11 hint is omitted because the binding
             // is user-rebindable — the real shortcut is shown in the command palette and bindings UI.
-            if (ImGui::MenuItem(Str::AppMenuFullscreen.id("menu_view_fullscreen"), nullptr, window->isFullscreen()))
+            if (ImGui::MenuItem(Str::AppMenuFullscreen.iconId(ICON_MAXIMIZE, "menu_view_fullscreen"), nullptr,
+                                window->isFullscreen()))
                 window->toggleFullscreen();
 #ifndef NDEBUG
             // Developer diagnostic — debug builds only, so it stays an English literal like the ImGui
@@ -1145,7 +1150,7 @@ void OfsApp::renderMainMenuBar() {
         renderPluginsMenu(hasProject);
 
         if (ImGui::BeginMenu(Str::AppMenuHelp.id("menu_help"))) {
-            if (ImGui::MenuItem(Str::AppMenuAbout.id("menu_help_about")))
+            if (ImGui::MenuItem(Str::AppMenuAbout.iconId(ICON_INFO, "menu_help_about")))
                 appState.showAboutWindow = true;
             ImGui::EndMenu();
         }
@@ -1228,10 +1233,10 @@ void OfsApp::renderLayoutMenu() {
 void OfsApp::renderAxesMenu(bool hasProject) {
     if (!ImGui::BeginMenu(Str::AppMenuAxes.id("menu_axes"), hasProject))
         return;
-    if (ImGui::MenuItem(Str::AppAxesMultiAxis.id("menu_multi_axis")) && projectManager)
+    if (ImGui::MenuItem(Str::AppAxesMultiAxis.iconId(ICON_EYE, "menu_multi_axis")) && projectManager)
         eventQueue.push(ofs::ShowMultiAxisEvent{});
     ImGui::SetItemTooltip("%s", Str::AppAxesMultiAxisTip.c_str());
-    if (ImGui::MenuItem(Str::AppAxesL0Only.id("menu_l0_only")) && projectManager)
+    if (ImGui::MenuItem(Str::AppAxesL0Only.iconId(ICON_EYE_OFF, "menu_l0_only")) && projectManager)
         eventQueue.push(ofs::ShowL0OnlyEvent{});
     ImGui::SetItemTooltip("%s", Str::AppAxesL0OnlyTip.c_str());
     ImGui::Separator();
@@ -1266,7 +1271,7 @@ void OfsApp::renderAxesMenu(bool hasProject) {
             // a standard axis and is hidden via "Show in Panel" instead.
             if (isScratch && axis.actions.empty()) {
                 ImGui::Separator();
-                if (ImGui::MenuItem(Str::AppAxesRemove.id("menu_axis_remove")))
+                if (ImGui::MenuItem(Str::AppAxesRemove.iconId(ICON_TRASH, "menu_axis_remove")))
                     eventQueue.push(ofs::RemoveAxisEvent{role});
             }
             ImGui::EndMenu();
@@ -1278,7 +1283,7 @@ void OfsApp::renderAxesMenu(bool hasProject) {
         if (scriptProject.axes[i].exists()) // a data-bearing scratch axis occupies a slot even if hidden
             ++scratchCount;
     ImGui::BeginDisabled(scratchCount >= ofs::kMaxScratchAxes);
-    if (ImGui::MenuItem(Str::AppAxesAddScratch.id("menu_add_scratch_axis")) && projectManager)
+    if (ImGui::MenuItem(Str::AppAxesAddScratch.iconId(ICON_PLUS, "menu_add_scratch_axis")) && projectManager)
         eventQueue.push(ofs::AddScratchAxisEvent{});
     ImGui::EndDisabled();
     if (scratchCount >= ofs::kMaxScratchAxes && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
@@ -1289,7 +1294,7 @@ void OfsApp::renderAxesMenu(bool hasProject) {
 void OfsApp::renderPluginsMenu(bool hasProject) {
     if (!ImGui::BeginMenu(Str::AppMenuPlugins.id("menu_plugins"), hasProject))
         return;
-    if (ImGui::MenuItem(Str::AppPluginsInstall.id("menu_install_plugin")))
+    if (ImGui::MenuItem(Str::AppPluginsInstall.iconId(ICON_IMPORT, "menu_install_plugin")))
         eventQueue.push(ofs::RequestInstallPluginEvent{});
     ImGui::Separator();
     if (!pluginManager || pluginManager->getPlugins().empty()) {
@@ -1327,7 +1332,7 @@ void OfsApp::renderPluginsMenu(bool hasProject) {
                                     plugin.enabled))
                     eventQueue.push(ofs::SetPluginHotReloadEvent{.name = plugin.name, .enabled = hotReload});
                 ImGui::SetItemTooltip("%s", Str::AppPluginHotReloadHint.c_str());
-                if (ImGui::MenuItem(Str::AppPluginUninstall.id("plugin_uninstall")))
+                if (ImGui::MenuItem(Str::AppPluginUninstall.iconId(ICON_TRASH, "plugin_uninstall")))
                     eventQueue.push(ofs::RequestUninstallPluginEvent{.name = plugin.name});
             }
             ImGui::EndMenu();

@@ -2600,24 +2600,24 @@ english     = "File"
 translation = "Файл"
 
 [AppMenuOpenNew]
-english     = "Open or New Project..."
-translation = "Открыть или новый проект..."
+english     = "Open or New..."
+translation = "Открыть или создать..."
 
 [AppMenuRestoreBackup]
-english     = "Restore from Backup..."
-translation = "Восстановить из резервной копии..."
+english     = "Restore Backup..."
+translation = "Восстановить копию..."
 
 [AppMenuCloseProject]
-english     = "Close Project"
-translation = "Закрыть проект"
+english     = "Close"
+translation = "Закрыть"
 
 [AppMenuSaveProject]
-english     = "Save Project"
-translation = "Сохранить проект"
+english     = "Save"
+translation = "Сохранить"
 
 [AppMenuSaveProjectAs]
-english     = "Save Project As..."
-translation = "Сохранить проект как..."
+english     = "Save As..."
+translation = "Сохранить как..."
 
 [AppMenuImport]
 english     = "Import"
@@ -2628,8 +2628,8 @@ english     = "Funscript..."
 translation = "Funscript..."
 
 [AppMenuExportFunscript]
-english     = "Export Funscript..."
-translation = "Экспорт Funscript..."
+english     = "Export..."
+translation = "Экспорт..."
 
 [AppMenuExit]
 english     = "Exit"
@@ -2652,7 +2652,7 @@ english     = "View"
 translation = "Вид"
 
 [AppMenuShortcuts]
-english     = "Keyboard Shortcuts"
+english     = "Shortcuts"
 translation = "Горячие клавиши"
 
 [AppMenuSimulator]
@@ -2857,8 +2857,8 @@ english     = "Air2"
 translation = "Воздух 2"
 
 [AppPluginsInstall]
-english     = "Install plugin from zip..."
-translation = "Установить плагин из ZIP..."
+english     = "Install from zip..."
+translation = "Установить из ZIP..."
 
 [AppPluginHotReload]
 english     = "Hot reload (developer)"

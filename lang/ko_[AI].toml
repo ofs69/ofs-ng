@@ -2600,24 +2600,24 @@ english     = "File"
 translation = "파일"
 
 [AppMenuOpenNew]
-english     = "Open or New Project..."
-translation = "프로젝트 열기 또는 새로 만들기..."
+english     = "Open or New..."
+translation = "열기/새로 만들기..."
 
 [AppMenuRestoreBackup]
-english     = "Restore from Backup..."
-translation = "백업에서 복원..."
+english     = "Restore Backup..."
+translation = "백업 복원..."
 
 [AppMenuCloseProject]
-english     = "Close Project"
-translation = "프로젝트 닫기"
+english     = "Close"
+translation = "닫기"
 
 [AppMenuSaveProject]
-english     = "Save Project"
-translation = "프로젝트 저장"
+english     = "Save"
+translation = "저장"
 
 [AppMenuSaveProjectAs]
-english     = "Save Project As..."
-translation = "프로젝트 다른 이름으로 저장..."
+english     = "Save As..."
+translation = "다른 이름으로 저장..."
 
 [AppMenuImport]
 english     = "Import"
@@ -2628,8 +2628,8 @@ english     = "Funscript..."
 translation = "Funscript..."
 
 [AppMenuExportFunscript]
-english     = "Export Funscript..."
-translation = "Funscript 내보내기..."
+english     = "Export..."
+translation = "내보내기..."
 
 [AppMenuExit]
 english     = "Exit"
@@ -2652,8 +2652,8 @@ english     = "View"
 translation = "보기"
 
 [AppMenuShortcuts]
-english     = "Keyboard Shortcuts"
-translation = "키보드 단축키"
+english     = "Shortcuts"
+translation = "단축키"
 
 [AppMenuSimulator]
 english     = "Simulator"
@@ -2857,8 +2857,8 @@ english     = "Air2"
 translation = "에어2"
 
 [AppPluginsInstall]
-english     = "Install plugin from zip..."
-translation = "zip에서 플러그인 설치..."
+english     = "Install from zip..."
+translation = "ZIP에서 설치..."
 
 [AppPluginHotReload]
 english     = "Hot reload (developer)"

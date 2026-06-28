@@ -372,7 +372,7 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
             eq.push(ModifyEvent<VideoPlayerState>{[](VideoPlayerState &s) { s.locked = !s.locked; }});
         ImGui::Separator();
         // Disabled while locked: a reset is ignored for a locked view (matches the apply-time guard).
-        if (ImGui::MenuItem(Str::CmdResetVideoView.id("vpw_reset_view"), nullptr, false, !state.locked))
+        if (ImGui::MenuItem(Str::CmdResetVideoView.iconId(ICON_RESET, "vpw_reset_view"), nullptr, false, !state.locked))
             eq.push(ResetVideoFramingEvent{});
         ImGui::EndPopup();
     }

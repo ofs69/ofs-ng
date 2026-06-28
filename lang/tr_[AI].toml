@@ -2600,24 +2600,24 @@ english     = "File"
 translation = "Dosya"
 
 [AppMenuOpenNew]
-english     = "Open or New Project..."
-translation = "Proje Aç veya Yeni Oluştur..."
+english     = "Open or New..."
+translation = "Aç veya yeni..."
 
 [AppMenuRestoreBackup]
-english     = "Restore from Backup..."
-translation = "Yedekten Geri Yükle..."
+english     = "Restore Backup..."
+translation = "Yedeği geri yükle..."
 
 [AppMenuCloseProject]
-english     = "Close Project"
-translation = "Projeyi Kapat"
+english     = "Close"
+translation = "Kapat"
 
 [AppMenuSaveProject]
-english     = "Save Project"
-translation = "Projeyi Kaydet"
+english     = "Save"
+translation = "Kaydet"
 
 [AppMenuSaveProjectAs]
-english     = "Save Project As..."
-translation = "Farklı Kaydet..."
+english     = "Save As..."
+translation = "Farklı kaydet..."
 
 [AppMenuImport]
 english     = "Import"
@@ -2628,8 +2628,8 @@ english     = "Funscript..."
 translation = "Funscript..."
 
 [AppMenuExportFunscript]
-english     = "Export Funscript..."
-translation = "Funscript Dışa Aktar..."
+english     = "Export..."
+translation = "Dışa aktar..."
 
 [AppMenuExit]
 english     = "Exit"
@@ -2652,8 +2652,8 @@ english     = "View"
 translation = "Görünüm"
 
 [AppMenuShortcuts]
-english     = "Keyboard Shortcuts"
-translation = "Klavye Kısayolları"
+english     = "Shortcuts"
+translation = "Kısayollar"
 
 [AppMenuSimulator]
 english     = "Simulator"
@@ -2857,8 +2857,8 @@ english     = "Air2"
 translation = "Hava2"
 
 [AppPluginsInstall]
-english     = "Install plugin from zip..."
-translation = "Zip'ten eklenti yükle..."
+english     = "Install from zip..."
+translation = "ZIP'ten yükle..."
 
 [AppPluginHotReload]
 english     = "Hot reload (developer)"
