@@ -27,8 +27,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
       - name: Install clang-format
-        run: sudo apt-get update && sudo apt-get install -y clang-format
+        # Pin the exact version via the pip wheel rather than apt's default: Ubuntu's stock
+        # clang-format trails LLVM by several releases and aligns trailing comments differently
+        # around multi-byte UTF-8 (em dash &c.), which silently disagreed with the local format
+        # target. Keep this in lockstep with the version contributors run.
+        run: pip install clang-format==22.1.5
       - name: Check formatting
         run: |
           mapfile -t files < <(find src -type f \( -name '*.cpp' -o -name '*.h' \) -not -name 'imgui_impl*')
@@ -46,8 +53,11 @@ jobs:
       pull-requests: write # reviewdog posts the formatting diff as review suggestions
     steps:
       - uses: actions/checkout@v5
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
       - name: Install clang-format
-        run: sudo apt-get update && sudo apt-get install -y clang-format
+        run: pip install clang-format==22.1.5 # keep in lockstep with the `format` gate above
       - name: Reformat in place
         run: |
           mapfile -t files < <(find src -type f \( -name '*.cpp' -o -name '*.h' \) -not -name 'imgui_impl*')
