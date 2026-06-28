@@ -13,7 +13,7 @@ copy it and rename. The key parts:
 - **`RuntimeIdentifier`** — defaults to the building SDK's RID so packages with **native** libraries
   ship their native assets; pin it (`-p:RuntimeIdentifier=win-x64`) to target another platform.
 - **Localization `EmbeddedResource`** — optional strongly-typed `Str` accessor generated from
-  `Str.resx`; delete it if you don't localize.
+  `Localization/Str.resx`; delete the `Localization/` folder and the block if you don't localize.
 - **`PackPluginZip` / `DeployToPrefPlugins`** — after each build, pack `dist/<name>.zip` and copy the
   plugin straight into your per-user plugins folder for fast iteration (`-p:DeployToPref=false` to opt
   out). `Ofs.Api` is excluded from both — ofs-ng owns the one canonical copy it loads everyone against.

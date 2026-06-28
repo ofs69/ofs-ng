@@ -207,12 +207,13 @@ plugin **`Name`** — just build from `Str.*` too:
 When the user switches language, the host **unloads and reloads every plugin**, so `OnLoad` re-runs and
 re-registers all of these in the new language — no provider or live-update wiring needed.
 
-**The catalog.** Ship a neutral `Str.resx` (the fallback — already included here) plus one
-`Str.<culture>.resx` per language. There's no CLI to scaffold a `.resx`; create a language by
-copying the neutral file (it carries the required schema) and translating the `<value>`s:
+**The catalog.** The `.resx` files live in `Localization/`: a neutral `Localization/Str.resx` (the
+fallback — already included here) plus one `Localization/Str.<culture>.resx` per language. There's no
+CLI to scaffold a `.resx`; create a language by copying the neutral file (it carries the required
+schema) and translating the `<value>`s:
 
 ```bash
-cp Str.resx Str.ja.resx      # then edit the <value>s
+cp Localization/Str.resx Localization/Str.ja.resx      # then edit the <value>s
 ```
 
 Each `Str.<culture>.resx` compiles to a satellite assembly (`<culture>/<name>.resources.dll`); the
@@ -220,13 +221,14 @@ pack/deploy steps glob recursively, so culture folders ship in the zip and pref 
 key missing in the active language falls back to neutral `Str.resx`.
 
 > **Caveat — the culture must exist as an ofs-ng language.** ofs-ng picks your `Str.<culture>.resx`
-> by the **ISO 639 code of its active UI language**, handed to the plugin as `Host.Culture`. That code
-> is the `[_meta].iso639` field inside a `lang/<id>.toml` catalog — **not** the catalog's filename. So
-> `Str.ja.resx` only ever loads when ofs-ng has a language declaring `iso639 = "ja"` *and the user
+> by the **BCP 47 culture tag of its active UI language**, handed to the plugin as `Host.Culture`. That
+> tag is the `[_meta].culture` field inside a `lang/<id>.toml` catalog — **not** the catalog's filename.
+> So `Str.ja.resx` only ever loads when ofs-ng has a language declaring `culture = "ja"` *and the user
 > selects it*; if no such language exists, `Host.Culture` never becomes `ja` and your plugin stays on
 > neutral `Str.resx`. (The shipped Japanese catalog is `lang/ja_[AI].toml` — a `ja_[AI]` filename, but
-> `iso639 = "ja"` inside — which is what pairs it with `Str.ja.resx`.) Match the `<culture>` suffix to
-> the `iso639` code of the ofs-ng language you're targeting.
+> `culture = "ja"` inside — which is what pairs it with `Str.ja.resx`.) Match the `<culture>` suffix to
+> the `[_meta].culture` tag of the ofs-ng language you're targeting — including script/region subtags
+> like `zh-Hant` or `pt-BR`, which .NET resolves with fallback (`zh-Hant → zh → neutral`).
 
 **`Str` comes from the resx.** Add a key to `Str.resx` and `Str.<Key>` is available on the next
 build.
@@ -235,7 +237,7 @@ build.
 > Build once; if the underlines linger, run *.NET: Restart Language Server* in VS Code (or reload the
 > project in Visual Studio).
 
-**Don't want localization?** Delete `Str.resx` and the `EmbeddedResource` block from the `.csproj`,
+**Don't want localization?** Delete the `Localization/` folder and the `EmbeddedResource` block from the `.csproj`,
 and pass literal strings to `ui.*` directly.
 
 For the raw language signal, `Host.Culture` and `Host.Language` are also exposed (read them at `OnLoad`),

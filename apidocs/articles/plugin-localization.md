@@ -65,12 +65,12 @@ reload story.)
 
 ## The catalog
 
-Ship a **neutral `Str.resx`** (the fallback) plus one **`Str.<culture>.resx` per language**. There's no
-CLI to scaffold one — copy the neutral file (it carries the required schema) and translate the
-`<value>`s:
+The `.resx` files live in `Localization/`: a **neutral `Localization/Str.resx`** (the fallback) plus one
+**`Localization/Str.<culture>.resx` per language**. There's no CLI to scaffold one — copy the neutral
+file (it carries the required schema) and translate the `<value>`s:
 
 ```bash
-cp Str.resx Str.ja.resx      # then edit the <value>s
+cp Localization/Str.resx Localization/Str.ja.resx      # then edit the <value>s
 ```
 
 Each `Str.<culture>.resx` compiles to a satellite assembly (`<culture>/<name>.resources.dll`); the
@@ -79,23 +79,25 @@ folder automatically. A key missing in the active language falls back to the neu
 
 ## ⚠️ The culture must exist as an ofs-ng language
 
-This is the one rule that trips people up. ofs-ng selects your `Str.<culture>.resx` by the **ISO 639
-code of its active UI language**, surfaced to the plugin as [`Host.Culture`](xref:Ofs.IOfsHost.Culture).
-That code is the **`[_meta].iso639` field inside a `lang/<id>.toml` catalog — not the catalog's
-filename**.
+This is the one rule that trips people up. ofs-ng selects your `Str.<culture>.resx` by the **BCP 47
+culture tag of its active UI language**, surfaced to the plugin as [`Host.Culture`](xref:Ofs.IOfsHost.Culture).
+That tag is the **`[_meta].culture` field inside a `lang/<id>.toml` catalog — not the catalog's
+filename**. Because it is a full BCP 47 tag, a script/region subtag (`zh-Hant`, `zh-Hans`, `pt-BR`)
+selects the matching satellite, and .NET's resource fallback walks it down (`zh-Hant → zh → neutral`).
 
 So `Str.ja.resx` loads only when **both**:
 
-1. ofs-ng has a language whose `iso639 = "ja"`, **and**
+1. ofs-ng has a language whose `culture = "ja"`, **and**
 2. the user has selected it.
 
 If no such language exists, [`Host.Culture`](xref:Ofs.IOfsHost.Culture) never becomes `ja` and your
-plugin stays on the neutral `Str.resx`. ofs-ng's built-in English (and any unknown code) maps to the
+plugin stays on the neutral `Str.resx`. ofs-ng's built-in English (and any unknown tag) maps to the
 **invariant** culture — i.e. your neutral catalog.
 
-> The shipped Japanese catalog is `lang/ja_[AI].toml` — a `ja_[AI]` *filename*, but `iso639 = "ja"`
+> The shipped Japanese catalog is `lang/ja_[AI].toml` — a `ja_[AI]` *filename*, but `culture = "ja"`
 > *inside* — which is what pairs it with `Str.ja.resx`. **Match the `<culture>` suffix of your `.resx`
-> to the `iso639` code of the ofs-ng language you're targeting**, not to any filename.
+> to the `[_meta].culture` tag of the ofs-ng language you're targeting**, not to any filename. (For
+> Chinese that means `Str.zh-Hans.resx` / `Str.zh-Hant.resx` — the two ship as distinct catalogs.)
 
 ## Build wiring (`.csproj`)
 
@@ -104,12 +106,20 @@ the essential part:
 
 ```xml
 <ItemGroup>
-  <EmbeddedResource Update="Str.resx">
+  <EmbeddedResource Update="Localization/Str.resx">
+    <!-- Link strips the subdir from the manifest name so the embedded resource is "YourPlugin.Str",
+         matching the generated accessor's ResourceManager base (StronglyTypedNamespace + class).
+         Omit it and the subdir leaks in ("YourPlugin.Localization.Str") and every lookup throws. -->
+    <Link>Str.resx</Link>
     <Generator>MSBuild:Compile</Generator>
     <StronglyTypedLanguage>CSharp</StronglyTypedLanguage>
     <StronglyTypedNamespace>YourPlugin</StronglyTypedNamespace>
     <StronglyTypedClassName>Str</StronglyTypedClassName>
     <StronglyTypedFileName>$(MSBuildProjectDirectory)/Generated/Str.Designer.cs</StronglyTypedFileName>
+  </EmbeddedResource>
+  <!-- Same path-stripping for each satellite catalog. -->
+  <EmbeddedResource Update="Localization/Str.*.resx">
+    <Link>%(Filename)%(Extension)</Link>
   </EmbeddedResource>
 </ItemGroup>
 ```
@@ -121,8 +131,8 @@ Declaring the neutral language in the `.csproj` (`<NeutralLanguage>en</NeutralLa
 > **Build once**; if the underlines linger, run *.NET: Restart Language Server* in VS Code (or reload
 > the project in Visual Studio).
 
-**Don't want localization?** Delete `Str.resx` and the `EmbeddedResource` block, and pass literal
-strings to `ui.*` directly.
+**Don't want localization?** Delete the `Localization/` folder and the `EmbeddedResource` block, and
+pass literal strings to `ui.*` directly.
 
 ## Rolling your own (no `Str` accessor)
 
@@ -133,8 +143,8 @@ so they follow ofs-ng's picker rather than the OS culture:
 string label = _resources.GetString("ClickMe", Host.Culture) ?? "Click me";
 ```
 
-[`Host.Language`](xref:Ofs.IOfsHost.Language) gives the raw ISO 639 code ("en" for built-in English)
-if you need the string form. Read either at `OnLoad`.
+[`Host.Language`](xref:Ofs.IOfsHost.Language) gives the raw BCP 47 culture tag ("en" for built-in
+English) if you need the string form. Read either at `OnLoad`.
 
 ## See also
 
@@ -143,4 +153,5 @@ if you need the string form. Read either at `OnLoad`.
 - [Plugin Loading & OnLoad](plugin-onload.md) — why `OnLoad` re-runs on a language switch.
 - [`IOfsHost.Culture`](xref:Ofs.IOfsHost.Culture) / [`IOfsHost.Language`](xref:Ofs.IOfsHost.Language) —
   the active-language signal.
-- `plugins/Ofs.Core/` — a larger worked example (`Str.resx`, `Str.ja.resx`, and its `Str.*` getters).
+- `plugins/Ofs.Core/` — a larger worked example (`Str.resx`, `Str.ja.resx`, `Str.zh-Hant.resx`, … and
+  its `Str.*` getters).

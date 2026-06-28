@@ -36,11 +36,11 @@ bool isWhitespaceOnly(std::string_view s) {
     return std::ranges::all_of(s, [](char c) { return std::isspace(static_cast<unsigned char>(c)) != 0; });
 }
 
-// Read the declared ISO 639 code from a parsed lang file's [_meta] iso639 field; empty if absent.
-// The code is read ONLY from the file content — never derived from the filename/language id.
-std::string readLanguageCode(const toml::table &root) {
+// Read the declared BCP 47 culture tag from a parsed lang file's [_meta] culture field; empty if
+// absent. The tag is read ONLY from the file content — never derived from the filename/language id.
+std::string readCultureTag(const toml::table &root) {
     if (const auto *meta = root["_meta"].as_table())
-        if (auto v = (*meta)["iso639"].value<std::string>(); v && !isWhitespaceOnly(*v))
+        if (auto v = (*meta)["culture"].value<std::string>(); v && !isWhitespaceOnly(*v))
             return *v;
     return {};
 }
@@ -120,18 +120,18 @@ toml::table buildEntry(std::uint32_t idx, std::string_view translation) {
     return entry;
 }
 
-// Build a full strings-shaped catalog (optional [_meta].iso639 + one annotated entry per key, each
+// Build a full strings-shaped catalog (optional [_meta].culture + one annotated entry per key, each
 // entry's translation supplied by `perKey(idx)`), prepend `header`, and write it to `path`. The shared
 // body of exportCatalog and refreshTranslation, which differ only in the per-key source and the header.
-// `forceMeta` emits the [_meta] table even for an empty code (export always declares one); otherwise it
+// `forceMeta` emits the [_meta] table even for an empty tag (export always declares one); otherwise it
 // is emitted only when non-empty. Logs and returns false on a write failure; the caller logs success.
 template <typename PerKeyFn>
-bool writeCatalogToFile(const std::filesystem::path &path, std::string_view iso639, bool forceMeta, PerKeyFn &&perKey,
+bool writeCatalogToFile(const std::filesystem::path &path, std::string_view culture, bool forceMeta, PerKeyFn &&perKey,
                         std::string_view header) {
     toml::table root;
-    if (forceMeta || !iso639.empty()) {
+    if (forceMeta || !culture.empty()) {
         toml::table meta;
-        meta.insert("iso639", std::string(iso639));
+        meta.insert("culture", std::string(culture));
         root.insert("_meta", std::move(meta));
     }
     for (std::uint32_t idx = 1; idx < gen::Count; ++idx)
@@ -168,7 +168,7 @@ void Translator::loadDefaults() {
         translation[i] = gen::Default[i];
     stringData_.clear();
     activeLanguageId_ = "en";
-    activeLanguageCode_ = "en";
+    activeCulture_ = "en";
     activeFilePath_.clear();
 }
 
@@ -246,12 +246,13 @@ bool Translator::load(std::string_view languageId) {
         translation[idx] = stringData_.data() + off;
 
     activeLanguageId_ = std::string(languageId);
-    // ISO 639 code the file declares in [_meta].iso639 — read from the file only, never from the
-    // filename. This is the code plugins receive (via getActiveLanguage at load). A file that omits it
-    // (e.g. a user-exported catalog) yields "en", so plugins show their neutral catalog.
-    activeLanguageCode_ = readLanguageCode(root);
-    if (activeLanguageCode_.empty())
-        activeLanguageCode_ = "en";
+    // BCP 47 culture tag the file declares in [_meta].culture — read from the file only, never from the
+    // filename. This is the tag plugins receive (via getActiveLanguage at load) and feed to .NET
+    // CultureInfo. A file that omits it (e.g. a user-exported catalog) yields "en", so plugins show
+    // their neutral catalog.
+    activeCulture_ = readCultureTag(root);
+    if (activeCulture_.empty())
+        activeCulture_ = "en";
     // Only disk-backed (user-override) languages support live reload; archived ones have no mtime to poll.
     activeFilePath_ = fromUser ? userPath : std::filesystem::path{};
     if (fromUser)
@@ -284,14 +285,14 @@ std::vector<std::string> Translator::available() const {
 }
 
 bool Translator::exportCatalog(const std::filesystem::path &path) const {
-    // Carry the active language's ISO 639 code into the export so the file declares one (a new language
-    // edits it to its own code). Without it the catalog has no code and plugins fall back to English.
+    // Carry the active language's culture tag into the export so the file declares one (a new language
+    // edits it to its own tag). Without it the catalog has no tag and plugins fall back to English.
     // Pre-fill each entry's translation with the active language's text so the user exports the
     // currently-selected language and patches it from there. load() leaves untranslated keys pointing at
     // the baked-in default (same pointer), so a pointer match means "not translated" → emit an empty
     // translation (the English source still shows in the `english` field).
     const bool ok = writeCatalogToFile(
-        path, activeLanguageCode_, /*forceMeta=*/true,
+        path, activeCulture_, /*forceMeta=*/true,
         [this](std::uint32_t idx) -> std::string_view {
             const char *tr = translation[idx];
             return (tr != nullptr && tr != gen::Default[idx]) ? std::string_view(tr) : std::string_view{};
@@ -301,8 +302,8 @@ bool Translator::exportCatalog(const std::filesystem::path &path) const {
         "# One [Key] table per UI string. Fill in the 'translation' field for each entry.\n"
         "# Leave 'translation' empty to fall back to the English default at runtime.\n"
         "#\n"
-        "# [_meta].iso639 is this catalog's ISO 639 language code (e.g. \"ja\"); set it to the\n"
-        "# language you are translating into. ofs-ng hands it to plugins so they localize to match.\n"
+        "# [_meta].culture is this catalog's BCP 47 culture tag (e.g. \"ja\", \"zh-Hant\"); set it to\n"
+        "# the language you are translating into. ofs-ng hands it to plugins so they localize to match.\n"
         "#\n"
         "# Fields:\n"
         "#   description  — context: what the string is / where it appears.\n"
@@ -316,7 +317,7 @@ bool Translator::exportCatalog(const std::filesystem::path &path) const {
 
 bool Translator::refreshTranslation(const std::filesystem::path &path) const {
     std::map<std::string, std::string> existing;
-    std::string iso639; // carried over from the file's [_meta] so a refresh never drops its language code
+    std::string culture; // carried over from the file's [_meta] so a refresh never drops its culture tag
     {
         toml::table parsed;
         try {
@@ -325,7 +326,7 @@ bool Translator::refreshTranslation(const std::filesystem::path &path) const {
             OFS_CORE_ERROR("Localization: cannot refresh '{}': {}", ofs::util::toUtf8(path), e.description());
             return false;
         }
-        iso639 = readLanguageCode(parsed);
+        culture = readCultureTag(parsed);
         for (auto &&[key, node] : parsed) {
             const auto *sub = node.as_table();
             if (sub == nullptr)
@@ -336,7 +337,7 @@ bool Translator::refreshTranslation(const std::filesystem::path &path) const {
     }
 
     const bool ok = writeCatalogToFile(
-        path, iso639, /*forceMeta=*/false,
+        path, culture, /*forceMeta=*/false,
         [&existing](std::uint32_t idx) -> std::string_view {
             auto it = existing.find(gen::KeyName[idx]);
             return (it != existing.end()) ? std::string_view(it->second) : std::string_view{};

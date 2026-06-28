@@ -18,8 +18,9 @@ stays green while a translation is underway.
 
 The language **id** is the filename stem. Machine translations carry an `_[AI]` suffix
 (`de_[AI].toml`), shown verbatim in the in-app language picker so users can tell them from
-human-reviewed catalogs. Each file declares its ISO 639 code in `[_meta].iso639` (handed to plugins so
-they localize to match).
+human-reviewed catalogs. Each file declares its BCP 47 culture tag in `[_meta].culture` — e.g. `de`,
+`ja`, or a script/region subtag like `zh-Hant`, `zh-Hans`, `pt-BR` (handed to plugins, which feed it
+straight to .NET `CultureInfo`, so they localize to match).
 
 ## File schema
 
@@ -109,8 +110,8 @@ machine translation to catch any label that lost its `###id`.
 python tools/translations.py new de --ai       # -> localization/wip/de_[AI].toml, all keys empty
 ```
 
-`new` derives the display name and ISO 639 code for common languages automatically; override with
-`--name` / `--iso639`, and drop `--ai` for a human-authored catalog. Then translate it via the loop
+`new` derives the display name and BCP 47 culture tag for common languages automatically; override with
+`--name` / `--culture`, and drop `--ai` for a human-authored catalog. Then translate it via the loop
 above.
 
 ## Which languages?

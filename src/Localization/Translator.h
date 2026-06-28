@@ -51,9 +51,10 @@ class Translator {
 
     [[nodiscard]] const std::string &activeLanguage() const { return activeLanguageId_; }
 
-    // The active language's ISO 639 code ("en", "ja", …). Declared per file in its [_meta] iso639
-    // field (built-in English is "en"); this is what plugins receive to drive their own catalogs.
-    [[nodiscard]] const std::string &activeLanguageCode() const { return activeLanguageCode_; }
+    // The active language's BCP 47 culture tag ("en", "ja", "zh-Hant", …). Declared per file in its
+    // [_meta] culture field (built-in English is "en"); this is what plugins receive (fed straight to
+    // .NET CultureInfo) to drive their own catalogs, so a script/region subtag selects the right one.
+    [[nodiscard]] const std::string &activeCulture() const { return activeCulture_; }
 
     // Indexed by Tr value. Public so the trLookup() hot path is a single array index.
     std::array<const char *, gen::Count> translation{};
@@ -63,7 +64,7 @@ class Translator {
 
     std::vector<char> stringData_;         // backing blob; translation[i] points into this or Default[i]
     std::string activeLanguageId_;         // "" / "en" = built-in English
-    std::string activeLanguageCode_;       // ISO 639 code from [_meta].iso639 ("en" for built-in English)
+    std::string activeCulture_;            // BCP 47 culture tag from [_meta].culture ("en" for built-in English)
     std::filesystem::path activeFilePath_; // empty when English
     std::filesystem::file_time_type lastWriteTime_{};
 };

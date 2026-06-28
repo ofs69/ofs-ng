@@ -10,7 +10,7 @@
 # strings the set of {N} placeholders in `translation` must match the source.
 
 [_meta]
-iso639 = "it"
+culture = "it"
 
 # ─────────────────────────────────────────────────────────────────────────────────────────────
 # Preferences window (src/UI/ConfigurationWindow.cpp)

@@ -151,8 +151,11 @@ bool OfsApp::init() {
     // path, rather than letting the whole UI render as boxes during the deferred window. For any other
     // language it stays deferred to onStartupComplete(), so the common case pays nothing for it.
     {
-        const std::string &code = ofs::loc::Translator::instance().activeLanguageCode();
-        if (code == "ja" || code == "zh" || code == "ko")
+        // Match the primary subtag so script/region variants (e.g. "zh-Hant", "zh-Hans") still trigger
+        // the CJK glyph load — an exact "zh" compare would miss them and render the menus as boxes.
+        const std::string &culture = ofs::loc::Translator::instance().activeCulture();
+        const std::string_view primary(culture.c_str(), std::min(culture.find('-'), culture.size()));
+        if (primary == "ja" || primary == "zh" || primary == "ko")
             loadCjkFont();
     }
 

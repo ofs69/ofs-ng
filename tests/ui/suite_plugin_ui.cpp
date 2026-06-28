@@ -1159,10 +1159,10 @@ void RegisterPluginUiTests(ImGuiTestEngine *e) {
 
     // Localization: Ofs.Core follows ofs-ng's active UI language through the host language signal. Its
     // command titles are registered in OnLoad via Loc.Tr(...) — Loc.Culture is seeded from Host.Culture,
-    // which the host derives from the active translation file's [_meta] iso639 code. So the live title in
+    // which the host derives from the active translation file's [_meta] culture tag. So the live title in
     // the registry is the TRANSLATED string for whatever language the run uses: English under ui-smoke,
-    // Japanese under ui-smoke-loc (--language=ja_[AI], iso639 "ja"). This is the end-to-end proof that the
-    // host's ISO 639 code reaches a real plugin's .NET ResourceManager AND that its ja satellite assembly
+    // Japanese under ui-smoke-loc (--language=ja_[AI], culture "ja"). This is the end-to-end proof that the
+    // host's culture tag reaches a real plugin's .NET ResourceManager AND that its ja satellite assembly
     // (ja/Ofs.Core.resources.dll) resolves under the plugin's collectible, load-from-bytes ALC.
     ImGuiTest *c12 = IM_REGISTER_TEST(e, "core_plugin", "command_titles_follow_host_language");
     c12->GuiFunc = pluginGateGuiFunc;
@@ -1175,8 +1175,8 @@ void RegisterPluginUiTests(ImGuiTestEngine *e) {
         IM_CHECK(equalize != nullptr);
         IM_CHECK(invert != nullptr);
 
-        // The exact ISO 639 code the host hands the plugin (getActiveLanguage → Host.Culture).
-        const bool ja = ofs::loc::Translator::instance().activeLanguageCode() == "ja";
+        // The exact culture tag the host hands the plugin (getActiveLanguage → Host.Culture).
+        const bool ja = ofs::loc::Translator::instance().activeCulture() == "ja";
         IM_CHECK_STR_EQ(equalize->title.c_str(), ja ? "均等化" : "Equalize");
         IM_CHECK_STR_EQ(invert->title.c_str(), ja ? "反転" : "Invert");
     };

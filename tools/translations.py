@@ -63,16 +63,16 @@ WIP_DIR = REPO / "localization" / "wip"
 _FIELD_W = len("translation")
 
 # Built-in metadata for the languages we seed, so `new <code>` fills in a sensible
-# display name and ISO 639 code without flags. Anything not listed still works; pass
-# --name / --iso639 explicitly. Display names carry the endonym for the picker.
+# display name and BCP 47 culture tag without flags. Anything not listed still works; pass
+# --name / --culture explicitly. Display names carry the endonym for the picker.
 KNOWN_LANGS: dict[str, tuple[str, str]] = {
-    "zh": ("Simplified Chinese (简体中文)", "zh"),
-    "zh-Hant": ("Traditional Chinese (繁體中文)", "zh"),
+    "zh": ("Simplified Chinese (简体中文)", "zh-Hans"),
+    "zh-Hant": ("Traditional Chinese (繁體中文)", "zh-Hant"),
     "es": ("Spanish (Español)", "es"),
     "de": ("German (Deutsch)", "de"),
     "fr": ("French (Français)", "fr"),
     "ru": ("Russian (Русский)", "ru"),
-    "pt-BR": ("Brazilian Portuguese (Português do Brasil)", "pt"),
+    "pt-BR": ("Brazilian Portuguese (Português do Brasil)", "pt-BR"),
     "ko": ("Korean (한국어)", "ko"),
     "it": ("Italian (Italiano)", "it"),
     "pl": ("Polish (Polski)", "pl"),
@@ -210,7 +210,7 @@ def source_layout() -> list[tuple]:
 class LangFile:
     lang_id: str
     path: Path
-    iso639: str
+    culture: str
     # key -> (english_reference, translation)
     entries: dict[str, tuple[str, str]]
     shipped: bool
@@ -220,7 +220,7 @@ def load_lang(path: Path) -> LangFile:
     with path.open("rb") as f:
         data = tomllib.load(f)
     meta = data.get("_meta", {})
-    iso = meta.get("iso639", "") if isinstance(meta, dict) else ""
+    culture = meta.get("culture", "") if isinstance(meta, dict) else ""
     entries: dict[str, tuple[str, str]] = {}
     for key, tbl in data.items():
         if key.startswith("_"):
@@ -231,7 +231,7 @@ def load_lang(path: Path) -> LangFile:
     return LangFile(
         lang_id=path.stem,
         path=path,
-        iso639=iso,
+        culture=culture,
         entries=entries,
         shipped=path.parent == SHIP_DIR,
     )
@@ -319,10 +319,10 @@ def build_header(lang_id: str, name: str) -> list[str]:
     return lines
 
 
-def render_lang(lang_id: str, name: str, iso639: str, source: dict[str, Entry],
+def render_lang(lang_id: str, name: str, culture: str, source: dict[str, Entry],
                 layout: list[tuple], translations: dict[str, tuple[str, str]]) -> str:
     out: list[str] = build_header(lang_id, name)
-    out += ["", "[_meta]", f'iso639 = "{iso639}"', ""]
+    out += ["", "[_meta]", f'culture = "{culture}"', ""]
     for item in layout:
         if item[0] == "blank":
             out.append("")
@@ -401,7 +401,7 @@ def cmd_sync(args: argparse.Namespace) -> int:
         lang = load_lang(p)
         name = lang_display_name(lang.lang_id)
         synced, report = sync_translations(source, lang.entries)
-        text = render_lang(lang.lang_id, name, lang.iso639 or "en", source, layout, synced)
+        text = render_lang(lang.lang_id, name, lang.culture or "en", source, layout, synced)
         changed = text != p.read_text(encoding="utf-8")
         if changed:
             p.write_text(text, encoding="utf-8", newline="\n")
@@ -423,11 +423,11 @@ def cmd_sync(args: argparse.Namespace) -> int:
 
 def cmd_new(args: argparse.Namespace) -> int:
     code = args.code
-    name, iso = KNOWN_LANGS.get(code, (code, code))
+    name, culture = KNOWN_LANGS.get(code, (code, code))
     if args.name:
         name = args.name
-    if args.iso639:
-        iso = args.iso639
+    if args.culture:
+        culture = args.culture
     lang_id = code + (AI_SUFFIX if args.ai else "")
     if find_lang_path(lang_id) is not None:
         die(f"language '{lang_id}' already exists")
@@ -435,10 +435,10 @@ def cmd_new(args: argparse.Namespace) -> int:
     source = load_source()
     layout = source_layout()
     translations = {key: (entry.english, "") for key, entry in source.items()}
-    text = render_lang(lang_id, name, iso, source, layout, translations)
+    text = render_lang(lang_id, name, culture, source, layout, translations)
     dest = WIP_DIR / f"{lang_id}.toml"
     dest.write_text(text, encoding="utf-8", newline="\n")
-    print(f"created {rel(dest)} — {len(source)} keys, 0 translated ({name}, iso639={iso})")
+    print(f"created {rel(dest)} — {len(source)} keys, 0 translated ({name}, culture={culture})")
     print(f"  translate it, then: translations.py promote {lang_id}")
     return 0
 
@@ -529,7 +529,7 @@ def cmd_apply(args: argparse.Namespace) -> int:
         applied += 1
 
     synced, _ = sync_translations(source, merged)
-    text = render_lang(lang.lang_id, lang_display_name(lang.lang_id), lang.iso639 or "en",
+    text = render_lang(lang.lang_id, lang_display_name(lang.lang_id), lang.culture or "en",
                        source, layout, synced)
     p.write_text(text, encoding="utf-8", newline="\n")
     print(f"{rel(p)}: applied {applied}, skipped {skipped}, rejected {rejected}")
@@ -546,8 +546,8 @@ def validate_lang(source: dict[str, Entry], path: Path) -> list[str]:
         return [f"parse error: {e}"]
 
     meta = data.get("_meta")
-    if not isinstance(meta, dict) or not str(meta.get("iso639", "")).strip():
-        errors.append("missing [_meta] table with a non-empty 'iso639' code")
+    if not isinstance(meta, dict) or not str(meta.get("culture", "")).strip():
+        errors.append("missing [_meta] table with a non-empty 'culture' tag")
 
     present = set()
     for key, tbl in data.items():
@@ -662,7 +662,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("code", help="language code, e.g. de or zh-Hant")
     s.add_argument("--ai", action="store_true", help="add the _[AI] machine-translation suffix")
     s.add_argument("--name", help="display name for the file header")
-    s.add_argument("--iso639", help="ISO 639 code for [_meta] (default: derived from code)")
+    s.add_argument("--culture", help="BCP 47 culture tag for [_meta] (default: derived from code)")
     s.set_defaults(func=cmd_new)
 
     s = sub.add_parser("todo", help="write a batch of keys needing translation")

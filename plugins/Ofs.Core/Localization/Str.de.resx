@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- German (de) translations for the Ofs.Core plugin. Keys must match Str.resx. -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="StrokeMoveModeLabel" xml:space="preserve">
+    <value>Verschiebemodus</value>
+  </data>
+  <data name="StrokeModeRigid" xml:space="preserve">
+    <value>Starr</value>
+  </data>
+  <data name="StrokeModeTaper" xml:space="preserve">
+    <value>Auslaufend</value>
+  </data>
+  <data name="StrokeModeSmooth" xml:space="preserve">
+    <value>Weich</value>
+  </data>
+  <data name="ModeLabel" xml:space="preserve">
+    <value>Modus</value>
+  </data>
+  <data name="ModeNone" xml:space="preserve">
+    <value>Keiner</value>
+  </data>
+  <data name="ModeAlternating" xml:space="preserve">
+    <value>Abwechselnd</value>
+  </data>
+  <data name="ModeShapedApproach" xml:space="preserve">
+    <value>Geformte Annäherung</value>
+  </data>
+  <data name="SectionAlternating" xml:space="preserve">
+    <value>Abwechselnd</value>
+  </data>
+  <data name="SectionShapedApproach" xml:space="preserve">
+    <value>Geformte Annäherung</value>
+  </data>
+  <data name="FixedRange" xml:space="preserve">
+    <value>Fester Bereich</value>
+  </data>
+  <data name="Top" xml:space="preserve">
+    <value>Oben</value>
+  </data>
+  <data name="Bottom" xml:space="preserve">
+    <value>Unten</value>
+  </data>
+  <data name="ApproachShape" xml:space="preserve">
+    <value>Form</value>
+  </data>
+  <data name="ShapeSnapEarly" xml:space="preserve">
+    <value>Früh einrasten</value>
+  </data>
+  <data name="ShapeEaseOut" xml:space="preserve">
+    <value>Ausklingen</value>
+  </data>
+  <data name="ShapeLinear" xml:space="preserve">
+    <value>Linear</value>
+  </data>
+  <data name="ShapeEaseIn" xml:space="preserve">
+    <value>Einklingen</value>
+  </data>
+  <data name="ShapeSnapLate" xml:space="preserve">
+    <value>Spät einrasten</value>
+  </data>
+  <data name="ApproachSteps" xml:space="preserve">
+    <value>Schritte</value>
+  </data>
+  <data name="CmdEqualize" xml:space="preserve">
+    <value>Angleichen</value>
+  </data>
+  <data name="CmdInvert" xml:space="preserve">
+    <value>Invertieren</value>
+  </data>
+  <data name="CmdIsolate" xml:space="preserve">
+    <value>Isolieren</value>
+  </data>
+  <data name="CmdRepeatStroke" xml:space="preserve">
+    <value>Stroke wiederholen</value>
+  </data>
+  <data name="PluginName" xml:space="preserve">
+    <value>Core-Plugin</value>
+  </data>
+  <data name="NodeShapeCurve" xml:space="preserve">
+    <value>Formkurve</value>
+  </data>
+  <data name="NodeShapeCurveDesc" xml:space="preserve">
+    <value>Bildet jede Eingangsposition über eine Gammakurve neu ab, um die Bewegung weicher oder schärfer zu machen; invertiert das Ergebnis bei Bedarf.</value>
+  </data>
+  <data name="ParamGamma" xml:space="preserve">
+    <value>Gamma</value>
+  </data>
+  <data name="ParamInvert" xml:space="preserve">
+    <value>Invertieren</value>
+  </data>
+  <data name="ShapeModeName" xml:space="preserve">
+    <value>Stroke-Formung</value>
+  </data>
+  <data name="SelectModeDisclaimer" xml:space="preserve">
+    <value>Wähle in der Fußzeile „{0}“ als Bearbeitungsmodus, um diese Einstellungen zu nutzen.</value>
+  </data>
+  <data name="SelectModePeaksName" xml:space="preserve">
+    <value>Spitzenauswahl</value>
+  </data>
+  <data name="SectionPeaks" xml:space="preserve">
+    <value>Spitzen</value>
+  </data>
+  <data name="PeaksDisclaimer" xml:space="preserve">
+    <value>Aktiviere den Auswahlmodus „Nur Spitzen“ oder den Spitzen-Navigator in der Fußzeile, um diese Einstellung zu nutzen.</value>
+  </data>
+  <data name="NavPeaksName" xml:space="preserve">
+    <value>Spitzenschritt</value>
+  </data>
+  <data name="PeakSelectLabel" xml:space="preserve">
+    <value>Auswahl</value>
+  </data>
+  <data name="PeakKindBoth" xml:space="preserve">
+    <value>Hoch- &amp; Tiefpunkte</value>
+  </data>
+  <data name="PeakKindTops" xml:space="preserve">
+    <value>Nur Hochpunkte</value>
+  </data>
+  <data name="PeakKindBottoms" xml:space="preserve">
+    <value>Nur Tiefpunkte</value>
+  </data>
+</root>

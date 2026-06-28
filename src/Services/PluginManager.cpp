@@ -1343,7 +1343,7 @@ int hostGetRegion(void *ctx, int index, double *startOut, double *endOut, char *
 int hostGetActiveLanguage(void *ctx, char *buf, int bufSize) {
     if (!checkMainThread(ctx, "getActiveLanguage"))
         return emptyBuf(buf, bufSize);
-    return fillBuf(buf, bufSize, ofs::loc::Translator::instance().activeLanguageCode());
+    return fillBuf(buf, bufSize, ofs::loc::Translator::instance().activeCulture());
 }
 
 // ── Native dialogs (non-blocking) ────────────────────────────────────────────

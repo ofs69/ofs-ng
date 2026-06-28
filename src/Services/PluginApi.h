@@ -579,10 +579,11 @@ struct HostApi {
                      int *nameReqOut);
 
     // ── Localization ──────────────────────────────────────────────────────────
-    // The ISO 639 code of ofs-ng's active UI language ("en" for built-in English, else the iso639 the
-    // translation file declares, e.g. "ja"). Fills buf (NUL-terminated) and returns the required byte
-    // length (excl NUL). A plugin reads this at onLoad and maps it to a .NET culture to drive its own
-    // resource catalog; the host reloads every plugin on a language switch, so it is re-read each time.
+    // The BCP 47 culture tag of ofs-ng's active UI language ("en" for built-in English, else the culture
+    // the translation file declares, e.g. "ja", "zh-Hant"). Fills buf (NUL-terminated) and returns the
+    // required byte length (excl NUL). A plugin reads this at onLoad and feeds it to a .NET CultureInfo to
+    // drive its own resource catalog; the host reloads every plugin on a language switch, so it is
+    // re-read each time.
     int (*getActiveLanguage)(void *ctx, char *buf, int bufSize);
 
     // ── Native dialogs (non-blocking) ─────────────────────────────────────────

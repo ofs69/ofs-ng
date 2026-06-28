@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- Korean (ko) translations for the Ofs.Core plugin. Keys must match Str.resx. -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="StrokeMoveModeLabel" xml:space="preserve">
+    <value>이동 모드</value>
+  </data>
+  <data name="StrokeModeRigid" xml:space="preserve">
+    <value>고정</value>
+  </data>
+  <data name="StrokeModeTaper" xml:space="preserve">
+    <value>테이퍼</value>
+  </data>
+  <data name="StrokeModeSmooth" xml:space="preserve">
+    <value>부드럽게</value>
+  </data>
+  <data name="ModeLabel" xml:space="preserve">
+    <value>모드</value>
+  </data>
+  <data name="ModeNone" xml:space="preserve">
+    <value>없음</value>
+  </data>
+  <data name="ModeAlternating" xml:space="preserve">
+    <value>교대</value>
+  </data>
+  <data name="ModeShapedApproach" xml:space="preserve">
+    <value>형상 접근</value>
+  </data>
+  <data name="SectionAlternating" xml:space="preserve">
+    <value>교대</value>
+  </data>
+  <data name="SectionShapedApproach" xml:space="preserve">
+    <value>형상 접근</value>
+  </data>
+  <data name="FixedRange" xml:space="preserve">
+    <value>고정 범위</value>
+  </data>
+  <data name="Top" xml:space="preserve">
+    <value>위</value>
+  </data>
+  <data name="Bottom" xml:space="preserve">
+    <value>아래</value>
+  </data>
+  <data name="ApproachShape" xml:space="preserve">
+    <value>형상</value>
+  </data>
+  <data name="ShapeSnapEarly" xml:space="preserve">
+    <value>빠르게 도달</value>
+  </data>
+  <data name="ShapeEaseOut" xml:space="preserve">
+    <value>이즈 아웃</value>
+  </data>
+  <data name="ShapeLinear" xml:space="preserve">
+    <value>선형</value>
+  </data>
+  <data name="ShapeEaseIn" xml:space="preserve">
+    <value>이즈 인</value>
+  </data>
+  <data name="ShapeSnapLate" xml:space="preserve">
+    <value>늦게 도달</value>
+  </data>
+  <data name="ApproachSteps" xml:space="preserve">
+    <value>단계</value>
+  </data>
+  <data name="CmdEqualize" xml:space="preserve">
+    <value>균등화</value>
+  </data>
+  <data name="CmdInvert" xml:space="preserve">
+    <value>반전</value>
+  </data>
+  <data name="CmdIsolate" xml:space="preserve">
+    <value>분리</value>
+  </data>
+  <data name="CmdRepeatStroke" xml:space="preserve">
+    <value>스트로크 반복</value>
+  </data>
+  <data name="PluginName" xml:space="preserve">
+    <value>코어 플러그인</value>
+  </data>
+  <data name="NodeShapeCurve" xml:space="preserve">
+    <value>형상 커브</value>
+  </data>
+  <data name="NodeShapeCurveDesc" xml:space="preserve">
+    <value>각 입력 위치를 감마 커브로 다시 매핑하여 동작을 완만하게 하거나 날카롭게 합니다. 필요에 따라 결과를 반전합니다.</value>
+  </data>
+  <data name="ParamGamma" xml:space="preserve">
+    <value>감마</value>
+  </data>
+  <data name="ParamInvert" xml:space="preserve">
+    <value>반전</value>
+  </data>
+  <data name="ShapeModeName" xml:space="preserve">
+    <value>스트로크 형상화</value>
+  </data>
+  <data name="SelectModeDisclaimer" xml:space="preserve">
+    <value>이 설정을 사용하려면 푸터에서 편집 모드 "{0}"을(를) 선택하세요.</value>
+  </data>
+  <data name="SelectModePeaksName" xml:space="preserve">
+    <value>피크 선택</value>
+  </data>
+  <data name="SectionPeaks" xml:space="preserve">
+    <value>피크</value>
+  </data>
+  <data name="PeaksDisclaimer" xml:space="preserve">
+    <value>이 설정을 사용하려면 푸터에서 "피크만" 선택 모드 또는 피크 내비게이터를 활성화하세요.</value>
+  </data>
+  <data name="NavPeaksName" xml:space="preserve">
+    <value>피크 단계 이동</value>
+  </data>
+  <data name="PeakSelectLabel" xml:space="preserve">
+    <value>선택</value>
+  </data>
+  <data name="PeakKindBoth" xml:space="preserve">
+    <value>정점 &amp; 저점</value>
+  </data>
+  <data name="PeakKindTops" xml:space="preserve">
+    <value>정점만</value>
+  </data>
+  <data name="PeakKindBottoms" xml:space="preserve">
+    <value>저점만</value>
+  </data>
+</root>

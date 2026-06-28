@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- Turkish (tr) translations for the Ofs.Core plugin. Keys must match Str.resx. -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="StrokeMoveModeLabel" xml:space="preserve">
+    <value>Taşıma modu</value>
+  </data>
+  <data name="StrokeModeRigid" xml:space="preserve">
+    <value>Katı</value>
+  </data>
+  <data name="StrokeModeTaper" xml:space="preserve">
+    <value>Daralma</value>
+  </data>
+  <data name="StrokeModeSmooth" xml:space="preserve">
+    <value>Yumuşak</value>
+  </data>
+  <data name="ModeLabel" xml:space="preserve">
+    <value>Mod</value>
+  </data>
+  <data name="ModeNone" xml:space="preserve">
+    <value>Yok</value>
+  </data>
+  <data name="ModeAlternating" xml:space="preserve">
+    <value>Dönüşümlü</value>
+  </data>
+  <data name="ModeShapedApproach" xml:space="preserve">
+    <value>Şekilli Yaklaşım</value>
+  </data>
+  <data name="SectionAlternating" xml:space="preserve">
+    <value>Dönüşümlü</value>
+  </data>
+  <data name="SectionShapedApproach" xml:space="preserve">
+    <value>Şekilli Yaklaşım</value>
+  </data>
+  <data name="FixedRange" xml:space="preserve">
+    <value>Sabit Aralık</value>
+  </data>
+  <data name="Top" xml:space="preserve">
+    <value>Üst</value>
+  </data>
+  <data name="Bottom" xml:space="preserve">
+    <value>Alt</value>
+  </data>
+  <data name="ApproachShape" xml:space="preserve">
+    <value>Şekil</value>
+  </data>
+  <data name="ShapeSnapEarly" xml:space="preserve">
+    <value>Erken Yanaş</value>
+  </data>
+  <data name="ShapeEaseOut" xml:space="preserve">
+    <value>Yavaşlayarak Bitir</value>
+  </data>
+  <data name="ShapeLinear" xml:space="preserve">
+    <value>Doğrusal</value>
+  </data>
+  <data name="ShapeEaseIn" xml:space="preserve">
+    <value>Yavaşça Başla</value>
+  </data>
+  <data name="ShapeSnapLate" xml:space="preserve">
+    <value>Geç Yanaş</value>
+  </data>
+  <data name="ApproachSteps" xml:space="preserve">
+    <value>Adımlar</value>
+  </data>
+  <data name="CmdEqualize" xml:space="preserve">
+    <value>Eşitle</value>
+  </data>
+  <data name="CmdInvert" xml:space="preserve">
+    <value>Ters Çevir</value>
+  </data>
+  <data name="CmdIsolate" xml:space="preserve">
+    <value>Yalıt</value>
+  </data>
+  <data name="CmdRepeatStroke" xml:space="preserve">
+    <value>Vuruşu Tekrarla</value>
+  </data>
+  <data name="PluginName" xml:space="preserve">
+    <value>Çekirdek Eklenti</value>
+  </data>
+  <data name="NodeShapeCurve" xml:space="preserve">
+    <value>Şekil Eğrisi</value>
+  </data>
+  <data name="NodeShapeCurveDesc" xml:space="preserve">
+    <value>Her giriş konumunu bir gama eğrisinden geçirerek hareketi yumuşatır veya keskinleştirir; isteğe bağlı olarak sonucu ters çevirir.</value>
+  </data>
+  <data name="ParamGamma" xml:space="preserve">
+    <value>Gama</value>
+  </data>
+  <data name="ParamInvert" xml:space="preserve">
+    <value>Ters Çevir</value>
+  </data>
+  <data name="ShapeModeName" xml:space="preserve">
+    <value>Vuruş Şekillendirme</value>
+  </data>
+  <data name="SelectModeDisclaimer" xml:space="preserve">
+    <value>Bu ayarları kullanmak için alt bilgiden düzenleme modu olarak "{0}" seçin.</value>
+  </data>
+  <data name="SelectModePeaksName" xml:space="preserve">
+    <value>Tepe Seçimi</value>
+  </data>
+  <data name="SectionPeaks" xml:space="preserve">
+    <value>Tepeler</value>
+  </data>
+  <data name="PeaksDisclaimer" xml:space="preserve">
+    <value>Bu ayarı kullanmak için alt bilgiden "Yalnızca tepeler" Seçim modunu veya Tepeler gezginini etkinleştirin.</value>
+  </data>
+  <data name="NavPeaksName" xml:space="preserve">
+    <value>Tepe Adımı</value>
+  </data>
+  <data name="PeakSelectLabel" xml:space="preserve">
+    <value>Seç</value>
+  </data>
+  <data name="PeakKindBoth" xml:space="preserve">
+    <value>Tepeler &amp; çukurlar</value>
+  </data>
+  <data name="PeakKindTops" xml:space="preserve">
+    <value>Yalnızca tepeler</value>
+  </data>
+  <data name="PeakKindBottoms" xml:space="preserve">
+    <value>Yalnızca çukurlar</value>
+  </data>
+</root>

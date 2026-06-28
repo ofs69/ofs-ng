@@ -17,12 +17,21 @@
        than the last build used — so Str builds yet red-underlines in the editor. A stable in-tree path
        is picked up by the default **/*.cs glob at evaluation time, so IntelliSense resolves Str. -->
   <ItemGroup>
-    <EmbeddedResource Update="Str.resx">
+    <EmbeddedResource Update="Localization/Str.resx">
+      <!-- Link makes MSBuild derive the manifest name from "Str.resx" (root), NOT "Localization/Str.resx",
+           so the embedded resource is "Ofs.Core.Str(.resources)" — matching the generated accessor's
+           ResourceManager base name (StronglyTypedNamespace + class). Without it the subdir leaks into the
+           manifest ("Ofs.Core.Localization.Str") and every Str.* lookup throws MissingManifestResource. -->
+      <Link>Str.resx</Link>
       <Generator>MSBuild:Compile</Generator>
       <StronglyTypedLanguage>CSharp</StronglyTypedLanguage>
       <StronglyTypedNamespace>Ofs.Core</StronglyTypedNamespace>
       <StronglyTypedClassName>Str</StronglyTypedClassName>
       <StronglyTypedFileName>$(MSBuildProjectDirectory)/Generated/Str.Designer.cs</StronglyTypedFileName>
+    </EmbeddedResource>
+    <!-- Same path-stripping for the satellite catalogs, so each lands under the same "Ofs.Core.Str" base. -->
+    <EmbeddedResource Update="Localization/Str.*.resx">
+      <Link>%(Filename)%(Extension)</Link>
     </EmbeddedResource>
   </ItemGroup>
 
@@ -45,9 +54,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <EnableDynamicLoading>true</EnableDynamicLoading>
-    <!-- Str.resx is the neutral (English) catalog; the Str.<culture>.resx files are its satellites. Declaring
-         the neutral language emits [assembly: NeutralResourcesLanguage] so the resource manager skips a
-         satellite probe for English (and satisfies CA1824). -->
+    <!-- Localization/Str.resx is the neutral (English) catalog; the Localization/Str.<culture>.resx files
+         are its satellites. Declaring the neutral language emits [assembly: NeutralResourcesLanguage] so
+         the resource manager skips a satellite probe for English (and satisfies CA1824). -->
     <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>
 

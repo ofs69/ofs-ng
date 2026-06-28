@@ -112,28 +112,33 @@ TEST_CASE("load() applies a user TOML and validates each entry") {
     tr.loadDefaults(); // restore English for the rest of the suite
 }
 
-TEST_CASE("activeLanguageCode reads [_meta].iso639, never the filename") {
+TEST_CASE("activeCulture reads [_meta].culture, never the filename") {
     auto &tr = Translator::instance();
 
     tr.loadDefaults();
-    CHECK(tr.activeLanguageCode() == "en"); // built-in English
+    CHECK(tr.activeCulture() == "en"); // built-in English
 
-    // The id stem is "jp_marker" but the file declares "ja" — the code follows the file, not the name.
-    writeLangFile("jp_marker", "[_meta]\niso639 = \"ja\"\n\n[PrefTitle]\ntranslation = \"設定\"\n");
+    // The id stem is "jp_marker" but the file declares "ja" — the tag follows the file, not the name.
+    writeLangFile("jp_marker", "[_meta]\nculture = \"ja\"\n\n[PrefTitle]\ntranslation = \"設定\"\n");
     REQUIRE(tr.load("jp_marker"));
-    CHECK(tr.activeLanguageCode() == "ja");
+    CHECK(tr.activeCulture() == "ja");
 
-    // A file that declares no code falls back to "en" (so plugins show their neutral catalog).
+    // A BCP 47 script subtag is read verbatim (this is what distinguishes Simplified from Traditional).
+    writeLangFile("cht", "[_meta]\nculture = \"zh-Hant\"\n\n[PrefTitle]\ntranslation = \"設定\"\n");
+    REQUIRE(tr.load("cht"));
+    CHECK(tr.activeCulture() == "zh-Hant");
+
+    // A file that declares no tag falls back to "en" (so plugins show their neutral catalog).
     writeLangFile("nometa", "[PrefTitle]\ntranslation = \"X\"\n");
     REQUIRE(tr.load("nometa"));
-    CHECK(tr.activeLanguageCode() == "en");
+    CHECK(tr.activeCulture() == "en");
 
     tr.loadDefaults();
 }
 
-TEST_CASE("exportCatalog round-trips the active language code via [_meta]") {
+TEST_CASE("exportCatalog round-trips the active culture tag via [_meta]") {
     auto &tr = Translator::instance();
-    writeLangFile("src", "[_meta]\niso639 = \"ja\"\n\n[PrefTitle]\ntranslation = \"設定\"\n");
+    writeLangFile("src", "[_meta]\nculture = \"ja\"\n\n[PrefTitle]\ntranslation = \"設定\"\n");
     REQUIRE(tr.load("src"));
 
     // Export into the pref lang/ dir so load() (which searches there first) can read it straight back.
@@ -141,9 +146,9 @@ TEST_CASE("exportCatalog round-trips the active language code via [_meta]") {
     REQUIRE(tr.exportCatalog(dest));
     tr.load(""); // exportCatalog reads active state; clear it before re-loading the exported file
 
-    // Loading the exported catalog back yields the same code — the export carried [_meta] through.
+    // Loading the exported catalog back yields the same tag — the export carried [_meta] through.
     REQUIRE(tr.load("exported"));
-    CHECK(tr.activeLanguageCode() == "ja");
+    CHECK(tr.activeCulture() == "ja");
 
     std::filesystem::remove(dest);
     tr.loadDefaults();

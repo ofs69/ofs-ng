@@ -395,14 +395,14 @@ TEST_CASE("SetLanguageEvent reloads plugins so they re-register strings in the n
     REQUIRE(fx.effectReg.pluginNodes.count("Ofs.ProbePlugin.langnode") == 1);
     CHECK(fx.effectReg.pluginNodes.at("Ofs.ProbePlugin.langnode").displayName == "Node-en");
 
-    // Host.Culture maps the active code to a CultureInfo: English → the invariant culture (the plugin's
+    // Host.Culture maps the active tag to a CultureInfo: English → the invariant culture (the plugin's
     // neutral .resx). CultureFromCode's "en"/empty branch.
     fx.pm.firePluginCommand("Ofs.ProbePlugin", "culture");
     fx.tp.eq.drain();
     CHECK(channelArg(fx.seeks.received, kCultureInvariant) == doctest::Approx(1.0));
 
-    // onSetLanguage reads the host's ACTIVE ISO 639 code from the Translator (never from the event's
-    // languageId / filename), so set the Translator first. ja_[AI].toml declares [_meta] iso639 = "ja".
+    // onSetLanguage reads the host's ACTIVE culture tag from the Translator (never from the event's
+    // languageId / filename), so set the Translator first. ja_[AI].toml declares [_meta] culture = "ja".
     // The host then unloads and reloads the plugin; OnLoad re-runs with Host.Language == "ja", so it
     // re-registers the command (synchronously) and the node (via RegisterPluginNodeEvent, drained in the
     // same pass) under the same ids with the now-Japanese strings.

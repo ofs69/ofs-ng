@@ -253,14 +253,14 @@ int runValidate(const std::string &srcPath, const std::vector<std::string> &lang
             continue;
         }
 
-        // Each shipped translation must declare its ISO 639 code so plugins can follow ofs-ng's
+        // Each shipped translation must declare its BCP 47 culture tag so plugins can follow ofs-ng's
         // language (the [_meta] table is reserved metadata, not a translatable string).
         if (const auto *meta = root["_meta"].as_table()) {
-            auto code = (*meta)["iso639"].value<std::string>();
-            if (!code || code->empty())
-                err(langPath, "[_meta] is missing a non-empty 'iso639' code");
+            auto tag = (*meta)["culture"].value<std::string>();
+            if (!tag || tag->empty())
+                err(langPath, "[_meta] is missing a non-empty 'culture' tag");
         } else {
-            err(langPath, "missing required [_meta] table with an 'iso639' code");
+            err(langPath, "missing required [_meta] table with a 'culture' tag");
         }
 
         std::set<std::string> present;

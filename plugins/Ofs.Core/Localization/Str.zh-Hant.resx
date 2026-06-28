@@ -1,0 +1,179 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <!-- Chinese Traditional (zh-Hant) translations for the Ofs.Core plugin. Keys must match Str.resx. -->
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="StrokeMoveModeLabel" xml:space="preserve">
+    <value>移動模式</value>
+  </data>
+  <data name="StrokeModeRigid" xml:space="preserve">
+    <value>剛性</value>
+  </data>
+  <data name="StrokeModeTaper" xml:space="preserve">
+    <value>漸變</value>
+  </data>
+  <data name="StrokeModeSmooth" xml:space="preserve">
+    <value>平滑</value>
+  </data>
+  <data name="ModeLabel" xml:space="preserve">
+    <value>模式</value>
+  </data>
+  <data name="ModeNone" xml:space="preserve">
+    <value>無</value>
+  </data>
+  <data name="ModeAlternating" xml:space="preserve">
+    <value>交替</value>
+  </data>
+  <data name="ModeShapedApproach" xml:space="preserve">
+    <value>塑形逼近</value>
+  </data>
+  <data name="SectionAlternating" xml:space="preserve">
+    <value>交替</value>
+  </data>
+  <data name="SectionShapedApproach" xml:space="preserve">
+    <value>塑形逼近</value>
+  </data>
+  <data name="FixedRange" xml:space="preserve">
+    <value>固定範圍</value>
+  </data>
+  <data name="Top" xml:space="preserve">
+    <value>頂部</value>
+  </data>
+  <data name="Bottom" xml:space="preserve">
+    <value>底部</value>
+  </data>
+  <data name="ApproachShape" xml:space="preserve">
+    <value>形狀</value>
+  </data>
+  <data name="ShapeSnapEarly" xml:space="preserve">
+    <value>提前到達</value>
+  </data>
+  <data name="ShapeEaseOut" xml:space="preserve">
+    <value>緩出</value>
+  </data>
+  <data name="ShapeLinear" xml:space="preserve">
+    <value>線性</value>
+  </data>
+  <data name="ShapeEaseIn" xml:space="preserve">
+    <value>緩入</value>
+  </data>
+  <data name="ShapeSnapLate" xml:space="preserve">
+    <value>延遲到達</value>
+  </data>
+  <data name="ApproachSteps" xml:space="preserve">
+    <value>步數</value>
+  </data>
+  <data name="CmdEqualize" xml:space="preserve">
+    <value>均衡</value>
+  </data>
+  <data name="CmdInvert" xml:space="preserve">
+    <value>反轉</value>
+  </data>
+  <data name="CmdIsolate" xml:space="preserve">
+    <value>隔離</value>
+  </data>
+  <data name="CmdRepeatStroke" xml:space="preserve">
+    <value>重複行程</value>
+  </data>
+  <data name="PluginName" xml:space="preserve">
+    <value>核心外掛</value>
+  </data>
+  <data name="NodeShapeCurve" xml:space="preserve">
+    <value>形狀曲線</value>
+  </data>
+  <data name="NodeShapeCurveDesc" xml:space="preserve">
+    <value>透過伽瑪曲線重新映射每個輸入位置，以緩和或銳化運動；可選擇反轉結果。</value>
+  </data>
+  <data name="ParamGamma" xml:space="preserve">
+    <value>伽瑪</value>
+  </data>
+  <data name="ParamInvert" xml:space="preserve">
+    <value>反轉</value>
+  </data>
+  <data name="ShapeModeName" xml:space="preserve">
+    <value>行程塑形</value>
+  </data>
+  <data name="SelectModeDisclaimer" xml:space="preserve">
+    <value>在頁尾中選擇「{0}」作為編輯模式以使用這些設定。</value>
+  </data>
+  <data name="SelectModePeaksName" xml:space="preserve">
+    <value>峰值選擇</value>
+  </data>
+  <data name="SectionPeaks" xml:space="preserve">
+    <value>峰值</value>
+  </data>
+  <data name="PeaksDisclaimer" xml:space="preserve">
+    <value>在頁尾中啟用「僅峰值」選擇模式或峰值導覽器以使用此設定。</value>
+  </data>
+  <data name="NavPeaksName" xml:space="preserve">
+    <value>峰值步進</value>
+  </data>
+  <data name="PeakSelectLabel" xml:space="preserve">
+    <value>選擇</value>
+  </data>
+  <data name="PeakKindBoth" xml:space="preserve">
+    <value>波峰與波谷</value>
+  </data>
+  <data name="PeakKindTops" xml:space="preserve">
+    <value>僅波峰</value>
+  </data>
+  <data name="PeakKindBottoms" xml:space="preserve">
+    <value>僅波谷</value>
+  </data>
+</root>

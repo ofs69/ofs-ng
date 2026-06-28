@@ -45,8 +45,8 @@ namespace Ofs
         /// </summary>
         AppScoped<T> AppScoped<T>(string key) where T : new();
 
-        /// <summary>The ISO 639 code of ofs-ng's active UI language ("en" for built-in English, else the
-        /// code the translation declares, e.g. "ja"). Main-thread only.</summary>
+        /// <summary>The BCP 47 culture tag of ofs-ng's active UI language ("en" for built-in English, else
+        /// the tag the translation declares, e.g. "ja", "zh-Hant"). Main-thread only.</summary>
         string Language { get; }
 
         /// <summary>ofs-ng's active UI language as a <see cref="CultureInfo"/> — feed it to your own
@@ -333,8 +333,10 @@ namespace Ofs
 
         public CultureInfo Culture => CultureFromCode(Language);
 
-        // Map ofs-ng's ISO 639 language code to a .NET culture. "" / "en" → invariant (a plugin's neutral
-        // .resx). Any code .NET doesn't recognize also falls back to invariant rather than throwing.
+        // Map ofs-ng's BCP 47 culture tag to a .NET culture. "" / "en" → invariant (a plugin's neutral
+        // .resx). A script/region subtag (e.g. "zh-Hant") resolves to that specific culture, with .NET's
+        // own resource fallback walking it down. Any tag .NET doesn't recognize falls back to invariant
+        // rather than throwing.
         private static CultureInfo CultureFromCode(string code)
         {
             code ??= string.Empty;

@@ -11,7 +11,7 @@
     <RootNamespace>StarterPlugin</RootNamespace>
     <!-- Shown next to the name in the plugin list (OfsPlugin.Version reads this). -->
     <Version>1.0.0</Version>
-    <!-- Strings.resx is the neutral (English) catalog; declaring the neutral language emits
+    <!-- Localization/Str.resx is the neutral (English) catalog; declaring the neutral language emits
          [assembly: NeutralResourcesLanguage] so the resource manager skips a satellite probe for English. -->
     <NeutralLanguage>en</NeutralLanguage>
   </PropertyGroup>
@@ -64,14 +64,19 @@
   </PropertyGroup>
 
 
-  <!-- Optional localization: build-time strongly-typed accessor for Strings.resx, so you call
+  <!-- Optional localization: build-time strongly-typed accessor for Localization/Str.resx, so you call
        Str.ClickMe (compile-checked) instead of a "ClickMe" string key. MSBuild generates the class into
        obj/ on every build — no Visual Studio, no committed Designer.cs. OfsPlugin keeps the generated
        accessor's static Culture synced to ofs-ng's language picker, so the getters follow the in-app
-       language with zero wiring. Don't want localization? Delete Str.resx and this ItemGroup and
-       pass literal strings to ui.* directly. See README "Localization". -->
+       language with zero wiring. Don't want localization? Delete the Localization/ folder and this
+       ItemGroup and pass literal strings to ui.* directly. See README "Localization". -->
   <ItemGroup>
-    <EmbeddedResource Update="Str.resx">
+    <EmbeddedResource Update="Localization/Str.resx">
+      <!-- Link makes MSBuild derive the manifest name from "Str.resx" (root), NOT "Localization/Str.resx",
+           so the embedded resource is "StarterPlugin.Str(.resources)" — matching the generated accessor's
+           ResourceManager base name (StronglyTypedNamespace + class). Without it the subdir leaks into the
+           manifest and every Str.* lookup throws MissingManifestResource at runtime. -->
+      <Link>Str.resx</Link>
       <Generator>MSBuild:Compile</Generator>
       <StronglyTypedLanguage>CSharp</StronglyTypedLanguage>
       <StronglyTypedNamespace>StarterPlugin</StronglyTypedNamespace>
@@ -83,6 +88,11 @@
            which excludes obj/ — so Str builds yet red-underlines in the editor. A stable in-tree path is
            globbed at evaluation time, so IntelliSense resolves Str. -->
       <StronglyTypedFileName>$(MSBuildProjectDirectory)/Generated/Str.Designer.cs</StronglyTypedFileName>
+    </EmbeddedResource>
+    <!-- Add a language by dropping Localization/Str.<culture>.resx alongside the neutral catalog; this
+         strips the subdir from each satellite's manifest name so it lands under the same base. -->
+    <EmbeddedResource Update="Localization/Str.*.resx">
+      <Link>%(Filename)%(Extension)</Link>
     </EmbeddedResource>
   </ItemGroup>
 
