@@ -69,52 +69,52 @@ fs::path stageCompatPlugin() {
 // the main `plugins` entry) by suite name — robust to renaming the case below. See tests/CMakeLists.txt.
 TEST_SUITE("plugin-compat") {
 
-TEST_CASE("host loads a plugin built against an older same-major Ofs.Api") {
+    TEST_CASE("host loads a plugin built against an older same-major Ofs.Api") {
 #ifndef OFS_COMPAT_PLUGIN_DIR
-    MESSAGE("back-compat fixture not configured (no Python/git at build) — skipping");
-    return;
-#else
-    const fs::path dll = stageCompatPlugin();
-    if (dll.empty()) {
-        MESSAGE("no same-major release tag baseline staged — skipping API back-compat check");
+        MESSAGE("back-compat fixture not configured (no Python/git at build) — skipping");
         return;
-    }
+#else
+        const fs::path dll = stageCompatPlugin();
+        if (dll.empty()) {
+            MESSAGE("no same-major release tag baseline staged — skipping API back-compat check");
+            return;
+        }
 
-    TestProject tp;
-    auto player = std::make_shared<FakeVideoPlayer>();
-    auto dummy = std::make_shared<FakeVideoPlayer>();
-    CommandRegistry cmdReg{tp.eq};
-    RebindState rebind;
-    BindingSystem binding{tp.eq, cmdReg, rebind};
-    EffectRegistryState effectReg;
-    PluginManager pm{tp.project, tp.eq, player, dummy, cmdReg, binding, effectReg};
-    tp.eq.freeze();
+        TestProject tp;
+        auto player = std::make_shared<FakeVideoPlayer>();
+        auto dummy = std::make_shared<FakeVideoPlayer>();
+        CommandRegistry cmdReg{tp.eq};
+        RebindState rebind;
+        BindingSystem binding{tp.eq, cmdReg, rebind};
+        EffectRegistryState effectReg;
+        PluginManager pm{tp.project, tp.eq, player, dummy, cmdReg, binding, effectReg};
+        tp.eq.freeze();
 
-    REQUIRE(pm.init());
-    pm.loadPlugins();
+        REQUIRE(pm.init());
+        pm.loadPlugins();
 
-    // The bootstrapper accepted the old binary (same Ofs.Api major, plugin <= host) instead of rejecting
-    // it — proof the back-compat gate holds for a plugin we did NOT recompile.
-    LoadedPlugin *lp = findPlugin(pm.getPlugins(), "Ofs.CompatPlugin");
-    REQUIRE(lp != nullptr);
-    CHECK(lp->enabled);
-    REQUIRE(lp->api.getName != nullptr);
-    CHECK(std::string(lp->api.getName()) == "Test Plugin");
+        // The bootstrapper accepted the old binary (same Ofs.Api major, plugin <= host) instead of rejecting
+        // it — proof the back-compat gate holds for a plugin we did NOT recompile.
+        LoadedPlugin *lp = findPlugin(pm.getPlugins(), "Ofs.CompatPlugin");
+        REQUIRE(lp != nullptr);
+        CHECK(lp->enabled);
+        REQUIRE(lp->api.getName != nullptr);
+        CHECK(std::string(lp->api.getName()) == "Test Plugin");
 
-    // OnLoad ran in the old binary and round-tripped through the host bridge: its Commands.Register call
-    // landed in the native registry, namespaced by this plugin's load name. If a public API member it uses
-    // had been dropped same-major, OnLoad would have thrown before reaching here.
-    CHECK(cmdReg.find("Ofs.CompatPlugin.ping") != nullptr);
+        // OnLoad ran in the old binary and round-tripped through the host bridge: its Commands.Register call
+        // landed in the native registry, namespaced by this plugin's load name. If a public API member it uses
+        // had been dropped same-major, OnLoad would have thrown before reaching here.
+        CHECK(cmdReg.find("Ofs.CompatPlugin.ping") != nullptr);
 
-    // Event dispatch into the old binary's managed callbacks stays sound.
-    REQUIRE(lp->api.onProjectChange != nullptr);
-    tp.eq.push(LoadProjectEvent{});
-    tp.eq.drain();
+        // Event dispatch into the old binary's managed callbacks stays sound.
+        REQUIRE(lp->api.onProjectChange != nullptr);
+        tp.eq.push(LoadProjectEvent{});
+        tp.eq.drain();
 
-    // Unload so the DLL isn't left locked for any later case in this process.
-    tp.eq.push(SetPluginEnabledEvent{.name = "Ofs.CompatPlugin", .enabled = false});
-    tp.eq.drain();
+        // Unload so the DLL isn't left locked for any later case in this process.
+        tp.eq.push(SetPluginEnabledEvent{.name = "Ofs.CompatPlugin", .enabled = false});
+        tp.eq.drain();
 #endif
-}
+    }
 
 } // TEST_SUITE("plugin-compat")

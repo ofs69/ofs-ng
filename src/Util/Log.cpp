@@ -20,9 +20,7 @@ class MemoryLogSink : public spdlog::sinks::base_sink<std::mutex> {
   public:
     explicit MemoryLogSink(size_t cap) : capacity(cap) {}
 
-    [[nodiscard]] uint64_t generation() const {
-        return generationCounter.load(std::memory_order_relaxed);
-    }
+    [[nodiscard]] uint64_t generation() const { return generationCounter.load(std::memory_order_relaxed); }
 
     void snapshot(std::vector<LogEntry> &out) {
         std::lock_guard<std::mutex> lock(mutex_);
