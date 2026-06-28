@@ -5,9 +5,10 @@
 #include "Core/ProjectLifecycleEvents.h"
 #include "Format/AppSettings.h"
 #include "Localization/Translator.h"
+#include "UI/FogBackground.h"
 #include "UI/Icons.h"
 #include "UI/ImGuiHelpers.h"     // buttonW
-#include "UI/Theme.h"            // AppCol_Warning
+#include "UI/Theme.h"            // AppCol_Warning, getActive
 #include "Util/FrameAllocator.h" // fmtScratch
 #include "Util/Version.h"        // versionTitle (shared with the OS window title)
 #include "imgui.h"
@@ -25,7 +26,32 @@ const char *utf8Filename(const std::string &path) {
     return pos == std::string::npos ? path.c_str() : path.c_str() + pos + 1;
 }
 
+// Monochrome fog tint derived from the window background: a lighter haze on dark themes, a darker one on
+// light themes, so it reads the same way regardless of palette. Alpha is the ceiling a full billow
+// reaches; the shader fades it out toward the center so it never competes with the text on top.
+ImVec4 fogTint() {
+    const ImVec4 bg = ImGui::GetStyleColorVec4(ImGuiCol_WindowBg);
+    const bool dark = ofs::theme::getActive().isDark;
+    const float target = dark ? 1.0f : 0.0f; // toward white on dark, toward black on light
+    // A dark haze over a near-white panel needs both a deeper tint and a higher alpha ceiling than a
+    // light haze over a dark one to read at all — otherwise light mode just washes out.
+    const float k = dark ? 0.6f : 0.8f;
+    const float alpha = dark ? 0.13f : 0.28f;
+    return {bg.x + (target - bg.x) * k, bg.y + (target - bg.y) * k, bg.z + (target - bg.z) * k, alpha};
+}
+
+// Central vignette over the content area. On dark themes it darkens toward black to deepen the panel
+// under the text; on light themes it brightens toward white, so the content sits in a clear bright pool
+// framed by the darker fog at the edges.
+ImVec4 fogCenter() {
+    return ofs::theme::getActive().isDark ? ImVec4{0.f, 0.f, 0.f, 0.32f} : ImVec4{1.f, 1.f, 1.f, 0.6f};
+}
+
 } // namespace
+
+WelcomeScreen::WelcomeScreen() : fog_(std::make_unique<FogBackground>()) {}
+
+WelcomeScreen::~WelcomeScreen() = default;
 
 void WelcomeScreen::render(EventQueue &eq, const AppSettings &settings) {
     const ImGuiViewport *vp = ImGui::GetMainViewport();
@@ -43,6 +69,9 @@ void WelcomeScreen::render(EventQueue &eq, const AppSettings &settings) {
         ImGui::End();
         return;
     }
+
+    // Animated fog behind everything: emitted first so the window's content draws on top of it.
+    fog_->draw(ImGui::GetWindowDrawList(), vp->WorkPos, vp->WorkSize, fogTint(), fogCenter());
 
     // The two action buttons, composed once so the column can size to the wider (translated) label.
     const char *openLabel = Str::WelOpenProject.iconId(ICON_FOLDER_OPEN, "welcome_open");
