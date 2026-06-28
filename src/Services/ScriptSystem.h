@@ -22,7 +22,7 @@ class JobSystem;
 struct ScriptProject;
 
 // Native↔managed result of one compile. Layout must match ScriptCompileResult in
-// plugins/Ofs.ScriptHost/ScriptCompiler.cs.
+// managed/Ofs.ScriptHost/ScriptCompiler.cs.
 struct OfsScriptCompileResult {
     OfsGenericFn fnPtr = nullptr; // trampoline
     void *userData = nullptr;     // slot index

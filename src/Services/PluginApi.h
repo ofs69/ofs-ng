@@ -456,7 +456,7 @@ static_assert(offsetof(OfsSelectModeDef, id) == 0 && offsetof(OfsSelectModeDef, 
 //
 //  • Plugin-supplied display strings (widget labels, section/row titles, command titles, node display
 //    names, the plugin's getName() window title) are rendered VERBATIM. They do NOT pass through the
-//    host's string catalog (localization/strings.toml) — localizing them is the plugin's own job.
+//    host's string catalog (tools/localization/strings.toml) — localizing them is the plugin's own job.
 //    A plugin reads getActiveLanguage at onLoad and registers its strings in that language; on a later
 //    UI-language switch the host unloads and reloads every plugin, so each re-registers from its onLoad
 //    in the new language. There is no live re-supply path. (The Ofs.Api C# wrapper handles this for you.)

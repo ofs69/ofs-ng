@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\Ofs.Api\Ofs.Api.csproj" Private="false" ExcludeAssets="runtime" />
+    <ProjectReference Include="..\..\Ofs.Api\Ofs.Api.csproj" Private="false" ExcludeAssets="runtime" />
   </ItemGroup>
 
   <!-- Build-time strongly-typed accessor for the resx (use Str.CmdEqualize, not a "CmdEqualize" string

@@ -241,7 +241,7 @@ build.
 and pass literal strings to `ui.*` directly.
 
 For the raw language signal, `Host.Culture` and `Host.Language` are also exposed (read them at `OnLoad`),
-but most plugins never need them. For a larger worked example see `plugins/Ofs.Core/` (`Str.resx`,
+but most plugins never need them. For a larger worked example see `managed/plugins/Ofs.Core/` (`Str.resx`,
 `Str.ja.resx`, and its `Str.*` getters).
 
 ## API version compatibility

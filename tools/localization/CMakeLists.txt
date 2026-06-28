@@ -15,7 +15,7 @@ target_compile_features(localization_gen PRIVATE cxx_std_20)
 # (MAIN_DEPENDENCY) or the generator changes; a normal build runs no generator. The ofs_strings_gen
 # target wraps the outputs so any consumer (src/ app, tests/) can add_dependencies() on it; this
 # subdir is added before src/ and tests/, so the target is visible to both.
-set(OFS_STRINGS_TOML "${CMAKE_SOURCE_DIR}/localization/strings.toml")
+set(OFS_STRINGS_TOML "${CMAKE_SOURCE_DIR}/tools/localization/strings.toml")
 add_custom_command(
         OUTPUT "${OFS_STRINGS_HDR}" "${OFS_STRINGS_SRC}"
         COMMAND "${CMAKE_COMMAND}" -E make_directory "${OFS_GENERATED_DIR}/Localization"

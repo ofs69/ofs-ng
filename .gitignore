@@ -3,11 +3,10 @@ bin/
 build*/
 cmake-build-*/
 **/obj/
-plugins/Ofs.Core/Generated/
+managed/plugins/Ofs.Core/Generated/
 
 # Transient translation work-orders from `tools/translations.py todo` (see docs/TRANSLATING.md).
-# The wip language files themselves are tracked; only these batch files are not.
-localization/wip/*.batch.toml
+tools/localization/*.batch.toml
 
 # Generated theme preview artifacts
 data/themes/preview.html
@@ -30,8 +29,8 @@ $RECYCLE.BIN/
 docs/imgui.wiki/
 docs/imgui_test_engine.wiki/
 
-# DocFX generated output (apidocs/). The api/*.md landing pages are tracked; the extracted
+# DocFX generated output (docs/apidocs/). The api/*.md landing pages are tracked; the extracted
 # metadata (api/*.yml) and the rendered site are build artifacts. (obj/ covered above.)
-apidocs/_site/
-apidocs/api/*.yml
-apidocs/api/.manifest
+docs/apidocs/_site/
+docs/apidocs/api/*.yml
+docs/apidocs/api/.manifest

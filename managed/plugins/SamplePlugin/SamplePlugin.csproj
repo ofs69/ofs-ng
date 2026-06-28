@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\Ofs.Api\Ofs.Api.csproj" Private="false" ExcludeAssets="runtime" />
+    <ProjectReference Include="..\..\Ofs.Api\Ofs.Api.csproj" Private="false" ExcludeAssets="runtime" />
   </ItemGroup>
 
   <PropertyGroup>

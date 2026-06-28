@@ -1,12 +1,12 @@
 {
   "$schema": "https://raw.githubusercontent.com/dotnet/docfx/main/schemas/docfx.schema.json",
 
-  "//": "Metadata step: compile plugins/Ofs.Api and extract its /// XML comments into api/*.yml.",
+  "//": "Metadata step: compile managed/Ofs.Api and extract its /// XML comments into api/*.yml.",
   "metadata": [
     {
       "src": [
         {
-          "src": "../plugins/Ofs.Api",
+          "src": "../../managed/Ofs.Api",
           "files": [ "Ofs.Api.csproj" ]
         }
       ],
@@ -31,7 +31,7 @@
     "resource": [
       { "files": [ "images/**" ] },
       { "//": "Pull the app logo straight from data/icons into the site root — no committed duplicate.",
-        "src": "../data/icons", "files": [ "logomark256.png", "logo32.png" ], "dest": "." }
+        "src": "../../data/icons", "files": [ "logomark256.png", "logo32.png" ], "dest": "." }
     ],
     "output": "_site",
     "template": [ "default", "modern", "template" ],

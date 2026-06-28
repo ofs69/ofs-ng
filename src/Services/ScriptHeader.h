@@ -64,7 +64,7 @@ ScriptHeader parseScriptHeader(std::string_view source);
 
 // Produce the full text of a starter script file for the given signal, input count, and output count:
 // a matching "// !ofs:" header (which round-trips through parseScriptHeader) plus a minimal Eval body
-// whose in-scope names match the wrapper in plugins/Ofs.ScriptHost/ScriptCompiler.cs. inputCount is
+// whose in-scope names match the wrapper in managed/Ofs.ScriptHost/ScriptCompiler.cs. inputCount is
 // clamped to 0..16 (named "in0", "in1", …) and outputCount to 1..16. A single output is left implicit
 // (named "out", so a functional body `return`s and a discrete one writes `outp`); with >1 output each
 // pin is declared "out0", "out1", … and the body assigns/writes every one. When `comments` is false,

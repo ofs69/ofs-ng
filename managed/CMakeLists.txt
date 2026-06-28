@@ -39,11 +39,10 @@ add_cs_project(Ofs.ScriptHost "${CMAKE_CURRENT_SOURCE_DIR}/Ofs.ScriptHost/Ofs.Sc
 add_dependencies(Ofs.ScriptHost Ofs.Api)
 add_dependencies(Ofs.ScriptHost Ofs.PluginHost)
 
-# 2c. Build Ofs.HostServices (app-internal managed services; put in managed folder). It lives OUTSIDE
-# plugins/ on purpose — it references neither Ofs.Api nor any plugin, so it shares no build state with the
-# linear Ofs.Api → … chain below and can build concurrently. Built here only because this file already
-# owns the managed-build + hash-baking pipeline.
-add_cs_project(Ofs.HostServices "${CMAKE_SOURCE_DIR}/Ofs.HostServices/Ofs.HostServices.csproj" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/managed")
+# 2c. Build Ofs.HostServices (app-internal managed services; put in managed folder next to the host
+# assemblies). It references neither Ofs.Api nor any plugin, so it shares no build state with the linear
+# Ofs.Api → … chain below and can build concurrently.
+add_cs_project(Ofs.HostServices "${CMAKE_CURRENT_SOURCE_DIR}/Ofs.HostServices/Ofs.HostServices.csproj" "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}/managed")
 
 # 3. Build plugins
 # Pass DEBUG_ONLY as the optional third argument to keep a plugin out of release
@@ -92,7 +91,7 @@ endfunction()
 # auto-loads from there.
 if (WIN32 AND DEFINED ENV{APPDATA})
     file(TO_CMAKE_PATH "$ENV{APPDATA}/ofs/ofs-ng/plugins/SamplePlugin" OFS_SAMPLE_USER_DIR)
-    set(SAMPLE_BUILD_CMD ${DOTNET_EXECUTABLE} build "${CMAKE_CURRENT_SOURCE_DIR}/SamplePlugin/SamplePlugin.csproj" -c Debug -o "${OFS_SAMPLE_USER_DIR}" -p:PassOutputPathToReferencedProjects=false --nologo -v q)
+    set(SAMPLE_BUILD_CMD ${DOTNET_EXECUTABLE} build "${CMAKE_CURRENT_SOURCE_DIR}/plugins/SamplePlugin/SamplePlugin.csproj" -c Debug -o "${OFS_SAMPLE_USER_DIR}" -p:PassOutputPathToReferencedProjects=false --nologo -v q)
     add_custom_target(SamplePlugin ALL
             COMMAND ${CMAKE_COMMAND} -E rm -rf "${PLUGIN_OUTPUT_ROOT}/SamplePlugin"
             COMMAND "$<$<CONFIG:Debug>:${SAMPLE_BUILD_CMD}>"
@@ -117,7 +116,7 @@ add_dependencies(SamplePlugin Ofs.Api)
 # ScriptHost→PluginHost already exist above; these two close the gap.)
 add_dependencies(SamplePlugin Ofs.ScriptHost)
 
-add_cs_plugin(Ofs.Core "${CMAKE_CURRENT_SOURCE_DIR}/Ofs.Core/Ofs.Core.csproj")
+add_cs_plugin(Ofs.Core "${CMAKE_CURRENT_SOURCE_DIR}/plugins/Ofs.Core/Ofs.Core.csproj")
 add_dependencies(Ofs.Core SamplePlugin)
 
 # StarterPlugin is a user-facing TEMPLATE: it is never shipped or deployed in a compiled state (it appears
@@ -130,7 +129,7 @@ add_dependencies(Ofs.Core SamplePlugin)
 # linear chain above; depending on Ofs.Core just runs it last, after the managed assemblies exist.
 set(STARTER_CHECK_DIR "${CMAKE_BINARY_DIR}/startercheck")
 add_custom_target(StarterPlugin.Check ALL
-    COMMAND ${DOTNET_EXECUTABLE} build "${CMAKE_CURRENT_SOURCE_DIR}/StarterPlugin/StarterPlugin.csproj"
+    COMMAND ${DOTNET_EXECUTABLE} build "${CMAKE_CURRENT_SOURCE_DIR}/plugins/StarterPlugin/StarterPlugin.csproj"
             -c $<IF:$<CONFIG:Debug>,Debug,Release> -o "${STARTER_CHECK_DIR}"
             -p:OfsDir=${CMAKE_RUNTIME_OUTPUT_DIRECTORY} -p:PackPlugin=false -p:DeployToPref=false
             -p:PassOutputPathToReferencedProjects=false --nologo -v q

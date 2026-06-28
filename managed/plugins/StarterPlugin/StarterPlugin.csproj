@@ -30,13 +30,13 @@
        Resolution order if this line stays commented out:
          1. -p:OfsDir=...   on the command line (build only)
          2. the OFS_DIR     environment variable  (build only)
-         3. ../../bin       (default: this template living inside the ofs-ng repo)
+         3. ../../../bin    (default: this template living inside the ofs-ng repo)
        ====================================================================== -->
   <PropertyGroup>
     <!-- <OfsDir>C:/Tools/ofs-ng</OfsDir> -->
 
     <OfsDir Condition="'$(OfsDir)' == '' and '$(OFS_DIR)' != ''">$(OFS_DIR)</OfsDir>
-    <OfsDir Condition="'$(OfsDir)' == ''">$(MSBuildProjectDirectory)/../../bin</OfsDir>
+    <OfsDir Condition="'$(OfsDir)' == ''">$(MSBuildProjectDirectory)/../../../bin</OfsDir>
     <OfsManagedDir>$(OfsDir)/managed</OfsManagedDir>
   </PropertyGroup>
 

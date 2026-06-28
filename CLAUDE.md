@@ -17,7 +17,7 @@ Deeper references live in `docs/`:
 | Doc | Covers |
 |-----|--------|
 | `docs/ARCHITECTURE.md` | The three-primitive design in prose, the interaction extension points, and the processing-node model |
-| `docs/TRANSLATING.md` | Maintaining translation catalogs and adding languages via `tools/translations.py` (the `sync`/`todo`/`apply`/`promote` workflow) |
+| `docs/TRANSLATING.md` | Maintaining translation catalogs and adding languages via `tools/translations.py` (the `sync`/`todo`/`apply` workflow) |
 
 ## Build
 
@@ -151,7 +151,7 @@ ImGui render functions execute every frame. Heap allocation inside them causes p
 
 ### Localized strings
 
-Every user-visible string is defined once in `localization/strings.toml` (the English source of truth)
+Every user-visible string is defined once in `tools/localization/strings.toml` (the English source of truth)
 and reached through the generated `Tr` enum / `Str::` constants — never typed as a literal in a render
 path. A build step (`localization_gen`) regenerates `StringsGenerated.{h,cpp}` from the catalog and
 **validates every `lang/*.toml` against it** (missing key, empty translation, `{N}` placeholder
@@ -171,8 +171,8 @@ mismatch, or unknown key fails the build).
 - **MUST** add the matching key (with `english` + `description`, and `placeholders` for formatted
   strings) to `strings.toml`, then run `python tools/translations.py sync` to propagate the change into
   **every** language catalog — do not hand-edit the per-language files. An out-of-sync translation file
-  fails the build. Shipped catalogs live in `lang/*.toml` (strictly validated); in-progress ones live
-  in `localization/wip/` (not built) until `promote`d. AI-translated catalogs carry an `_[AI]` filename
+  fails the build. All catalogs live in `lang/*.toml` and are strictly validated, so a catalog stays
+  broken-build until every key is translated. AI-translated catalogs carry an `_[AI]` filename
   suffix (e.g. `lang/jp_[AI].toml`) so the language picker shows machine translations as such. The full
   suite runs twice — built-in English and `jp_[AI]` (ctest `ui-smoke` + `ui-smoke-loc`) — so a label
   that lost its `###id` is caught. See `docs/TRANSLATING.md` for the full `sync`/`todo`/`apply` workflow.
@@ -325,7 +325,7 @@ The reader sees the code that *exists*; a comment about code that *doesn't* only
 
 C ABI (`HostApi` / `PluginApi` structs of function pointers, `src/Services/PluginApi.h`). Plugins are C# DLLs loaded via .NET CoreCLR (`DotNetHost`). Shipped first-party plugins are built to `bin/managed/plugins/<name>/` (under the managed dir, not a top-level `bin/plugins/` users would mistake for their install folder); user-installed plugins live in the writable `<pref>/plugins/`. The native↔managed struct layout is guarded by `OFS_ABI_VERSION` (must match the C# mirror in `Ofs.Api/PluginAbi.cs`); whether a given *plugin* is compatible is a separate check against the `Ofs.Api` assembly version in `PluginBootstrapper`. C# script nodes are compiled at runtime by `ScriptSystem` — see *Processing nodes* in `docs/ARCHITECTURE.md`.
 
-**Host-internal managed code (NOT a plugin).** The same CoreCLR runtime also hosts **`Ofs.HostServices`** (source in the top-level `Ofs.HostServices/`, built to `bin/<cfg>/managed/` next to `Ofs.Api`/`Ofs.PluginHost`/`Ofs.ScriptHost`). It is deliberately standalone — references no `Ofs.Api`, is never loaded through `PluginLoadContext`, and touches none of the plugin/script ABI — so the native host loads it through its **own** `DotNetHost` and calls its `[UnmanagedCallersOnly]` entry points directly. It exists to lean on the already-mandatory .NET runtime instead of vendoring a native library: today it backs the app's only outbound HTTP (an `HttpClient` GET behind `ofs::util::httpGet`, brought up by `initManagedHttp()`; the response crosses back through a native callback sink, not a returned buffer). That is why **no libcurl/native TLS stack ships**. Like the plugin/script hosts it is trust-gated — its bytes are verified against a baked SHA-256 (it is in `OFS_MANAGED_ASSEMBLIES`) before load. When adding such host-internal .NET helpers, keep them out of `plugins/` and free of `Ofs.Api`.
+**Host-internal managed code (NOT a plugin).** The same CoreCLR runtime also hosts **`Ofs.HostServices`** (source in `managed/Ofs.HostServices/`, built to `bin/<cfg>/managed/` next to `Ofs.Api`/`Ofs.PluginHost`/`Ofs.ScriptHost`). It is deliberately standalone — references no `Ofs.Api`, is never loaded through `PluginLoadContext`, and touches none of the plugin/script ABI — so the native host loads it through its **own** `DotNetHost` and calls its `[UnmanagedCallersOnly]` entry points directly. It exists to lean on the already-mandatory .NET runtime instead of vendoring a native library: today it backs the app's only outbound HTTP (an `HttpClient` GET behind `ofs::util::httpGet`, brought up by `initManagedHttp()`; the response crosses back through a native callback sink, not a returned buffer). That is why **no libcurl/native TLS stack ships**. Like the plugin/script hosts it is trust-gated — its bytes are verified against a baked SHA-256 (it is in `OFS_MANAGED_ASSEMBLIES`) before load. When adding such host-internal .NET helpers, keep them out of `managed/plugins/` and free of `Ofs.Api`.
 
 **ABI vs API — breaking the ABI does *not* break plugins; only breaking the API does.** At load, `PluginLoadContext` discards the `Ofs.Api` a plugin ships and binds it to the *host's own* copy (`PluginBootstrapper.cs:22-29`), and every ABI struct (`HostApi`, `PluginApi`, `OfsNodeDef`, `OfsEvalCtx`, `OfsEditIntent`, …) is `internal` to `Ofs.Api`. So the C ABI is internal to one shipped unit (native host + its `Ofs.Api`, always rebuilt together); a third-party plugin couples only to the *public* C# surface, which the host builds from the ABI structs inside its own trampolines. Consequence: growing/reordering a marshaled struct is a coordinated host rebuild (bump `OFS_ABI_VERSION` — a build-consistency guard, **not** a plugin gate), transparent to already-built plugins. There are no native-ABI one-way doors and "reserve space in the struct now" is a non-goal. The *only* plugin-compatibility gate is the `Ofs.Api` assembly version (`Major`-match, `plugin ≤ host`); that public surface — and bumping its version on additive changes — is the real stabilization contract. Any ABI change visible to a plugin is, by definition, a public-surface (API) change.
 

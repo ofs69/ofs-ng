@@ -96,7 +96,7 @@ function(ofs_setup_ui_test_runtime target)
     endif ()
 endfunction()
 
-# The localization sources are generated into the build tree by ofs_strings_gen (localization/).
+# The localization sources are generated into the build tree by ofs_strings_gen (tools/localization/).
 # Mark them GENERATED so CMake doesn't require them at configure time; targets below that compile
 # OFS_STRINGS_SRC add_dependencies(ofs_strings_gen) so the rule runs first.
 set_source_files_properties("${OFS_STRINGS_SRC}" PROPERTIES GENERATED TRUE)
@@ -152,7 +152,7 @@ set(OFS_OBJ_BASE_SRC
         ${CMAKE_SOURCE_DIR}/src/Util/Resources.cpp
         ${CMAKE_SOURCE_DIR}/src/Util/TimeUtil.cpp
         ${CMAKE_SOURCE_DIR}/src/Util/FuzzyMatch.cpp
-        ${OFS_STRINGS_SRC}  # generated; see localization/CMakeLists.txt
+        ${OFS_STRINGS_SRC}  # generated; see tools/localization/CMakeLists.txt
 )
 add_library(ofs-obj-base OBJECT ${OFS_OBJ_BASE_SRC})
 target_include_directories(ofs-obj-base PRIVATE

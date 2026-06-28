@@ -1,7 +1,7 @@
 <Project>
 
   <!-- Stricter compile rules shared by every C# project, the managed-side parallel to the C++ build's
-       /WX. Centralized here so all projects under plugins/ inherit one policy; the separate
+       /WX. Centralized here so all projects under managed/ inherit one policy; the separate
        tests/plugins/ tree imports this same file.
          - TreatWarningsAsErrors: any compiler, nullable, or analyzer warning fails the build (like /WX).
          - AnalysisMode=Recommended: promotes the curated mid-tier CA code-quality rules to warnings.

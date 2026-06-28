@@ -69,7 +69,7 @@ if (Python3_FOUND)
     add_custom_target(ofs_check_path_encoding DEPENDS "${OFS_PATH_CHECK_STAMP}")
 
     # === Unused localization-key guard ===
-    # tools/check_unused_strings.py flags keys in localization/strings.toml that no source file
+    # tools/check_unused_strings.py flags keys in tools/localization/strings.toml that no source file
     # references via Str::Key / Tr::Key — dead weight that still has to be translated in every
     # lang/*.toml yet displays nowhere. Re-runs only when strings.toml, a scanned source, or the
     # script changes; the scan covers src/ and tests/ so a key used only by a test isn't flagged.
@@ -82,10 +82,10 @@ if (Python3_FOUND)
     add_custom_command(
         OUTPUT "${OFS_UNUSED_STRINGS_STAMP}"
         COMMAND ${Python3_EXECUTABLE} "${CMAKE_SOURCE_DIR}/tools/check_unused_strings.py"
-                "${CMAKE_SOURCE_DIR}/localization/strings.toml"
+                "${CMAKE_SOURCE_DIR}/tools/localization/strings.toml"
                 "${CMAKE_SOURCE_DIR}/src" "${CMAKE_SOURCE_DIR}/tests"
         COMMAND ${CMAKE_COMMAND} -E touch "${OFS_UNUSED_STRINGS_STAMP}"
-        DEPENDS "${CMAKE_SOURCE_DIR}/localization/strings.toml" ${OFS_STRINGS_USAGE_SOURCES}
+        DEPENDS "${CMAKE_SOURCE_DIR}/tools/localization/strings.toml" ${OFS_STRINGS_USAGE_SOURCES}
                 "${CMAKE_SOURCE_DIR}/tools/check_unused_strings.py"
         COMMENT "Checking for unused localization keys (check_unused_strings.py)"
         VERBATIM)
@@ -145,12 +145,12 @@ else ()
 endif ()
 if (DOTNET_EXECUTABLE)
     # Clear the Platform env var for the format invocation: the Visual Studio generator sets Platform=x64,
-    # which MSBuild reads as a solution config "Debug|x64" that plugins.slnx (AnyCPU projects) doesn't
+    # which MSBuild reads as a solution config "Debug|x64" that managed.slnx (AnyCPU projects) doesn't
     # define, failing the restore. Unsetting it lets MSBuild pick the solution's default configuration.
     list(APPEND FORMAT_COMMANDS
-        COMMAND ${CMAKE_COMMAND} -E echo "Formatting C# plugins (dotnet format)..."
+        COMMAND ${CMAKE_COMMAND} -E echo "Formatting C# projects (dotnet format)..."
         COMMAND ${CMAKE_COMMAND} -E env --unset=Platform
-                ${DOTNET_EXECUTABLE} format "${CMAKE_SOURCE_DIR}/plugins/plugins.slnx")
+                ${DOTNET_EXECUTABLE} format "${CMAKE_SOURCE_DIR}/managed/managed.slnx")
 else ()
     message(WARNING "dotnet not found. 'format' target will skip the C# plugins.")
 endif ()
@@ -167,17 +167,17 @@ endif ()
 enable_testing()
 
 # Baked-in trust hashes: the SHA-256 of each shipped plugin DLL and each managed host assembly is
-# compiled into the app at build time (see cmake/GenBakedHashes.cmake + plugins/CMakeLists.txt).
+# compiled into the app at build time (see cmake/GenBakedHashes.cmake + managed/CMakeLists.txt).
 # First-party plugins load without the third-party trust prompt (a tampered/imposter DLL under the
 # same name still prompts); the managed host assemblies must match exactly or loading is refused.
-# Shared here so the generator (plugins/), the consumer (src/) and the tests all agree on the lists,
+# Shared here so the generator (managed/), the consumer (src/) and the tests all agree on the lists,
 # paths and roots.
 set(OFS_FIRST_PARTY_PLUGINS "Ofs.Core")
 set(OFS_MANAGED_ASSEMBLIES "Ofs.Api;Ofs.PluginHost;Ofs.ScriptHost;Ofs.HostServices")
 set(OFS_GENERATED_DIR "${CMAKE_BINARY_DIR}/generated")
 set(OFS_BAKED_HASHES_HEADER "${OFS_GENERATED_DIR}/OfsBakedHashes.h")
-# Generated localization sources. Emitted from localization/strings.toml by localization_gen into
-# the build tree (see localization/CMakeLists.txt) — not committed to the src tree. Shared here so
+# Generated localization sources. Emitted from tools/localization/strings.toml by localization_gen into
+# the build tree (see tools/localization/CMakeLists.txt) — not committed to the src tree. Shared here so
 # both the app (src/) and the tests/ targets reference the same paths.
 set(OFS_STRINGS_HDR "${OFS_GENERATED_DIR}/Localization/StringsGenerated.h")
 set(OFS_STRINGS_SRC "${OFS_GENERATED_DIR}/Localization/StringsGenerated.cpp")
@@ -286,8 +286,8 @@ function(ofs_target_pch target)
 endfunction()
 
 add_subdirectory("lib/")
-add_subdirectory("localization/")
-add_subdirectory("plugins/")
+add_subdirectory("tools/localization/")
+add_subdirectory("managed/")
 add_subdirectory("src/")
 add_subdirectory("tests/")
 

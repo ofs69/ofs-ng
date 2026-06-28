@@ -18,4 +18,4 @@ copy it and rename. The key parts:
   plugin straight into your per-user plugins folder for fast iteration (`-p:DeployToPref=false` to opt
   out). `Ofs.Api` is excluded from both — ofs-ng owns the one canonical copy it loads everyone against.
 
-[!code-xml[StarterPlugin.csproj](../../plugins/StarterPlugin/StarterPlugin.csproj)]
+[!code-xml[StarterPlugin.csproj](../../../managed/plugins/StarterPlugin/StarterPlugin.csproj)]

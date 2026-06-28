@@ -2,21 +2,17 @@
 """Manage ofs-ng translation catalogs from a single place.
 
 The localization pipeline has one English source of truth
-(`localization/strings.toml`) and one `lang/<id>.toml` per language that mirrors
+(`tools/localization/strings.toml`) and one `lang/<id>.toml` per language that mirrors
 it, adding a `translation` field per key. Keeping a dozen of those files in step
 with the source by hand — adding new keys, dropping removed ones, noticing when an
 English string changed out from under a translation — is the maintenance cost this
 tool removes. The structural bookkeeping is mechanical, so Python owns it; a human
 (or Claude) only ever supplies `translation` strings.
 
-Two locations hold language files:
-
-  lang/                  Shipped, strictly validated at build time (`localization_gen
-                         --validate`). A file here MUST be complete: every source key
-                         present with a non-empty, placeholder-matching translation.
-  localization/wip/      Work in progress. Not globbed by the build, not shipped, may
-                         be incomplete. Seed new languages here, translate, then
-                         `promote` into lang/ once complete.
+Language files live in lang/, shipped and strictly validated at build time
+(`localization_gen --validate`): every file MUST be complete — each source key present
+with a non-empty, placeholder-matching translation, or the build fails. A new language
+therefore fails the build until it is fully translated.
 
 Subcommands:
 
@@ -26,7 +22,7 @@ Subcommands:
                      (empty translation), drop keys no longer in the source, refresh
                      the English reference of untranslated keys, and preserve existing
                      translations. The one command to run after editing strings.toml.
-  new <code>         Create a work-in-progress stub for a new language under wip/.
+  new <code>         Create a stub language file in lang/ (empty translations).
   todo <id>          Write a focused batch file holding only the keys that still need
                      work (missing / empty / stale / bad-placeholder), with English +
                      description + placeholder docs — the unit of work to translate.
@@ -34,7 +30,6 @@ Subcommands:
                      placeholders and clearing the stale flag. Implies a sync.
   check [id ...]     Validate language file(s) exactly as the build does, without a
                      build. No args = every file in lang/. Non-zero exit on any error.
-  promote <id>       Move a complete, valid wip/ language into lang/ so it ships.
 
 "Stale" means the source English changed after the key was translated: the file's
 stored `english` reference no longer matches the source, so the translation is likely
@@ -54,9 +49,10 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-SOURCE = REPO / "localization" / "strings.toml"
+SOURCE = REPO / "tools" / "localization" / "strings.toml"
 SHIP_DIR = REPO / "lang"
-WIP_DIR = REPO / "localization" / "wip"
+# Transient `todo`/`apply` work-orders (gitignored); never shipped or globbed by the build.
+BATCH_DIR = SOURCE.parent
 
 # Field-name column: pad names so the `=` aligns, matching the existing lang files
 # ("translation" is the longest name we emit).
@@ -81,7 +77,7 @@ KNOWN_LANGS: dict[str, tuple[str, str]] = {
 }
 
 AI_SUFFIX = "_[AI]"
-# Transient `todo` output lives alongside wip language files but is not one; exclude it from globs.
+# `todo`/`apply` batch files share the .toml extension but are not language files; exclude from globs.
 BATCH_SUFFIX = ".batch.toml"
 
 _KEY_HEADER = re.compile(r"^\[([A-Za-z][A-Za-z0-9_]*)\]")
@@ -213,7 +209,6 @@ class LangFile:
     culture: str
     # key -> (english_reference, translation)
     entries: dict[str, tuple[str, str]]
-    shipped: bool
 
 
 def load_lang(path: Path) -> LangFile:
@@ -233,25 +228,19 @@ def load_lang(path: Path) -> LangFile:
         path=path,
         culture=culture,
         entries=entries,
-        shipped=path.parent == SHIP_DIR,
     )
 
 
 def find_lang_path(lang_id: str) -> Path | None:
-    """Locate a language by id, preferring a shipped file over a wip one."""
-    for d in (SHIP_DIR, WIP_DIR):
-        p = d / f"{lang_id}.toml"
-        if p.exists():
-            return p
-    return None
+    """Locate a language file by id in lang/."""
+    p = SHIP_DIR / f"{lang_id}.toml"
+    return p if p.exists() else None
 
 
 def all_lang_paths() -> list[Path]:
-    paths: list[Path] = []
-    for d in (SHIP_DIR, WIP_DIR):
-        if d.is_dir():
-            paths.extend(sorted(p for p in d.glob("*.toml") if not p.name.endswith(BATCH_SUFFIX)))
-    return paths
+    if not SHIP_DIR.is_dir():
+        return []
+    return sorted(p for p in SHIP_DIR.glob("*.toml") if not p.name.endswith(BATCH_SUFFIX))
 
 
 def resolve_ids(ids: list[str]) -> list[Path]:
@@ -261,7 +250,7 @@ def resolve_ids(ids: list[str]) -> list[Path]:
     for lang_id in ids:
         p = find_lang_path(lang_id)
         if p is None:
-            die(f"no language file for '{lang_id}' in lang/ or localization/wip/")
+            die(f"no language file for '{lang_id}' in lang/")
         out.append(p)
     return out
 
@@ -382,14 +371,13 @@ def cmd_status(args: argparse.Namespace) -> int:
         print("No language files found. Seed one with: translations.py new <code>")
         return 0
     name_w = max(len(p.stem) for p in paths)
-    print(f"{'language'.ljust(name_w)}  {'done':>9}   missing  empty  stale  badph  loc")
+    print(f"{'language'.ljust(name_w)}  {'done':>9}   missing  empty  stale  badph")
     for p in paths:
         lang = load_lang(p)
         c = status_counts(source, lang)
         pct = 100.0 * c[OK] / total if total else 100.0
-        loc = "ship" if lang.shipped else "wip"
         print(f"{lang.lang_id.ljust(name_w)}  {c[OK]:>4}/{total:<4} {pct:4.0f}%  "
-              f"{c[MISSING]:>7}  {c[EMPTY]:>5}  {c[STALE]:>5}  {c[BADPH]:>5}  {loc}")
+              f"{c[MISSING]:>7}  {c[EMPTY]:>5}  {c[STALE]:>5}  {c[BADPH]:>5}")
     return 0
 
 
@@ -414,10 +402,9 @@ def cmd_sync(args: argparse.Namespace) -> int:
         else:
             summary = ", ".join(bits)
         print(f"{rel(p)}: {summary}")
-        if lang.shipped and report["added"]:
-            print(f"  WARNING: {len(report['added'])} new key(s) are now untranslated in a SHIPPED file; "
-                  f"the build will fail until they are translated. Complete them or move the file to "
-                  f"localization/wip/.")
+        if report["added"]:
+            print(f"  WARNING: {len(report['added'])} new key(s) are now untranslated; "
+                  f"the build will fail until they are translated.")
     return 0
 
 
@@ -431,15 +418,15 @@ def cmd_new(args: argparse.Namespace) -> int:
     lang_id = code + (AI_SUFFIX if args.ai else "")
     if find_lang_path(lang_id) is not None:
         die(f"language '{lang_id}' already exists")
-    WIP_DIR.mkdir(parents=True, exist_ok=True)
+    SHIP_DIR.mkdir(parents=True, exist_ok=True)
     source = load_source()
     layout = source_layout()
     translations = {key: (entry.english, "") for key, entry in source.items()}
     text = render_lang(lang_id, name, culture, source, layout, translations)
-    dest = WIP_DIR / f"{lang_id}.toml"
+    dest = SHIP_DIR / f"{lang_id}.toml"
     dest.write_text(text, encoding="utf-8", newline="\n")
     print(f"created {rel(dest)} — {len(source)} keys, 0 translated ({name}, culture={culture})")
-    print(f"  translate it, then: translations.py promote {lang_id}")
+    print(f"  translate it (translations.py todo {lang_id}); the build fails until it is complete.")
     return 0
 
 
@@ -486,7 +473,7 @@ def cmd_todo(args: argparse.Namespace) -> int:
         out.append("")
     text = "\n".join(out).rstrip("\n") + "\n"
 
-    dest = Path(args.out) if args.out else WIP_DIR / f"{args.id}.batch.toml"
+    dest = Path(args.out) if args.out else BATCH_DIR / f"{args.id}.batch.toml"
     dest.parent.mkdir(parents=True, exist_ok=True)
     dest.write_text(text, encoding="utf-8", newline="\n")
     print(f"wrote {rel(dest)} — {len(pending)} key(s) to translate")
@@ -499,7 +486,7 @@ def cmd_apply(args: argparse.Namespace) -> int:
     p = find_lang_path(args.id)
     if p is None:
         die(f"no language file for '{args.id}'")
-    batch_path = Path(args.input) if args.input else WIP_DIR / f"{args.id}.batch.toml"
+    batch_path = Path(args.input) if args.input else BATCH_DIR / f"{args.id}.batch.toml"
     if not batch_path.exists():
         die(f"batch file not found: {rel(batch_path)} (run `todo {args.id}` first)")
     with batch_path.open("rb") as f:
@@ -598,32 +585,6 @@ def cmd_check(args: argparse.Namespace) -> int:
     return 0 if ok else 1
 
 
-def cmd_promote(args: argparse.Namespace) -> int:
-    source = load_source()
-    src_path = WIP_DIR / f"{args.id}.toml"
-    if not src_path.exists():
-        die(f"no wip file at {rel(src_path)} (promote moves a wip/ language into lang/)")
-    errors = validate_lang(source, src_path)
-    if errors:
-        print(f"{rel(src_path)} is not ready to ship:")
-        for e in errors[:20]:
-            print(f"  {e}")
-        if len(errors) > 20:
-            print(f"  ... and {len(errors) - 20} more")
-        print(f"Finish translating it (translations.py status {args.id}), then promote again.")
-        return 1
-    SHIP_DIR.mkdir(parents=True, exist_ok=True)
-    dest = SHIP_DIR / f"{args.id}.toml"
-    if dest.exists():
-        die(f"{rel(dest)} already exists")
-    src_path.replace(dest)
-    batch = WIP_DIR / f"{args.id}.batch.toml"
-    if batch.exists():
-        batch.unlink()
-    print(f"promoted {args.id}: {rel(src_path)} -> {rel(dest)} (now shipped & build-validated)")
-    return 0
-
-
 # ─────────────────────────────────────────────────────────────────────────────
 # Helpers
 # ─────────────────────────────────────────────────────────────────────────────
@@ -658,7 +619,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("ids", nargs="*", help="language ids (default: all)")
     s.set_defaults(func=cmd_sync)
 
-    s = sub.add_parser("new", help="create a work-in-progress stub for a language")
+    s = sub.add_parser("new", help="create a language stub in lang/")
     s.add_argument("code", help="language code, e.g. de or zh-Hant")
     s.add_argument("--ai", action="store_true", help="add the _[AI] machine-translation suffix")
     s.add_argument("--name", help="display name for the file header")
@@ -667,22 +628,18 @@ def build_parser() -> argparse.ArgumentParser:
 
     s = sub.add_parser("todo", help="write a batch of keys needing translation")
     s.add_argument("id", help="language id")
-    s.add_argument("-o", "--out", help="output path (default: localization/wip/<id>.batch.toml)")
+    s.add_argument("-o", "--out", help="output path (default: tools/localization/<id>.batch.toml)")
     s.set_defaults(func=cmd_todo)
 
     s = sub.add_parser("apply", help="merge a filled batch back into the language file")
     s.add_argument("id", help="language id")
-    s.add_argument("-i", "--input", help="batch path (default: localization/wip/<id>.batch.toml)")
+    s.add_argument("-i", "--input", help="batch path (default: tools/localization/<id>.batch.toml)")
     s.set_defaults(func=cmd_apply)
 
     s = sub.add_parser("check", help="validate language file(s) like the build does")
     s.add_argument("ids", nargs="*", help="language ids (default: all in lang/)")
     s.add_argument("--max-errors", type=int, default=25, help="cap errors shown per file")
     s.set_defaults(func=cmd_check)
-
-    s = sub.add_parser("promote", help="move a complete wip/ language into lang/")
-    s.add_argument("id", help="language id")
-    s.set_defaults(func=cmd_promote)
 
     return p
 

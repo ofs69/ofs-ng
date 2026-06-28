@@ -1,7 +1,7 @@
 <Project>
 
-  <!-- tests/plugins/ is a separate directory tree, so MSBuild does not auto-import the plugins/ props.
+  <!-- tests/plugins/ is a separate directory tree, so MSBuild does not auto-import the managed/ props.
        Pull in the same strict policy here so the test plugins build under identical rules. -->
-  <Import Project="$(MSBuildThisFileDirectory)../../plugins/Directory.Build.props" />
+  <Import Project="$(MSBuildThisFileDirectory)../../managed/Directory.Build.props" />
 
 </Project>

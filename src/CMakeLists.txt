@@ -4,11 +4,11 @@ project(ofs-ng)
 # generated localization .cpp, which lives in the build tree and so is outside the glob.
 set(OFS_SOURCES
         ${OFS_SRC_FILES}
-        ${OFS_STRINGS_SRC}  # generated into the build tree (localization/), depends on ofs_strings_gen
+        ${OFS_STRINGS_SRC}  # generated into the build tree (tools/localization/), depends on ofs_strings_gen
 )
 
 # The generated .cpp lives in the build tree; mark it GENERATED so CMake doesn't require it to exist
-# at configure time. The ofs_strings_gen target (localization/) owns the rule that produces it.
+# at configure time. The ofs_strings_gen target (tools/localization/) owns the rule that produces it.
 set_source_files_properties("${OFS_STRINGS_SRC}" PROPERTIES GENERATED TRUE)
 
 if (WIN32)
@@ -33,7 +33,7 @@ if (TARGET Ofs.Core)
     add_dependencies(${PROJECT_NAME} Ofs.Core)
 endif ()
 # Generated baked hashes (PluginManager.cpp / ScriptSystem.cpp include OfsBakedHashes.h). The target
-# exists only when the plugins/managed assemblies are built (dotnet present); without it the
+# exists only when the managed assemblies are built (dotnet present); without it the
 # configure-time baseline header is used.
 if (TARGET ofs_baked_hashes)
     add_dependencies(${PROJECT_NAME} ofs_baked_hashes)

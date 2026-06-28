@@ -1,8 +1,8 @@
 name: Docs
 
-# Build the plugin-author API reference (apidocs/, DocFX) from the Ofs.Api assembly's XML doc
-# comments and publish it to GitHub Pages. Source-of-truth is plugins/Ofs.Api — the private,
-# gitignored docs/ tree is never part of this. Runs on pushes to main that touch the API or the
+# Build the plugin-author API reference (docs/apidocs/, DocFX) from the Ofs.Api assembly's XML doc
+# comments and publish it to GitHub Pages. Source-of-truth is managed/Ofs.Api — the private,
+# gitignored docs/*.wiki mirrors are never part of this. Runs on pushes to main that touch the API or the
 # docfx config; the manual trigger lets you re-publish without a code change.
 #
 # One-time setup outside this file: repo Settings -> Pages -> Source = "GitHub Actions".
@@ -10,8 +10,8 @@ on:
   push:
     branches: [main]
     paths:
-      - 'plugins/Ofs.Api/**'
-      - 'apidocs/**'
+      - 'managed/Ofs.Api/**'
+      - 'docs/apidocs/**'
       - '.github/workflows/docs.yml'
   workflow_dispatch:
 
@@ -50,24 +50,24 @@ jobs:
         #   * the Getting Started guide, copied verbatim from the StarterPlugin README.
         # Backticks are backslash-escaped so the double-quoted string doesn't trigger command substitution.
         run: |
-          version=$(sed -n 's/.*<Version>\([^<]*\)<\/Version>.*/\1/p' plugins/Ofs.Api/Ofs.Api.csproj | head -1)
+          version=$(sed -n 's/.*<Version>\([^<]*\)<\/Version>.*/\1/p' managed/Ofs.Api/Ofs.Api.csproj | head -1)
           echo "Stamping Ofs.Api v$version"
-          printf '%s\n' "> 📦 This reference documents **\`Ofs.Api\` v$version** — the assembly version your plugin builds against." > apidocs/includes/_apiversion.md
+          printf '%s\n' "> 📦 This reference documents **\`Ofs.Api\` v$version** — the assembly version your plugin builds against." > docs/apidocs/includes/_apiversion.md
           {
-            printf '%s\n' '<!-- GENERATED from plugins/StarterPlugin/README.md — do not edit. The Docs workflow'
+            printf '%s\n' '<!-- GENERATED from managed/plugins/StarterPlugin/README.md — do not edit. The Docs workflow'
             printf '%s\n' '     regenerates this before every publish; this committed copy is the local-build fallback. -->'
-            cat plugins/StarterPlugin/README.md
-          } > apidocs/articles/getting-started.md
+            cat managed/plugins/StarterPlugin/README.md
+          } > docs/apidocs/articles/getting-started.md
 
       - name: Build site
         # docfx runs the metadata step (compile Ofs.Api -> api/*.yml) then the build step (render _site).
-        run: docfx apidocs/docfx.json
+        run: docfx docs/apidocs/docfx.json
 
       - uses: actions/configure-pages@v5
 
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: apidocs/_site
+          path: docs/apidocs/_site
 
       - name: Deploy to GitHub Pages
         id: deploy

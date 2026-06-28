@@ -10,7 +10,7 @@ shipping assembly, so it always matches the version you build against.
 
 ## Start from the StarterPlugin template
 
-The quickest way in is the **[StarterPlugin template](https://github.com/ofs69/ofs-ng/tree/main/plugins/StarterPlugin)** —
+The quickest way in is the **[StarterPlugin template](https://github.com/ofs69/ofs-ng/tree/main/managed/plugins/StarterPlugin)** —
 a complete, buildable plugin you copy and rename. It already wires up the things you'd otherwise
 get wrong by hand:
 

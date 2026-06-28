@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Guard against dead localization keys in strings.toml.
 
-Every key in `localization/strings.toml` becomes a `Tr` enum member and a `Str::`
+Every key in `tools/localization/strings.toml` becomes a `Tr` enum member and a `Str::`
 constant (via `localization_gen`), and is reached from a render path through one of
 those — `Str::Foo`, `Str::Foo.id(...)`, `Str::Foo.fmt(...)`, or the raw `Tr::Foo`.
 A key that no source file references is dead weight: it still has to be translated in
@@ -15,7 +15,7 @@ A key is exempt if its `[Key]` header line carries the marker `# i18n-keep`
 
 Usage:
     python tools/check_unused_strings.py [strings.toml] [source-dir ...]
-    # defaults: localization/strings.toml, scanning src/ and tests/
+    # defaults: tools/localization/strings.toml, scanning src/ and tests/
 
 Exit status is non-zero if any unused key is found, so it can gate a commit or be
 wired into a build target.
@@ -85,7 +85,7 @@ def main(argv: list[str]) -> int:
         strings_toml = Path(args[0])
         roots = [Path(a) for a in args[1:]] or [here / "src", here / "tests"]
     else:
-        strings_toml = here / "localization" / "strings.toml"
+        strings_toml = here / "tools" / "localization" / "strings.toml"
         roots = [here / "src", here / "tests"]
 
     keys = parse_keys(strings_toml)

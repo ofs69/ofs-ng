@@ -153,5 +153,5 @@ English) if you need the string form. Read either at `OnLoad`.
 - [Plugin Loading & OnLoad](plugin-onload.md) — why `OnLoad` re-runs on a language switch.
 - [`IOfsHost.Culture`](xref:Ofs.IOfsHost.Culture) / [`IOfsHost.Language`](xref:Ofs.IOfsHost.Language) —
   the active-language signal.
-- `plugins/Ofs.Core/` — a larger worked example (`Str.resx`, `Str.ja.resx`, `Str.zh-Hant.resx`, … and
+- `managed/plugins/Ofs.Core/` — a larger worked example (`Str.resx`, `Str.ja.resx`, `Str.zh-Hant.resx`, … and
   its `Str.*` getters).
