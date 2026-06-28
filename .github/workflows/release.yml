@@ -137,7 +137,7 @@ jobs:
         run: cmake --build build -j
 
       - name: Package (dist)
-        # Emits bin/dist/<variant>-<plat>-release-<tag>[<hash>].zip and, where the toolchain
+        # Emits bin/dist/<variant>-<plat>-release-<tag>+<hash>.zip and, where the toolchain
         # produces separate symbols, a sibling …-pdb.zip (Windows native .pdb + managed .pdb).
         run: cmake --build build --target dist
 

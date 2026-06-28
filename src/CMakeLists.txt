@@ -159,7 +159,7 @@ add_custom_target(ofs_stage_assets ALL DEPENDS "${OFS_RUNTIME_DIR}/data.pak")
 add_dependencies(${PROJECT_NAME} ofs_stage_assets)
 
 # Distribution archive: package this build's runtime artifacts (app, runtime DLLs, data.pak, plugins,
-# managed assemblies) into dist/<app>-<platform>-<config>-<tag>[<shorthash>].zip, with the .pdb symbols
+# managed assemblies) into dist/<app>-<platform>-<config>-<tag>+<shorthash>.zip, with the .pdb symbols
 # split into a sibling …-pdb.zip so the shipped archive stays lean. MakeDist names each artifact
 # explicitly rather than zipping bin/ wholesale, because bin/<config> is shared by both AVX variants, so
 # a blanket copy would sweep in the other variant's exe/pdb. APP_FILE/SYSTEM_NAME/SDL_SHARED_FILE are

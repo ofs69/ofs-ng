@@ -1,4 +1,4 @@
-# Packages this build's runtime artifacts into dist/<app>-<platform>-<config>-<tag>[<shorthash>].zip, and
+# Packages this build's runtime artifacts into dist/<app>-<platform>-<config>-<tag>+<shorthash>.zip, and
 # (on Windows only — the sole toolchain we ship standalone symbol files for) the debug symbols into a
 # sibling dist/…-pdb.zip.
 #
@@ -75,10 +75,20 @@ else ()
     string(TOLOWER "${SYSTEM_NAME}" _plat)
 endif ()
 
-# <variant>-<plat>-<config>-<tag>[<shorthash>]: a tag-less history yields …-[<hash>]; no git at all
-# yields …-[], still a valid (if unhelpful) name rather than a failure.
+# <variant>-<plat>-<config>-<tag>+<shorthash>: the hash rides as semver-style build metadata. It must
+# NOT be bracketed — the gh CLI glob-expands its asset arguments itself (so it works on a brackets-are-
+# literal Windows shell), and CMake file(GLOB) treats them the same, so "[<hash>]" silently matches
+# nothing in both. A tag-less history yields …-g<hash> (git-describe style); no git at all yields a bare
+# …-<config>, still a valid (if unhelpful) name rather than a failure.
 string(TOLOWER "${CONFIG}" _config_lc)
-set(_name "${_variant}-${_plat}-${_config_lc}-${_tag}[${_short}]")
+set(_name "${_variant}-${_plat}-${_config_lc}")
+if (NOT _tag STREQUAL "" AND NOT _short STREQUAL "")
+    string(APPEND _name "-${_tag}+${_short}")
+elseif (NOT _tag STREQUAL "")
+    string(APPEND _name "-${_tag}")
+elseif (NOT _short STREQUAL "")
+    string(APPEND _name "-g${_short}")
+endif ()
 set(_stage "${DIST_DIR}/${_name}")
 set(_zip "${DIST_DIR}/${_name}.zip")
 # Symbols travel in a sibling zip whose root folder is suffixed -pdb, so the two unpack side by side.
@@ -126,8 +136,8 @@ if (DEFINED SDL_SHARED_FILE AND NOT SDL_SHARED_FILE STREQUAL "" AND EXISTS "${SD
     file(COPY "${SDL_SHARED_FILE}" DESTINATION "${_stage}")
 endif ()
 
-# Tracked explicitly rather than by globbing the symbol stage: its path contains the "[<hash>]" token,
-# whose brackets are file(GLOB) character-class metacharacters, so a glob there silently matches nothing.
+# Tracked explicitly rather than by re-globbing the symbol stage: we already know exactly what we copy
+# in below, so a glob would only re-derive it.
 set(_have_syms FALSE)
 
 # The managed-assembly tree (host assemblies + the shipped first-party plugins now nested under
@@ -138,7 +148,6 @@ set(_have_syms FALSE)
 if (IS_DIRECTORY "${BIN_DIR}/managed")
     file(COPY "${BIN_DIR}/managed" DESTINATION "${_stage}" PATTERN "*.pdb" EXCLUDE)
     if (_is_windows)
-        # BIN_DIR has no bracket token, so globbing it for .pdb is safe.
         file(COPY "${BIN_DIR}/managed" DESTINATION "${_sym}" FILES_MATCHING PATTERN "*.pdb")
         file(GLOB_RECURSE _tree_pdbs "${BIN_DIR}/managed/*.pdb")
         if (_tree_pdbs)
