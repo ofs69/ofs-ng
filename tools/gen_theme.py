@@ -611,6 +611,7 @@ _IMGUI_VARS = {
 _APP_VARS = {
     "ScriptSeekCursorWidth": 2.0, "ScriptPlayCursorWidth": 1.0,
     "GridLineMidWidth": 1.0, "OverlayLineMajorWidth": 1.0,
+    "TimelineLineWidth": 3.0,
     "WaveformScale": 0.9,
     "SimGlobalOpacity": 0.75,
     "NodeGridSpacing": 24.0, "NodeCornerRounding": 5.0, "NodePadding": [10.0, 8.0],

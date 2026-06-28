@@ -951,6 +951,37 @@ TEST_CASE("ProcessingSystem: a math node with one input unconnected substitutes 
     CHECK(r[0].pos == 60); // 10 + 50 (dangling pin → midpoint)
 }
 
+TEST_CASE("ProcessingSystem: editing an axis re-evaluates sibling outputs routed from it") {
+    // Graph routes L0's input to BOTH the L0 and L1 outputs; the region spans {L0, L1}. Editing only
+    // L0 must fan out and recompute L1 too — not leave it stale until a manual Recompute.
+    PsFixture f;
+    ProcessingNodeGraph g;
+    const int inL = g.allocId(), outL0 = g.allocId(), outL1 = g.allocId();
+    g.nodes.push_back({.id = inL, .type = GraphNodeType::Input, .role = StandardAxis::L0});
+    g.nodes.push_back({.id = outL0, .type = GraphNodeType::Output, .role = StandardAxis::L0});
+    g.nodes.push_back({.id = outL1, .type = GraphNodeType::Output, .role = StandardAxis::L1});
+    g.links.push_back({.id = g.allocId(), .fromNode = inL, .toNode = outL0, .toPin = 0});
+    g.links.push_back({.id = g.allocId(), .fromNode = inL, .toNode = outL1, .toPin = 0});
+    f.addRegion(g, {StandardAxis::L0, StandardAxis::L1});
+    f.start();
+
+    f.tp.project.axes[static_cast<size_t>(StandardAxis::L1)].showInStrip = true;
+    f.seed(StandardAxis::L0, acts({{1.0, 50}, {5.0, 75}})); // only L0 is mutated
+
+    const auto &l0 = f.eval(StandardAxis::L0);
+    REQUIRE(l0.size() == 2);
+    CHECK(l0[0].pos == 50);
+    CHECK(l0[1].pos == 75);
+
+    auto &axisL1 = f.tp.project.axes[static_cast<size_t>(StandardAxis::L1)];
+    REQUIRE(waitForEval(f.tp.eq, axisL1));
+    REQUIRE(axisL1.resolved.has_value()); // before the fan-out fix L1 is never re-evaluated → nullopt
+    const auto &l1 = axisL1.resolved->actions;
+    REQUIRE(l1.size() == 2);
+    CHECK(l1[0].pos == 50);
+    CHECK(l1[1].pos == 75);
+}
+
 TEST_CASE("ProcessingSystem: a fully functional graph is discretized at the region Hz") {
     // Constant + Constant has no discrete timestamps, so the Add stays functional and the Output
     // discretizes it at the region's 30 Hz. Over [0,10] that's ~301 samples, all 20+30 = 50.

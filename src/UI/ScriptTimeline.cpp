@@ -452,8 +452,12 @@ void ScriptTimelineWindow::renderCurves(const ScriptProject &project, ImDrawList
 
         const float bgAxisOpacity = ofs::theme::getActive().backgroundAxisOpacity;
         float lineOpacity = emphasized ? 1.0f : bgAxisOpacity;
-        float lineW = isActive ? 3.0f : (isGroupedMember ? 3.0f : 2.0f);
-        float outlineW = isActive ? 7.0f : (isGroupedMember ? 7.0f : 6.0f);
+        // Emphasized axes (active or grouped) stroke at the themed base width; a plain background
+        // reference reads 1px thinner. The contrast outline is a fixed 2px halo each side, so it
+        // tracks the line width automatically.
+        float baseLineW = ofs::theme::GetStyleVar(AppVar_TimelineLineWidth);
+        float lineW = emphasized ? baseLineW : std::max(1.0f, baseLineW - 1.0f);
+        float outlineW = lineW + 4.0f;
         auto outlineAlpha = static_cast<ImU32>(emphasized ? 255 : static_cast<int>(255.f * bgAxisOpacity));
 
         constexpr double skipAt = -1.0;

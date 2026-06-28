@@ -1165,8 +1165,9 @@ void ConfigurationWindow::renderThemeTab(const ScriptProject &project, EventQueu
         const bool wPlay = pass("Play Cursor Width");
         const bool wGrid = pass("Grid Mid Width");
         const bool wOverlay = pass("Overlay Major Width");
+        const bool wLine = pass("Line Width");
         const bool wWave = pass("Waveform Height");
-        const bool anyWidth = wSeek || wPlay || wGrid || wOverlay || wWave;
+        const bool anyWidth = wSeek || wPlay || wGrid || wOverlay || wLine || wWave;
         if (beginSection(Str::PrefSecTimeline.id("sec_timeline"),
                          countMatch(std::span(kTimelineColors)) > 0 || anyWidth, true)) {
             if (colorGrid("##tl", kTimelineColors))
@@ -1190,6 +1191,8 @@ void ConfigurationWindow::renderThemeTab(const ScriptProject &project, EventQueu
                 applyAndSave();
             if (wOverlay && ImGui::DragFloat("Overlay Major Width", &t.vars[AppVar_OverlayLineMajorWidth].x, 0.1f, 0.5f,
                                              4.f, "%.1f"))
+                applyAndSave();
+            if (wLine && ImGui::DragFloat("Line Width", &t.vars[AppVar_TimelineLineWidth].x, 0.1f, 1.f, 6.f, "%.1f"))
                 applyAndSave();
             if (wWave && ImGui::SliderFloat("Waveform Height", &t.vars[AppVar_WaveformScale].x, 0.1f, 1.f, "%.2f"))
                 applyAndSave();

@@ -201,6 +201,7 @@
     "ScriptPlayCursorWidth": 1.0,
     "GridLineMidWidth": 1.0,
     "OverlayLineMajorWidth": 1.0,
+    "TimelineLineWidth": 3.0,
     "WaveformScale": 0.9,
     "SimGlobalOpacity": 0.75,
     "NodeGridSpacing": 24.0,

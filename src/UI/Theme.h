@@ -166,6 +166,8 @@ enum AppVar : int {
     // Timeline grid/overlay coarse-line widths (fine lines are fixed at 1px)
     AppVar_GridLineMidWidth,
     AppVar_OverlayLineMajorWidth,
+    // Timeline action-curve stroke width; the contrast outline behind it derives from this
+    AppVar_TimelineLineWidth,
     // Audio waveform envelope height as a fraction of the lane half-height (<1 leaves an edge margin)
     AppVar_WaveformScale,
     // Simulator 2D bar: thickness/border/line widths are now derived from the content-space
@@ -253,7 +255,7 @@ struct Theme {
     ImNodesStyle nodes = {};            // full imnodes Col[] + geometry, owned verbatim
     ImGradient heatmapColors;           // speed → color (slow=0 … fast=1); line segments + heatmap shader
     float heatmapMaxSpeed = 400.0f;     // speed (pos-units/s) that maps to gradient t=1
-    float backgroundAxisOpacity = 0.3f; // opacity of non-active axes drawn behind the timeline curve
+    float backgroundAxisOpacity = 0.5f; // opacity of non-active axes drawn behind the timeline curve
 };
 
 // Applies a theme: writes ImGui colors+vars, App colors+vars, and the global

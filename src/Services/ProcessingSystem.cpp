@@ -967,7 +967,21 @@ void ProcessingSystem::onAxisModified(const AxisModifiedEvent &event) {
     // (see onSetAutoEvalEnabled), so the timeline shows raw actions until a manual Recompute.
     if (!project.autoEvalEnabled)
         return;
-    evaluateAxis(event.role);
+
+    // A region's graph can route the edited axis into other output axes (e.g. L0 in → L0 + L1 out), so
+    // an edit to one axis must recompute every axis sharing a region with it — not just the edited one,
+    // whose own resolved would otherwise be the only thing to update. Mirrors the manual Recompute
+    // fan-out over region.axisRoles.
+    const auto roleIdx = static_cast<size_t>(event.role);
+    AxisRoles affected;
+    affected.set(roleIdx);
+    for (const auto &r : project.regions)
+        if (r.axisRoles.test(roleIdx))
+            affected |= r.axisRoles;
+
+    for (size_t i = 0; i < kStandardAxisCount; ++i)
+        if (affected.test(i))
+            evaluateAxis(static_cast<StandardAxis>(i));
 }
 
 void ProcessingSystem::onRequestEval(const RequestAxisEvalEvent &event) {

@@ -136,9 +136,9 @@ static_assert(std::size(kCustomColorNames) == static_cast<int>(AppCol_COUNT) - s
 // Names for the custom (>= ImGuiStyleVar_COUNT) style-var slots, in AppVar order.
 // Must match the appVars keys emitted by tools/gen_theme.py.
 constexpr const char *kCustomVarNames[static_cast<int>(AppVar_COUNT) - static_cast<int>(ImGuiStyleVar_COUNT)] = {
-    "ScriptSeekCursorWidth", "ScriptPlayCursorWidth", "GridLineMidWidth",  "OverlayLineMajorWidth",
-    "WaveformScale",         "SimGlobalOpacity",      "NodeGridSpacing",   "NodeCornerRounding",
-    "NodePadding",           "NodeBorderThickness",   "NodeLinkThickness", "NodePinRadius"};
+    "ScriptSeekCursorWidth", "ScriptPlayCursorWidth", "GridLineMidWidth", "OverlayLineMajorWidth", "TimelineLineWidth",
+    "WaveformScale",         "SimGlobalOpacity",      "NodeGridSpacing",  "NodeCornerRounding",    "NodePadding",
+    "NodeBorderThickness",   "NodeLinkThickness",     "NodePinRadius"};
 static_assert(std::size(kCustomVarNames) == static_cast<int>(AppVar_COUNT) - static_cast<int>(ImGuiStyleVar_COUNT),
               "kCustomVarNames out of sync with AppVar enum");
 
@@ -265,7 +265,7 @@ void fillDefaultGradients(Theme *dst) {
     dst->heatmapColors.addMark(0.8f, ImColor(1.f, 1.f, 0.f, 1.f));
     dst->heatmapColors.addMark(1.f, ImColor(1.f, 0.f, 0.f, 1.f));
     dst->heatmapMaxSpeed = 400.0f;
-    dst->backgroundAxisOpacity = 0.3f;
+    dst->backgroundAxisOpacity = 0.5f;
 }
 
 // Fill the ImGui range of vars[] with the live ImGui style-var defaults, read via
@@ -625,6 +625,7 @@ void makeBaseDefaults(Theme *dst, bool dark) {
     dst->vars[AppVar_ScriptPlayCursorWidth] = {1.f, 0.f};
     dst->vars[AppVar_GridLineMidWidth] = {1.f, 0.f};
     dst->vars[AppVar_OverlayLineMajorWidth] = {1.f, 0.f};
+    dst->vars[AppVar_TimelineLineWidth] = {3.f, 0.f};
     dst->vars[AppVar_WaveformScale] = {0.9f, 0.f};
     dst->vars[AppVar_SimGlobalOpacity] = {0.75f, 0.f};
 
