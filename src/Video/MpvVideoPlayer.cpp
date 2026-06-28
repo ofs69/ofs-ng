@@ -43,6 +43,7 @@ MpvVideoPlayer::~MpvVideoPlayer() {
 bool MpvVideoPlayer::init() {
     eventQueue.on<PlayPauseEvent>([this](const PlayPauseEvent &e) { onPlayPauseEvent(e); });
     eventQueue.on<SeekEvent>([this](const SeekEvent &e) { onSeekEvent(e); });
+    eventQueue.on<SetPauseOnSeekEvent>([this](const SetPauseOnSeekEvent &e) { onSetPauseOnSeekEvent(e); });
     eventQueue.on<PlaybackSpeedEvent>([this](const PlaybackSpeedEvent &e) { onPlaybackSpeedEvent(e); });
     eventQueue.on<LoadVideoEvent>([this](const LoadVideoEvent &e) { onLoadVideoEvent(e); });
     eventQueue.on<CloseVideoEvent>([this](const CloseVideoEvent &e) { onCloseVideoEvent(e); });
@@ -132,6 +133,10 @@ void MpvVideoPlayer::openVideo(const std::string &path) {
     eventQueue.push(DurationChangedEvent{0.0});
     const char *cmd[] = {"loadfile", path.c_str(), nullptr};
     MpvLoader::mpv_command_async(mpv, 0, cmd);
+    // A freshly loaded file must land paused — opening a project should never start playing, even when
+    // the pause-on-seek policy is off (its deferred resume seek would then not pause). mpv's pause
+    // property persists across loadfile, so force it here independent of onSeekEvent.
+    setPaused(true);
     videoPath = path;
 }
 
@@ -359,8 +364,13 @@ void MpvVideoPlayer::onPlayPauseEvent(const PlayPauseEvent &event) {
 }
 
 void MpvVideoPlayer::onSeekEvent(const SeekEvent &event) {
-    setPaused(true);
+    if (pauseOnSeek)
+        setPaused(true);
     setPosition(event.time);
+}
+
+void MpvVideoPlayer::onSetPauseOnSeekEvent(const SetPauseOnSeekEvent &event) {
+    pauseOnSeek = event.enabled;
 }
 
 void MpvVideoPlayer::onPlaybackSpeedEvent(const PlaybackSpeedEvent &event) {

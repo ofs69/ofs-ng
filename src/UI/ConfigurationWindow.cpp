@@ -273,6 +273,14 @@ void ConfigurationWindow::renderApplicationTab(EventQueue &eq) {
                 [timelinePreview](AppSettings &s) { s.showTimelinePreview = timelinePreview; }});
         ImGui::SameLine();
         ofs::ui::helpMarker(Str::PrefTimelinePreviewHint.c_str());
+
+        bool pauseOnSeek = appSettings.pauseOnSeek;
+        ImGui::TextUnformatted(Str::PrefPauseOnSeek);
+        ImGui::SameLine();
+        if (ImGui::Checkbox("##pause_on_seek", &pauseOnSeek))
+            eq.push(ModifyEvent<AppSettings>{[pauseOnSeek](AppSettings &s) { s.pauseOnSeek = pauseOnSeek; }});
+        ImGui::SameLine();
+        ofs::ui::helpMarker(Str::PrefPauseOnSeekHint.c_str());
     }
     ImGui::PushTextWrapPos(0.0f);
     ImGui::TextDisabled("%s", Str::PrefRestartHint.c_str());

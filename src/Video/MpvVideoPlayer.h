@@ -60,6 +60,7 @@ class MpvVideoPlayer : public VideoPlayer {
 
     void onPlayPauseEvent(const PlayPauseEvent &event);
     void onSeekEvent(const SeekEvent &event);
+    void onSetPauseOnSeekEvent(const SetPauseOnSeekEvent &event);
     void onPlaybackSpeedEvent(const PlaybackSpeedEvent &event);
     void onLoadVideoEvent(const LoadVideoEvent &event);
     void onCloseVideoEvent(const CloseVideoEvent &event);
@@ -104,5 +105,6 @@ class MpvVideoPlayer : public VideoPlayer {
 
     EventQueue &eventQueue;
     bool hwdecEnabled = true;
+    bool pauseOnSeek = true; // mirrors AppSettings.pauseOnSeek; set via SetPauseOnSeekEvent
 };
 } // namespace ofs

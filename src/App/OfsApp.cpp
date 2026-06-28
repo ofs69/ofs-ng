@@ -231,6 +231,8 @@ bool OfsApp::init() {
         // directly) so the mpv create/destroy runs in the engine's drained handler, between frames.
         if (videoPreview && videoPreview->isEnabled() != appSettings.showTimelinePreview)
             eventQueue.push(ofs::SetPreviewEnabledEvent{appSettings.showTimelinePreview});
+        // Apply the pause-on-seek policy live; the player caches the flag (cheap to re-push).
+        eventQueue.push(ofs::SetPauseOnSeekEvent{appSettings.pauseOnSeek});
         // Apply analog input tunables live (e.g. dragging the deadzone/smoothing sliders).
         if (bindingSystem)
             bindingSystem->setAnalogConfig(
@@ -283,6 +285,7 @@ bool OfsApp::init() {
         eventQueue.on<ofs::CloseVideoEvent>([this](const ofs::CloseVideoEvent &) { player = mpvPlayer; });
 
         eventQueue.push(ofs::VolumeChangedEvent{appSettings.volume});
+        eventQueue.push(ofs::SetPauseOnSeekEvent{appSettings.pauseOnSeek});
         videoPlayerWindow = std::make_unique<ofs::VideoPlayerWindow>(eventQueue);
         undoSystem = std::make_unique<ofs::UndoSystem>(scriptProject, eventQueue, undoMemoryBytes(appSettings));
         projectManager =

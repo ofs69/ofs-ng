@@ -116,6 +116,14 @@ translation = "タイムラインプレビュー"
 english     = "Timeline Preview runs a second video player to decode hover frames, so it uses extra memory and CPU/GPU."
 translation = "タイムラインプレビューはホバー時のフレームをデコードするために2つ目のビデオプレーヤーを使用するため、追加のメモリとCPU/GPUを消費します。"
 
+[PrefPauseOnSeek]
+english     = "Pause on Seek"
+translation = "シーク時に一時停止"
+
+[PrefPauseOnSeekHint]
+english     = "Pause video playback whenever you seek (timeline click, bookmark or chapter jump, frame step). Loading a project always pauses regardless of this setting."
+translation = "シーク（タイムラインのクリック、ブックマークやチャプターへのジャンプ、フレームステップ）するたびにビデオ再生を一時停止します。プロジェクトの読み込み時はこの設定に関係なく常に一時停止します。"
+
 [PrefIntraSection]
 english     = "Optimized Video"
 translation = "最適化された動画"

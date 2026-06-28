@@ -124,6 +124,14 @@ description = "Preferences › Application › Video: toggle the video frame pre
 english     = "Timeline Preview runs a second video player to decode hover frames, so it uses extra memory and CPU/GPU."
 description = "Preferences › Application › Video: help-marker tooltip on the Timeline Preview toggle warning that it is resource-intensive."
 
+[PrefPauseOnSeek]
+english     = "Pause on Seek"
+description = "Preferences › Application › Video: toggle that pauses playback whenever the user seeks (timeline click, bookmark/chapter jump, frame step)."
+
+[PrefPauseOnSeekHint]
+english     = "Pause video playback whenever you seek (timeline click, bookmark or chapter jump, frame step). Loading a project always pauses regardless of this setting."
+description = "Preferences › Application › Video: help-marker tooltip explaining the Pause on Seek toggle."
+
 [PrefIntraSection]
 english     = "Optimized Video"
 description = "Preferences › Application: section header for intra-frame (all-keyframe) video optimization settings."

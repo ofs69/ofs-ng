@@ -79,6 +79,9 @@ struct AppSettings {
     std::string activeTheme = "Dark"; // name of the active theme (shipped "Dark"/"Light" or a user theme)
     bool hwdecEnabled = true;
     bool showTimelinePreview = false; // hover-scrub frame preview on the player seek bar
+    // Pause video playback on any seek (timeline click, bookmark/chapter jump, frame step, etc.). On by
+    // default; off keeps playback rolling through a seek. Project loads always land paused regardless.
+    bool pauseOnSeek = true;
     // UI frame-rate cap (0 = unlimited / full refresh). Realized as an integer swap-interval divisor
     // of the display refresh, so it stays tear-free (see Application::updateSwapInterval).
     int maxFps = 0;

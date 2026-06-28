@@ -41,6 +41,12 @@ struct PlaybackSpeedEvent {
     float speed;
 };
 
+// Toggle the "pause playback on seek" policy. Pushed by OfsApp from AppSettings.pauseOnSeek (once at
+// startup and whenever the preference changes); the player caches it and applies it in its seek handler.
+struct SetPauseOnSeekEvent {
+    bool enabled;
+};
+
 struct PlayStateChangedEvent {
     bool playing;
 };

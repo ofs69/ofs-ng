@@ -148,6 +148,7 @@ void to_json(nlohmann::json &j, const AppSettings &s) {
                                 {"activeTheme", s.activeTheme},
                                 {"hwdecEnabled", s.hwdecEnabled},
                                 {"showTimelinePreview", s.showTimelinePreview},
+                                {"pauseOnSeek", s.pauseOnSeek},
                                 {"maxFps", s.maxFps},
                                 {"autoBackupEnabled", s.autoBackupEnabled},
                                 {"checkForUpdatesOnStartup", s.checkForUpdatesOnStartup},
@@ -173,6 +174,7 @@ void from_json(const nlohmann::json &j, AppSettings &s) {
     s.activeTheme = j.value("activeTheme", std::string("Dark"));
     s.hwdecEnabled = j.value("hwdecEnabled", true);
     s.showTimelinePreview = j.value("showTimelinePreview", false);
+    s.pauseOnSeek = j.value("pauseOnSeek", true);
     s.maxFps = j.value("maxFps", 0);
     s.autoBackupEnabled = j.value("autoBackupEnabled", true);
     s.checkForUpdatesOnStartup = j.value("checkForUpdatesOnStartup", true);

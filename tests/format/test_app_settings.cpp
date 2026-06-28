@@ -16,6 +16,7 @@ TEST_CASE("AppSettings round-trips all scalar fields through JSON") {
     in.showStatistics = false;
     in.activeTheme = "Midnight";
     in.hwdecEnabled = false;
+    in.pauseOnSeek = false; // flip from default (true)
     in.autoBackupEnabled = false;
     in.language = "de";
     in.liveReloadTranslations = true;
@@ -32,6 +33,7 @@ TEST_CASE("AppSettings round-trips all scalar fields through JSON") {
     CHECK(out.showStatistics == false);
     CHECK(out.activeTheme == "Midnight");
     CHECK(out.hwdecEnabled == false);
+    CHECK(out.pauseOnSeek == false);
     CHECK(out.autoBackupEnabled == false);
     CHECK(out.language == "de");
     CHECK(out.liveReloadTranslations == true);
@@ -47,6 +49,7 @@ TEST_CASE("AppSettings from_json on an empty object yields documented defaults")
     CHECK(out.volume == doctest::Approx(1.0f));
     CHECK(out.showSimulator == true);
     CHECK(out.activeTheme == "Dark");
+    CHECK(out.pauseOnSeek == true);
     CHECK(out.autoBackupEnabled == true);
     CHECK(out.language.empty());
     CHECK(out.lastProjectPaths.empty());
