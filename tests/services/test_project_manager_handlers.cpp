@@ -12,6 +12,7 @@
 #include "Core/SceneViewEvents.h"
 #include "Core/TranscodeEvents.h"
 #include "Format/AppSettings.h"
+#include "Format/BackupArchive.h"
 #include "Format/Funscript.h"
 #include "Services/EditIntentRouter.h"
 #include "Services/EditModeRegistry.h"
@@ -2767,7 +2768,7 @@ TEST_CASE("update() writes a dated auto-backup once the interval elapses on a ch
     tp.eq.push(AddActionAtTimeEvent{.axis = StandardAxis::L0, .time = 1.0, .pos = 50});
     tp.eq.drain();
 
-    const auto backupDir = ofs::util::getPrefPath() / "backup" / "ofs_backup_proj";
+    const auto backupDir = ofs::backup::dirForProject(filePath);
     std::error_code ec;
     std::filesystem::remove_all(backupDir, ec);
 
@@ -2817,7 +2818,7 @@ TEST_CASE("update() skips the auto-backup when the project is unchanged") {
     tp.project.state.filePath = filePath.string();
     tp.eq.drain();
 
-    const auto backupDir = ofs::util::getPrefPath() / "backup" / "ofs_backup_clean";
+    const auto backupDir = ofs::backup::dirForProject(filePath);
     std::error_code ec;
     std::filesystem::remove_all(backupDir, ec);
 

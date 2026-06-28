@@ -3,59 +3,22 @@
 #include "Core/EventQueue.h"
 #include "Core/ProjectLifecycleEvents.h" // RestoreBackupRequestEvent
 #include "Core/ScriptProject.h"
+#include "Format/BackupArchive.h"
 #include "Localization/Translator.h"
 #include "UI/Icons.h"
 #include "Util/FrameAllocator.h" // fmtScratch
 #include "Util/PathUtil.h"
 
 #include "imgui.h"
-#include <algorithm>
-#include <filesystem>
-#include <string_view>
 
 namespace ofs {
-namespace {
-
-// The backup directory key for a project — its filename stem, or "_unnamed_" for a never-saved project.
-// Must match the write side in ProjectManager so the list shows the files it actually produced.
-std::string backupStem(const ScriptProject &project) {
-    return project.state.filePath.empty() ? "_unnamed_"
-                                          : ofs::util::toUtf8(ofs::util::fromUtf8(project.state.filePath).stem());
-}
-
-} // namespace
 
 void BackupRestoreWindow::refresh(const ScriptProject &project) {
-    entries_.clear();
-    selected_ = -1;
-    scannedStem_ = backupStem(project);
+    scannedFor_ = project.state.filePath;
     loaded_ = true;
-
-    constexpr std::string_view kPrefix = "backup-";
-    auto dir = ofs::util::getPrefPath() / "backup" / ofs::util::fromUtf8(scannedStem_);
-    std::error_code ec;
-    for (const auto &dirEntry : std::filesystem::directory_iterator(dir, ec)) {
-        if (!dirEntry.is_regular_file())
-            continue;
-        const auto &p = dirEntry.path();
-        std::string fn = ofs::util::toUtf8(p.filename());
-        if (p.extension() != ".ofp" || !fn.starts_with(kPrefix))
-            continue;
-
-        // "backup-YYYY-MM-DD_HH-MM-SS.ofp" → "YYYY-MM-DD HH:MM:SS". Fall back to the raw stem if the
-        // 19-char core doesn't match (a hand-renamed file).
-        std::string core = fn.substr(kPrefix.size(), fn.size() - kPrefix.size() - 4);
-        std::string display = core;
-        if (display.size() == 19) {
-            display[10] = ' ';
-            display[13] = ':';
-            display[16] = ':';
-        }
-        entries_.push_back(
-            {.path = ofs::util::toUtf8(p), .display = std::move(display), .bytes = dirEntry.file_size(ec)});
-    }
-    // Sortable timestamp ⇒ lexicographic path order is chronological; descending puts newest first.
-    std::ranges::sort(entries_, [](const Entry &a, const Entry &b) { return a.path > b.path; });
+    entries_ = backup::list(backup::dirForProject(ofs::util::fromUtf8(project.state.filePath)));
+    // Preselect the newest backup so Restore is immediately actionable.
+    selected_ = entries_.empty() ? -1 : 0;
 }
 
 void BackupRestoreWindow::render(bool &open, const ScriptProject &project, EventQueue &eq) {
@@ -76,7 +39,7 @@ void BackupRestoreWindow::render(bool &open, const ScriptProject &project, Event
         return;
     }
 
-    if (!loaded_ || backupStem(project) != scannedStem_)
+    if (!loaded_ || project.state.filePath != scannedFor_)
         refresh(project);
 
     ImGui::PushTextWrapPos(0.0f);
@@ -95,7 +58,7 @@ void BackupRestoreWindow::render(bool &open, const ScriptProject &project, Event
         ImGui::TableHeadersRow();
 
         for (int i = 0; i < static_cast<int>(entries_.size()); ++i) {
-            const Entry &e = entries_[i];
+            const backup::BackupFile &e = entries_[i];
             ImGui::TableNextRow();
             ImGui::TableNextColumn();
             if (ImGui::Selectable(fmtScratch("{}##backup_row{}", e.display, i), selected_ == i,
@@ -116,7 +79,7 @@ void BackupRestoreWindow::render(bool &open, const ScriptProject &project, Event
     const bool hasSel = selected_ >= 0 && selected_ < static_cast<int>(entries_.size());
     ImGui::BeginDisabled(!hasSel);
     if (ImGui::Button(Str::BackupRestoreRestore.id("backup_do_restore"))) {
-        eq.push(RestoreBackupRequestEvent{entries_[selected_].path});
+        eq.push(RestoreBackupRequestEvent{ofs::util::toUtf8(entries_[selected_].path)});
         open = false;
     }
     ImGui::EndDisabled();
@@ -125,7 +88,7 @@ void BackupRestoreWindow::render(bool &open, const ScriptProject &project, Event
         refresh(project);
     ImGui::SameLine();
     if (ImGui::Button(Str::PrefOpenBackupFolder.iconId(ICON_FOLDER_OPEN, "backup_open_folder")))
-        ofs::util::openInFileBrowser(ofs::util::getPrefPath() / "backup" / ofs::util::fromUtf8(scannedStem_));
+        ofs::util::openInFileBrowser(backup::dirForProject(ofs::util::fromUtf8(scannedFor_)));
 
     ImGui::End();
 }

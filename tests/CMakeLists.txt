@@ -232,6 +232,7 @@ add_executable(ofs-unit-tests
         format/test_funscript.cpp
         format/test_graph_preset.cpp
         format/test_project.cpp
+        format/test_backup_archive.cpp
         core/test_funscript_metadata.cpp
         util/test_time_util.cpp
         util/test_benchmark.cpp
@@ -265,6 +266,7 @@ add_executable(ofs-unit-tests
         ${CMAKE_SOURCE_DIR}/src/Services/CustomCommandTemplate.cpp
         ${CMAKE_SOURCE_DIR}/src/Format/Funscript.cpp
         ${CMAKE_SOURCE_DIR}/src/Format/AppSettings.cpp
+        ${CMAKE_SOURCE_DIR}/src/Format/BackupArchive.cpp
         ${CMAKE_SOURCE_DIR}/src/Format/LayoutStore.cpp
         ${CMAKE_SOURCE_DIR}/src/Format/Project.cpp
         ${CMAKE_SOURCE_DIR}/src/UI/Theme.cpp

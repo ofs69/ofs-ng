@@ -1,6 +1,7 @@
 #pragma once
 
-#include <cstdint>
+#include "Format/BackupArchive.h" // ofs::backup::BackupFile
+
 #include <string>
 #include <vector>
 
@@ -18,20 +19,14 @@ class BackupRestoreWindow {
     void render(bool &open, const ScriptProject &project, EventQueue &eq);
 
   private:
-    struct Entry {
-        std::string path;     // UTF-8 absolute path to the backup .ofp (the restore target)
-        std::string display;  // "YYYY-MM-DD HH:MM:SS" parsed from the filename, or the raw stem on mismatch
-        std::uintmax_t bytes; // file size, formatted for display per frame
-    };
-
     // Rescan the current project's backup directory into `entries_`, newest first. Cheap, disk-touching:
     // called on open and when the open project changes, not every frame.
     void refresh(const ScriptProject &project);
 
-    std::vector<Entry> entries_;
-    std::string scannedStem_; // project stem the cache was built for; a change forces a rescan
-    bool loaded_ = false;     // false ⇒ rescan on the next render (covers re-open)
-    int selected_ = -1;       // row index into entries_, or -1
+    std::vector<backup::BackupFile> entries_;
+    std::string scannedFor_; // project file path the cache was built for; a change forces a rescan
+    bool loaded_ = false;    // false ⇒ rescan on the next render (covers re-open)
+    int selected_ = -1;      // row index into entries_, or -1
 };
 
 } // namespace ofs

@@ -9,6 +9,7 @@
 #include "Core/SimulatorSettings.h"
 #include "Core/TimeSlot.h"
 #include "Core/TranscodeEvents.h"
+#include "Format/BackupArchive.h"
 #include "Format/Funscript.h"
 #include "Format/MediaTypes.h"
 #include "Localization/Translator.h"
@@ -43,43 +44,6 @@
 namespace ofs {
 
 static constexpr double kBackupIntervalSeconds = 60.0;
-// Dated backups are named "backup-<sortable timestamp>.ofp" so a lexicographic sort is chronological —
-// pruning and the restore list both rely on that ordering.
-static constexpr std::string_view kBackupPrefix = "backup-";
-
-// Local wall-clock stamp for a backup filename: "backup-YYYY-MM-DD_HH-MM-SS.ofp". Filesystem-safe (no
-// ':') and lexicographically sortable. Computed on the main thread — localtime is not thread-safe.
-static std::string backupFileName() {
-    std::time_t t = std::time(nullptr);
-    std::tm tm{};
-#ifdef _WIN32
-    localtime_s(&tm, &t);
-#else
-    localtime_r(&t, &tm);
-#endif
-    return fmt::format("{}{:04}-{:02}-{:02}_{:02}-{:02}-{:02}.ofp", kBackupPrefix, tm.tm_year + 1900, tm.tm_mon + 1,
-                       tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
-}
-
-// Delete the oldest dated backups in `dir` beyond `keepCount`, so the rolling window never grows without
-// bound. Only our own "backup-*.ofp" files are touched. Runs on the write worker, off the main thread.
-static void pruneBackups(const std::filesystem::path &dir, int keepCount) {
-    keepCount = std::max(1, keepCount);
-    std::error_code ec;
-    std::vector<std::filesystem::path> files;
-    for (const auto &entry : std::filesystem::directory_iterator(dir, ec)) {
-        if (!entry.is_regular_file())
-            continue;
-        const auto &p = entry.path();
-        if (p.extension() == ".ofp" && ofs::util::toUtf8(p.filename()).starts_with(kBackupPrefix))
-            files.push_back(p);
-    }
-    if (static_cast<int>(files.size()) <= keepCount)
-        return;
-    std::ranges::sort(files); // sortable timestamp ⇒ oldest first
-    for (size_t i = 0; i + static_cast<size_t>(keepCount) < files.size(); ++i)
-        std::filesystem::remove(files[i], ec);
-}
 
 // SHA-256 over a graph's embedded script sources — the only trust-relevant, code-executing content.
 // Sources are length-prefixed and ordered by node id so the digest is stable regardless of node
@@ -1254,11 +1218,9 @@ void ProjectManager::update(float dt) {
     if (project.editRevision == backupRevision)
         return;
 
-    auto stem = project.state.filePath.empty() ? "_unnamed_"
-                                               : ofs::util::toUtf8(ofs::util::fromUtf8(project.state.filePath).stem());
-    auto backupDir = ofs::util::getPrefPath() / "backup" / stem;
+    auto backupDir = ofs::backup::dirForProject(ofs::util::fromUtf8(project.state.filePath));
     std::filesystem::create_directories(backupDir);
-    auto backupPath = backupDir / ofs::util::fromUtf8(backupFileName());
+    auto backupPath = backupDir / ofs::util::fromUtf8(ofs::backup::fileName(std::time(nullptr)));
 
     auto captureStart = std::chrono::steady_clock::now();
     Project p;
@@ -1278,7 +1240,7 @@ void ProjectManager::update(float dt) {
                                         OFS_CORE_INFO("[Backup] {} — capture {}ms, write {}ms",
                                                       ofs::util::toUtf8(backupPath.filename()), captureMs, writeMs);
                                         if (ok)
-                                            pruneBackups(backupDir, keepCount);
+                                            ofs::backup::prune(backupDir, keepCount);
                                         return ok;
                                     }),
                                 .path = backupPath,
