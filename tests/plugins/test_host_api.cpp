@@ -418,7 +418,12 @@ TEST_CASE("getFunscriptJson serializes axes per the requested format version") {
     fx.axis(kL0).showInStrip = true;
     fx.axis(kR0).showInStrip = true;
     fx.tp.project.mutate(
-        StandardAxis::L0, [](AxisState &a) { a.actions.insert({1.0, 40}); a.actions.insert({2.0, 60}); }, fx.tp.eq);
+        StandardAxis::L0,
+        [](AxisState &a) {
+            a.actions.insert({1.0, 40});
+            a.actions.insert({2.0, 60});
+        },
+        fx.tp.eq);
     fx.tp.project.mutate(StandardAxis::R0, [](AxisState &a) { a.actions.insert({0.5, 10}); }, fx.tp.eq);
     fx.tp.project.metadata.title = "MyTitle";
     fx.drain();

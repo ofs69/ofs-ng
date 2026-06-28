@@ -43,7 +43,9 @@ constexpr uint32_t kCacheVersion = 2;
 int16_t quantizePeak(float v) {
     return static_cast<int16_t>(std::clamp<long>(std::lround(v * 32768.0f), -32768, 32767));
 }
-float dequantizePeak(int16_t q) { return static_cast<float>(q) / 32768.0f; }
+float dequantizePeak(int16_t q) {
+    return static_cast<float>(q) / 32768.0f;
+}
 } // namespace
 
 std::optional<WaveformData> loadCache(const std::filesystem::path &file) {
