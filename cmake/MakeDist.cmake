@@ -1,5 +1,6 @@
 # Packages this build's runtime artifacts into dist/<app>-<platform>-<config>-<tag>[<shorthash>].zip, and
-# (where the toolchain emits separate symbol files) the debug symbols into a sibling dist/…-pdb.zip.
+# (on Windows only — the sole toolchain we ship standalone symbol files for) the debug symbols into a
+# sibling dist/…-pdb.zip.
 #
 # Driven by the `dist` custom target (see src/CMakeLists.txt) after the app is built. The git tag and
 # short commit hash are read here, at build time rather than configure time, so the archive name tracks
@@ -88,7 +89,11 @@ set(_sym_zip "${DIST_DIR}/${_sym_name}.zip")
 file(MAKE_DIRECTORY "${DIST_DIR}")
 file(REMOVE_RECURSE "${_stage}" "${_sym}")
 file(REMOVE "${_zip}" "${_sym_zip}")
-file(MAKE_DIRECTORY "${_stage}" "${_sym}")
+file(MAKE_DIRECTORY "${_stage}")
+# The symbol stage only exists on Windows; non-Windows toolchains ship no separate symbol zip.
+if (_is_windows)
+    file(MAKE_DIRECTORY "${_sym}")
+endif ()
 
 # App binary (exact name incl. extension) and the always-present asset pak.
 set(_want
@@ -126,20 +131,24 @@ endif ()
 set(_have_syms FALSE)
 
 # The managed-assembly tree (host assemblies + the shipped first-party plugins now nested under
-# managed/plugins). The managed .dll/.pdb are platform-neutral .NET assemblies, so they ship on every
-# platform. The tree is split: runtime files into the main stage, .pdb into the symbol stage with the
-# same directory structure. (BIN_DIR has no bracket token, so globbing it for .pdb is safe.)
+# managed/plugins). The managed .dll runtime assemblies are platform-neutral .NET, so they ship on every
+# platform (into the main stage, .pdb excluded). Their matching .pdb are debug symbols — a separate symbol
+# zip only makes sense on Windows (the one platform that also emits a standalone native .pdb), so the
+# managed .pdb are packaged into the symbol stage there and simply not shipped elsewhere.
 if (IS_DIRECTORY "${BIN_DIR}/managed")
     file(COPY "${BIN_DIR}/managed" DESTINATION "${_stage}" PATTERN "*.pdb" EXCLUDE)
-    file(COPY "${BIN_DIR}/managed" DESTINATION "${_sym}" FILES_MATCHING PATTERN "*.pdb")
-    file(GLOB_RECURSE _tree_pdbs "${BIN_DIR}/managed/*.pdb")
-    if (_tree_pdbs)
-        set(_have_syms TRUE)
+    if (_is_windows)
+        # BIN_DIR has no bracket token, so globbing it for .pdb is safe.
+        file(COPY "${BIN_DIR}/managed" DESTINATION "${_sym}" FILES_MATCHING PATTERN "*.pdb")
+        file(GLOB_RECURSE _tree_pdbs "${BIN_DIR}/managed/*.pdb")
+        if (_tree_pdbs)
+            set(_have_syms TRUE)
+        endif ()
     endif ()
 endif ()
 
 # The native app symbol file is MSVC's separate .pdb. GCC/Clang embed DWARF in the binary (or emit a
-# .dSYM bundle) — not handled here — so on those toolchains the only symbols are the managed .pdb above.
+# .dSYM bundle) — not handled here — so on those toolchains there are no separate symbols to ship.
 if (_is_windows AND EXISTS "${BIN_DIR}/${APP_NAME}.pdb")
     file(COPY "${BIN_DIR}/${APP_NAME}.pdb" DESTINATION "${_sym}")
     set(_have_syms TRUE)

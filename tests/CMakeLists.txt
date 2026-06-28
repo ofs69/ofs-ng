@@ -483,7 +483,8 @@ endif ()
 # Ofs.Api AssemblyVersion MAJOR matches the working tree's) and dotnet-builds them into plugins-compat/.
 # test_plugin_compat.cpp then loads that binary against the CURRENT host. The script is non-fatal and
 # no-ops cleanly until such a tag exists (mirroring the update checker's no-git-tags gotcha), so this
-# block is inert pre-release. find_package(Git) already ran in the root CMakeLists (GIT_EXECUTABLE).
+# block self-skips until a release tag for the current Ofs.Api major exists (now satisfied by v0.1.0).
+# find_package(Git) already ran in the root CMakeLists (GIT_EXECUTABLE).
 if (DOTNET_EXECUTABLE AND TARGET Ofs.PluginHost AND Python3_FOUND AND GIT_EXECUTABLE)
     set(OFS_COMPAT_PLUGIN_STAGE "${OFS_TEST_BIN_DIR}/plugin-tests/plugins-compat")
     # ALL custom target (like ofs_build_info): re-run every build so a freshly-cut tag is picked up

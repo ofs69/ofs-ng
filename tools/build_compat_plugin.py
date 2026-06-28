@@ -169,7 +169,8 @@ def main() -> int:
 
     tag = select_baseline_tag(repo, a.git, current_major)
     if tag is None:
-        # Pre-release, or first release of a new MAJOR not yet tagged. Nothing to witness against yet.
+        # No release tagged yet for this Ofs.Api MAJOR (e.g. the first release of a new major before it's
+        # tagged). Nothing to witness against yet.
         clear_stage(stage, "none")
         print(f"[build_compat_plugin] no release tag with Ofs.Api major {current_major}; "
               f"back-compat fixture skipped")

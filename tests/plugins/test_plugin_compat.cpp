@@ -9,8 +9,8 @@
 // / TypeLoadException) deep in the bridge and the round-trip assertions below go red — exactly the
 // regression the recompile otherwise masks.
 //
-// Skips cleanly (never fails) when no baseline is staged: pre-release (no matching tag), or the first
-// release of a new MAJOR before it is tagged. See build_compat_plugin.py for the no-op contract.
+// Skips cleanly (never fails) when no baseline is staged: no release tag for the current Ofs.Api MAJOR
+// (e.g. the first release of a new major before it is tagged). See build_compat_plugin.py for the no-op contract.
 
 #include <doctest/doctest.h>
 
