@@ -194,8 +194,10 @@ struct ScriptProject {
     std::uint64_t editRevision = 0;
 
     // Apply fn to the named axis, sync selection, set axis.dirty, bump editRevision, push
-    // AxisModifiedEvent. Main thread only.
-    void mutate(StandardAxis role, const std::function<void(AxisState &)> &fn, EventQueue &eq);
+    // AxisModifiedEvent. Main thread only. Pass affectsData=false for a display-only flag write
+    // (isVisible/isLocked/showInStrip): everything runs except the AxisModifiedEvent push, so the change
+    // persists without triggering a processing re-eval / plugin notify it does not affect.
+    void mutate(StandardAxis role, const std::function<void(AxisState &)> &fn, EventQueue &eq, bool affectsData = true);
 
     // Replace axis selection, sync against actions, push SelectionChangedEvent.
     // Does NOT set dirty. Main thread only.

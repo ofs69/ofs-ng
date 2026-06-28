@@ -1715,6 +1715,10 @@ TEST_CASE("ToggleAxisVisibility / Lock / PanelVisibility") {
     PMFixture f;
     f.showAxis(StandardAxis::R0);
 
+    // Display-only flag writes must not raise AxisModifiedEvent — that signal drives a processing
+    // re-eval / plugin notify, and a visibility/lock/panel toggle leaves the action data untouched.
+    f.axisMods.received.clear();
+    const std::uint64_t revBefore = f.proj().editRevision;
     f.push(ToggleAxisVisibilityEvent{.axisRole = StandardAxis::R0, .visible = false});
     f.push(ToggleAxisLockEvent{.axisRole = StandardAxis::R0, .locked = true});
     f.push(ToggleAxisPanelVisibilityEvent{.axisRole = StandardAxis::R0, .inPanel = false});
@@ -1722,6 +1726,9 @@ TEST_CASE("ToggleAxisVisibility / Lock / PanelVisibility") {
     CHECK_FALSE(f.axis(StandardAxis::R0).isVisible);
     CHECK(f.axis(StandardAxis::R0).isLocked);
     CHECK_FALSE(f.axis(StandardAxis::R0).showInStrip);
+    CHECK(f.axisMods.received.empty());
+    // The change still persists: editRevision advances (so an unchanged-project backup skip won't drop it).
+    CHECK(f.proj().editRevision > revBefore);
 
     // L0's panel visibility is pinned on — the toggle is a no-op.
     f.showAxis(StandardAxis::L0);

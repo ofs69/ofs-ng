@@ -18,7 +18,8 @@ VectorSet<ScriptAxisAction> selectionWithinActions(const VectorSet<ScriptAxisAct
 }
 } // namespace
 
-void ScriptProject::mutate(StandardAxis role, const std::function<void(AxisState &)> &fn, EventQueue &eq) {
+void ScriptProject::mutate(StandardAxis role, const std::function<void(AxisState &)> &fn, EventQueue &eq,
+                           bool affectsData) {
     auto &axis = axes[static_cast<size_t>(role)];
     fn(axis);
     // Sync selection: remove any selected actions that no longer exist in the axis.
@@ -26,7 +27,12 @@ void ScriptProject::mutate(StandardAxis role, const std::function<void(AxisState
         axis.selection = selectionWithinActions(axis.selection, axis.actions);
     axis.dirty = true;
     ++editRevision;
-    eq.push(AxisModifiedEvent{role});
+    // Display-only flag writes (isVisible/isLocked/showInStrip) leave the action data untouched, so they
+    // pass affectsData=false to skip AxisModifiedEvent — that event means "the axis's resolved data may
+    // have changed" and would otherwise trigger a pointless processing re-eval and plugin notify for a
+    // change the graph never sees. The edit still persists (dirty + editRevision bump above).
+    if (affectsData)
+        eq.push(AxisModifiedEvent{role});
 }
 
 void ScriptProject::setSelection(StandardAxis role, const VectorSet<ScriptAxisAction> &newSel, EventQueue &eq) {

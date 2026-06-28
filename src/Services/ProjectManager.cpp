@@ -1942,7 +1942,7 @@ void ProjectManager::onRemoveAxis(const RemoveAxisEvent &event) {
 }
 
 void ProjectManager::onToggleAxisVisibility(const ToggleAxisVisibilityEvent &event) {
-    project.mutate(event.axisRole, [v = event.visible](AxisState &a) { a.isVisible = v; }, eq);
+    project.mutate(event.axisRole, [v = event.visible](AxisState &a) { a.isVisible = v; }, eq, /*affectsData=*/false);
     setDirty(true);
 }
 
@@ -1952,7 +1952,9 @@ void ProjectManager::onToggleAxisPanelVisibility(const ToggleAxisPanelVisibility
     bool wasActive = (project.state.activeAxis == event.axisRole);
     if (!event.inPanel)
         project.state.axesGrouping.reset(static_cast<size_t>(event.axisRole)); // hidden from strip ⇒ out of group
-    project.mutate(event.axisRole, [v = event.inPanel](AxisState &a) { a.showInStrip = v; }, eq);
+    project.mutate(
+        event.axisRole, [v = event.inPanel](AxisState &a) { a.showInStrip = v; }, eq,
+        /*affectsData=*/false);
     if (!event.inPanel && wasActive) {
         for (size_t i = 0; i < kStandardAxisCount; ++i) {
             if (project.axes[i].showInStrip) {
@@ -2015,7 +2017,7 @@ void ProjectManager::onShowL0Only(const ShowL0OnlyEvent &) {
 }
 
 void ProjectManager::onToggleAxisLock(const ToggleAxisLockEvent &event) {
-    project.mutate(event.axisRole, [v = event.locked](AxisState &a) { a.isLocked = v; }, eq);
+    project.mutate(event.axisRole, [v = event.locked](AxisState &a) { a.isLocked = v; }, eq, /*affectsData=*/false);
     setDirty(true);
 }
 
