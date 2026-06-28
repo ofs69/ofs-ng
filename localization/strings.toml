@@ -490,13 +490,9 @@ description = "Preferences › Application: button that opens the app's data fol
 english     = "Open Backup Folder"
 description = "Preferences › Application: button that opens the backup folder in the file browser."
 
-[PrefBackupKeepCount]
-english     = "Backups to keep"
-description = "Preferences › Application: slider for how many timestamped backups to retain per project."
-
 [PrefBackupKeepCountHint]
 english     = "How many dated backups to keep per project before the oldest is removed."
-description = "Preferences › Application: help-marker tooltip on the 'Backups to keep' slider."
+description = "Preferences › Application: help-marker tooltip on the backup retention slider."
 
 [BackupRestoreTitle]
 english     = "Restore from Backup"

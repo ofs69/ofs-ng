@@ -66,10 +66,12 @@ static const char *fogFragmentSource = R"(#version 330 core
             return v / 0.9375;
         }
 
-        void main() {
+        // The warped fog density at one UV, before the contrast curve. Factored out of main() so the
+        // field can be sampled at both a fragment and its mirror across the vertical centerline.
+        float fogDensity(vec2 uv) {
             // Square the domain so the fog cells aren't stretched on wide windows, then scale to a handful
             // of cells across the screen.
-            vec2 p = vec2(Frag_UV.x * uAspect, Frag_UV.y) * 3.0;
+            vec2 p = vec2(uv.x * uAspect, uv.y) * 3.0;
 
             // Time-driven drift (uPhase is advanced by wall-clock seconds, so the speed is identical at any
             // frame rate). It enters here (translation) and again in the warp below at a different
@@ -80,8 +82,16 @@ static const char *fogFragmentSource = R"(#version 330 core
             // read as curling fog instead of plain blurred noise.
             vec2 q = vec2(fbm(p), fbm(p + vec2(5.2, 1.3)));
             vec2 r = p + 1.2 * q + vec2(-uPhase * 0.08, uPhase * 0.11);
+            return fbm(r);
+        }
 
-            float f = fbm(r);
+        void main() {
+            // Mirror-average the density across x=0.5 so neither side of the centered welcome content
+            // carries more haze than the other — a single drifting field never balances on its own. The
+            // average of f(x) and f(1-x) is exactly symmetric, and its horizontal gradient at the
+            // centerline is zero, so the two halves meet in a smooth ridge rather than a visible seam.
+            // The two fields still drift independently, so the result animates instead of looking frozen.
+            float f = 0.5 * (fogDensity(Frag_UV) + fogDensity(vec2(1.0 - Frag_UV.x, Frag_UV.y)));
             // Contrast curve: carve out empty gaps between billows so the haze breathes instead of being
             // a uniform wash. Tighter than a flat wash so the billows pop.
             f = smoothstep(0.30, 0.85, f);
@@ -95,19 +105,17 @@ static const char *fogFragmentSource = R"(#version 330 core
             // Fog pops toward the edges and fades out toward the center, leaving the content area calm.
             float fogA = uColor.a * f * mix(0.2, 1.0, smoothstep(0.15, 0.95, d));
             // A soft vignette tints the center (darker or brighter, per theme), strongest dead-center and
-            // gone by the edges.
-            float centerA = uCenter.a * (1.0 - smoothstep(0.0, 0.8, d));
+            // trailing off toward the edges. A gaussian falloff rather than a smoothstep: smoothstep has
+            // zero slope at both ends, so it builds a flat plateau across the center and ends at a fixed
+            // radius — together that reads as a hard-edged disc. The gaussian has neither, so the tint
+            // dissolves continuously into the fog with no visible rim.
+            float centerA = uCenter.a * exp(-d * d * 3.0);
 
             // Composite fog (top) over the center vignette (bottom) into one straight-alpha value, so a
             // single quad reproduces exactly what layering the two over the panel would.
             float outA = fogA + centerA * (1.0 - fogA);
             vec3 outRgb = outA > 0.0001 ? (uColor.rgb * fogA + uCenter.rgb * centerA * (1.0 - fogA)) / outA
                                         : vec3(0.0);
-
-            // Feather the outermost rim so the quad doesn't clip into a hard line against the title bar and
-            // footer that border the work area.
-            vec2 edge = min(Frag_UV, 1.0 - Frag_UV);
-            outA *= smoothstep(0.0, 0.015, min(edge.x, edge.y));
 
             // Dither by ±1/255 to break up banding in these very smooth, low-alpha gradients on an 8-bit
             // framebuffer. A static (gl_FragCoord-locked) hash, so it reads as faint grain, not noise.

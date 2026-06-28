@@ -469,9 +469,6 @@ void renderToasts(NotificationState &state) {
     ImGui::PushStyleColor(ImGuiCol_WindowBg, 0);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
     ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-    // Tight, font-relative inter-toast gap so stacked toasts read as a close group. This is the only
-    // spacing between the child windows; no extra Spacing() call below.
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0.0f, ImGui::GetFontSize() * 0.2f));
     if (ImGui::Begin("##toaststack", nullptr, flags)) {
         // Render oldest-first so the newest sits at the bottom, nearest the bell.
         for (int i = shownN - 1; i >= 0; --i) {
@@ -484,7 +481,7 @@ void renderToasts(NotificationState &state) {
         }
     }
     ImGui::End();
-    ImGui::PopStyleVar(3);
+    ImGui::PopStyleVar(2);
     ImGui::PopStyleColor();
 }
 

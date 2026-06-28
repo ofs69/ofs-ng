@@ -467,10 +467,6 @@ translation = "アプリデータフォルダを開く"
 english     = "Open Backup Folder"
 translation = "バックアップフォルダを開く"
 
-[PrefBackupKeepCount]
-english     = "Backups to keep"
-translation = "保持するバックアップ数"
-
 [PrefBackupKeepCountHint]
 english     = "How many dated backups to keep per project before the oldest is removed."
 translation = "プロジェクトごとに保持する日付き backup の数。古いものから削除されます。"

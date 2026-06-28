@@ -273,7 +273,7 @@ void ConfigurationWindow::renderApplicationTab(EventQueue &eq) {
                 [timelinePreview](AppSettings &s) { s.showTimelinePreview = timelinePreview; }});
         ImGui::SameLine();
         ofs::ui::helpMarker(Str::PrefTimelinePreviewHint.c_str());
-
+        ImGui::SameLine(0.0f, ImGui::GetFontSize() * 1.5f);
         bool pauseOnSeek = appSettings.pauseOnSeek;
         ImGui::TextUnformatted(Str::PrefPauseOnSeek);
         ImGui::SameLine();
@@ -435,11 +435,24 @@ void ConfigurationWindow::renderApplicationTab(EventQueue &eq) {
     // --- Backup ---
     ImGui::SeparatorText(Str::PrefBackup);
     {
-        // Auto-backup toggle and both folder shortcuts share one row: the checkbox auto-sizes to its
-        // label, the two buttons split the remaining width.
+        // Auto-backup toggle, the retention-count slider, and both folder shortcuts share one row: the
+        // checkbox and slider auto-size, the two buttons split the remaining width.
         bool autoBackup = appSettings.autoBackupEnabled;
         if (ImGui::Checkbox(Str::PrefAutoBackup.id("auto_backup"), &autoBackup))
             eq.push(ModifyEvent<AppSettings>{[autoBackup](AppSettings &s) { s.autoBackupEnabled = autoBackup; }});
+
+        // How many timestamped backups to retain per project before the oldest is pruned. No visible
+        // label — the help marker explains it.
+        ImGui::SameLine();
+        ImGui::BeginDisabled(!appSettings.autoBackupEnabled);
+        int keepCount = appSettings.backupKeepCount;
+        ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
+        if (ImGui::SliderInt("##backup_keep_count", &keepCount, 1, 100))
+            eq.push(ModifyEvent<AppSettings>{[keepCount](AppSettings &s) { s.backupKeepCount = keepCount; }});
+        ImGui::SameLine();
+        ofs::ui::helpMarker(Str::PrefBackupKeepCountHint.c_str());
+        ImGui::EndDisabled();
+
         ImGui::SameLine();
         const float btnW = (ImGui::GetContentRegionAvail().x - kRightGap - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
         if (ImGui::Button(Str::PrefOpenAppDataFolder.icon(ICON_FOLDER_OPEN), {btnW, 0.f}))
@@ -447,16 +460,6 @@ void ConfigurationWindow::renderApplicationTab(EventQueue &eq) {
         ImGui::SameLine();
         if (ImGui::Button(Str::PrefOpenBackupFolder.icon(ICON_FOLDER_OPEN), {btnW, 0.f}))
             ofs::util::openInFileBrowser(ofs::util::getPrefPath() / "backup");
-
-        // How many timestamped backups to retain per project before the oldest is pruned.
-        ImGui::BeginDisabled(!appSettings.autoBackupEnabled);
-        int keepCount = appSettings.backupKeepCount;
-        ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8.0f);
-        if (ImGui::SliderInt(Str::PrefBackupKeepCount.id("backup_keep_count"), &keepCount, 1, 100))
-            eq.push(ModifyEvent<AppSettings>{[keepCount](AppSettings &s) { s.backupKeepCount = keepCount; }});
-        ImGui::SameLine();
-        ofs::ui::helpMarker(Str::PrefBackupKeepCountHint.c_str());
-        ImGui::EndDisabled();
     }
 
     ImGui::Spacing();
