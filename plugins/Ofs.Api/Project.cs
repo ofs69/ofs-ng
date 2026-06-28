@@ -124,7 +124,7 @@ namespace Ofs
             if (roles == null || roles.Length == 0) return string.Empty;
             if (version == FunscriptVersion.V10 && roles.Length != 1)
                 throw new ArgumentException(
-                    "Funscript 1.0 is a single-axis format; pass exactly one axis (use V1_1 or V2_0 for " +
+                    "Funscript 1.0 is a single-axis format; pass exactly one axis (use V11 or V20 for " +
                     "multiple axes).", nameof(roles));
             int count = roles.Length;
             int[] roleInts = new int[count];
