@@ -705,6 +705,11 @@ void VideoControlsWindow::render(const ScriptProject &project, EventQueue &eq, V
     const float minSliderW = ImGui::GetFrameHeight() * 2.0f;
     float timeAnchorW = 0.0f;
 
+    // The middle-column widgets (seek bar + bookmark bar) already inset themselves by FramePadding.x so
+    // the two bars align; the table's own horizontal CellPadding then stacks on top of that inset,
+    // doubling the apparent gap between the transport, bar, and time/speed columns. Drop the horizontal
+    // cell padding (keep the vertical, which sets the row gap) so each column boundary shows one inset.
+    ImGui::PushStyleVar(ImGuiStyleVar_CellPadding, ImVec2(0.0f, ImGui::GetStyle().CellPadding.y));
     if (ImGui::BeginTable("##controls", 3, 0)) {
         ImGui::TableSetupColumn("##c1", ImGuiTableColumnFlags_WidthFixed);
         ImGui::TableSetupColumn("##c2", ImGuiTableColumnFlags_WidthStretch);
@@ -773,7 +778,7 @@ void VideoControlsWindow::render(const ScriptProject &project, EventQueue &eq, V
             // Show the gain as a percent (0–130%) so the >100% boost reads as a boost, not a bare "1.3".
             float volPct = volume * 100.0f;
             if (ImGui::SliderFloat("##Volume", &volPct, 0.0f, 130.0f, "%.0f%%", ImGuiSliderFlags_AlwaysClamp)) {
-                volume = std::round(volPct / 10.0f) * 10.0f / 100.0f; // snap to 10 % steps (the old 0.1 grid)
+                volume = ImClamp(volPct / 100.0f, 0.0f, 1.3f);
                 eq.push(VolumeChangedEvent{volume});
             }
         }
@@ -810,6 +815,7 @@ void VideoControlsWindow::render(const ScriptProject &project, EventQueue &eq, V
 
         ImGui::EndTable();
     }
+    ImGui::PopStyleVar();
 
     ImGui::End();
 }
