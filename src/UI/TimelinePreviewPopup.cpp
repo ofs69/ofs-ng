@@ -28,14 +28,23 @@ void drawCaption(double hoverTime, double currentTime) {
     const char *signedDelta = fmtScratch("{}{}", delta >= 0.0 ? "+" : "-", TimeUtil::formatTime(std::abs(delta), true));
     ImGui::TextUnformatted(Str::TlpDelta.fmt(signedDelta));
 }
+
+// Muted action hint at the bottom of the tooltip; no-op when the caller passes none.
+void drawFooterHint(const char *footerHint) {
+    if (!footerHint)
+        return;
+    ImGui::Separator();
+    ImGui::TextDisabled("%s", footerHint);
+}
 } // namespace
 
 void TimelinePreviewPopup::render(const ScriptProject &project, EventQueue &eq, const VideoPreview &preview,
-                                  double hoverTime, double currentTime) {
+                                  double hoverTime, double currentTime, const char *footerHint) {
     // Feature off: preserve the original text-only time tooltip and request nothing.
     if (!preview.isEnabled()) {
         ImGui::BeginTooltip();
         ImGui::TextUnformatted(TimeUtil::formatTime(hoverTime, true));
+        drawFooterHint(footerHint);
         ImGui::EndTooltip();
         return;
     }
@@ -46,6 +55,7 @@ void TimelinePreviewPopup::render(const ScriptProject &project, EventQueue &eq, 
     if (!preview.isReady()) {
         ImGui::BeginTooltip();
         drawCaption(hoverTime, currentTime);
+        drawFooterHint(footerHint);
         ImGui::EndTooltip();
         return;
     }
@@ -108,6 +118,7 @@ void TimelinePreviewPopup::render(const ScriptProject &project, EventQueue &eq, 
         ImGui::Image((ImTextureID)(intptr_t)tex, imgSize);
     }
     drawCaption(hoverTime, currentTime);
+    drawFooterHint(footerHint);
     ImGui::EndTooltip();
 }
 

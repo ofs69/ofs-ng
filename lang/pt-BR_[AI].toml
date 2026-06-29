@@ -2520,6 +2520,10 @@ translation = "Exportar mapa de calor"
 english     = "PNG image"
 translation = "Imagem PNG"
 
+[VpcHeatmapExportHint]
+english     = "Right-click to export as image"
+translation = "Clique com o botão direito para exportar como imagem"
+
 [VpcChapterNoRoom]
 english     = "No room for a chapter here — the timeline is full at this point."
 translation = "Sem espaço para um capítulo aqui — a linha do tempo está cheia neste ponto."

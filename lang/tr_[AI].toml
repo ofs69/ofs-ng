@@ -2520,6 +2520,10 @@ translation = "Isı haritasını dışa aktar"
 english     = "PNG image"
 translation = "PNG görüntüsü"
 
+[VpcHeatmapExportHint]
+english     = "Right-click to export as image"
+translation = "Görüntü olarak dışa aktarmak için sağ tıklayın"
+
 [VpcChapterNoRoom]
 english     = "No room for a chapter here — the timeline is full at this point."
 translation = "Buraya bölüm eklenemiyor — zaman çizelgesi bu noktada dolu."

@@ -204,7 +204,8 @@ bool VideoControlsWindow::drawTimelineWidget(const ScriptProject &project, Event
 
         float hoverPos = (mouseX - frameBB.Min.x) / frameBB.GetWidth();
         double hoverTime = static_cast<double>(hoverPos) * videoPlayer.getDuration();
-        previewPopup.render(project, eq, preview, hoverTime, project.playback.cursorPos);
+        previewPopup.render(project, eq, preview, hoverTime, project.playback.cursorPos,
+                            Str::VpcHeatmapExportHint.c_str());
     }
 
     drawList->AddLine(p1, p2, ofs::theme::GetColorU32(AppCol_TimelineCursorOuter), timelinePosCursorW);

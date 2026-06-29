@@ -2520,6 +2520,10 @@ translation = "ヒートマップをエクスポート"
 english     = "PNG image"
 translation = "PNG画像"
 
+[VpcHeatmapExportHint]
+english     = "Right-click to export as image"
+translation = "右クリックで画像として書き出し"
+
 [VpcChapterNoRoom]
 english     = "No room for a chapter here — the timeline is full at this point."
 translation = "ここにチャプターを追加する空きがありません — この位置はタイムラインが埋まっています。"

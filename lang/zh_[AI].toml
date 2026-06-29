@@ -2520,6 +2520,10 @@ translation = "导出热图"
 english     = "PNG image"
 translation = "PNG 图像"
 
+[VpcHeatmapExportHint]
+english     = "Right-click to export as image"
+translation = "右键导出为图片"
+
 [VpcChapterNoRoom]
 english     = "No room for a chapter here — the timeline is full at this point."
 translation = "此处无法添加章节——该时间点时间轴已满。"

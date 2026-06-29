@@ -21,9 +21,11 @@ class TimelinePreviewPopup {
     // Pushes a PreviewSeekRequestEvent for `hoverTime`, then (if a frame is ready) draws the preview
     // tooltip — a 2D image, or the equirect projected through the current VR framing — plus the
     // hovered timestamp and signed offset from the playhead. Falls back to a text-only time tooltip
-    // until the engine has a frame (feature off, or first frame not yet decoded).
+    // until the engine has a frame (feature off, or first frame not yet decoded). An optional
+    // `footerHint` (already-localized) is appended as a muted line so a caller can surface a hidden
+    // right-click action without stacking a second tooltip on top of this one.
     void render(const ScriptProject &project, EventQueue &eq, const VideoPreview &preview, double hoverTime,
-                double currentTime);
+                double currentTime, const char *footerHint = nullptr);
 
   private:
     std::unique_ptr<VrShader> vrShader;

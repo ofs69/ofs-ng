@@ -2669,6 +2669,10 @@ description = "Title of the native save dialog for the heatmap PNG export."
 english     = "PNG image"
 description = "File-type filter label in the heatmap export save dialog."
 
+[VpcHeatmapExportHint]
+english     = "Right-click to export as image"
+description = "Hint line at the bottom of the seek-bar preview tooltip, telling the user the heatmap can be right-click exported."
+
 [VpcChapterNoRoom]
 english     = "No room for a chapter here — the timeline is full at this point."
 description = "Toast shown when a new chapter can't be placed because no free gap remains at that time."
