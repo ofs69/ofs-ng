@@ -1903,6 +1903,26 @@ translation = "グラフを保存"
 english     = "Load Graph"
 translation = "グラフを読み込み"
 
+[ProcFit]
+english     = "Fit"
+translation = "全体表示"
+
+[ProcFitTip]
+english     = "Center the graph in view, or just the selected nodes. Shortcut: F"
+translation = "グラフ全体（または選択したノード）をビューの中央に表示します。ショートカット: F"
+
+[ProcCtxDuplicate]
+english     = "Duplicate"
+translation = "複製"
+
+[ProcCtxDisconnect]
+english     = "Disconnect"
+translation = "切断"
+
+[ProcCtxDelete]
+english     = "Delete"
+translation = "削除"
+
 [ProcBake]
 english     = "Bake"
 translation = "ベイク"

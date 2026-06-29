@@ -73,6 +73,9 @@ class ProcessingPanel {
                     bool hot, bool pending, int &outSaveReqNodeId, int &outLoadReqNodeId);
     void renderFooter(const ScriptProject &project, EventQueue &eq, int selId, const ProcessingRegion &region,
                       bool anyPending);
+    // Node/link right-click context menus (Duplicate / Disconnect / Delete). Begun inside the editor
+    // scope alongside the add-node popup; acts on m_ctxNodeId / m_ctxLinkId captured when opened.
+    void renderGraphContextMenus(const ProcessingRegion &region, EventQueue &eq, int selId) const;
     void maybeShowNewScriptModal(EventQueue &eq);
     void maybeShowSaveScriptModal(EventQueue &eq);
     void maybeShowTrustModal(const ScriptProject &project, EventQueue &eq, int selId);
@@ -90,6 +93,14 @@ class ProcessingPanel {
     bool m_openAddNodeMenuNextFrame = false;
     std::string m_nodeFilter; // add-node menu fuzzy filter; std::string so localized input isn't byte-capped
     bool m_focusFilterNextFrame = false;
+
+    // Node/link right-click context menu (transient): the graph element the open menu acts on, captured
+    // when the menu is opened (the hovered node/link id, decoded to its owner record id).
+    int m_ctxNodeId = -1;
+    int m_ctxLinkId = -1;
+    // Fit-to-view request, raised by the header button or the F shortcut and consumed after EndNodeEditor
+    // (where node dimensions are known). Frames the current node selection, or the whole graph when none.
+    bool m_fitRequested = false;
 
     // "New Script" creation dialog (transient). Picking Script from the add-node menu opens the
     // modal; on confirm the stub is written and a Script node is dropped at the captured position.

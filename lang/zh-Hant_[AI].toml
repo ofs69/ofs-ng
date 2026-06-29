@@ -1903,6 +1903,26 @@ translation = "儲存圖形"
 english     = "Load Graph"
 translation = "載入圖形"
 
+[ProcFit]
+english     = "Fit"
+translation = "適配"
+
+[ProcFitTip]
+english     = "Center the graph in view, or just the selected nodes. Shortcut: F"
+translation = "將整個圖（或選取的節點）置中顯示。快捷鍵: F"
+
+[ProcCtxDuplicate]
+english     = "Duplicate"
+translation = "複製"
+
+[ProcCtxDisconnect]
+english     = "Disconnect"
+translation = "中斷連接"
+
+[ProcCtxDelete]
+english     = "Delete"
+translation = "刪除"
+
 [ProcBake]
 english     = "Bake"
 translation = "烘焙"

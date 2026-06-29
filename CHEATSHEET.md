@@ -156,3 +156,6 @@ locked overlay ignores it.
 | Drag output pin | Create link |
 | Drag numeric field | Adjust value |
 | Right-click empty | Add node |
+| Right-click node | Context menu (Duplicate / Disconnect / Delete) |
+| Right-click link | Context menu (Delete) |
+| `F` | Fit view to the selection (or the whole graph) — also the header **Fit** button |

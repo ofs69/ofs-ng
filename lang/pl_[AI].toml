@@ -1903,6 +1903,26 @@ translation = "Zapisz graf"
 english     = "Load Graph"
 translation = "Wczytaj graf"
 
+[ProcFit]
+english     = "Fit"
+translation = "Dopasuj"
+
+[ProcFitTip]
+english     = "Center the graph in view, or just the selected nodes. Shortcut: F"
+translation = "Wyśrodkuj graf w widoku lub tylko zaznaczone węzły. Skrót: F"
+
+[ProcCtxDuplicate]
+english     = "Duplicate"
+translation = "Duplikuj"
+
+[ProcCtxDisconnect]
+english     = "Disconnect"
+translation = "Odłącz"
+
+[ProcCtxDelete]
+english     = "Delete"
+translation = "Usuń"
+
 [ProcBake]
 english     = "Bake"
 translation = "Wypal"

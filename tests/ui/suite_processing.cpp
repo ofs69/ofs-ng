@@ -78,6 +78,17 @@ static void addNodeViaMenu(ImGuiTestContext *ctx, const char *filter, const std:
     ctx->Yield(2);
 }
 
+// Right-click a node's title bar to open its context menu. The node is located by its imnodes screen
+// position (the panel's editor context is still current right after a render), nudged inside the title
+// so the click lands on the node body — not a param drag — and registers IsNodeHovered first.
+static void rightClickNode(ImGuiTestContext *ctx, int nodeId) {
+    const ImVec2 p = ImNodes::GetNodeScreenSpacePos(ofs::GraphId::nodeBody(nodeId));
+    ctx->MouseMoveToPos(ImVec2(p.x + 12.0f, p.y + 8.0f));
+    ctx->Yield(); // let imnodes register the hover so the next frame's IsNodeHovered() is true
+    ctx->MouseClick(ImGuiMouseButton_Right);
+    ctx->Yield(2);
+}
+
 void RegisterProcessingTests(ImGuiTestEngine *e) {
     IM_REGISTER_TEST(e, "processing", "bake_button_present_with_selected_region")->TestFunc =
         [](ImGuiTestContext *ctx) {
@@ -756,5 +767,88 @@ void RegisterProcessingTests(ImGuiTestEngine *e) {
         ctx->Yield(2);
 
         IM_CHECK_EQ(proj.procSelRegionId, selId);
+    };
+
+    // Fit button: shove the whole graph far off-canvas (preserving its internal layout), click Fit, and
+    // confirm the nodes are pulled back near the visible canvas with their relative spacing intact.
+    // imnodes has no zoom, so framing is a pure translation via MoveRegionNodesEvent.
+    IM_REGISTER_TEST(e, "processing", "fit_button_recenters_graph")->TestFunc = [](ImGuiTestContext *ctx) {
+        setupRegionInDefaultLayout(ctx);
+        auto &proj = *getTestState().project;
+        auto &g = proj.regions[0].nodeGraph;
+        IM_CHECK(g.nodes.size() >= 2);
+
+        const float spacing = g.nodes[1].posX - g.nodes[0].posX;
+        for (auto &n : g.nodes) {
+            n.posX += 4000.0f;
+            n.posY += 4000.0f;
+        }
+        ctx->Yield(2);
+
+        ctx->ItemClick("Processing###video_player/fitgraph");
+        ctx->Yield(3);
+
+        float maxX = 0.0f;
+        for (const auto &n : g.nodes)
+            maxX = std::max(maxX, n.posX);
+        IM_CHECK_LT(maxX, 2000.0f);                                                 // pulled back from +4000
+        IM_CHECK_LT(std::abs((g.nodes[1].posX - g.nodes[0].posX) - spacing), 1.0f); // layout preserved
+    };
+
+    // Node context menu → Delete removes the right-clicked node (and its links). Uses a Constant since
+    // Input/Output are delete-protected.
+    IM_REGISTER_TEST(e, "processing", "node_context_menu_deletes_node")->TestFunc = [](ImGuiTestContext *ctx) {
+        setupRegionInDefaultLayout(ctx);
+        auto &proj = *getTestState().project;
+        addNodeViaMenu(ctx, "Constant", std::string("**/") + ICON_HASH + "  Constant");
+        const size_t afterAdd = proj.regions[0].nodeGraph.nodes.size();
+        const int newId = proj.regions[0].nodeGraph.nodes.back().id;
+
+        rightClickNode(ctx, newId);
+        IM_CHECK(anyPopupOpen());
+        ctx->ItemClick("**/proc_node_del");
+        ctx->Yield(2);
+
+        const auto &nodes = proj.regions[0].nodeGraph.nodes;
+        IM_CHECK_EQ(nodes.size(), afterAdd - 1);
+        IM_CHECK(std::none_of(nodes.begin(), nodes.end(), [newId](const auto &n) { return n.id == newId; }));
+    };
+
+    // Node context menu → Duplicate adds an unlinked copy of the same type.
+    IM_REGISTER_TEST(e, "processing", "node_context_menu_duplicates_node")->TestFunc = [](ImGuiTestContext *ctx) {
+        setupRegionInDefaultLayout(ctx);
+        auto &proj = *getTestState().project;
+        addNodeViaMenu(ctx, "Constant", std::string("**/") + ICON_HASH + "  Constant");
+        const size_t afterAdd = proj.regions[0].nodeGraph.nodes.size();
+        const int origId = proj.regions[0].nodeGraph.nodes.back().id;
+
+        rightClickNode(ctx, origId);
+        IM_CHECK(anyPopupOpen());
+        ctx->ItemClick("**/proc_node_dup");
+        ctx->Yield(2);
+
+        const auto &nodes = proj.regions[0].nodeGraph.nodes;
+        IM_CHECK_EQ(nodes.size(), afterAdd + 1);
+        IM_CHECK(nodes.back().type == ofs::GraphNodeType::Constant);
+        IM_CHECK(nodes.back().id != origId);
+    };
+
+    // Node context menu → Disconnect drops every link touching the node but keeps the node. The default
+    // graph wires Input→Output, so disconnecting the Input clears the region's only link.
+    IM_REGISTER_TEST(e, "processing", "node_context_menu_disconnects_node")->TestFunc = [](ImGuiTestContext *ctx) {
+        setupRegionInDefaultLayout(ctx);
+        auto &proj = *getTestState().project;
+        auto &g = proj.regions[0].nodeGraph;
+        IM_CHECK(!g.links.empty());        // default Input→Output link
+        const int inputId = g.nodes[0].id; // buildDefaultGraph pushes Input first
+        const size_t nodeCount = g.nodes.size();
+
+        rightClickNode(ctx, inputId);
+        IM_CHECK(anyPopupOpen());
+        ctx->ItemClick("**/proc_node_disc");
+        ctx->Yield(2);
+
+        IM_CHECK(proj.regions[0].nodeGraph.links.empty());
+        IM_CHECK_EQ(proj.regions[0].nodeGraph.nodes.size(), nodeCount); // node kept
     };
 }

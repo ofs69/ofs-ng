@@ -1903,6 +1903,26 @@ translation = "Graph speichern"
 english     = "Load Graph"
 translation = "Graph laden"
 
+[ProcFit]
+english     = "Fit"
+translation = "Einpassen"
+
+[ProcFitTip]
+english     = "Center the graph in view, or just the selected nodes. Shortcut: F"
+translation = "Den Graphen ins Sichtfeld zentrieren, oder nur die ausgewählten Knoten. Tastenkürzel: F"
+
+[ProcCtxDuplicate]
+english     = "Duplicate"
+translation = "Duplizieren"
+
+[ProcCtxDisconnect]
+english     = "Disconnect"
+translation = "Trennen"
+
+[ProcCtxDelete]
+english     = "Delete"
+translation = "Löschen"
+
 [ProcBake]
 english     = "Bake"
 translation = "Einbrennen"

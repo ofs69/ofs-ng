@@ -1903,6 +1903,26 @@ translation = "그래프 저장"
 english     = "Load Graph"
 translation = "그래프 불러오기"
 
+[ProcFit]
+english     = "Fit"
+translation = "맞춤"
+
+[ProcFitTip]
+english     = "Center the graph in view, or just the selected nodes. Shortcut: F"
+translation = "그래프 전체 또는 선택한 노드를 화면 중앙에 맞춥니다. 단축키: F"
+
+[ProcCtxDuplicate]
+english     = "Duplicate"
+translation = "복제"
+
+[ProcCtxDisconnect]
+english     = "Disconnect"
+translation = "연결 해제"
+
+[ProcCtxDelete]
+english     = "Delete"
+translation = "삭제"
+
 [ProcBake]
 english     = "Bake"
 translation = "베이크"

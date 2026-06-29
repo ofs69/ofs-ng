@@ -1166,9 +1166,11 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
     // central dock window the panel shares, so its hijacked HoveredId silently blocked add-node on empty
     // canvas. imnodes' own hover queries must run outside the editor scope, so read them (last frame's
     // result) before BeginNodeEditor.
-    int hoveredGraphId = 0;
-    const bool overGraphElement = ImNodes::IsNodeHovered(&hoveredGraphId) || ImNodes::IsPinHovered(&hoveredGraphId) ||
-                                  ImNodes::IsLinkHovered(&hoveredGraphId);
+    int hoveredNodeId = 0, hoveredPinId = 0, hoveredLinkId = 0;
+    const bool overNode = ImNodes::IsNodeHovered(&hoveredNodeId);
+    const bool overPin = ImNodes::IsPinHovered(&hoveredPinId);
+    const bool overLink = ImNodes::IsLinkHovered(&hoveredLinkId);
+    const bool overGraphElement = overNode || overPin || overLink;
 
     ImNodes::BeginNodeEditor();
 
@@ -1197,11 +1199,20 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
     // uses ImGui::IsWindowHovered), so an occluding window suppresses it; requiring focus on top of
     // that swallowed the first click whenever another window held focus.
     const bool canvasHovered = ImNodes::IsEditorHovered();
-    if (canvasHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Right) && !overGraphElement) {
-        m_pendingLinkPin = -1;
-        m_nodeFilter.clear();
-        m_focusFilterNextFrame = true;
-        ImGui::OpenPopup("##addnode");
+    if (canvasHovered && ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
+        if (overNode || overPin) {
+            // Right-click on a node (or one of its pins) → that node's context menu.
+            m_ctxNodeId = GraphId::decode(overNode ? hoveredNodeId : hoveredPinId).owner;
+            ImGui::OpenPopup("##nodectx");
+        } else if (overLink) {
+            m_ctxLinkId = GraphId::decode(hoveredLinkId).owner;
+            ImGui::OpenPopup("##linkctx");
+        } else {
+            m_pendingLinkPin = -1;
+            m_nodeFilter.clear();
+            m_focusFilterNextFrame = true;
+            ImGui::OpenPopup("##addnode");
+        }
     }
     if (m_openAddNodeMenuNextFrame) {
         m_openAddNodeMenuNextFrame = false;
@@ -1212,6 +1223,8 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
 
     const AddNodeRequest addReq = renderAddNodeMenu(effectReg);
     const ImVec2 newNodePos{addReq.posX, addReq.posY};
+
+    renderGraphContextMenus(region, eq, selId);
 
     int saveReqNodeId = -1; // set by an embedded Script node's "Save to scripts folder" button
     int loadReqNodeId = -1; // set by an embedded Script node's "Load from disk..." button
@@ -1303,6 +1316,60 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
         ProcessingRegion updated = region;
         if (syncPositions(updated.nodeGraph))
             eq.push(MoveRegionNodesEvent{.regionId = selId, .updatedRegion = updated});
+    }
+
+    // Fit-to-view: pan the whole graph so the chosen bbox — the current node selection, or every node
+    // when nothing is selected — is centered in the canvas. imnodes has no zoom, so framing is a pure
+    // translation that preserves layout; it rides MoveRegionNodesEvent (no re-eval, no undo step), the
+    // same path panning uses. Runs here, after EndNodeEditor, because node dimensions are only measured
+    // once the nodes have been laid out this frame. F triggers it while the canvas is hovered.
+    const bool fitKey = m_graphFocused && ImGui::IsKeyPressed(ImGuiKey_F) && !itemActiveAtFrameStart &&
+                        !ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel);
+    if ((m_fitRequested || fitKey) && !region.nodeGraph.nodes.empty()) {
+        m_fitRequested = false;
+        std::vector<int> sel;
+        if (const int nSel = ImNodes::NumSelectedNodes(); nSel > 0) {
+            sel.resize(static_cast<size_t>(nSel));
+            ImNodes::GetSelectedNodes(sel.data());
+        }
+        const auto selected = [&](int nodeId) {
+            return std::ranges::any_of(sel, [&](int enc) { return GraphId::decode(enc).owner == nodeId; });
+        };
+        // Frame the selection only if it actually covers a live node; a stale/empty selection falls back
+        // to framing the whole graph.
+        const bool useSel = std::ranges::any_of(region.nodeGraph.nodes, [&](const auto &n) { return selected(n.id); });
+        const auto framed = [&](int nodeId) { return !useSel || selected(nodeId); };
+        ImVec2 mn{}, mx{};
+        bool any = false;
+        for (const auto &n : region.nodeGraph.nodes) {
+            if (!framed(n.id))
+                continue;
+            const ImVec2 dim = ImNodes::GetNodeDimensions(GraphId::nodeBody(n.id));
+            const ImVec2 lo{n.posX, n.posY};
+            const ImVec2 hi{n.posX + dim.x, n.posY + dim.y};
+            if (!any) {
+                mn = lo;
+                mx = hi;
+                any = true;
+            } else {
+                mn.x = std::min(mn.x, lo.x);
+                mn.y = std::min(mn.y, lo.y);
+                mx.x = std::max(mx.x, hi.x);
+                mx.y = std::max(mx.y, hi.y);
+            }
+        }
+        if (any) {
+            const ImVec2 canvas = ImGui::GetWindowSize();
+            const ImVec2 off{canvas.x * 0.5f - (mn.x + mx.x) * 0.5f, canvas.y * 0.5f - (mn.y + mx.y) * 0.5f};
+            if (std::abs(off.x) > 0.5f || std::abs(off.y) > 0.5f) {
+                ProcessingRegion updated = region;
+                for (auto &n : updated.nodeGraph.nodes) {
+                    n.posX += off.x;
+                    n.posY += off.y;
+                }
+                eq.push(MoveRegionNodesEvent{.regionId = selId, .updatedRegion = std::move(updated)});
+            }
+        }
     }
 
     {
@@ -1496,6 +1563,63 @@ bool ProcessingPanel::deleteSelected(const ScriptProject &project, EventQueue &e
 
     eq.push(ModifyRegionEvent{.regionId = selId, .updatedRegion = updated});
     return true;
+}
+
+void ProcessingPanel::renderGraphContextMenus(const ProcessingRegion &region, EventQueue &eq, int selId) const {
+    // Node context menu — Duplicate / Disconnect / Delete on the right-clicked node. Input/Output are the
+    // region's fixed axis endpoints: they can be disconnected but never duplicated or deleted, so those
+    // items are hidden for them. Each action follows the panel's copy-region → push-ModifyRegion recipe,
+    // which earns undo for free.
+    if (ImGui::BeginPopup("##nodectx")) {
+        const ProcessingGraphNode *n = region.nodeGraph.findNode(m_ctxNodeId);
+        if (!n) {
+            ImGui::CloseCurrentPopup();
+        } else {
+            const int nodeId = m_ctxNodeId;
+            const bool endpoint = n->type == GraphNodeType::Input || n->type == GraphNodeType::Output;
+            const bool hasLinks = std::ranges::any_of(
+                region.nodeGraph.links, [nodeId](const auto &l) { return l.fromNode == nodeId || l.toNode == nodeId; });
+            if (!endpoint && ImGui::MenuItem(Str::ProcCtxDuplicate.iconId(ICON_COPY, "proc_node_dup"))) {
+                ProcessingRegion updated = region;
+                ProcessingGraphNode dup = *n;
+                dup.id = updated.nodeGraph.allocId();
+                // Offset the copy so it doesn't land exactly on the original.
+                dup.posX += ImGui::GetFontSize() * 1.5f;
+                dup.posY += ImGui::GetFontSize() * 1.5f;
+                updated.nodeGraph.nodes.push_back(std::move(dup));
+                eq.push(ModifyRegionEvent{.regionId = selId, .updatedRegion = std::move(updated)});
+            }
+            if (ImGui::MenuItem(Str::ProcCtxDisconnect.iconId(ICON_UNLINK, "proc_node_disc"), nullptr, false,
+                                hasLinks)) {
+                ProcessingRegion updated = region;
+                auto &links = updated.nodeGraph.links;
+                links.erase(std::ranges::remove_if(
+                                links, [nodeId](const auto &l) { return l.fromNode == nodeId || l.toNode == nodeId; })
+                                .begin(),
+                            links.end());
+                eq.push(ModifyRegionEvent{.regionId = selId, .updatedRegion = std::move(updated)});
+            }
+            if (!endpoint) {
+                ImGui::Separator();
+                if (ImGui::MenuItem(Str::ProcCtxDelete.iconId(ICON_TRASH, "proc_node_del"))) {
+                    ProcessingRegion updated = region;
+                    removeNodeAndLinks(updated.nodeGraph, nodeId);
+                    eq.push(ModifyRegionEvent{.regionId = selId, .updatedRegion = std::move(updated)});
+                }
+            }
+        }
+        ImGui::EndPopup();
+    }
+
+    // Link context menu — Delete the right-clicked link.
+    if (ImGui::BeginPopup("##linkctx")) {
+        if (ImGui::MenuItem(Str::ProcCtxDelete.iconId(ICON_TRASH, "proc_link_del"))) {
+            ProcessingRegion updated = region;
+            removeLink(updated.nodeGraph, m_ctxLinkId);
+            eq.push(ModifyRegionEvent{.regionId = selId, .updatedRegion = std::move(updated)});
+        }
+        ImGui::EndPopup();
+    }
 }
 
 ProcessingPanel::AddNodeRequest ProcessingPanel::renderAddNodeMenu(const EffectRegistryState &effectReg) {
@@ -1913,15 +2037,17 @@ void ProcessingPanel::renderHeader(const ScriptProject &project, EventQueue &eq,
 
     // Reserve the right end of the row for the graph I/O buttons; the name field fills the gap between.
     // Measure the actual (translated) labels so the reserve tracks the rendered text, not an English literal.
+    const char *fitGraphLabel = Str::ProcFit.icon(ICON_FOCUS);
     const char *remapGraphLabel = Str::ProcRemap.icon(ICON_ARROW_RIGHT_LEFT);
     const char *saveGraphLabel = Str::ProcSaveGraph.icon(ICON_SAVE);
     const char *loadGraphLabel = Str::ProcLoadGraph.icon(ICON_FOLDER_OPEN);
     const float ioSpacing = ImGui::GetStyle().ItemSpacing.x;
     const float ioPadX = ImGui::GetStyle().FramePadding.x * 2.0f;
+    const float fitBtnW = ImGui::CalcTextSize(fitGraphLabel).x + ioPadX;
     const float remapBtnW = ImGui::CalcTextSize(remapGraphLabel).x + ioPadX;
     const float saveBtnW = ImGui::CalcTextSize(saveGraphLabel).x + ioPadX;
     const float loadBtnW = ImGui::CalcTextSize(loadGraphLabel).x + ioPadX;
-    const float ioReserved = remapBtnW + saveBtnW + loadBtnW + ioSpacing * 3.0f + ofs::ui::kRightGap;
+    const float ioReserved = fitBtnW + remapBtnW + saveBtnW + loadBtnW + ioSpacing * 4.0f + ofs::ui::kRightGap;
 
     ImGui::SameLine();
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ioReserved);
@@ -1940,6 +2066,11 @@ void ProcessingPanel::renderHeader(const ScriptProject &project, EventQueue &eq,
         m_nameEdit = region.name;
     }
 
+    ImGui::SameLine();
+    if (ImGui::Button(fmtScratch("{}###fitgraph", fitGraphLabel)))
+        m_fitRequested = true;
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("%s", Str::ProcFitTip.c_str());
     ImGui::SameLine();
     if (ImGui::Button(fmtScratch("{}###remapgraph", remapGraphLabel)))
         eq.push(RemapCurrentGraphEvent{selId});

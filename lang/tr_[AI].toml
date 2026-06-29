@@ -1903,6 +1903,26 @@ translation = "Grafiği Kaydet"
 english     = "Load Graph"
 translation = "Grafik Yükle"
 
+[ProcFit]
+english     = "Fit"
+translation = "Sığdır"
+
+[ProcFitTip]
+english     = "Center the graph in view, or just the selected nodes. Shortcut: F"
+translation = "Grafiği görünüme ortala veya yalnızca seçili düğümleri. Kısayol: F"
+
+[ProcCtxDuplicate]
+english     = "Duplicate"
+translation = "Çoğalt"
+
+[ProcCtxDisconnect]
+english     = "Disconnect"
+translation = "Bağlantıyı kes"
+
+[ProcCtxDelete]
+english     = "Delete"
+translation = "Sil"
+
 [ProcBake]
 english     = "Bake"
 translation = "Pişir"

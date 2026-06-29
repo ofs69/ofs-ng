@@ -1903,6 +1903,26 @@ translation = "Сохранить граф"
 english     = "Load Graph"
 translation = "Загрузить граф"
 
+[ProcFit]
+english     = "Fit"
+translation = "Вместить"
+
+[ProcFitTip]
+english     = "Center the graph in view, or just the selected nodes. Shortcut: F"
+translation = "Центрировать граф в области просмотра или только выбранные узлы. Сочетание клавиш: F"
+
+[ProcCtxDuplicate]
+english     = "Duplicate"
+translation = "Дублировать"
+
+[ProcCtxDisconnect]
+english     = "Disconnect"
+translation = "Отсоединить"
+
+[ProcCtxDelete]
+english     = "Delete"
+translation = "Удалить"
+
 [ProcBake]
 english     = "Bake"
 translation = "Запечь"

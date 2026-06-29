@@ -2028,6 +2028,26 @@ description = "Processing: header button — save the region's node graph to a f
 english     = "Load Graph"
 description = "Processing: header button — load a node graph from a file into the region."
 
+[ProcFit]
+english     = "Fit"
+description = "Processing: header button — pan the graph so all nodes (or the selected ones) are centered in view."
+
+[ProcFitTip]
+english     = "Center the graph in view, or just the selected nodes. Shortcut: F"
+description = "Processing: tooltip on the Fit button. 'F' is the keyboard key, not translated."
+
+[ProcCtxDuplicate]
+english     = "Duplicate"
+description = "Processing: node right-click context menu — add an unlinked copy of this node."
+
+[ProcCtxDisconnect]
+english     = "Disconnect"
+description = "Processing: node right-click context menu — remove every link attached to this node, keeping the node."
+
+[ProcCtxDelete]
+english     = "Delete"
+description = "Processing: node/link right-click context menu — delete this node (and its links) or this link."
+
 [ProcBake]
 english     = "Bake"
 description = "Processing: footer button — bake the processed result into the region's actions."
