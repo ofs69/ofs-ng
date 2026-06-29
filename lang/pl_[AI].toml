@@ -2023,6 +2023,14 @@ translation = "(wybierz .cs)"
 english     = "Right-click to add a node"
 translation = "Kliknij prawym, aby dodać węzeł"
 
+[ProcLinkRejectedSelf]
+english     = "Can't connect a node to itself"
+translation = "Nie można połączyć węzła z samym sobą"
+
+[ProcLinkRejectedCycle]
+english     = "Can't connect — this would create a feedback loop"
+translation = "Nie można połączyć — utworzyłoby to pętlę sprzężenia zwrotnego"
+
 [ProcEdit]
 english     = "Edit"
 translation = "Edytuj"
@@ -2403,6 +2411,10 @@ translation = "Zablokuj"
 english     = "Unlock"
 translation = "Odblokuj"
 
+[TlAxisLocked]
+english     = "Axis locked — unlock to edit points"
+translation = "Oś zablokowana — odblokuj, aby edytować punkty"
+
 [TlDelete]
 english     = "Delete"
 translation = "Usuń"
@@ -2523,6 +2535,14 @@ translation = "Obraz PNG"
 [VpcHeatmapExportHint]
 english     = "Right-click to export as image"
 translation = "Kliknij prawym przyciskiem, aby wyeksportować jako obraz"
+
+[VpcHeatmapExportFailed]
+english     = "Heatmap export failed"
+translation = "Eksport mapy ciepła nie powiódł się"
+
+[VpcHeatmapExportDone]
+english     = "Heatmap exported to {0}"
+translation = "Wyeksportowano mapę ciepła do {0}"
 
 [VpcChapterNoRoom]
 english     = "No room for a chapter here — the timeline is full at this point."

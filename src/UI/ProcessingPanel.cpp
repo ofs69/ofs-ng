@@ -1402,7 +1402,11 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
                 int toNode = GraphId::decode(endAttr).owner;
                 int toPin = GraphId::decode(endAttr).slot;
 
-                if (fromNode != toNode && !wouldCreateCycle(fromNode, toNode, region.nodeGraph)) {
+                if (fromNode == toNode) {
+                    eq.push(NotifyEvent{.level = NotifyLevel::Warning, .message = Str::ProcLinkRejectedSelf.c_str()});
+                } else if (wouldCreateCycle(fromNode, toNode, region.nodeGraph)) {
+                    eq.push(NotifyEvent{.level = NotifyLevel::Warning, .message = Str::ProcLinkRejectedCycle.c_str()});
+                } else {
                     ProcessingRegion updated = region;
                     auto &links = updated.nodeGraph.links;
                     links.erase(

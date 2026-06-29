@@ -691,17 +691,17 @@ void ScriptTimelineWindow::renderTimeline(const ScriptProject &project, EventQue
                             project.axes[static_cast<size_t>(project.state.activeAxis)].isLocked;
 
         if (hit.action != nullptr) {
-            if (!activeLocked)
-                ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+            // A locked axis no-ops every point gesture; signal that with the not-allowed cursor so the
+            // dead click isn't mistaken for an unresponsive UI.
+            ImGui::SetMouseCursor(activeLocked ? ImGuiMouseCursor_NotAllowed : ImGuiMouseCursor_Hand);
             if (ImGui::BeginTooltip()) {
                 ImGui::Text(ICON_CLOCK_3 " %s", TimeUtil::formatTimeShort(hit.action->at));
                 ImGui::Text(ICON_MOVE_VERTICAL " %d", hit.action->pos);
                 // The curve's modifier gestures have no on-screen affordance; surface them here so a new
-                // user can discover add/value-move/select. Omitted on a locked axis where they no-op.
-                if (!activeLocked) {
-                    ImGui::Separator();
-                    ImGui::TextDisabled("%s", Str::TlPointGestures.c_str());
-                }
+                // user can discover add/value-move/select. On a locked axis they no-op, so name the lock
+                // instead so the dead clicks read as intentional.
+                ImGui::Separator();
+                ImGui::TextDisabled("%s", activeLocked ? Str::TlAxisLocked.c_str() : Str::TlPointGestures.c_str());
                 ImGui::EndTooltip();
             }
         }

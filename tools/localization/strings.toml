@@ -2157,6 +2157,14 @@ description = "Processing: Script node file-picker combo placeholder when no scr
 english     = "Right-click to add a node"
 description = "Faint centered prompt drawn on an empty node-graph canvas (no nodes) to reveal that right-click opens the add-node menu."
 
+[ProcLinkRejectedSelf]
+english      = "Can't connect a node to itself"
+description  = "Warning toast when a dragged node-graph link is rejected because its two ends are on the same node."
+
+[ProcLinkRejectedCycle]
+english      = "Can't connect — this would create a feedback loop"
+description  = "Warning toast when a dragged node-graph link is rejected because it would form a cycle in the graph."
+
 [ProcEdit]
 english     = "Edit"
 description = "Processing: Script node button — open the script file in the default editor."
@@ -2549,6 +2557,10 @@ description = "Timeline curve right-click menu — lock the axis so its points c
 english     = "Unlock"
 description = "Timeline curve right-click menu — unlock a locked axis."
 
+[TlAxisLocked]
+english     = "Axis locked — unlock to edit points"
+description = "Muted hint at the bottom of the timeline point tooltip when the active axis is locked, explaining why clicks/drags do nothing."
+
 [TlDelete]
 english     = "Delete"
 description = "Timeline right-click menus — delete the scratch axis (curve menu) or the region (region-bar menu)."
@@ -2672,6 +2684,17 @@ description = "File-type filter label in the heatmap export save dialog."
 [VpcHeatmapExportHint]
 english     = "Right-click to export as image"
 description = "Hint line at the bottom of the seek-bar preview tooltip, telling the user the heatmap can be right-click exported."
+
+[VpcHeatmapExportFailed]
+english     = "Heatmap export failed"
+description = "Warning toast when writing the exported heatmap PNG fails (empty bitmap or the file couldn't be opened)."
+
+[VpcHeatmapExportDone]
+english      = "Heatmap exported to {0}"
+description  = "Success toast after the heatmap PNG is written. {0} is the file name."
+placeholders = [
+    "{0} = exported file name",
+]
 
 [VpcChapterNoRoom]
 english     = "No room for a chapter here — the timeline is full at this point."

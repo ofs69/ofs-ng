@@ -2023,6 +2023,14 @@ translation = "（選擇 .cs）"
 english     = "Right-click to add a node"
 translation = "右鍵新增節點"
 
+[ProcLinkRejectedSelf]
+english     = "Can't connect a node to itself"
+translation = "無法將節點連接到自身"
+
+[ProcLinkRejectedCycle]
+english     = "Can't connect — this would create a feedback loop"
+translation = "無法連接 — 這會造成回饋迴圈"
+
 [ProcEdit]
 english     = "Edit"
 translation = "編輯"
@@ -2403,6 +2411,10 @@ translation = "鎖定"
 english     = "Unlock"
 translation = "解鎖"
 
+[TlAxisLocked]
+english     = "Axis locked — unlock to edit points"
+translation = "軸已鎖定 — 解鎖以編輯控制點"
+
 [TlDelete]
 english     = "Delete"
 translation = "刪除"
@@ -2523,6 +2535,14 @@ translation = "PNG 圖片"
 [VpcHeatmapExportHint]
 english     = "Right-click to export as image"
 translation = "右鍵匯出為圖片"
+
+[VpcHeatmapExportFailed]
+english     = "Heatmap export failed"
+translation = "熱力圖匯出失敗"
+
+[VpcHeatmapExportDone]
+english     = "Heatmap exported to {0}"
+translation = "熱力圖已匯出至 {0}"
 
 [VpcChapterNoRoom]
 english     = "No room for a chapter here — the timeline is full at this point."

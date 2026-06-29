@@ -2023,6 +2023,14 @@ translation = "(.cs を選択)"
 english     = "Right-click to add a node"
 translation = "右クリックでノードを追加"
 
+[ProcLinkRejectedSelf]
+english     = "Can't connect a node to itself"
+translation = "ノードを自分自身に接続することはできません"
+
+[ProcLinkRejectedCycle]
+english     = "Can't connect — this would create a feedback loop"
+translation = "接続できません — フィードバックループが発生します"
+
 [ProcEdit]
 english     = "Edit"
 translation = "編集"
@@ -2403,6 +2411,10 @@ translation = "ロック"
 english     = "Unlock"
 translation = "ロック解除"
 
+[TlAxisLocked]
+english     = "Axis locked — unlock to edit points"
+translation = "軸がロックされています — 編集するにはロックを解除してください"
+
 [TlDelete]
 english     = "Delete"
 translation = "削除"
@@ -2523,6 +2535,14 @@ translation = "PNG画像"
 [VpcHeatmapExportHint]
 english     = "Right-click to export as image"
 translation = "右クリックで画像として書き出し"
+
+[VpcHeatmapExportFailed]
+english     = "Heatmap export failed"
+translation = "ヒートマップの書き出しに失敗しました"
+
+[VpcHeatmapExportDone]
+english     = "Heatmap exported to {0}"
+translation = "ヒートマップを {0} に書き出しました"
 
 [VpcChapterNoRoom]
 english     = "No room for a chapter here — the timeline is full at this point."

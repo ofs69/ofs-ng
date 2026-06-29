@@ -2023,6 +2023,14 @@ translation = "(seleccionar .cs)"
 english     = "Right-click to add a node"
 translation = "Clic derecho para añadir un nodo"
 
+[ProcLinkRejectedSelf]
+english     = "Can't connect a node to itself"
+translation = "No se puede conectar un nodo consigo mismo"
+
+[ProcLinkRejectedCycle]
+english     = "Can't connect — this would create a feedback loop"
+translation = "No se puede conectar: crearía un bucle de retroalimentación"
+
 [ProcEdit]
 english     = "Edit"
 translation = "Editar"
@@ -2403,6 +2411,10 @@ translation = "Bloquear"
 english     = "Unlock"
 translation = "Desbloquear"
 
+[TlAxisLocked]
+english     = "Axis locked — unlock to edit points"
+translation = "Eje bloqueado: desbloquéalo para editar los puntos"
+
 [TlDelete]
 english     = "Delete"
 translation = "Eliminar"
@@ -2523,6 +2535,14 @@ translation = "Imagen PNG"
 [VpcHeatmapExportHint]
 english     = "Right-click to export as image"
 translation = "Clic derecho para exportar como imagen"
+
+[VpcHeatmapExportFailed]
+english     = "Heatmap export failed"
+translation = "Error al exportar el mapa de calor"
+
+[VpcHeatmapExportDone]
+english     = "Heatmap exported to {0}"
+translation = "Mapa de calor exportado a {0}"
 
 [VpcChapterNoRoom]
 english     = "No room for a chapter here — the timeline is full at this point."

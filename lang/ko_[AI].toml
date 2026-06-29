@@ -2023,6 +2023,14 @@ translation = "(.cs 선택)"
 english     = "Right-click to add a node"
 translation = "마우스 오른쪽 버튼으로 노드 추가"
 
+[ProcLinkRejectedSelf]
+english     = "Can't connect a node to itself"
+translation = "노드를 자기 자신에 연결할 수 없습니다"
+
+[ProcLinkRejectedCycle]
+english     = "Can't connect — this would create a feedback loop"
+translation = "연결할 수 없습니다 — 피드백 루프가 생깁니다"
+
 [ProcEdit]
 english     = "Edit"
 translation = "편집"
@@ -2403,6 +2411,10 @@ translation = "잠금"
 english     = "Unlock"
 translation = "잠금 해제"
 
+[TlAxisLocked]
+english     = "Axis locked — unlock to edit points"
+translation = "축이 잠겨 있습니다 — 점을 편집하려면 잠금을 해제하세요"
+
 [TlDelete]
 english     = "Delete"
 translation = "삭제"
@@ -2523,6 +2535,14 @@ translation = "PNG 이미지"
 [VpcHeatmapExportHint]
 english     = "Right-click to export as image"
 translation = "오른쪽 클릭으로 이미지로 내보내기"
+
+[VpcHeatmapExportFailed]
+english     = "Heatmap export failed"
+translation = "히트맵 내보내기에 실패했습니다"
+
+[VpcHeatmapExportDone]
+english     = "Heatmap exported to {0}"
+translation = "히트맵을 {0}에 내보냈습니다"
 
 [VpcChapterNoRoom]
 english     = "No room for a chapter here — the timeline is full at this point."

@@ -14,6 +14,7 @@
 #include "Util/ColorGen.h"
 #include "Util/FrameAllocator.h"
 #include "Util/Log.h"
+#include "Util/PathUtil.h"
 #include "Util/TimeUtil.h"
 #include "Video/VideoPlayer.h"
 #include "imgui.h"
@@ -147,16 +148,21 @@ bool VideoControlsWindow::drawTimelineWidget(const ScriptProject &project, Event
                       .defaultName = "heatmap.png",
                       .filterPatterns = {"*.png"},
                       .filterDesc = Str::VpcPngImage.c_str()},
-                     [hm = heatmap, height = exportHeight, fade = exportFade](const std::string &path) {
+                     [&eq, hm = heatmap, height = exportHeight, fade = exportFade](const std::string &path) {
                          if (path.empty())
                              return;
                          constexpr int16_t kExportWidth = 2048;
                          auto pixels = hm->renderToBitmap(kExportWidth, static_cast<int16_t>(height), fade);
-                         if (pixels.empty())
+                         if (pixels.empty()) {
+                             eq.push(NotifyEvent{.level = NotifyLevel::Warning,
+                                                 .message = Str::VpcHeatmapExportFailed.c_str()});
                              return;
+                         }
                          SDL_IOStream *f = SDL_IOFromFile(path.c_str(), "wb"); // SDL takes UTF-8
                          if (!f) {
                              OFS_CORE_ERROR("Heatmap export: failed to open '{}'", path);
+                             eq.push(NotifyEvent{.level = NotifyLevel::Warning,
+                                                 .message = Str::VpcHeatmapExportFailed.c_str()});
                              return;
                          }
                          stbi_write_png_to_func(
@@ -165,6 +171,9 @@ bool VideoControlsWindow::drawTimelineWidget(const ScriptProject &project, Event
                              },
                              f, kExportWidth, height, 4, pixels.data(), kExportWidth * 4);
                          SDL_CloseIO(f);
+                         eq.push(NotifyEvent{.level = NotifyLevel::Success,
+                                             .message = Str::VpcHeatmapExportDone.fmt(
+                                                 ofs::util::toUtf8(ofs::util::fromUtf8(path).filename()))});
                      });
         }
         ImGui::EndPopup();
