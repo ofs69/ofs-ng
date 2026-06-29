@@ -2385,10 +2385,6 @@ translation = "Derece"
 english     = "Percent"
 translation = "Yüzde"
 
-[SimSettingsHint]
-english     = "Right-click for simulator settings"
-translation = "Simülatör ayarları için sağ tıklayın"
-
 [SimDisplay]
 english     = "Display"
 translation = "Görünüm"

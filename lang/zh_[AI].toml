@@ -2385,10 +2385,6 @@ translation = "度"
 english     = "Percent"
 translation = "百分比"
 
-[SimSettingsHint]
-english     = "Right-click for simulator settings"
-translation = "右键打开模拟器设置"
-
 [SimDisplay]
 english     = "Display"
 translation = "显示"

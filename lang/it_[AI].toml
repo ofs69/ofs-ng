@@ -2385,10 +2385,6 @@ translation = "Gradi"
 english     = "Percent"
 translation = "Percentuale"
 
-[SimSettingsHint]
-english     = "Right-click for simulator settings"
-translation = "Clic destro per le impostazioni del simulatore"
-
 [SimDisplay]
 english     = "Display"
 translation = "Visualizzazione"

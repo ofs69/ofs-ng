@@ -2385,10 +2385,6 @@ translation = "度"
 english     = "Percent"
 translation = "パーセント"
 
-[SimSettingsHint]
-english     = "Right-click for simulator settings"
-translation = "右クリックでシミュレーター設定"
-
 [SimDisplay]
 english     = "Display"
 translation = "表示"

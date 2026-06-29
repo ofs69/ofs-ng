@@ -2385,10 +2385,6 @@ translation = "도(°)"
 english     = "Percent"
 translation = "퍼센트"
 
-[SimSettingsHint]
-english     = "Right-click for simulator settings"
-translation = "마우스 오른쪽 버튼으로 시뮬레이터 설정"
-
 [SimDisplay]
 english     = "Display"
 translation = "표시"

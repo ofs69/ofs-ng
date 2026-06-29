@@ -2385,10 +2385,6 @@ translation = "Graus"
 english     = "Percent"
 translation = "Porcentagem"
 
-[SimSettingsHint]
-english     = "Right-click for simulator settings"
-translation = "Clique com o botão direito para as configurações do simulador"
-
 [SimDisplay]
 english     = "Display"
 translation = "Exibição"

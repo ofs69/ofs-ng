@@ -1254,9 +1254,6 @@ bool ScriptSimulator::renderOverlay(ImDrawList *dl, const ScriptProject &project
         if (vpHovered && dragTarget == DragTarget::None && !isMovingSimulator) {
             const ImVec2 m = ImGui::GetMousePos();
             if (pointToSegmentDist(m, barP1, barP2) <= std::max(8.f, barWidth / 2.f)) {
-                // The bar is the only entry point to the 2D simulator settings, with no affordance that
-                // it's interactive — name the right-click menu on hover.
-                ImGui::SetTooltip("%s", Str::SimSettingsHint.c_str());
                 if (ImGui::IsMouseClicked(ImGuiMouseButton_Right))
                     ImGui::OpenPopup("Sim2DContext");
             }

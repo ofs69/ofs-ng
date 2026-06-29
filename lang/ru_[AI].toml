@@ -2385,10 +2385,6 @@ translation = "Градусы"
 english     = "Percent"
 translation = "Проценты"
 
-[SimSettingsHint]
-english     = "Right-click for simulator settings"
-translation = "Щёлкните правой кнопкой для настроек симулятора"
-
 [SimDisplay]
 english     = "Display"
 translation = "Отображение"
