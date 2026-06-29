@@ -192,6 +192,8 @@ void AboutWindow::render(bool &open, const UpdateChecker::Status &update, EventQ
 
     // ── Updates ───────────────────────────────────────────────────────────────────────────────
     ImGui::SeparatorText(Str::AboutUpdates);
+    if (update.state != UpdateChecker::State::Idle)
+        ImGui::AlignTextToFramePadding();
     switch (update.state) {
     case UpdateChecker::State::Checking:
         ImGui::TextDisabled("%s", Str::AboutChecking.c_str());
@@ -213,6 +215,8 @@ void AboutWindow::render(bool &open, const UpdateChecker::Status &update, EventQ
     case UpdateChecker::State::Idle:
         break;
     }
+    if (update.state != UpdateChecker::State::Idle)
+        ImGui::SameLine();
     ImGui::BeginDisabled(update.state == UpdateChecker::State::Checking);
     if (ImGui::Button(Str::AboutCheckNow.id("about_check_now")))
         eq.push(CheckForUpdatesEvent{.userInitiated = true});
