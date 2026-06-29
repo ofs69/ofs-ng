@@ -160,7 +160,7 @@ void buildModeSwitchCommands(const ScriptProject &project, const EditModeRegistr
         out.push_back(Command{
             .id = fmt::format("mode.edit.{}", m.id),
             .group = "Switch Edit Mode",
-            .title = m.id == kNativeEditModeId ? std::string(Str::FtEditModeNative.c_str())
+            .title = m.id == kNativeEditModeId ? std::string(Str::FtEditModeNative.sv())
                      : !m.displayName.empty()  ? m.displayName
                                                : m.id,
             .source = CommandSource::Dynamic,
@@ -174,7 +174,7 @@ void buildModeSwitchCommands(const ScriptProject &project, const EditModeRegistr
         out.push_back(Command{
             .id = fmt::format("mode.navigator.{}", n.id),
             .group = "Switch Navigator",
-            .title = n.id == kFollowOverlayNavigatorId ? std::string(Str::FtStepNative.c_str())
+            .title = n.id == kFollowOverlayNavigatorId ? std::string(Str::FtStepNative.sv())
                      : !n.displayName.empty()          ? n.displayName
                                                        : n.id,
             .source = CommandSource::Dynamic,
@@ -188,7 +188,7 @@ void buildModeSwitchCommands(const ScriptProject &project, const EditModeRegistr
         out.push_back(Command{
             .id = fmt::format("mode.select.{}", s.id),
             .group = "Switch Selection Mode",
-            .title = s.id == kNativeSelectionModeId ? std::string(Str::FtSelectNative.c_str())
+            .title = s.id == kNativeSelectionModeId ? std::string(Str::FtSelectNative.sv())
                      : !s.displayName.empty()       ? s.displayName
                                                     : s.id,
             .source = CommandSource::Dynamic,

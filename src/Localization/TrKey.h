@@ -17,12 +17,14 @@
 #include <cstring>
 #include <spdlog/fmt/fmt.h>
 #include <string>
+#include <string_view>
 #include <variant>
 
 namespace ofs::loc {
 
 // Defined in Translator.cpp. All run on the main thread and return frame-arena / static storage.
 const char *trLookup(uint32_t index);                        // -> Translator Translation[index]
+std::string_view trLookupSv(uint32_t index);                 // -> same text, length-carrying (no strlen)
 const char *trId(uint32_t index, const char *stableId);      // -> "visible label###stableId" (frame arena)
 const char *trFormat(uint32_t index, fmt::format_args args); // -> validated, formatted (frame arena)
 const char *trIcon(uint32_t index, const char *glyph);       // -> "<glyph> label" (frame arena)
@@ -59,6 +61,12 @@ struct TrKey {
     // a printf-style vararg (ImGui::Text("%s", k.c_str())), an fmt argument, or a std::string
     // parameter (an implicit TrKey->const char*->std::string would be two user conversions).
     const char *c_str() const { return ofs::loc::trLookup(index); }
+
+    // The active translation as a length-carrying view. Prefer this over c_str() when handing the label
+    // to fmt/fmtScratch ("{}", k.sv()) — fmt uses the known size instead of a strlen, and it lets a
+    // TrKey field be formatted directly (fmt has no formatter for TrKey itself). Valid until the next
+    // language load; for an immediate format-and-discard that is always safe.
+    std::string_view sv() const { return ofs::loc::trLookupSv(index); }
 
     // Validated runtime formatting. The translation is fetched by index and used as the format
     // string; args fill {0}, {1}, … The result lives in the frame arena (valid until the next

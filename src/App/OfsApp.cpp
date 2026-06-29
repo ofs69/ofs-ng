@@ -747,7 +747,7 @@ void OfsApp::renderFooterBar() {
     if (!projectManager || !projectManager->hasActiveProject()) {
         info.idleMessage = ofs::generated::kGitTag.empty()
                                ? Str::AppNoProjectOpen.c_str()
-                               : fmtScratch("ofs-ng {} · {}", ofs::generated::kGitTag, Str::AppNoProjectOpen.c_str());
+                               : fmtScratch("ofs-ng {} · {}", ofs::generated::kGitTag, Str::AppNoProjectOpen.sv());
         ofs::ui::renderFooterBar(info, notifications, eventQueue);
         return;
     }
@@ -835,7 +835,7 @@ bool OfsApp::renderActiveToolSections() {
             return;
         ImGui::PushID(seed);
         // displayName is plugin-provided (rendered verbatim); empty falls back to the namespaced id.
-        const char *hdr = fmtScratch("{}###hdr", e->displayName.empty() ? e->id.c_str() : e->displayName.c_str());
+        const char *hdr = fmtScratch("{}###hdr", e->displayName.empty() ? e->id : e->displayName);
         if (ImGui::CollapsingHeader(hdr, ImGuiTreeNodeFlags_DefaultOpen))
             pluginManager->renderIntentUi(e->owningPlugin, e->onUi, e->userData);
         ImGui::PopID();
@@ -1750,7 +1750,7 @@ void OfsApp::promptForMissingIntraDir() {
     // picker persists it and re-opens the options dialog.
     ofs::confirmAsync(eventQueue,
                       ofs::ModalSpec{.title = Str::TranscodeNoDirTitle.c_str(),
-                                     .message = Str::TranscodeNoDirBody.fmt(appSettings.intraOutputDir.c_str()),
+                                     .message = Str::TranscodeNoDirBody.fmt(appSettings.intraOutputDir),
                                      .buttons = {Str::PrefIntraChooseFolder.c_str(), Str::AppCancel.c_str()},
                                      .severity = ofs::ModalSeverity::Warning},
                       [this](int idx) {

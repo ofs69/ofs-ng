@@ -817,8 +817,8 @@ float renderFooterBar(const FooterBarInfo &info, NotificationState &notification
             const double usedMib = static_cast<double>(info.undoUsedBytes) / kMib;
             const double maxMib = static_cast<double>(info.undoMaxBytes) / kMib;
             ImGui::TextDisabled("%s", fmtScratch("{} {} {} {}", ICON_UNDO, info.undoSteps, ICON_REDO, info.redoSteps));
-            ImGui::SetItemTooltip("%s", fmtScratch("{}\n{} {:.1f} / {:.0f} MB", Str::FtUndoHistory.c_str(),
-                                                   ICON_DATABASE, usedMib, maxMib));
+            ImGui::SetItemTooltip(
+                "%s", fmtScratch("{}\n{} {:.1f} / {:.0f} MB", Str::FtUndoHistory.sv(), ICON_DATABASE, usedMib, maxMib));
         }
 
         // ── Right zone: eval spinner + worker count + managed heap + loop status (idle icon + UI fps),

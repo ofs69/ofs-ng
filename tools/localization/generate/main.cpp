@@ -369,7 +369,7 @@ void generate(const std::vector<Entry> &entries, const std::string &outHeader, c
 
         h << "namespace ofs::loc::gen {\n";
         h << "inline constexpr std::uint32_t Count = " << count << "; // includes InvalidTr at index 0\n\n";
-        h << "extern const char *const Default[Count];      // English source text\n";
+        h << "extern const std::string_view Default[Count];  // English source text (length-carrying)\n";
         h << "extern const char *const Description[Count];   // translator-facing description\n";
         h << "extern const char *const KeyName[Count];       // index -> key (TrToKey, for export)\n";
         h << "extern const std::uint32_t PlaceholderCount[Count];\n";
@@ -390,16 +390,18 @@ void generate(const std::vector<Entry> &entries, const std::string &outHeader, c
         c << "#include <string_view>\n\n";
         c << "namespace ofs::loc::gen {\n\n";
 
-        auto emitStringArray = [&](const char *name, auto &&pick) {
-            c << "const char *const " << name << "[Count] = {\n";
+        auto emitStringArray = [&](const char *type, const char *name, auto &&pick) {
+            c << type << " " << name << "[Count] = {\n";
             c << "    \"\",\n"; // InvalidTr
             for (const auto &e : entries)
                 c << "    \"" << cppEscape(pick(e)) << "\",\n";
             c << "};\n\n";
         };
-        emitStringArray("Default", [](const Entry &e) { return e.english; });
-        emitStringArray("Description", [](const Entry &e) { return e.description; });
-        emitStringArray("KeyName", [](const Entry &e) { return e.key; });
+        // Default is std::string_view so trLookupSv() can hand fmt a length-carrying view (no strlen);
+        // each literal's length is computed at compile time. The reference-only arrays stay const char*.
+        emitStringArray("const std::string_view", "Default", [](const Entry &e) { return e.english; });
+        emitStringArray("const char *const", "Description", [](const Entry &e) { return e.description; });
+        emitStringArray("const char *const", "KeyName", [](const Entry &e) { return e.key; });
 
         c << "const std::uint32_t PlaceholderCount[Count] = {\n    0,\n";
         for (const auto &e : entries)

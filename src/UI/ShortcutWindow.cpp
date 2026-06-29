@@ -242,7 +242,7 @@ void ShortcutWindow::render(bool &open, EventQueue &eq, const AppSettings &appSe
     if (ofs::ui::shortcutFocusSearch())
         ImGui::SetKeyboardFocusHere();
     ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - ofs::ui::kRightGap - onlyW - resetW);
-    ImGui::InputTextWithHint("###scfilter", fmtScratch("{}  {}", ICON_SEARCH, Str::ScFilterHint.c_str()), &filter_);
+    ImGui::InputTextWithHint("###scfilter", fmtScratch("{}  {}", ICON_SEARCH, Str::ScFilterHint.sv()), &filter_);
     ImGui::SameLine();
     ImGui::Checkbox(Str::ScOnlyBound.id("onlybound"), &m_onlyBound);
     ImGui::SetItemTooltip("%s", Str::ScOnlyBoundTip.c_str());
@@ -826,9 +826,9 @@ void ShortcutWindow::renderAddCommandPicker() {
         const std::string &g = *groups[i];
         const char *icon = commandRegistry_.groupIcon(g);
         // "<Group>…" — the ellipsis signals it opens a chooser. Stable "###addcat_<group>" id for tests.
-        const char *label =
-            icon[0] != '\0' ? fmtScratch("{} {}…###addcat_{}", icon, commandRegistry_.groupDisplayName(g), g.c_str())
-                            : fmtScratch("{}…###addcat_{}", commandRegistry_.groupDisplayName(g), g.c_str());
+        const char *label = icon[0] != '\0'
+                                ? fmtScratch("{} {}…###addcat_{}", icon, commandRegistry_.groupDisplayName(g), g)
+                                : fmtScratch("{}…###addcat_{}", commandRegistry_.groupDisplayName(g), g);
         if (ImGui::Selectable(label)) {
             m_addProviderGroup = g; // latches the target modal, raised after the popup closes
             ImGui::CloseCurrentPopup();
@@ -848,7 +848,7 @@ bool ShortcutWindow::renderProviderTargetModal(EventQueue &eq, const std::string
     for (const auto &cmd : commandRegistry_.all()) {
         if (cmd.inRebindList || cmd.group != group || hasValidBinding(cmd.id))
             continue;
-        if (ImGui::Selectable(fmtScratch("{}###provpick_{}", cmd.title.c_str(), cmd.id.c_str()))) {
+        if (ImGui::Selectable(fmtScratch("{}###provpick_{}", cmd.title.c_str(), cmd.id))) {
             beginCapture(eq, {.commandId = cmd.id});
             close = true;
         }
@@ -894,7 +894,7 @@ void ShortcutWindow::renderPresetBar() {
             // The preset name is user data (untranslated); only the "(built-in)" suffix is localized.
             // A stable "###preset_opt_<slug>" id keeps each option addressable by id in any language.
             const char *visible = p.builtin ? Str::ScBuiltinSuffix.fmt(p.name) : p.name.c_str();
-            if (ImGui::Selectable(fmtScratch("{}###preset_opt_{}", visible, p.slug.c_str()), i == selIdx))
+            if (ImGui::Selectable(fmtScratch("{}###preset_opt_{}", visible, p.slug), i == selIdx))
                 m_selectedPresetSlug = p.slug;
         }
         ImGui::EndCombo();

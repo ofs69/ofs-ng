@@ -13,6 +13,7 @@
 #include "Services/ScriptNodeEvents.h"
 #include "Services/ScriptRegistry.h"
 #include "UI/AxisColors.h"
+#include "UI/Glyphs.h"
 #include "UI/Icons.h"
 #include "UI/ImGuiHelpers.h"
 #include "UI/Modals.h"
@@ -83,13 +84,13 @@ static ResolvedScriptName resolveScriptName(std::string_view raw) {
 static const char *mathNodeLabel(GraphNodeType t) {
     switch (t) {
     case GraphNodeType::Add:
-        return fmtScratch("{}  (A + B)", Str::ProcMathAdd.c_str());
+        return fmtScratch("{}  (A + B)", Str::ProcMathAdd.sv());
     case GraphNodeType::Subtract:
-        return fmtScratch("{}  (A \xe2\x88\x92 B)", Str::ProcMathSubtract.c_str());
+        return fmtScratch("{}  (A " GLYPH_MINUS " B)", Str::ProcMathSubtract.sv());
     case GraphNodeType::Multiply:
-        return fmtScratch("{}  (A \xc3\x97 B)", Str::ProcMathMultiply.c_str());
+        return fmtScratch("{}  (A " GLYPH_MULTIPLY " B)", Str::ProcMathMultiply.sv());
     case GraphNodeType::Divide:
-        return fmtScratch("{}  (A \xc3\xb7 B)", Str::ProcMathDivide.c_str());
+        return fmtScratch("{}  (A " GLYPH_DIVIDE " B)", Str::ProcMathDivide.sv());
     case GraphNodeType::Constant:
         return Str::ProcNodeConstant.c_str();
     default:
@@ -667,7 +668,7 @@ void ProcessingPanel::renderNode(const ProcessingGraphNode &node, const EffectRe
         // An I/O node has no param body, so anchor the lone output label to the title width rather than
         // the standard body width — that keeps the Input node as compact as its Output-node mirror
         // (which auto-sizes to its title). Title width is intrinsic, so it stays position-stable.
-        const char *title = fmtScratch("{}  {} {}", ICON_LOG_IN, standardAxisTag(node.role), Str::ProcPinIn.c_str());
+        const char *title = fmtScratch("{}  {} {}", ICON_LOG_IN, standardAxisTag(node.role), Str::ProcPinIn.sv());
         ImNodes::BeginNodeTitleBar();
         ImGui::TextUnformatted(title);
         ImNodes::EndNodeTitleBar();
@@ -677,8 +678,7 @@ void ProcessingPanel::renderNode(const ProcessingGraphNode &node, const EffectRe
 
     case GraphNodeType::Output: {
         ImNodes::BeginNodeTitleBar();
-        ImGui::TextUnformatted(
-            fmtScratch("{}  {} {}", ICON_LOG_OUT, standardAxisTag(node.role), Str::ProcPinOut.c_str()));
+        ImGui::TextUnformatted(fmtScratch("{}  {} {}", ICON_LOG_OUT, standardAxisTag(node.role), Str::ProcPinOut.sv()));
         ImNodes::EndNodeTitleBar();
         ImNodes::BeginInputAttribute(GraphId::inPin(node.id, 0));
         ImGui::TextUnformatted(Str::ProcPinSignal.c_str());
@@ -765,7 +765,7 @@ void ProcessingPanel::renderNode(const ProcessingGraphNode &node, const EffectRe
             ImNodes::BeginInputAttribute(GraphId::inPin(node.id, i));
             const char *pinName = (entry && i < static_cast<int>(entry->inputNames.size()))
                                       ? entry->inputNames[static_cast<size_t>(i)].c_str()
-                                      : fmtScratch("{}{}", Str::ProcPinIn.c_str(), i);
+                                      : fmtScratch("{}{}", Str::ProcPinIn.sv(), i);
             const bool connected = region.nodeGraph.findLinkToPin(node.id, i) != nullptr;
             ImGui::TextUnformatted(connected ? pinName : fmtScratch("{}  = 50", pinName));
             ImNodes::EndInputAttribute();
@@ -810,7 +810,7 @@ void ProcessingPanel::renderNode(const ProcessingGraphNode &node, const EffectRe
 
     case GraphNodeType::Constant: {
         ImNodes::BeginNodeTitleBar();
-        ImGui::TextUnformatted(fmtScratch("{}  {}", ICON_HASH, Str::ProcNodeConstant.c_str()));
+        ImGui::TextUnformatted(fmtScratch("{}  {}", ICON_HASH, Str::ProcNodeConstant.sv()));
         ImNodes::EndNodeTitleBar();
 
         ImNodes::BeginStaticAttribute(GraphId::staticAttr(node.id));
@@ -838,7 +838,7 @@ void ProcessingPanel::renderNode(const ProcessingGraphNode &node, const EffectRe
 
     case GraphNodeType::Discretize: {
         ImNodes::BeginNodeTitleBar();
-        ImGui::TextUnformatted(fmtScratch("{}  {}", ICON_BAR_CHART, Str::ProcNodeDiscretize.c_str()));
+        ImGui::TextUnformatted(fmtScratch("{}  {}", ICON_BAR_CHART, Str::ProcNodeDiscretize.sv()));
         ImNodes::EndNodeTitleBar();
 
         ImNodes::BeginInputAttribute(GraphId::inPin(node.id, 0));
@@ -886,7 +886,7 @@ void ProcessingPanel::renderNode(const ProcessingGraphNode &node, const EffectRe
 
     case GraphNodeType::Functionalize: {
         ImNodes::BeginNodeTitleBar();
-        ImGui::TextUnformatted(fmtScratch("{}  {}", ICON_CHART_SPLINE, Str::ProcNodeFunctionalize.c_str()));
+        ImGui::TextUnformatted(fmtScratch("{}  {}", ICON_CHART_SPLINE, Str::ProcNodeFunctionalize.sv()));
         ImNodes::EndNodeTitleBar();
 
         ImNodes::BeginInputAttribute(GraphId::inPin(node.id, 0));
@@ -915,14 +915,12 @@ void ProcessingPanel::renderNode(const ProcessingGraphNode &node, const EffectRe
             std::string_view stem = node.scriptFile;
             if (stem.ends_with(".cs"))
                 stem.remove_suffix(3);
-            ImGui::TextUnformatted(stem.empty()
-                                       ? fmtScratch("{}  {}", ICON_BRACES, Str::ProcScript.c_str())
-                                       : fmtScratch("{}  {}  [{}]", ICON_BRACES, Str::ProcScript.c_str(), stem));
+            ImGui::TextUnformatted(stem.empty() ? fmtScratch("{}  {}", ICON_BRACES, Str::ProcScript.sv())
+                                                : fmtScratch("{}  {}  [{}]", ICON_BRACES, Str::ProcScript.sv(), stem));
         } else if (node.scriptFile.empty()) {
-            ImGui::TextUnformatted(fmtScratch("{}  {}", ICON_BRACES, Str::ProcScript.c_str()));
+            ImGui::TextUnformatted(fmtScratch("{}  {}", ICON_BRACES, Str::ProcScript.sv()));
         } else {
-            ImGui::TextUnformatted(
-                fmtScratch("{}  {}  [{}]", ICON_BRACES, Str::ProcScript.c_str(), node.scriptFile.c_str()));
+            ImGui::TextUnformatted(fmtScratch("{}  {}  [{}]", ICON_BRACES, Str::ProcScript.sv(), node.scriptFile));
         }
         ImNodes::EndNodeTitleBar();
 
@@ -1793,7 +1791,7 @@ ProcessingPanel::AddNodeRequest ProcessingPanel::renderAddNodeMenu(const EffectR
                 ImGui::TextUnformatted(e.description.c_str());
             const char *sig = (e.signal == OfsSignalDiscrete ? Str::ProcDiscrete : Str::ProcFunctional).c_str();
             const char *kind = (e.library ? Str::ProcLibraryScript : Str::ProcScript).c_str();
-            ImGui::TextDisabled("%s \xc2\xb7 %s", sig, kind); // "·" is a separator glyph, not translatable text
+            ImGui::TextDisabled("%s " GLYPH_MIDDLE_DOT " %s", sig, kind); // a separator glyph, not translatable text
             ImGui::PopTextWrapPos();
             ImGui::EndTooltip();
         };
@@ -1812,7 +1810,7 @@ ProcessingPanel::AddNodeRequest ProcessingPanel::renderAddNodeMenu(const EffectR
         };
 
         if (!filtering) {
-            if (ImGui::BeginMenu(fmtScratch("{}  {}###procmenu_math", ICON_CALCULATOR, Str::ProcCatMath.c_str()))) {
+            if (ImGui::BeginMenu(fmtScratch("{}  {}###procmenu_math", ICON_CALCULATOR, Str::ProcCatMath.sv()))) {
                 ImGui::PushStyleColor(ImGuiCol_Text, mathCol);
                 for (const auto t : kMathMenuTypes) {
                     if (ImGui::MenuItem(
@@ -1824,7 +1822,7 @@ ProcessingPanel::AddNodeRequest ProcessingPanel::renderAddNodeMenu(const EffectR
             }
 
             if (ImGui::MenuItem(
-                    fmtScratch("{}  {}\xe2\x80\xa6###procnew_script", ICON_BRACES, Str::ProcScript.c_str())))
+                    fmtScratch("{}  {}" GLYPH_ELLIPSIS "###procnew_script", ICON_BRACES, Str::ProcScript.sv())))
                 requestNewScript();
 
             // Generate / Modify / Combine submenus hold native effects and ready-to-add library/user
@@ -1852,14 +1850,14 @@ ProcessingPanel::AddNodeRequest ProcessingPanel::renderAddNodeMenu(const EffectR
                     continue;
                 if (isModify) {
                     ImGui::PushStyleColor(ImGuiCol_Text, discCol);
-                    if (ImGui::MenuItem(fmtScratch("{}  {}###procnode_discretize", ICON_BAR_CHART,
-                                                   Str::ProcNodeDiscretize.c_str())))
+                    if (ImGui::MenuItem(
+                            fmtScratch("{}  {}###procnode_discretize", ICON_BAR_CHART, Str::ProcNodeDiscretize.sv())))
                         req.type = GraphNodeType::Discretize;
                     ImGui::PopStyleColor();
                     renderDiscretizeTooltip();
                     ImGui::PushStyleColor(ImGuiCol_Text, funcCol);
                     if (ImGui::MenuItem(fmtScratch("{}  {}###procnode_functionalize", ICON_CHART_SPLINE,
-                                                   Str::ProcNodeFunctionalize.c_str())))
+                                                   Str::ProcNodeFunctionalize.sv())))
                         req.type = GraphNodeType::Functionalize;
                     ImGui::PopStyleColor();
                     renderFunctionalizeTooltip();
@@ -1869,7 +1867,7 @@ ProcessingPanel::AddNodeRequest ProcessingPanel::renderAddNodeMenu(const EffectR
                     if (def.category != category)
                         continue;
                     ImGui::PushStyleColor(ImGuiCol_Text, def.kind == EffectKind::Functional ? funcCol : discCol);
-                    if (ImGui::MenuItem(fmtScratch("{}  {}", nodeCategoryIcon(category), def.displayName.c_str()))) {
+                    if (ImGui::MenuItem(fmtScratch("{}  {}", nodeCategoryIcon(category), def.displayName.sv()))) {
                         req.addEffect = true;
                         req.effectType = key;
                         ImGui::CloseCurrentPopup();
@@ -1882,7 +1880,7 @@ ProcessingPanel::AddNodeRequest ProcessingPanel::renderAddNodeMenu(const EffectR
                     if (nodeCategoryForInputs(e.inputCount) != category)
                         continue;
                     ImGui::PushStyleColor(ImGuiCol_Text, e.signal == OfsSignalFunctional ? funcCol : discCol);
-                    if (ImGui::MenuItem(fmtScratch("{}  {}", scriptMenuIcon(e.library), e.displayName.c_str()))) {
+                    if (ImGui::MenuItem(fmtScratch("{}  {}", scriptMenuIcon(e.library), e.displayName))) {
                         req.addScript = true;
                         req.scriptIndex = i;
                         ImGui::CloseCurrentPopup();
@@ -1901,7 +1899,7 @@ ProcessingPanel::AddNodeRequest ProcessingPanel::renderAddNodeMenu(const EffectR
                     if (pn.category == openPlugin)
                         continue;
                     openPlugin = pn.category;
-                    if (!ImGui::BeginMenu(fmtScratch("{}  {}", ICON_PLUGIN, pn.category.c_str())))
+                    if (!ImGui::BeginMenu(fmtScratch("{}  {}", ICON_PLUGIN, pn.category)))
                         continue;
                     for (const NodeCategory bucket :
                          {NodeCategory::Generate, NodeCategory::Modify, NodeCategory::Combine}) {
@@ -1918,7 +1916,7 @@ ProcessingPanel::AddNodeRequest ProcessingPanel::renderAddNodeMenu(const EffectR
                                     break;
                             }
                             ImGui::PushStyleColor(ImGuiCol_Text, pn2.signal == OfsSignalFunctional ? funcCol : discCol);
-                            if (ImGui::MenuItem(fmtScratch("{}  {}", pluginNodeIcon(pn2), pn2.displayName.c_str()))) {
+                            if (ImGui::MenuItem(fmtScratch("{}  {}", pluginNodeIcon(pn2), pn2.displayName))) {
                                 req.addPlugin = true;
                                 req.pluginNodeId = k2;
                                 ImGui::CloseCurrentPopup();
@@ -1938,7 +1936,7 @@ ProcessingPanel::AddNodeRequest ProcessingPanel::renderAddNodeMenu(const EffectR
                 if (!ofs::util::fuzzyMatch(m_nodeFilter, mathNodeLabel(t)).matched)
                     continue;
                 if (!mathHeaderShown) {
-                    ImGui::SeparatorText(fmtScratch("{}  {}", ICON_CALCULATOR, Str::ProcCatMath.c_str()));
+                    ImGui::SeparatorText(fmtScratch("{}  {}", ICON_CALCULATOR, Str::ProcCatMath.sv()));
                     mathHeaderShown = true;
                 }
                 ImGui::PushStyleColor(ImGuiCol_Text, mathCol);
@@ -1949,10 +1947,10 @@ ProcessingPanel::AddNodeRequest ProcessingPanel::renderAddNodeMenu(const EffectR
                 ImGui::PopStyleColor();
             }
 
-            if (ofs::util::fuzzyMatch(m_nodeFilter, Str::ProcScript.c_str()).matched) {
-                ImGui::SeparatorText(fmtScratch("{}  {}", ICON_BRACES, Str::ProcScript.c_str()));
+            if (ofs::util::fuzzyMatch(m_nodeFilter, Str::ProcScript.sv()).matched) {
+                ImGui::SeparatorText(fmtScratch("{}  {}", ICON_BRACES, Str::ProcScript.sv()));
                 if (ImGui::MenuItem(
-                        fmtScratch("{}  {}\xe2\x80\xa6###procnew_script", ICON_BRACES, Str::ProcScript.c_str())))
+                        fmtScratch("{}  {}" GLYPH_ELLIPSIS "###procnew_script", ICON_BRACES, Str::ProcScript.sv())))
                     requestNewScript();
             }
 
@@ -1967,11 +1965,11 @@ ProcessingPanel::AddNodeRequest ProcessingPanel::renderAddNodeMenu(const EffectR
                     }
                 };
                 if (category == NodeCategory::Modify &&
-                    ofs::util::fuzzyMatchAny(m_nodeFilter, {Str::ProcNodeDiscretize.c_str(), catLabel}).matched) {
+                    ofs::util::fuzzyMatchAny(m_nodeFilter, {Str::ProcNodeDiscretize.sv(), catLabel}).matched) {
                     header();
                     ImGui::PushStyleColor(ImGuiCol_Text, discCol);
-                    if (ImGui::MenuItem(fmtScratch("{}  {}###procnode_discretize", ICON_BAR_CHART,
-                                                   Str::ProcNodeDiscretize.c_str()))) {
+                    if (ImGui::MenuItem(
+                            fmtScratch("{}  {}###procnode_discretize", ICON_BAR_CHART, Str::ProcNodeDiscretize.sv()))) {
                         req.type = GraphNodeType::Discretize;
                         ImGui::CloseCurrentPopup();
                     }
@@ -1979,11 +1977,11 @@ ProcessingPanel::AddNodeRequest ProcessingPanel::renderAddNodeMenu(const EffectR
                     renderDiscretizeTooltip();
                 }
                 if (category == NodeCategory::Modify &&
-                    ofs::util::fuzzyMatchAny(m_nodeFilter, {Str::ProcNodeFunctionalize.c_str(), catLabel}).matched) {
+                    ofs::util::fuzzyMatchAny(m_nodeFilter, {Str::ProcNodeFunctionalize.sv(), catLabel}).matched) {
                     header();
                     ImGui::PushStyleColor(ImGuiCol_Text, funcCol);
                     if (ImGui::MenuItem(fmtScratch("{}  {}###procnode_functionalize", ICON_CHART_SPLINE,
-                                                   Str::ProcNodeFunctionalize.c_str()))) {
+                                                   Str::ProcNodeFunctionalize.sv()))) {
                         req.type = GraphNodeType::Functionalize;
                         ImGui::CloseCurrentPopup();
                     }
@@ -1994,11 +1992,11 @@ ProcessingPanel::AddNodeRequest ProcessingPanel::renderAddNodeMenu(const EffectR
                     const auto &def = effectReg.effects.at(key);
                     if (def.category != category)
                         continue;
-                    if (!ofs::util::fuzzyMatchAny(m_nodeFilter, {def.displayName.c_str(), catLabel}).matched)
+                    if (!ofs::util::fuzzyMatchAny(m_nodeFilter, {def.displayName.sv(), catLabel}).matched)
                         continue;
                     header();
                     ImGui::PushStyleColor(ImGuiCol_Text, def.kind == EffectKind::Functional ? funcCol : discCol);
-                    if (ImGui::MenuItem(fmtScratch("{}  {}", nodeCategoryIcon(category), def.displayName.c_str()))) {
+                    if (ImGui::MenuItem(fmtScratch("{}  {}", nodeCategoryIcon(category), def.displayName.sv()))) {
                         req.addEffect = true;
                         req.effectType = key;
                         ImGui::CloseCurrentPopup();
@@ -2014,7 +2012,7 @@ ProcessingPanel::AddNodeRequest ProcessingPanel::renderAddNodeMenu(const EffectR
                         continue;
                     header();
                     ImGui::PushStyleColor(ImGuiCol_Text, e.signal == OfsSignalFunctional ? funcCol : discCol);
-                    if (ImGui::MenuItem(fmtScratch("{}  {}", scriptMenuIcon(e.library), e.displayName.c_str()))) {
+                    if (ImGui::MenuItem(fmtScratch("{}  {}", scriptMenuIcon(e.library), e.displayName))) {
                         req.addScript = true;
                         req.scriptIndex = i;
                         ImGui::CloseCurrentPopup();
@@ -2032,10 +2030,10 @@ ProcessingPanel::AddNodeRequest ProcessingPanel::renderAddNodeMenu(const EffectR
                     continue;
                 if (pn.category != openCategory) {
                     openCategory = pn.category;
-                    ImGui::SeparatorText(fmtScratch("{}  {}", ICON_PLUGIN, pn.category.c_str()));
+                    ImGui::SeparatorText(fmtScratch("{}  {}", ICON_PLUGIN, pn.category));
                 }
                 ImGui::PushStyleColor(ImGuiCol_Text, pn.signal == OfsSignalFunctional ? funcCol : discCol);
-                if (ImGui::MenuItem(fmtScratch("{}  {}", pluginNodeIcon(pn), pn.displayName.c_str()))) {
+                if (ImGui::MenuItem(fmtScratch("{}  {}", pluginNodeIcon(pn), pn.displayName))) {
                     req.addPlugin = true;
                     req.pluginNodeId = key;
                     ImGui::CloseCurrentPopup();
@@ -2056,7 +2054,7 @@ ProcessingPanel::AddNodeRequest ProcessingPanel::renderAddNodeMenu(const EffectR
 void ProcessingPanel::renderHeader(const ScriptProject &project, EventQueue &eq, int selId,
                                    const ProcessingRegion &region) {
     // ── Header ────────────────────────────────────────────────────────────────
-    ImGui::TextDisabled("%s \xe2\x80\x93 %s", TimeUtil::formatTime(region.startTime, true),
+    ImGui::TextDisabled("%s " GLYPH_EN_DASH " %s", TimeUtil::formatTime(region.startTime, true),
                         TimeUtil::formatTime(region.endTime, true));
 
     // Tight, font-relative chip grid (≈3 px spacing, ≈5×2 px padding at the 18 px default) so the chips
@@ -2181,12 +2179,12 @@ void ProcessingPanel::renderFooter(const ScriptProject &project, EventQueue &eq,
     ImGui::Separator();
 
     // Group 1 — compute. ###Bake/###Recompute pin the IDs so the icon prefix doesn't break ItemClick in tests.
-    if (ImGui::Button(fmtScratch("{} {}###Bake", ICON_BAKE, Str::ProcBake.c_str()))) {
+    if (ImGui::Button(fmtScratch("{} {}###Bake", ICON_BAKE, Str::ProcBake.sv()))) {
         eq.push(BakeRegionEvent{selId});
     }
     ImGui::SetItemTooltip("%s", Str::ProcBakeTip.c_str());
     ImGui::SameLine();
-    if (ImGui::Button(fmtScratch("{} {}###Recompute", ICON_REFRESH, Str::ProcRecompute.c_str()))) {
+    if (ImGui::Button(fmtScratch("{} {}###Recompute", ICON_REFRESH, Str::ProcRecompute.sv()))) {
         for (size_t i = 0; i < kStandardAxisCount; ++i)
             if (region.axisRoles.test(i))
                 eq.push(RequestAxisEvalEvent{static_cast<StandardAxis>(i)});
@@ -2209,7 +2207,7 @@ void ProcessingPanel::renderFooter(const ScriptProject &project, EventQueue &eq,
     // recomputing until the next Recompute (or re-check). Checked maps directly to autoEvalEnabled.
     ImGui::SameLine();
     bool autoEval = project.autoEvalEnabled;
-    if (ImGui::Checkbox(fmtScratch("{}###autoEval", Str::ProcAuto.c_str()), &autoEval))
+    if (ImGui::Checkbox(fmtScratch("{}###autoEval", Str::ProcAuto.sv()), &autoEval))
         eq.push(SetAutoEvalEnabledEvent{autoEval});
     ImGui::SetItemTooltip("%s", Str::ProcAutoTip.c_str());
 
@@ -2554,7 +2552,7 @@ void ProcessingPanel::maybeShowRemapModal(const ScriptProject &project, EventQue
                          for (size_t k = 0; k < pend.savedAxes.size(); ++k) {
                              ImGui::PushID(static_cast<int>(k));
                              ofs::ui::formRow(ofs::loc::localizedAxisName(pend.savedAxes[k]));
-                             ImGui::TextUnformatted("\xe2\x86\x92"); // →
+                             ImGui::TextUnformatted(GLYPH_ARROW_RIGHT);
                              ImGui::SameLine();
                              ImGui::SetNextItemWidth(-FLT_MIN);
                              const char *preview =

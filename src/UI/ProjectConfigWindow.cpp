@@ -225,7 +225,7 @@ void ProjectConfigWindow::renderMarkersTab(const ScriptProject &project, EventQu
     };
 
     // --- Chapters ---
-    ImGui::SeparatorText(fmtScratch("{}  {}", ICON_CHAPTER, Str::PcfChapters.c_str()));
+    ImGui::SeparatorText(fmtScratch("{}  {}", ICON_CHAPTER, Str::PcfChapters.sv()));
     if (bc.chapters.empty()) {
         ImGui::TextDisabled("%s", Str::PcfNoChapters.c_str());
     } else if (ImGui::BeginTable("##chapters_tbl", 6, kTableFlags)) {
@@ -291,7 +291,7 @@ void ProjectConfigWindow::renderMarkersTab(const ScriptProject &project, EventQu
     ImGui::Spacing();
 
     // --- Bookmarks ---
-    ImGui::SeparatorText(fmtScratch("{}  {}", ICON_BOOKMARK, Str::PcfBookmarks.c_str()));
+    ImGui::SeparatorText(fmtScratch("{}  {}", ICON_BOOKMARK, Str::PcfBookmarks.sv()));
     if (bc.bookmarks.empty()) {
         ImGui::TextDisabled("%s", Str::PcfNoBookmarks.c_str());
     } else if (ImGui::BeginTable("##bookmarks_tbl", 3, kTableFlags)) {
@@ -377,7 +377,7 @@ void ProjectConfigWindow::renderMetadataTab(const ScriptProject &project, EventQ
         eq.push(ModifyEvent<FunscriptMetadata>{
             [md = presets[selectedPresetIdx].metadata](FunscriptMetadata &m) { m = md; }});
         eq.push(NotifyEvent{.level = NotifyLevel::Success,
-                            .message = Str::PcfPresetLoaded.fmt(presets[selectedPresetIdx].name.c_str())});
+                            .message = Str::PcfPresetLoaded.fmt(presets[selectedPresetIdx].name)});
         meta = presets[selectedPresetIdx].metadata;
     }
     ImGui::SameLine();
@@ -385,7 +385,7 @@ void ProjectConfigWindow::renderMetadataTab(const ScriptProject &project, EventQ
         const int delIdx = selectedPresetIdx;
         confirmAsync(eq,
                      {.title = Str::PcfPresetDeleteConfirmTitle.c_str(),
-                      .message = Str::PcfPresetDeleteConfirmBody.fmt(presets[delIdx].name.c_str()),
+                      .message = Str::PcfPresetDeleteConfirmBody.fmt(presets[delIdx].name),
                       .buttons = {Str::PcfDelete.c_str(), Str::AppCancel.c_str()},
                       .severity = ofs::ModalSeverity::Warning},
                      [this, eqp = &eq, delIdx](int idx) {
@@ -423,7 +423,7 @@ void ProjectConfigWindow::renderMetadataTab(const ScriptProject &project, EventQ
             else
                 s.metadataPresets.push_back({.name = name, .metadata = md});
         }});
-        eq.push(NotifyEvent{.level = NotifyLevel::Success, .message = Str::PcfPresetSaved.fmt(newPresetName.c_str())});
+        eq.push(NotifyEvent{.level = NotifyLevel::Success, .message = Str::PcfPresetSaved.fmt(newPresetName)});
     }
     ImGui::EndDisabled();
     ImGui::SameLine();
@@ -992,7 +992,7 @@ void ProjectConfigWindow::renderSettingsTab(const ScriptProject &project, EventQ
             auto **snapNames = ofs::FrameAllocator::instance().allocArray<const char *>(kTempoSubdivisionCount);
             for (int i = 0; i < kTempoSubdivisionCount; ++i)
                 snapNames[i] = kTempoSubdivisionNames[i];
-            snapNames[0] = fmtScratch("1/1 ({})", Str::TlMeasure.c_str());
+            snapNames[0] = fmtScratch("1/1 ({})", Str::TlMeasure.sv());
 
             formRow(Str::PcfSnap);
             ImGui::SetNextItemWidth(-FLT_MIN);

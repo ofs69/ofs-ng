@@ -965,7 +965,7 @@ bool ScriptSimulator::renderOverlay(ImDrawList *dl, const ScriptProject &project
             if (shown(StandardAxis::L1)) {
                 const float v = axisVal(StandardAxis::L1);
                 const char *lbl = fmtScratch("{} {} {:.0f}% {}", standardAxisShortName(StandardAxis::L1),
-                                             dofWord(StandardAxis::L1), v * 100.f, Str::SimDepth.c_str());
+                                             dofWord(StandardAxis::L1), v * 100.f, Str::SimDepth.sv());
                 text({origin.x - ImGui::CalcTextSize(lbl).x * 0.5f, perspMax.y - lineH - 4.f}, col(StandardAxis::L1),
                      lbl);
             }
@@ -993,10 +993,10 @@ bool ScriptSimulator::renderOverlay(ImDrawList *dl, const ScriptProject &project
                     dl->PathArcTo(origin, radius, std::min(refAng, curAng), std::max(refAng, curAng), 24);
                     dl->PathStroke(col(role), 2.f);
                 }
-                const char *lbl =
-                    state.labels3dInDegrees
-                        ? fmtScratch("{} {:.0f}\xc2\xb0", standardAxisShortName(role), rotationDegrees(role, v, state))
-                        : fmtScratch("{} {:.0f}%", standardAxisShortName(role), v * 100.f);
+                const char *lbl = state.labels3dInDegrees
+                                      ? fmtScratch("{} {:.0f}" GLYPH_DEGREE, standardAxisShortName(role),
+                                                   rotationDegrees(role, v, state))
+                                      : fmtScratch("{} {:.0f}%", standardAxisShortName(role), v * 100.f);
                 text({tip.x + 4.f, tip.y - lineH * 0.5f}, col(role), lbl);
             }
         }

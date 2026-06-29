@@ -872,7 +872,7 @@ void ScriptTimelineWindow::renderOverlayMenu(const ScriptProject &project, Event
             auto **snapNames = ofs::FrameAllocator::instance().allocArray<const char *>(kTempoSubdivisionCount);
             for (int i = 0; i < kTempoSubdivisionCount; ++i)
                 snapNames[i] = kTempoSubdivisionNames[i];
-            snapNames[0] = fmtScratch("1/1 ({})", Str::TlMeasure.c_str());
+            snapNames[0] = fmtScratch("1/1 ({})", Str::TlMeasure.sv());
 
             ImGui::TextUnformatted(Str::TlSnap);
             ImGui::SetNextItemWidth(fieldW);
@@ -1332,7 +1332,7 @@ void ScriptTimelineWindow::renderRegionBar(VideoPlayer &videoPlayer, const Scrip
         };
         const auto *ctxReg = project.findRegion(ctxRegionId);
         if (ctxReg != nullptr) {
-            ImGui::TextDisabled("%s \xe2\x80\x93 %s", TimeUtil::formatTime(ctxReg->startTime, true),
+            ImGui::TextDisabled("%s " GLYPH_EN_DASH " %s", TimeUtil::formatTime(ctxReg->startTime, true),
                                 TimeUtil::formatTime(ctxReg->endTime, true));
             ImGui::Separator();
             {

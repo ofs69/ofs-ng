@@ -231,19 +231,19 @@ bool Translator::load(std::string_view languageId) {
 
     std::vector<char> blob;
     blob.reserve(total);
-    std::vector<std::pair<std::uint32_t, std::size_t>> offsets;
+    std::vector<std::tuple<std::uint32_t, std::size_t, std::size_t>> offsets; // idx, offset, length
     offsets.reserve(accepted.size());
     for (const auto &[idx, str] : accepted) {
-        offsets.emplace_back(idx, blob.size());
+        offsets.emplace_back(idx, blob.size(), str.size());
         blob.insert(blob.end(), str.begin(), str.end());
-        blob.push_back('\0');
+        blob.push_back('\0'); // keep .data() NUL-terminated so trLookup() can return a C string
     }
 
     stringData_ = std::move(blob);
     for (std::uint32_t i = 0; i < gen::Count; ++i)
         translation[i] = gen::Default[i];
-    for (const auto &[idx, off] : offsets)
-        translation[idx] = stringData_.data() + off;
+    for (const auto &[idx, off, len] : offsets)
+        translation[idx] = std::string_view(stringData_.data() + off, len);
 
     activeLanguageId_ = std::string(languageId);
     // BCP 47 culture tag the file declares in [_meta].culture — read from the file only, never from the
@@ -294,8 +294,10 @@ bool Translator::exportCatalog(const std::filesystem::path &path) const {
     const bool ok = writeCatalogToFile(
         path, activeCulture_, /*forceMeta=*/true,
         [this](std::uint32_t idx) -> std::string_view {
-            const char *tr = translation[idx];
-            return (tr != nullptr && tr != gen::Default[idx]) ? std::string_view(tr) : std::string_view{};
+            // Pointer identity: an untranslated key still aliases the baked-in default, so a differing
+            // data() means the language actually provided a translation.
+            std::string_view tr = translation[idx];
+            return tr.data() != gen::Default[idx].data() ? tr : std::string_view{};
         },
         "# Translation catalog — ofs-ng localization.\n"
         "#\n"
@@ -364,8 +366,16 @@ void Translator::pollReload() {
 const char *trLookup(std::uint32_t index) {
     if (index >= gen::Count)
         return "";
-    const char *p = Translator::instance().translation[index];
+    // Both backing stores (gen::Default literals, stringData_ blob) are NUL-terminated at .data()+size(),
+    // so the view's data() is a valid C string.
+    const char *p = Translator::instance().translation[index].data();
     return p != nullptr ? p : "";
+}
+
+std::string_view trLookupSv(std::uint32_t index) {
+    if (index >= gen::Count)
+        return {};
+    return Translator::instance().translation[index];
 }
 
 const char *trId(std::uint32_t index, const char *stableId) {

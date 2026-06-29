@@ -426,7 +426,7 @@ void VideoTranscoder::onFailed(const TranscodeFailedEvent &ev) {
     }
     project.transcode.error = reason;
     std::string msg = reason.empty() ? std::string(Str::TranscodeFailed.c_str())
-                                     : fmt::format("{}: {}", Str::TranscodeFailed.c_str(), reason);
+                                     : fmt::format("{}: {}", Str::TranscodeFailed.sv(), reason);
     eq.push(NotifyEvent{.level = NotifyLevel::Error, .message = std::move(msg)});
 }
 

@@ -88,7 +88,8 @@ Run a single suite with `-R`, e.g. `ctest --test-dir build -R ui-smoke --output-
 ofs-ng plugins are C# DLLs loaded into the app's .NET runtime — one class deriving from
 `OfsPlugin`, with no C ABI or manual marshaling to deal with. The `managed/` directory holds
 the plugin API, the host, and example plugins; **[managed/plugins/StarterPlugin](managed/plugins/StarterPlugin)**
-is a ready-to-build template to copy from.
+is a ready-to-build template to copy from. The full **[C# API reference](https://ofs69.github.io/ofs-ng/)**
+documents the `Ofs.Api` surface.
 
 Plugins are managed .NET assemblies (platform-neutral IL). A compiled plugin is tied only to
 the `Ofs.Api` version it was built against — not to a specific ofs-ng version — so the same

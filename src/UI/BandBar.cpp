@@ -1,5 +1,6 @@
 #include "BandBar.h"
 #include "Localization/Translator.h"
+#include "UI/Glyphs.h"
 #include "UI/ImGuiHelpers.h"
 #include "UI/Theme.h"
 #include "Util/TimeUtil.h"
@@ -252,7 +253,7 @@ void drawBandBar(ImDrawList *dl, ImVec2 barMin, ImVec2 barMax, std::span<const B
         if (!tooltipShown) {
             ImGui::BeginTooltip();
             ImGui::TextUnformatted((hovEdgeL || hovEdgeR) ? Str::BandDragResize.c_str() : Str::BandDragMove.c_str());
-            ImGui::Text("%s \xe2\x80\x93 %s", ofs::TimeUtil::formatTime(bands[i].startTime, true),
+            ImGui::Text("%s " GLYPH_EN_DASH " %s", ofs::TimeUtil::formatTime(bands[i].startTime, true),
                         ofs::TimeUtil::formatTime(bands[i].endTime, true));
             ImGui::EndTooltip();
             tooltipShown = true;

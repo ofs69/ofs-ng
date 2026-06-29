@@ -3,6 +3,7 @@
 #include "Core/EventQueue.h"
 #include "Core/UpdateEvents.h"
 #include "Localization/Translator.h"
+#include "UI/Glyphs.h"
 #include "UI/Icons.h"
 #include "UI/ImGuiHelpers.h"
 #include "Util/FrameAllocator.h" // fmtScratch
@@ -133,8 +134,8 @@ const char *toolchainLine() {
 #else
     const char *compiler = "unknown compiler";
 #endif
-    return fmtScratch("{} \xc2\xb7 Dear ImGui {} \xc2\xb7 SDL {}.{}.{}", compiler, IMGUI_VERSION, SDL_MAJOR_VERSION,
-                      SDL_MINOR_VERSION, SDL_MICRO_VERSION);
+    return fmtScratch("{} " GLYPH_MIDDLE_DOT " Dear ImGui {} " GLYPH_MIDDLE_DOT " SDL {}.{}.{}", compiler,
+                      IMGUI_VERSION, SDL_MAJOR_VERSION, SDL_MINOR_VERSION, SDL_MICRO_VERSION);
 }
 
 } // namespace
@@ -263,7 +264,7 @@ void AboutWindow::render(bool &open, const UpdateChecker::Status &update, EventQ
         ImGui::TextDisabled("%s", Str::AboutSelectPrompt.c_str());
     } else {
         const Attribution &e = kAttributions[selected_];
-        ImGui::TextUnformatted(fmtScratch("{}  \xe2\x80\x94  {}", e.name, e.license));
+        ImGui::TextUnformatted(fmtScratch("{}  " GLYPH_EM_DASH "  {}", e.name, e.license));
         const char *copyLbl = Str::AboutCopyLicense.iconId(ICON_COPY, "about_copy");
         ImGui::SameLine();
         ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - ofs::ui::buttonW(copyLbl));

@@ -5,6 +5,7 @@
 #include "Core/SimulatorSettings.h"
 #include "Format/AppSettings.h"
 #include "Localization/Translator.h"
+#include "UI/Glyphs.h"
 #include "UI/Icons.h"
 #include "UI/ImGuiHelpers.h"
 #include "UI/Modals.h"
@@ -151,13 +152,13 @@ void ConfigurationWindow::renderSimulatorTab(const ScriptProject &project, Event
         changed |= ImGui::DragFloat("##simsway", &sim.swayRange, 0.01f, 0.f, 4.f, "%.2f");
         formRowIcon(ICON_ROTATE_3D, Str::PrefTwistR0);
         ImGui::SetNextItemWidth(-FLT_MIN);
-        changed |= ImGui::SliderFloat("##simtwist", &sim.twistRange, 0.f, 180.f, "%.0f\xc2\xb0");
+        changed |= ImGui::SliderFloat("##simtwist", &sim.twistRange, 0.f, 180.f, "%.0f" GLYPH_DEGREE);
         formRowIcon(ICON_AXIS_3D, Str::PrefRollR1);
         ImGui::SetNextItemWidth(-FLT_MIN);
-        changed |= ImGui::SliderFloat("##simroll", &sim.rollRange, 0.f, 90.f, "%.0f\xc2\xb0");
+        changed |= ImGui::SliderFloat("##simroll", &sim.rollRange, 0.f, 90.f, "%.0f" GLYPH_DEGREE);
         formRowIcon(ICON_ORBIT, Str::PrefPitchR2);
         ImGui::SetNextItemWidth(-FLT_MIN);
-        changed |= ImGui::SliderFloat("##simpitch", &sim.pitchRange, 0.f, 90.f, "%.0f\xc2\xb0");
+        changed |= ImGui::SliderFloat("##simpitch", &sim.pitchRange, 0.f, 90.f, "%.0f" GLYPH_DEGREE);
         endForm();
     }
 
@@ -974,11 +975,10 @@ void ConfigurationWindow::renderThemeTab(const ScriptProject &project, EventQueu
         if (ImGui::BeginCombo("###theme_select", appSettings.activeTheme.c_str())) {
             for (const auto &info : availableThemes) {
                 const bool selected = info.name == appSettings.activeTheme;
-                const char *visible =
-                    info.shipped ? Str::PrefThemeShippedSuffix.fmt(info.name.c_str()) : info.name.c_str();
+                const char *visible = info.shipped ? Str::PrefThemeShippedSuffix.fmt(info.name) : info.name.c_str();
                 // Stable ###id keyed on the (untranslated) theme name: the "(shipped)" suffix is
                 // localized, so without this the item's ImGui id would shift per language.
-                const char *label = fmtScratch("{}###theme_opt_{}", visible, info.name.c_str());
+                const char *label = fmtScratch("{}###theme_opt_{}", visible, info.name);
                 if (ImGui::Selectable(label, selected) && !selected)
                     switchTo(info.name);
                 if (selected)
@@ -1024,11 +1024,10 @@ void ConfigurationWindow::renderThemeTab(const ScriptProject &project, EventQueu
                 eq.push(ModifyEvent<AppSettings>{[name = themeName_](AppSettings &s) { s.activeTheme = name; }});
                 ofs::theme::apply(t);
                 availableThemes = ofs::theme::list();
-                eq.push(NotifyEvent{.level = NotifyLevel::Success, .message = Str::PrefThemeSaved.fmt(t.name.c_str())});
+                eq.push(NotifyEvent{.level = NotifyLevel::Success, .message = Str::PrefThemeSaved.fmt(t.name)});
                 themeName_.clear();
             } else {
-                eq.push(NotifyEvent{.level = NotifyLevel::Error,
-                                    .message = Str::PrefThemeSaveFailed.fmt(themeName_.c_str())});
+                eq.push(NotifyEvent{.level = NotifyLevel::Error, .message = Str::PrefThemeSaveFailed.fmt(themeName_)});
             }
         }
         ImGui::EndDisabled();
@@ -1037,7 +1036,7 @@ void ConfigurationWindow::renderThemeTab(const ScriptProject &project, EventQueu
         if (ImGui::Button(Str::PrefDelete.iconId(ICON_TRASH, "theme_delete"), {halfW, 0.f})) {
             confirmAsync(eq,
                          {.title = Str::PrefThemeDeleteConfirmTitle.c_str(),
-                          .message = Str::PrefThemeDeleteConfirmBody.fmt(appSettings.activeTheme.c_str()),
+                          .message = Str::PrefThemeDeleteConfirmBody.fmt(appSettings.activeTheme),
                           .buttons = {Str::PrefDelete.c_str(), Str::AppCancel.c_str()},
                           .severity = ofs::ModalSeverity::Warning},
                          [this, eqp = &eq](int idx) {
@@ -1057,7 +1056,7 @@ void ConfigurationWindow::renderThemeTab(const ScriptProject &project, EventQueu
         // Share path: export the current (possibly edited) theme to a chosen file, or
         // pull an external .json into <pref>/themes/ so it joins the dropdown.
         if (ImGui::Button(Str::PrefExport.iconId(ICON_EXPORT, "theme_export"), {halfW, 0.f})) {
-            std::string defName = fmtScratch("{}.json", appSettings.activeTheme.c_str());
+            std::string defName = fmtScratch("{}.json", appSettings.activeTheme);
             // Re-fetch the active theme in the callback: it is a stable global, and exporting what
             // is active when the dialog resolves matches the old blocking behavior.
             pickFile(eq,
@@ -1114,7 +1113,7 @@ void ConfigurationWindow::renderThemeTab(const ScriptProject &project, EventQueu
     if (ofs::ui::shortcutFocusSearch())
         ImGui::SetKeyboardFocusHere();
     ImGui::SetNextItemWidth(avail);
-    ImGui::InputTextWithHint("###theme_filter", fmtScratch("{}  {}", ICON_SEARCH, Str::PrefFilterHint.c_str()),
+    ImGui::InputTextWithHint("###theme_filter", fmtScratch("{}  {}", ICON_SEARCH, Str::PrefFilterHint.sv()),
                              &themeFilter_);
     ImGui::Spacing();
 
@@ -1328,7 +1327,7 @@ void ConfigurationWindow::renderThemeTab(const ScriptProject &project, EventQueu
     }
 
     if (!themeFilter_.empty() && !sawMatch)
-        ImGui::TextDisabled("%s", Str::PrefNoThemeMatch.fmt(themeFilter_.c_str()));
+        ImGui::TextDisabled("%s", Str::PrefNoThemeMatch.fmt(themeFilter_));
 }
 
 } // namespace ofs

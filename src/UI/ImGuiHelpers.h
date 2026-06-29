@@ -1,4 +1,5 @@
 #pragma once
+#include "UI/Glyphs.h"
 #include "UI/Icons.h"
 #include "UI/Theme.h"
 #include "Util/FrameAllocator.h"
@@ -155,7 +156,7 @@ inline void spinner(const char *label, float radius, float thickness, ImU32 colo
 inline const char *elide(const char *s, float maxW) {
     if (maxW <= 0.f || ImGui::CalcTextSize(s).x <= maxW)
         return s;
-    const char *ellipsis = "\xE2\x80\xA6"; // …
+    const char *ellipsis = GLYPH_ELLIPSIS;
     const float avail = std::max(0.f, maxW - ImGui::CalcTextSize(ellipsis).x);
     int fit = 0;
     for (int i = 0; s[i] != '\0';) {

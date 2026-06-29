@@ -56,8 +56,10 @@ class Translator {
     // .NET CultureInfo) to drive their own catalogs, so a script/region subtag selects the right one.
     [[nodiscard]] const std::string &activeCulture() const { return activeCulture_; }
 
-    // Indexed by Tr value. Public so the trLookup() hot path is a single array index.
-    std::array<const char *, gen::Count> translation{};
+    // Indexed by Tr value. Public so the trLookup() hot path is a single array index. Each view points
+    // at a baked-in default (gen::Default[i]) or into stringData_, both NUL-terminated at .data()+size()
+    // so trLookup() can still return a C string; the carried length lets trLookupSv() skip a strlen.
+    std::array<std::string_view, gen::Count> translation{};
 
   private:
     Translator();

@@ -400,7 +400,7 @@ void ModalManager::renderEntry(size_t index) {
                 ImGui::TextUnformatted(ui::elide(full.c_str(), labelColW));
                 ImGui::SetItemTooltip("%s", full.c_str());
                 ImGui::SameLine(arrowColX);
-                ImGui::TextUnformatted("\xe2\x86\x92"); // →
+                ImGui::TextUnformatted(GLYPH_ARROW_RIGHT);
                 ImGui::SameLine();
                 // Combo fills the row but leaves room for the trailing remove button.
                 const float comboW = std::max(ImGui::GetFontSize() * 4.0f, ImGui::GetContentRegionAvail().x - trashW -
