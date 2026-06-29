@@ -2153,6 +2153,10 @@ description = "Processing: Script node button — replace the embedded script wi
 english     = "(select .cs)"
 description = "Processing: Script node file-picker combo placeholder when no script is chosen."
 
+[ProcAddNodeHint]
+english     = "Right-click to add a node"
+description = "Faint centered prompt drawn on an empty node-graph canvas (no nodes) to reveal that right-click opens the add-node menu."
+
 [ProcEdit]
 english     = "Edit"
 description = "Processing: Script node button — open the script file in the default editor."
@@ -2451,6 +2455,10 @@ description = "Simulator: 3D right-click menu — show rotation labels in degree
 english     = "Percent"
 description = "Simulator: 3D right-click menu — show rotation labels as a percentage."
 
+[SimSettingsHint]
+english     = "Right-click for simulator settings"
+description = "Hover tooltip over the thin 2D simulator overlay bar (the only place its settings are reachable in 2D mode) — reveals the right-click menu."
+
 [SimDisplay]
 english     = "Display"
 description = "Simulator: 2D right-click menu — submenu of overlay display toggles."
@@ -2520,6 +2528,14 @@ description = "Simulator: appended to the Surge gizmo label — Surge runs along
 [TlTitle]
 english     = "Timeline"
 description = "Timeline window title."
+
+[TlAddRegionHint]
+english     = "Right-click to add a processing region"
+description = "Faint centered prompt drawn on the empty region bar (no regions placed) to reveal that right-click adds one."
+
+[TlPointGestures]
+english     = "Shift+click: add point · Alt+drag: value only · Ctrl+click: select"
+description = "Muted hint line in the timeline point hover tooltip — the curve's modifier gestures. 'Shift'/'Alt'/'Ctrl' are key names; the '·' separates the three gestures."
 
 [TlHideFromPanel]
 english     = "Hide from panel"

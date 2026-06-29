@@ -696,6 +696,12 @@ void ScriptTimelineWindow::renderTimeline(const ScriptProject &project, EventQue
             if (ImGui::BeginTooltip()) {
                 ImGui::Text(ICON_CLOCK_3 " %s", TimeUtil::formatTimeShort(hit.action->at));
                 ImGui::Text(ICON_MOVE_VERTICAL " %d", hit.action->pos);
+                // The curve's modifier gestures have no on-screen affordance; surface them here so a new
+                // user can discover add/value-move/select. Omitted on a locked axis where they no-op.
+                if (!activeLocked) {
+                    ImGui::Separator();
+                    ImGui::TextDisabled("%s", Str::TlPointGestures.c_str());
+                }
                 ImGui::EndTooltip();
             }
         }
@@ -1223,6 +1229,15 @@ void ScriptTimelineWindow::renderRegionBar(VideoPlayer &videoPlayer, const Scrip
     // regions placed (ProcessingPanelBg alone blended into the surrounding panel).
     dl->AddRectFilled(barMin, barMax, ofs::theme::GetColorU32(AppCol_StripBg));
     dl->AddRect(barMin, barMax, ofs::theme::GetColorU32(ImGuiCol_Border));
+
+    // With no regions placed the bar is just an empty track; the region/processing feature is otherwise
+    // undiscoverable, so prompt the right-click that creates one (elided so a narrow bar can't overrun).
+    if (project.regions.empty()) {
+        const char *hint = ofs::ui::elide(Str::TlAddRegionHint.c_str(), (barMax.x - barMin.x) - ImGui::GetFontSize());
+        const ImVec2 ts = ImGui::CalcTextSize(hint);
+        dl->AddText({(barMin.x + barMax.x - ts.x) * 0.5f, (barMin.y + barMax.y - ts.y) * 0.5f},
+                    ofs::theme::GetColorU32(ImGuiCol_TextDisabled), hint);
+    }
 
     // Regions are axis-agnostic on the timeline: every region renders here regardless of the
     // active axis. Axis assignment governs only the node graph's I/O, not visibility.

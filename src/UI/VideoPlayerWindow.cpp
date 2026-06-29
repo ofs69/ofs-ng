@@ -227,6 +227,9 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
                 dragging = false;
                 framingChanged = true;
             }
+            // Signal the drag-to-rotate gesture; nothing else hints the unlocked video is grabbable.
+            if (dragging || (hovered && !overlayHoveredPrev && ImGui::GetActiveID() == 0))
+                ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
         } else {
             dragging = false;
         }
@@ -306,6 +309,9 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
                 dragging = false;
                 framingChanged = true;
             }
+            // Signal the drag-to-pan gesture; nothing else hints the unlocked video is draggable.
+            if (dragging || (hovered && !overlayHoveredPrev && ImGui::GetActiveID() == 0))
+                ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
         } else {
             dragging = false;
         }

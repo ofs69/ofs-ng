@@ -2019,6 +2019,10 @@ translation = "載入"
 english     = "(select .cs)"
 translation = "（選擇 .cs）"
 
+[ProcAddNodeHint]
+english     = "Right-click to add a node"
+translation = "右鍵新增節點"
+
 [ProcEdit]
 english     = "Edit"
 translation = "編輯"
@@ -2305,6 +2309,10 @@ translation = "度"
 english     = "Percent"
 translation = "百分比"
 
+[SimSettingsHint]
+english     = "Right-click for simulator settings"
+translation = "右鍵開啟模擬器設定"
+
 [SimDisplay]
 english     = "Display"
 translation = "顯示"
@@ -2374,6 +2382,14 @@ translation = "（深度）"
 [TlTitle]
 english     = "Timeline"
 translation = "時間軸"
+
+[TlAddRegionHint]
+english     = "Right-click to add a processing region"
+translation = "右鍵新增處理區段"
+
+[TlPointGestures]
+english     = "Shift+click: add point · Alt+drag: value only · Ctrl+click: select"
+translation = "Shift+點擊：新增點 · Alt+拖曳：僅數值 · Ctrl+點擊：選取"
 
 [TlHideFromPanel]
 english     = "Hide from panel"

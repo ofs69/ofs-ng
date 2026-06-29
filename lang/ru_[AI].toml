@@ -2019,6 +2019,10 @@ translation = "Загрузить"
 english     = "(select .cs)"
 translation = "(выбрать .cs)"
 
+[ProcAddNodeHint]
+english     = "Right-click to add a node"
+translation = "Щёлкните правой кнопкой, чтобы добавить узел"
+
 [ProcEdit]
 english     = "Edit"
 translation = "Редактировать"
@@ -2305,6 +2309,10 @@ translation = "Градусы"
 english     = "Percent"
 translation = "Проценты"
 
+[SimSettingsHint]
+english     = "Right-click for simulator settings"
+translation = "Щёлкните правой кнопкой для настроек симулятора"
+
 [SimDisplay]
 english     = "Display"
 translation = "Отображение"
@@ -2374,6 +2382,14 @@ translation = "(глубина)"
 [TlTitle]
 english     = "Timeline"
 translation = "Таймлайн"
+
+[TlAddRegionHint]
+english     = "Right-click to add a processing region"
+translation = "Щёлкните правой кнопкой, чтобы добавить регион обработки"
+
+[TlPointGestures]
+english     = "Shift+click: add point · Alt+drag: value only · Ctrl+click: select"
+translation = "Shift+щелчок: добавить точку · Alt+перетаскивание: только значение · Ctrl+щелчок: выбрать"
 
 [TlHideFromPanel]
 english     = "Hide from panel"

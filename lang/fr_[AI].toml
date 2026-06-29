@@ -2019,6 +2019,10 @@ translation = "Charger"
 english     = "(select .cs)"
 translation = "(sélectionner .cs)"
 
+[ProcAddNodeHint]
+english     = "Right-click to add a node"
+translation = "Clic droit pour ajouter un nœud"
+
 [ProcEdit]
 english     = "Edit"
 translation = "Modifier"
@@ -2305,6 +2309,10 @@ translation = "Degrés"
 english     = "Percent"
 translation = "Pourcentage"
 
+[SimSettingsHint]
+english     = "Right-click for simulator settings"
+translation = "Clic droit pour les réglages du simulateur"
+
 [SimDisplay]
 english     = "Display"
 translation = "Affichage"
@@ -2374,6 +2382,14 @@ translation = "(profondeur)"
 [TlTitle]
 english     = "Timeline"
 translation = "Timeline"
+
+[TlAddRegionHint]
+english     = "Right-click to add a processing region"
+translation = "Clic droit pour ajouter une région de traitement"
+
+[TlPointGestures]
+english     = "Shift+click: add point · Alt+drag: value only · Ctrl+click: select"
+translation = "Maj+clic : ajouter un point · Alt+glisser : valeur seule · Ctrl+clic : sélectionner"
 
 [TlHideFromPanel]
 english     = "Hide from panel"

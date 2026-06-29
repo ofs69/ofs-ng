@@ -2019,6 +2019,10 @@ translation = "불러오기"
 english     = "(select .cs)"
 translation = "(.cs 선택)"
 
+[ProcAddNodeHint]
+english     = "Right-click to add a node"
+translation = "마우스 오른쪽 버튼으로 노드 추가"
+
 [ProcEdit]
 english     = "Edit"
 translation = "편집"
@@ -2305,6 +2309,10 @@ translation = "도(°)"
 english     = "Percent"
 translation = "퍼센트"
 
+[SimSettingsHint]
+english     = "Right-click for simulator settings"
+translation = "마우스 오른쪽 버튼으로 시뮬레이터 설정"
+
 [SimDisplay]
 english     = "Display"
 translation = "표시"
@@ -2374,6 +2382,14 @@ translation = "(깊이)"
 [TlTitle]
 english     = "Timeline"
 translation = "타임라인"
+
+[TlAddRegionHint]
+english     = "Right-click to add a processing region"
+translation = "마우스 오른쪽 버튼으로 처리 영역 추가"
+
+[TlPointGestures]
+english     = "Shift+click: add point · Alt+drag: value only · Ctrl+click: select"
+translation = "Shift+클릭: 점 추가 · Alt+드래그: 값만 · Ctrl+클릭: 선택"
 
 [TlHideFromPanel]
 english     = "Hide from panel"

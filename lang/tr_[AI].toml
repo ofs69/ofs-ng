@@ -2019,6 +2019,10 @@ translation = "Yükle"
 english     = "(select .cs)"
 translation = "(.cs seç)"
 
+[ProcAddNodeHint]
+english     = "Right-click to add a node"
+translation = "Düğüm eklemek için sağ tıklayın"
+
 [ProcEdit]
 english     = "Edit"
 translation = "Düzenle"
@@ -2305,6 +2309,10 @@ translation = "Derece"
 english     = "Percent"
 translation = "Yüzde"
 
+[SimSettingsHint]
+english     = "Right-click for simulator settings"
+translation = "Simülatör ayarları için sağ tıklayın"
+
 [SimDisplay]
 english     = "Display"
 translation = "Görünüm"
@@ -2374,6 +2382,14 @@ translation = "(derinlik)"
 [TlTitle]
 english     = "Timeline"
 translation = "Zaman Çizelgesi"
+
+[TlAddRegionHint]
+english     = "Right-click to add a processing region"
+translation = "İşleme bölgesi eklemek için sağ tıklayın"
+
+[TlPointGestures]
+english     = "Shift+click: add point · Alt+drag: value only · Ctrl+click: select"
+translation = "Shift+tıklama: nokta ekle · Alt+sürükleme: yalnızca değer · Ctrl+tıklama: seç"
 
 [TlHideFromPanel]
 english     = "Hide from panel"

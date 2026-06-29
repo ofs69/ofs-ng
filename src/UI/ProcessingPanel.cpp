@@ -1316,6 +1316,19 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
         }
     }
 
+    // An empty graph has no visible affordance to add a node (right-click canvas / drag a link into
+    // space); prompt it centered on the canvas so the feature isn't a guess. Drawn after EndNodeEditor
+    // so it sits in the panel's own (un-panned) child rect rather than scrolling with the canvas.
+    if (region.nodeGraph.nodes.empty()) {
+        ImDrawList *cdl = ImGui::GetWindowDrawList();
+        const ImVec2 wPos = ImGui::GetWindowPos();
+        const ImVec2 wSize = ImGui::GetWindowSize();
+        const char *hint = ofs::ui::elide(Str::ProcAddNodeHint.c_str(), wSize.x - ImGui::GetFontSize() * 2.0f);
+        const ImVec2 ts = ImGui::CalcTextSize(hint);
+        cdl->AddText({wPos.x + (wSize.x - ts.x) * 0.5f, wPos.y + (wSize.y - ts.y) * 0.5f},
+                     ofs::theme::GetColorU32(ImGuiCol_TextDisabled), hint);
+    }
+
     {
         ProcessingRegion updated = region;
         if (syncPositions(updated.nodeGraph))

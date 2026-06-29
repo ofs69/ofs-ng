@@ -151,6 +151,10 @@ constexpr float kMaxLineWidth = 5.5f;  // ...nor thicker than this (don't domina
 // so the cull happens well off-screen — the clip rect trims the on-screen overflow without popping.
 constexpr float kVrCullMargin = 1.5f;
 
+// 3D overlay resize-grip corner (bottom-right). The interaction hit-zone and the drawn grip glyph
+// both derive from this, so the visible affordance always matches the grabbable area.
+constexpr float kOverlayGripSize = 14.f;
+
 ImVec2 ndcToScreen(const ImVec2 &ndc, const ofs::OverlayViewport &vp) {
     return {vp.contentMin.x + (ndc.x + 0.5f) * vp.contentSize.x, vp.contentMin.y + (ndc.y + 0.5f) * vp.contentSize.y};
 }
@@ -626,7 +630,7 @@ void ScriptSimulator::render3D(const ScriptProject &project, EventQueue &eq, dou
     OverlayAnchor a = anchor; // working copy; pushed as a capture on change
 
     // Move/resize interaction
-    constexpr float kGripSize = 14.f;
+    constexpr float kGripSize = kOverlayGripSize;
     if (shiftPlace3d) {
         // Shift-hover place: a left-click commits an action on the active axis at the previewed value.
         // Consume the click (and claim hover) so the Video Player doesn't pan/rotate or seek under it.
@@ -846,6 +850,14 @@ bool ScriptSimulator::renderOverlay(ImDrawList *dl, const ScriptProject &project
         dl->AddCallback(&ScriptSimulator::glCallbackFunc, &callbackDataPerspective);
         dl->AddCallback(ImGui::GetPlatformIO().DrawCallback_ResetRenderState, nullptr);
         dl->AddRect(perspMin, perspMax, ofs::theme::GetColorU32(AppCol_SimCrosshair), 0.f, 1.5f, ImDrawFlags_None);
+
+        // Resize-grip affordance: diagonal ticks in the bottom-right corner so the kOverlayGripSize
+        // hit-zone (an otherwise invisible corner) reads as grabbable without first hovering for the cursor.
+        const ImU32 gripCol = ofs::theme::GetColorU32(AppCol_SimCrosshair);
+        for (int g = 1; g <= 3; ++g) {
+            const float off = kOverlayGripSize * (static_cast<float>(g) / 4.0f);
+            dl->AddLine({perspMax.x - off, perspMax.y}, {perspMax.x, perspMax.y - off}, gripCol, 1.5f);
+        }
 
         // Data labels: an axis gizmo anchored on the model so each value reads as a position/angle on
         // the model itself. Stroke (world Y) and Sway (world X) project to clean screen lines with a
@@ -1229,11 +1241,15 @@ bool ScriptSimulator::renderOverlay(ImDrawList *dl, const ScriptProject &project
         // Right-click context menu for quick access to the 2D bar settings. The Video Player suppresses
         // its own menu over the bar (this function reports the hover), so this is the only menu there.
         // Kept outside the move/resize block above so it works even when the overlay is locked.
-        if (vpHovered) {
+        if (vpHovered && dragTarget == DragTarget::None && !isMovingSimulator) {
             const ImVec2 m = ImGui::GetMousePos();
-            if (pointToSegmentDist(m, barP1, barP2) <= std::max(8.f, barWidth / 2.f) &&
-                ImGui::IsMouseClicked(ImGuiMouseButton_Right))
-                ImGui::OpenPopup("Sim2DContext");
+            if (pointToSegmentDist(m, barP1, barP2) <= std::max(8.f, barWidth / 2.f)) {
+                // The bar is the only entry point to the 2D simulator settings, with no affordance that
+                // it's interactive — name the right-click menu on hover.
+                ImGui::SetTooltip("%s", Str::SimSettingsHint.c_str());
+                if (ImGui::IsMouseClicked(ImGuiMouseButton_Right))
+                    ImGui::OpenPopup("Sim2DContext");
+            }
         }
         if (ImGui::BeginPopup("Sim2DContext")) {
             // Menu items push events like every other UI write — never mutate ScriptProject directly.
