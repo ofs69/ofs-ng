@@ -2555,6 +2555,22 @@ translation = "Sağa Genişlet"
 english     = "Grow Both Sides"
 translation = "Her İki Yana Genişlet"
 
+[TlNeedActiveAxis]
+english     = "Select an axis first"
+translation = "Önce bir eksen seçin"
+
+[TlAddOverSelReq]
+english     = "Needs a selection of at least 0.5 s, clear of existing regions"
+translation = "Mevcut bölgelerden uzak, en az 0,5 sn'lik bir seçim gerekir"
+
+[TlAddDurationReq]
+english     = "Only available when no regions exist yet"
+translation = "Yalnızca henüz hiç bölge yokken kullanılabilir"
+
+[TlGrowNoRoom]
+english     = "No empty space to grow into on that side"
+translation = "O tarafta genişleyecek boş alan yok"
+
 [TlAddRegionPlayhead]
 english     = "Add Region at Playhead"
 translation = "Oynatma Konumuna Bölge Ekle"

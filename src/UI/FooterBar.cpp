@@ -476,6 +476,15 @@ bool renderOneToast(ToastItem &item, float alpha, float slotHeight) {
     ImGui::Unindent(sideIndent);
 
     const bool hovered = ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows);
+    // Signal that the toast is clickable-to-dismiss: a hand cursor plus a faint ✕ in the top-right
+    // corner on hover (GetColorU32 applies the pushed alpha, so it fades with the toast).
+    if (hovered) {
+        ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+        const char *closeGlyph = ICON_X;
+        const ImVec2 gs = ImGui::CalcTextSize(closeGlyph);
+        dl->AddText(ImVec2(mx.x - sideIndent - gs.x, mn.y + ImGui::GetFontSize() * kToastPadYEm),
+                    ImGui::GetColorU32(ImGuiCol_TextDisabled), closeGlyph);
+    }
     ImGui::EndChild();
     ImGui::PopStyleColor();
     ImGui::PopStyleVar(2);

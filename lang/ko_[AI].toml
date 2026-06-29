@@ -2555,6 +2555,22 @@ translation = "오른쪽으로 확장"
 english     = "Grow Both Sides"
 translation = "양쪽으로 확장"
 
+[TlNeedActiveAxis]
+english     = "Select an axis first"
+translation = "먼저 축을 선택하세요"
+
+[TlAddOverSelReq]
+english     = "Needs a selection of at least 0.5 s, clear of existing regions"
+translation = "기존 구간과 겹치지 않는 0.5초 이상의 선택이 필요합니다"
+
+[TlAddDurationReq]
+english     = "Only available when no regions exist yet"
+translation = "아직 구간이 없을 때만 사용할 수 있습니다"
+
+[TlGrowNoRoom]
+english     = "No empty space to grow into on that side"
+translation = "그쪽에는 확장할 빈 공간이 없습니다"
+
 [TlAddRegionPlayhead]
 english     = "Add Region at Playhead"
 translation = "재생 헤드 위치에 구역 추가"

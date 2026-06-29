@@ -732,8 +732,10 @@ void VideoControlsWindow::render(const ScriptProject &project, EventQueue &eq, V
             ImGui::SetItemTooltip("%s", muted ? Str::VpcUnmute.c_str() : Str::VpcMute.c_str());
             ImGui::SameLine();
             ImGui::SetNextItemWidth(-FLT_MIN);
-            if (ImGui::SliderFloat("##Volume", &volume, 0.0f, 1.3f, "%.1f", ImGuiSliderFlags_AlwaysClamp)) {
-                volume = std::round(volume / 0.1f) * 0.1f;
+            // Show the gain as a percent (0–130%) so the >100% boost reads as a boost, not a bare "1.3".
+            float volPct = volume * 100.0f;
+            if (ImGui::SliderFloat("##Volume", &volPct, 0.0f, 130.0f, "%.0f%%", ImGuiSliderFlags_AlwaysClamp)) {
+                volume = std::round(volPct / 10.0f) * 10.0f / 100.0f; // snap to 10 % steps (the old 0.1 grid)
                 eq.push(VolumeChangedEvent{volume});
             }
         }

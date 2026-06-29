@@ -2704,6 +2704,22 @@ description = "Timeline region-bar right-click menu — extend the region's end 
 english     = "Grow Both Sides"
 description = "Timeline region-bar right-click menu — extend both edges to the neighboring regions (or the timeline bounds)."
 
+[TlNeedActiveAxis]
+english     = "Select an axis first"
+description = "Disabled-item tooltip in the timeline region-bar menu: the add-region actions need an active axis to seed the new region."
+
+[TlAddOverSelReq]
+english     = "Needs a selection of at least 0.5 s, clear of existing regions"
+description = "Disabled-item tooltip: why 'Add Region over selection' is unavailable (no/too-short selection, or it overlaps a region)."
+
+[TlAddDurationReq]
+english     = "Only available when no regions exist yet"
+description = "Disabled-item tooltip: why 'Add for entire duration' is unavailable (the timeline already has regions)."
+
+[TlGrowNoRoom]
+english     = "No empty space to grow into on that side"
+description = "Disabled-item tooltip: why a Grow action is unavailable (the region already touches its neighbor or the timeline bound)."
+
 [TlAddRegionPlayhead]
 english     = "Add Region at Playhead"
 description = "Timeline region-bar right-click menu — create a region starting at the playhead."

@@ -2555,6 +2555,22 @@ translation = "向右延伸"
 english     = "Grow Both Sides"
 translation = "向两侧延伸"
 
+[TlNeedActiveAxis]
+english     = "Select an axis first"
+translation = "请先选择一个轴"
+
+[TlAddOverSelReq]
+english     = "Needs a selection of at least 0.5 s, clear of existing regions"
+translation = "需要至少 0.5 秒且不与现有区域重叠的选区"
+
+[TlAddDurationReq]
+english     = "Only available when no regions exist yet"
+translation = "仅在尚无任何区域时可用"
+
+[TlGrowNoRoom]
+english     = "No empty space to grow into on that side"
+translation = "该侧没有可扩展的空白空间"
+
 [TlAddRegionPlayhead]
 english     = "Add Region at Playhead"
 translation = "在播放头处添加区域"

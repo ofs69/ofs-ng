@@ -2555,6 +2555,22 @@ translation = "Расширить вправо"
 english     = "Grow Both Sides"
 translation = "Расширить в обе стороны"
 
+[TlNeedActiveAxis]
+english     = "Select an axis first"
+translation = "Сначала выберите ось"
+
+[TlAddOverSelReq]
+english     = "Needs a selection of at least 0.5 s, clear of existing regions"
+translation = "Нужно выделение не менее 0,5 с, без существующих регионов"
+
+[TlAddDurationReq]
+english     = "Only available when no regions exist yet"
+translation = "Доступно, только когда регионов ещё нет"
+
+[TlGrowNoRoom]
+english     = "No empty space to grow into on that side"
+translation = "С этой стороны нет свободного места для расширения"
+
 [TlAddRegionPlayhead]
 english     = "Add Region at Playhead"
 translation = "Добавить регион на позиции воспроизведения"

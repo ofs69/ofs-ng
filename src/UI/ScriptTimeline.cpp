@@ -1324,6 +1324,12 @@ void ScriptTimelineWindow::renderRegionBar(VideoPlayer &videoPlayer, const Scrip
                          callbacks, "##regionbar");
 
     if (ImGui::BeginPopup("##region_ctx")) {
+        // Tooltip for a BeginDisabled()'d menu item explaining why it's unavailable. Disabled items
+        // don't hover by default, so allow-when-disabled is required.
+        const auto disabledReq = [](const char *msg) {
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_ForTooltip))
+                ImGui::SetTooltip("%s", msg);
+        };
         const auto *ctxReg = project.findRegion(ctxRegionId);
         if (ctxReg != nullptr) {
             ImGui::TextDisabled("%s \xe2\x80\x93 %s", TimeUtil::formatTime(ctxReg->startTime, true),
@@ -1384,6 +1390,8 @@ void ScriptTimelineWindow::renderRegionBar(VideoPlayer &videoPlayer, const Scrip
                 eq.push(ModifyRegionEvent{.regionId = ctxRegionId, .updatedRegion = updated});
                 ImGui::CloseCurrentPopup();
             }
+            if (!canGrowLeft)
+                disabledReq(Str::TlGrowNoRoom.c_str());
             ImGui::EndDisabled();
             ImGui::BeginDisabled(!canGrowRight);
             if (ImGui::MenuItem(Str::TlGrowRight.iconId(ICON_ARROW_RIGHT_TO_LINE, "tl_region_grow_right")) &&
@@ -1393,6 +1401,8 @@ void ScriptTimelineWindow::renderRegionBar(VideoPlayer &videoPlayer, const Scrip
                 eq.push(ModifyRegionEvent{.regionId = ctxRegionId, .updatedRegion = updated});
                 ImGui::CloseCurrentPopup();
             }
+            if (!canGrowRight)
+                disabledReq(Str::TlGrowNoRoom.c_str());
             ImGui::EndDisabled();
             ImGui::BeginDisabled(!canGrowLeft && !canGrowRight);
             if (ImGui::MenuItem(Str::TlGrowBoth.iconId(ICON_UNFOLD_HORIZONTAL, "tl_region_grow_both")) &&
@@ -1403,6 +1413,8 @@ void ScriptTimelineWindow::renderRegionBar(VideoPlayer &videoPlayer, const Scrip
                 eq.push(ModifyRegionEvent{.regionId = ctxRegionId, .updatedRegion = updated});
                 ImGui::CloseCurrentPopup();
             }
+            if (!canGrowLeft && !canGrowRight)
+                disabledReq(Str::TlGrowNoRoom.c_str());
             ImGui::EndDisabled();
         } else {
             constexpr double kDefaultDur = 5.0;
@@ -1425,6 +1437,8 @@ void ScriptTimelineWindow::renderRegionBar(VideoPlayer &videoPlayer, const Scrip
                                           .timelineDuration = duration});
                 ImGui::CloseCurrentPopup();
             }
+            if (!hasActiveAxis)
+                disabledReq(Str::TlNeedActiveAxis.c_str());
             if (ImGui::MenuItem(Str::TlAddRegionHere.iconId(ICON_PLUS, "add_region_here")) && hasActiveAxis) {
                 double s = std::max(0.0, ctxRegionClickTime - kDefaultDur * 0.5);
                 double e = std::min(duration, ctxRegionClickTime + kDefaultDur * 0.5);
@@ -1435,6 +1449,8 @@ void ScriptTimelineWindow::renderRegionBar(VideoPlayer &videoPlayer, const Scrip
                                           .timelineDuration = duration});
                 ImGui::CloseCurrentPopup();
             }
+            if (!hasActiveAxis)
+                disabledReq(Str::TlNeedActiveAxis.c_str());
             ImGui::EndDisabled();
 
             ImGui::Separator();
@@ -1464,6 +1480,8 @@ void ScriptTimelineWindow::renderRegionBar(VideoPlayer &videoPlayer, const Scrip
                                           .timelineDuration = duration});
                 ImGui::CloseCurrentPopup();
             }
+            if (!canAddOverSel)
+                disabledReq(hasActiveAxis ? Str::TlAddOverSelReq.c_str() : Str::TlNeedActiveAxis.c_str());
             ImGui::EndDisabled();
 
             const bool canAddEntireDur = hasActiveAxis && (bandCount == 0);
@@ -1476,6 +1494,8 @@ void ScriptTimelineWindow::renderRegionBar(VideoPlayer &videoPlayer, const Scrip
                                           .timelineDuration = duration});
                 ImGui::CloseCurrentPopup();
             }
+            if (!canAddEntireDur)
+                disabledReq(hasActiveAxis ? Str::TlAddDurationReq.c_str() : Str::TlNeedActiveAxis.c_str());
             ImGui::EndDisabled();
         }
         ImGui::EndPopup();
