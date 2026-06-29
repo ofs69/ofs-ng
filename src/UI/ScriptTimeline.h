@@ -4,7 +4,9 @@
 #include "Core/StandardAxis.h"
 #include "Format/AppSettings.h"
 #include "UI/BandBar.h"
+#include "Util/SmoothedFloat.h"
 #include "imgui.h"
+#include <array>
 #include <cstdint>
 #include <memory>
 
@@ -96,6 +98,10 @@ class ScriptTimelineWindow {
     void renderPlayhead(VideoPlayer &videoPlayer, const ImVec2 &pos, const ImVec2 &size, double offsetTime) const;
     void renderRegionBar(VideoPlayer &videoPlayer, const ScriptProject &project, EventQueue &eq, const ImVec2 &barMin,
                          const ImVec2 &barMax, const ImVec2 &curvePos, const ImVec2 &curveSize, double offsetTime);
+    // Advance the per-axis curve-emphasis ease once per frame, separate from rendering: each axis
+    // targets 1 while it is the active lead or an edit-group member, 0 otherwise. renderCurves only
+    // reads the eased weight (axisEmphasis_).
+    void stepAxisEmphasis(const ScriptProject &project);
 
     static constexpr float kMinPanelH = 40.f;
 
@@ -118,6 +124,14 @@ class ScriptTimelineWindow {
     // Region whose band color is mid-edit in the context menu. Only the first change of a picker
     // gesture snapshots undo, so dragging through the picker collapses into one undo step.
     int m_colorEditRegionId = -1;
+    // Per-axis eased highlight weights, advanced by stepAxisEmphasis, indexed by StandardAxis role.
+    // axisEmphasis_ (1 = active or edit-group member) fades the line's opacity/width/outline; axisActive_
+    // (1 = the single active lead only) fades the source dots — kept separate because grouped members are
+    // emphasized but, by design, draw no dots. emphasisPrimed_ snaps the first frame to its target so the
+    // timeline doesn't fade in on appearance.
+    std::array<SmoothedFloat, kStandardAxisCount> axisEmphasis_;
+    std::array<SmoothedFloat, kStandardAxisCount> axisActive_;
+    bool emphasisPrimed_ = false;
 };
 
 } // namespace ofs

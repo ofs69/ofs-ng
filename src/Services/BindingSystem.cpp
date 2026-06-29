@@ -656,12 +656,13 @@ void BindingSystem::onGamepadButtonUp(const GamepadButtonUpEvent &event) {
 void BindingSystem::tickAnalog(const std::array<float, SDL_GAMEPAD_AXIS_COUNT> &raw, bool padCaptured, float dt) {
     axisRaw_ = raw; // unsmoothed snapshot for modifier held-state (modifierHeld)
 
-    // Frame-rate-correct exponential low-pass: alpha = 1 - exp(-dt/tau). Smooths stick/trigger jitter
-    // before the deadzone test so a noisy idle stick can't flicker a hold on and off.
+    // Frame-rate-correct exponential low-pass (SmoothedFloat: alpha = 1 - exp(-dt/tau)). Smooths
+    // stick/trigger jitter before the deadzone test so a noisy idle stick can't flicker a hold on and off.
     const float tau = std::max(1e-3f, analogConfig_.smoothing);
-    const float alpha = 1.0f - std::exp(-dt / tau);
-    for (int a = 0; a < SDL_GAMEPAD_AXIS_COUNT; ++a)
-        axisSmoothed_[a] += (raw[a] - axisSmoothed_[a]) * alpha;
+    for (int a = 0; a < SDL_GAMEPAD_AXIS_COUNT; ++a) {
+        axisSmoothed_[a].setTarget(raw[a]);
+        axisSmoothed_[a].advance(dt, tau);
+    }
 
     // The rebind modal owns input while capturing (OfsApp handles axis capture from the raw samples);
     // ImGui gamepad-nav suppresses dispatch. Either way, end any analog holds so none ticks underneath.
@@ -678,7 +679,7 @@ void BindingSystem::tickAnalog(const std::array<float, SDL_GAMEPAD_AXIS_COUNT> &
 
         // Deflection in the bound direction, then a scaled deadzone so output ramps from 0 just past
         // the threshold (no jump at the edge). Triggers rest at 0, so their negative half never fires.
-        const float defl = pa->positive ? axisSmoothed_[pa->axis] : -axisSmoothed_[pa->axis];
+        const float defl = pa->positive ? axisSmoothed_[pa->axis].value() : -axisSmoothed_[pa->axis].value();
         const float mag = defl <= dz ? 0.0f : std::min((defl - dz) / (1.0f - dz), 1.0f);
 
         auto it = std::ranges::find_if(activeHolds_, [&](const ActiveHold &h) {

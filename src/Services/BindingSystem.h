@@ -2,6 +2,7 @@
 
 #include "Core/EventQueue.h"
 #include "Services/CommandRegistry.h"
+#include "Util/SmoothedFloat.h"
 #include <SDL3/SDL_gamepad.h>
 #include <SDL3/SDL_keycode.h>
 #include <array>
@@ -299,7 +300,7 @@ class BindingSystem {
     AnalogConfig analogConfig_;
     // Per-axis low-pass state for tickAnalog, indexed by SDL_GamepadAxis. Single active pad (last
     // opened); a multi-pad setup would need per-SDL_JoystickID state.
-    std::array<float, SDL_GAMEPAD_AXIS_COUNT> axisSmoothed_{};
+    std::array<SmoothedFloat, SDL_GAMEPAD_AXIS_COUNT> axisSmoothed_{};
     // Latest *raw* (unsmoothed) axis values, captured each tickAnalog. The analog *velocity* rides
     // axisSmoothed_, but a modifier's binary held-state must use the raw value — the smoothing time
     // constant (~0.5 s) would otherwise leave the modifier "on" for nearly a second after release.

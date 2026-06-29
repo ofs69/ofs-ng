@@ -399,37 +399,77 @@ constexpr double kToastLife = 3.0;      // total seconds a toast is visible
 constexpr double kToastLifeError = 6.0; // errors linger longer — more important and easier to miss
 constexpr int kMaxToasts = 3;
 
+// Toast panel layout, em-relative (× font size) so it tracks DPI. Shared by toastNaturalHeight and
+// renderOneToast so the up-front height matches the rendered panel exactly — change one, the other
+// follows, instead of two hand-synced copies.
+constexpr float kToastPadYEm = 0.2f;       // vertical WindowPadding above/below the row
+constexpr float kToastSideIndentEm = 0.6f; // left indent before the level glyph
+constexpr float kToastWrapMarginEm = 1.1f; // right gutter the wrapped text stops short of
+constexpr float kToastIconGap = 8.0f;      // gap between the level glyph and the message
+
+// Window-local x where the wrapped message stops; the height calc derives its wrap width from this.
+float toastWrapPosX(float width) {
+    return width - ImGui::GetFontSize() * kToastWrapMarginEm;
+}
+
 double toastLife(ofs::NotifyLevel level) {
     return level == ofs::NotifyLevel::Error ? kToastLifeError : kToastLife;
 }
 
-// One toast panel: accent bar + level glyph + wrapped text, faded by `alpha`. Returns true while
-// hovered so the caller can pause its timer.
-bool renderOneToast(ToastItem &item, float alpha) {
+// Font-relative toast width (tracks DPI); the wrap column, side indent, and height all follow from it.
+float toastWidth() {
+    return ImGui::GetFontSize() * 20.0f;
+}
+
+// Smoothstep ease for the toast glide — a clean in/out with no overshoot (per the no-spring request).
+float toastEase(float t) {
+    t = std::clamp(t, 0.0f, 1.0f);
+    return t * t * (3.0f - 2.0f * t);
+}
+
+// Natural (fully grown) height of a toast, computed up front so the stack can size itself to the
+// animated heights with no measure-then-place round trip. Uses the shared kToast* layout constants so
+// it stays in step with renderOneToast: vertical padding above/below one row of glyph + wrapped text.
+float toastNaturalHeight(const ToastItem &item, float width) {
+    const float fs = ImGui::GetFontSize();
+    const float padY = fs * kToastPadYEm;
+    const float iconW = ImGui::CalcTextSize(levelStyle(item.level).icon).x;
+    const float textStart = fs * kToastSideIndentEm + iconW + kToastIconGap;
+    const float wrapW = std::max(1.0f, toastWrapPosX(width) - textStart);
+    const float textH = ImGui::CalcTextSize(item.text.c_str(), nullptr, false, wrapW).y;
+    return 2.0f * padY + std::max(fs, textH);
+}
+
+// One toast panel: accent bar + level glyph + wrapped text, faded by `alpha`. Rendered at a fixed
+// `slotHeight` (the stack animates it) with content clipped, so the panel grows/shrinks smoothly
+// instead of the layout popping. Returns true while hovered so the caller can pause its timer.
+bool renderOneToast(ToastItem &item, float alpha, float slotHeight) {
     const LevelStyle ls = levelStyle(item.level);
-    // Font-relative width so the toast tracks DPI; the wrap column and side indent follow from it.
-    const float toastWidth = ImGui::GetFontSize() * 20.0f;
-    const float sideIndent = ImGui::GetFontSize() * 0.6f;
+    const float width = toastWidth();
+    const float sideIndent = ImGui::GetFontSize() * kToastSideIndentEm;
     ImGui::PushStyleVar(ImGuiStyleVar_Alpha, alpha);
     // Tight vertical inner padding so a one-line toast is a compact bar rather than a tall block; keep the
     // theme's horizontal padding. This replaces the old Dummy(0,1) top/bottom spacers.
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding,
-                        ImVec2(ImGui::GetStyle().WindowPadding.x, ImGui::GetFontSize() * 0.2f));
+                        ImVec2(ImGui::GetStyle().WindowPadding.x, ImGui::GetFontSize() * kToastPadYEm));
     ImGui::PushStyleColor(ImGuiCol_ChildBg, ofs::theme::GetColorU32(ImGuiCol_PopupBg));
-    ImGui::BeginChild(fmtScratch("##toast{}", static_cast<const void *>(&item)), ImVec2(toastWidth, 0.0f),
-                      ImGuiChildFlags_AutoResizeY | ImGuiChildFlags_Borders);
+    // NoScrollbar: the slot height is animated below the content's natural height while the toast grows
+    // and shrinks, so the overflow must clip silently, never sprout a scrollbar.
+    ImGui::BeginChild(fmtScratch("##toast{}", static_cast<const void *>(&item)), ImVec2(width, slotHeight),
+                      ImGuiChildFlags_Borders, ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse);
 
     ImDrawList *dl = ImGui::GetWindowDrawList();
     const ImVec2 mn = ImGui::GetWindowPos();
     const ImVec2 mx = mn + ImGui::GetWindowSize();
-    dl->AddRectFilled(mn, ImVec2(mn.x + 3.0f, mx.y), ls.color); // left accent stripe
+    // GetColorU32 applies the pushed style Alpha, so the draw-list accent stripe fades with the toast.
+    dl->AddRectFilled(mn, ImVec2(mn.x + 3.0f, mx.y), ImGui::GetColorU32(ls.color));
 
     ImGui::Indent(sideIndent);
     ImGui::PushStyleColor(ImGuiCol_Text, ls.color);
     ImGui::TextUnformatted(ls.icon);
     ImGui::PopStyleColor();
-    ImGui::SameLine(0.0f, 8.0f);
-    ImGui::PushTextWrapPos(toastWidth - ImGui::GetFontSize() * 1.1f);
+    ImGui::SameLine(0.0f, kToastIconGap);
+    ImGui::PushTextWrapPos(toastWrapPosX(width));
     ImGui::TextUnformatted(item.text.c_str());
     ImGui::PopTextWrapPos();
     ImGui::Unindent(sideIndent);
@@ -457,10 +497,15 @@ void renderToasts(NotificationState &state) {
         return;
 
     // Draw the newest kMaxToasts (a burst's overflow simply ages out without a toast — it isn't lost
-    // from the bell, which keeps Warning/Error independently).
+    // from the bell, which keeps Warning/Error independently). A smoothstep presence drives both the
+    // opacity and the animated slot height, so a toast glides up as it grows in and the stack glides
+    // down as one shrinks out — the layout never pops.
+    const float width = toastWidth();
+    const float spacing = ImGui::GetStyle().ItemSpacing.y;
     const int n = static_cast<int>(state.toasts.size());
     size_t shown[kMaxToasts];
     float alpha[kMaxToasts];
+    float slotH[kMaxToasts];
     int shownN = 0;
     for (int k = n - 1; k >= 0 && shownN < kMaxToasts; --k) {
         const ToastItem &item = state.toasts[static_cast<size_t>(k)];
@@ -471,19 +516,35 @@ void renderToasts(NotificationState &state) {
             a = static_cast<float>(age / kToastFade);
         else if (age > life - kToastFade)
             a = static_cast<float>((life - age) / kToastFade);
+        const float p = toastEase(a);
         shown[shownN] = static_cast<size_t>(k);
-        alpha[shownN] = a;
+        alpha[shownN] = p;
+        slotH[shownN] = toastNaturalHeight(item, width) * p;
         ++shownN;
     }
+
+    // Total animated height; skip toasts collapsed to ~nothing so their inter-toast spacing doesn't pop.
+    // Floored at 1px so the window still exists while every toast is mid-grow/-shrink (it's transparent
+    // and empty then) rather than blinking out and back.
+    float total = 0.0f;
+    int visible = 0;
+    for (int i = 0; i < shownN; ++i) {
+        if (slotH[i] < 1.0f)
+            continue;
+        total += slotH[i] + (visible > 0 ? spacing : 0.0f);
+        ++visible;
+    }
+    total = std::max(total, 1.0f);
 
     const ImGuiWindowFlags flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove |
                                    ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse |
                                    ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing |
-                                   ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoDocking |
-                                   ImGuiWindowFlags_AlwaysAutoResize;
-    // Bottom-right pinned just above the bell (and above the task stack, if any); grows up as toasts stack.
+                                   ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoDocking;
+    // Bottom-right pinned just above the bell (and above the task stack, if any); sized to the animated
+    // stack height each frame so it grows/shrinks smoothly as toasts come and go.
     ImGui::SetNextWindowPos(ImVec2(state.bellAnchorX, state.bellAnchorY - state.taskStackHeight - 6.0f),
                             ImGuiCond_Always, ImVec2(1.0f, 1.0f));
+    ImGui::SetNextWindowSize(ImVec2(width, total), ImGuiCond_Always);
     // Transparent, border-less shell — each toast paints its own panel + border; without the border
     // override the theme's WindowBorderSize would draw a second box around the whole stack.
     ImGui::PushStyleColor(ImGuiCol_WindowBg, 0);
@@ -492,11 +553,15 @@ void renderToasts(NotificationState &state) {
     if (ImGui::Begin("##toaststack", nullptr, flags)) {
         // Render oldest-first so the newest sits at the bottom, nearest the bell.
         for (int i = shownN - 1; i >= 0; --i) {
+            if (slotH[i] < 1.0f)
+                continue;
             ToastItem &item = state.toasts[shown[i]];
-            if (renderOneToast(item, alpha[i])) {
-                item.shownAt = now; // pause while hovered
+            if (renderOneToast(item, alpha[i], slotH[i])) {
+                // Pause at full presence while hovered (age held just past fade-in) — not reset to 0,
+                // which would collapse the height the presence now drives.
+                item.shownAt = now - kToastFade;
                 if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))
-                    item.shownAt = now - toastLife(item.level); // click dismisses
+                    item.shownAt = now - (toastLife(item.level) - kToastFade); // dismiss: glide out, don't snap
             }
         }
     }

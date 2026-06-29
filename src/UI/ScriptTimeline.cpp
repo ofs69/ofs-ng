@@ -41,6 +41,14 @@ static constexpr float kLodThreshSq = 32.0f;
 static constexpr float kDotR = 8.0f;
 static constexpr double kDotFadeStart = 10.0;
 static constexpr double kDotFadeEnd = 40.0;
+// Spring tuning for the curve-emphasis ease. zeta < 1 overshoots ("bounce back"). The emphasis weight
+// glides the line's opacity and turns its overshoot into a transient width pulse on activation (steady
+// width unchanged); the source dots get a poppier easeOutBack scale-in.
+static constexpr float kEmphasisTau = 0.09f;      // slow enough that the opacity glide reads as motion
+static constexpr float kEmphasisDamping = 0.5f;   // overshoot drives the activation width pulse
+static constexpr float kEmphasisWidthBump = 9.0f; // px of transient line-width pulse per unit overshoot
+static constexpr float kDotPopTau = 0.045f;
+static constexpr float kDotPopDamping = 0.5f; // poppier dot-scale overshoot
 
 static float easeOutExpo(float x) noexcept {
     return x >= 1.f ? 1.f : 1.f - powf(2, -10 * x);
@@ -444,21 +452,29 @@ void ScriptTimelineWindow::renderCurves(const ScriptProject &project, ImDrawList
         const auto &ax = project.axes[static_cast<size_t>(entry.role)];
         const auto &displayActions = ax.resolved ? ax.resolved->actions : ax.actions;
         bool isActive = entry.isActive;
-        // Grouped (non-lead) members get full opacity and a slightly thicker line than a plain
-        // visible reference axis. Dots render only on the active axis, so this line weight is the
-        // sole cue that a background curve belongs to the edit group.
-        bool isGroupedMember = entry.inEditSet && !isActive;
-        bool emphasized = isActive || isGroupedMember;
+        // Eased emphasis weight (0 = background, 1 = active/grouped), stepped per frame in
+        // stepAxisEmphasis. It fades the line's opacity/width/outline when the active axis or edit
+        // group changes; the heat-gradient and dot passes below still switch discretely on isActive,
+        // so a grouped member's emphasized line weight is the sole cue it belongs to the edit group.
+        const float e = axisEmphasis_[static_cast<size_t>(entry.role)].value();
+        const float aw = axisActive_[static_cast<size_t>(entry.role)].value();
 
+        // Emphasized axes (active or grouped) reach full opacity and the themed base width; a plain
+        // background reference fades toward backgroundAxisOpacity and 1px thinner. The contrast outline
+        // is a fixed 2px halo each side, so it tracks the line width automatically. The settle width is
+        // the e∈[0,1] interpolation; the spring's overshoot (e > 1, only on activation) becomes a
+        // transient width pulse on top, so the line visibly swells then relaxes back to base — the
+        // motion is in the transition, the resting width is unchanged. Floored at 1px so an undershoot
+        // on the way out can't invert the stroke.
         const float bgAxisOpacity = ofs::theme::getActive().backgroundAxisOpacity;
-        float lineOpacity = emphasized ? 1.0f : bgAxisOpacity;
-        // Emphasized axes (active or grouped) stroke at the themed base width; a plain background
-        // reference reads 1px thinner. The contrast outline is a fixed 2px halo each side, so it
-        // tracks the line width automatically.
-        float baseLineW = ofs::theme::GetStyleVar(AppVar_TimelineLineWidth);
-        float lineW = emphasized ? baseLineW : std::max(1.0f, baseLineW - 1.0f);
+        float lineOpacity = std::clamp(bgAxisOpacity + (1.0f - bgAxisOpacity) * e, 0.0f, 1.0f);
+        const float baseLineW = ofs::theme::GetStyleVar(AppVar_TimelineLineWidth);
+        const float bgLineW = std::max(1.0f, baseLineW - 1.0f);
+        const float settleW = bgLineW + (baseLineW - bgLineW) * std::clamp(e, 0.0f, 1.0f);
+        const float pulseW = std::max(0.0f, e - 1.0f) * kEmphasisWidthBump;
+        float lineW = std::max(1.0f, settleW + pulseW);
         float outlineW = lineW + 4.0f;
-        auto outlineAlpha = static_cast<ImU32>(emphasized ? 255 : static_cast<int>(255.f * bgAxisOpacity));
+        auto outlineAlpha = static_cast<ImU32>(255.f * lineOpacity);
 
         constexpr double skipAt = -1.0;
 
@@ -501,13 +517,19 @@ void ScriptTimelineWindow::renderCurves(const ScriptProject &project, ImDrawList
             }
 
             // Pass 4: dots from source actions (active axis only; grouped members read as their
-            // emphasized line, not dots). Hidden when points are toggled off.
-            if (project.timelineView.showPoints && isActive && !ax.actions.empty()) {
+            // emphasized line, not dots). Driven by the eased active weight (a spring): the dot radius
+            // scales with it, so when the active axis changes the dots pop in with an easeOutBack
+            // overshoot — briefly larger than full size, then settling — instead of appearing instantly.
+            // Alpha is a plain clamped fade (no overshoot past opaque). Hidden when points are toggled off.
+            const float dotScale = std::max(0.0f, aw);
+            if (project.timelineView.showPoints && dotScale > 0.01f && !ax.actions.empty()) {
                 auto fadeT = static_cast<float>(
                     std::clamp((viewState.visibleTime - kDotFadeStart) / (kDotFadeEnd - kDotFadeStart), 0.0, 1.0));
-                float dotAlpha = 1.0f - fadeT * fadeT;
+                float dotAlpha = (1.0f - fadeT * fadeT) * std::clamp(aw, 0.0f, 1.0f);
                 if (dotAlpha > 0.1f) {
                     auto alpha = static_cast<ImU32>(255.0f * dotAlpha);
+                    const float rOuter = kDotR * dotScale;
+                    const float rInner = kDotR * 0.7f * dotScale;
                     forEachVisibleDot(
                         project, ax.role, ax.actions, viewState.visibleTime, offsetTime, curveSize.x,
                         [&](const ScriptAxisAction &a) {
@@ -520,8 +542,8 @@ void ScriptTimelineWindow::renderCurves(const ScriptProject &project, ImDrawList
                                                                                      : AppCol_TimelinePoint) &
                                                     0x00FFFFFFU) |
                                                    (alpha << 24);
-                            drawList->AddCircleFilled(p, kDotR, outlineCol, 4);
-                            drawList->AddCircleFilled(p, kDotR * 0.7f, innerCol, 4);
+                            drawList->AddCircleFilled(p, rOuter, outlineCol, 4);
+                            drawList->AddCircleFilled(p, rInner, innerCol, 4);
                         });
                 }
             }
@@ -555,6 +577,25 @@ void ScriptTimelineWindow::renderCurves(const ScriptProject &project, ImDrawList
     drawList->AddRect(pos, pos + size, borderColor, 0.0f, 1.0f, 0);
 }
 
+void ScriptTimelineWindow::stepAxisEmphasis(const ScriptProject &project) {
+    const AxisRoles editSet = project.effectiveEditSet();
+    const float dt = ImGui::GetIO().DeltaTime;
+    for (size_t r = 0; r < kStandardAxisCount; ++r) {
+        const bool isActive = static_cast<StandardAxis>(r) == project.state.activeAxis;
+        const float emph = (isActive || editSet.test(r)) ? 1.0f : 0.0f;
+        const float act = isActive ? 1.0f : 0.0f;
+        if (!emphasisPrimed_) {
+            axisEmphasis_[r].snap(emph);
+            axisActive_[r].snap(act);
+        }
+        axisEmphasis_[r].setTarget(emph);
+        axisEmphasis_[r].advance(dt, kEmphasisTau, kEmphasisDamping);
+        axisActive_[r].setTarget(act);
+        axisActive_[r].advance(dt, kDotPopTau, kDotPopDamping);
+    }
+    emphasisPrimed_ = true;
+}
+
 void ScriptTimelineWindow::renderTimeline(const ScriptProject &project, EventQueue &eq, VideoPlayer &videoPlayer,
                                           WaveformRenderer &waveform, const ImVec2 &pos, const ImVec2 &size) {
     ImDrawList *drawList = ImGui::GetWindowDrawList();
@@ -580,6 +621,8 @@ void ScriptTimelineWindow::renderTimeline(const ScriptProject &project, EventQue
     // visible while it happens. hasGroup gates the strip's group bracket/fill.
     const AxisRoles editSet = project.effectiveEditSet();
     const bool hasGroup = project.state.axesGrouping.count() > 1;
+
+    stepAxisEmphasis(project); // advance the curve-emphasis ease once per frame, before any curve reads it
 
     std::array<AxisEntry, kStandardAxisCount> stripEntries{};
     int stripCount = 0;
