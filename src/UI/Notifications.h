@@ -3,6 +3,7 @@
 #include "Core/NotifyLevel.h"
 #include "Util/RingBuffer.h"
 #include <cstdint>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -37,19 +38,30 @@ struct TaskItem {
     bool hidden = false; // minimized into the bell: no floating panel, listed in the bell popup instead
 };
 
+// A persistent, actionable "update available" banner shown at the top of the bell popup. Unlike a toast
+// it never auto-expires and unlike a log entry it carries an action (open the release page); it sticks
+// until the user discards it. A single slot — a fresh check overwrites it, so repeated checks can't pile
+// up duplicates.
+struct UpdateBanner {
+    std::string version;    // release tag, e.g. "v1.2.0"
+    std::string releaseUrl; // release page to open in a browser (may be empty)
+};
+
 // Notification state, owned by the caller (OfsApp) — mirrors the CommandPaletteState pattern so the
-// renderers keep no global UI state. Three channels, by design:
+// renderers keep no global UI state. Four channels, by design:
 //   • toasts: transient, EVERY level, auto-expiring — pruned once shown and aged out.
 //   • log:    persistent bell history, WARNING/ERROR only (Info/Success are toast-only and not kept),
 //             backed by a fixed-capacity RingBuffer so it can't grow unbounded over a session.
 //   • tasks:  persistent in-flight background jobs, removed by their producer (never auto-expire).
+//   • update: a single persistent, actionable update banner, discarded by the user (never auto-expires).
 struct NotificationState {
     static constexpr size_t kMax = 100;
 
     ofs::RingBuffer<NotificationItem> log{kMax};
     std::vector<ToastItem> toasts;
     std::vector<TaskItem> tasks;
-    int unread = 0; // unseen bell-log entries (Warning/Error)
+    std::optional<UpdateBanner> update;
+    int unread = 0; // unseen bell-log entries (Warning/Error) plus a pending update banner
 
     // Published by renderFooterBar each frame so the separate end-of-frame renderToasts() pass can
     // anchor the stack above the bell without re-deriving the footer layout.
@@ -67,6 +79,12 @@ struct NotificationState {
             ++unread;
         }
         toasts.push_back({.level = level, .text = std::move(text)});
+    }
+
+    // Raise (or refresh) the persistent update banner and badge the bell so the user notices it once.
+    void setUpdate(std::string version, std::string releaseUrl) {
+        update = {.version = std::move(version), .releaseUrl = std::move(releaseUrl)};
+        ++unread;
     }
 
     void startTask(uint32_t id, std::string label, bool cancellable) {

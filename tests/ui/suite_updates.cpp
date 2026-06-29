@@ -60,6 +60,45 @@ void RegisterUpdatesTests(ImGuiTestEngine *e) {
         resetOverrides();
     };
 
+    // An available update raises a persistent bell banner that sticks until the user discards it (it is
+    // not a transient toast). The bell's discard button clears it.
+    IM_REGISTER_TEST(e, "updates", "available_sticks_in_bell")->TestFunc = [](ImGuiTestContext *ctx) {
+        auto &notif = *getTestState().notifications;
+        notif.clear();
+        notif.update.reset();
+        setUpdateCurrentVersionForTesting("v1.0.0");
+        setUpdateFetchOverrideForTesting([] {
+            return std::optional<std::string>(
+                R"({"tag_name":"v2.0.0","html_url":"https://example.test/r/v2.0.0","body":"Notes"})");
+        });
+
+        loadFixture(ctx);
+        getTestState().eventQueue->push(CheckForUpdatesEvent{.userInitiated = false});
+
+        bool banner = false;
+        for (int i = 0; i < 240 && !banner; ++i) {
+            ctx->Yield();
+            banner = notif.update.has_value();
+        }
+        IM_CHECK(banner);
+        IM_CHECK_STR_EQ(notif.update->version.c_str(), "v2.0.0");
+
+        // Still present after further frames — unlike a toast, it does not age out on its own.
+        ctx->Yield(10);
+        IM_CHECK(notif.update.has_value());
+
+        // Open the bell and discard it; the banner clears.
+        ctx->ItemClick("//##AppFooterBar/##bell");
+        ctx->Yield(2);
+        ctx->ItemClick("**/###bell_update_dismiss");
+        ctx->Yield(2);
+        IM_CHECK(!notif.update.has_value());
+
+        ctx->KeyPress(ImGuiKey_Escape); // leave no popup open for the next suite
+        ctx->Yield();
+        resetOverrides();
+    };
+
     // A check that can't reach a feed reports a warning toast on a user-initiated run, and no release link.
     IM_REGISTER_TEST(e, "updates", "failed_check_notifies")->TestFunc = [](ImGuiTestContext *ctx) {
         auto &notif = *getTestState().notifications;

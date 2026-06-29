@@ -361,6 +361,8 @@ bool OfsApp::init() {
     // "up to date" / failure toast so a command-palette run isn't silent. The UpdateChecker itself owns
     // the About-window status; these handlers add the transient toast on top.
     eventQueue.on<ofs::UpdateAvailableEvent>([this](const ofs::UpdateAvailableEvent &e) {
+        // The toast is a brief notice; the bell banner persists the actionable reminder until discarded.
+        notifications.setUpdate(e.version, e.releaseUrl);
         eventQueue.push(
             ofs::NotifyEvent{.level = ofs::NotifyLevel::Info, .message = Str::AboutUpdateAvailable.fmt(e.version)});
     });

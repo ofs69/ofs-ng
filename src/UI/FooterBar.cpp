@@ -13,6 +13,7 @@
 #include "Util/TimeUtil.h"
 #include "imgui.h"
 #include "imgui_internal.h" // BeginViewportSideBar — not part of the public imgui.h API.
+#include <SDL3/SDL_misc.h>  // SDL_OpenURL — bell update-banner "Open Release Page"
 
 #include <algorithm>
 #include <cfloat>
@@ -233,7 +234,8 @@ const char *kNotifPopupId = "##notifications";
 // Renders the bell glyph in the far-right of the bar plus its unread badge and a running-task spinner,
 // and the popup (opening upward from the bell). Mutates `state`: clicking the bell opens the popup and
 // clears `unread`; "Clear all" empties the log; the popup's task rows toggle TaskItem::hidden and push
-// CancelTaskEvent. Returns nothing — the bell owns its own popup, like the palette.
+// CancelTaskEvent; the update banner's discard button clears `state.update`. Returns nothing — the bell
+// owns its own popup, like the palette.
 void renderBell(NotificationState &state, EventQueue &eq, float lineH) {
     const char *bell = ICON_BELL;
     const float pad = 4.0f;
@@ -259,7 +261,7 @@ void renderBell(NotificationState &state, EventQueue &eq, float lineH) {
 
     ImDrawList *dl = ImGui::GetWindowDrawList();
     const float bellX = tl.x + pad;
-    const bool active = state.unread > 0 || hiddenTasks > 0 || hovered;
+    const bool active = state.unread > 0 || hiddenTasks > 0 || state.update.has_value() || hovered;
     const ImU32 bellCol =
         active ? ofs::theme::GetColorU32(ImGuiCol_Text) : ofs::theme::GetColorU32(ImGuiCol_TextDisabled);
     dl->AddText(ImVec2(bellX, tl.y), bellCol, bell);
@@ -304,6 +306,24 @@ void renderBell(NotificationState &state, EventQueue &eq, float lineH) {
 
     state.panelOpen = true; // suppress toasts while the full list is open
     state.unread = 0;       // stay cleared while the panel is open
+
+    // Persistent update banner: an actionable reminder that sits above everything and stays until the user
+    // opens the release page or discards it (its own ✕ — "Clear all" only empties the log, like the tasks).
+    if (state.update) {
+        ImGui::SeparatorText(Str::AboutUpdates);
+        ImGui::TextWrapped("%s", Str::AboutUpdateAvailable.fmt(state.update->version));
+        if (!state.update->releaseUrl.empty())
+            if (ImGui::SmallButton(Str::AboutOpenRelease.id("bell_open_release")))
+                SDL_OpenURL(state.update->releaseUrl.c_str());
+        const float padX = ImGui::GetStyle().FramePadding.x;
+        const float dismissW = ImGui::CalcTextSize(ICON_X).x + padX * 2.0f;
+        ImGui::SameLine();
+        ImGui::SetCursorPosX(ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - dismissW);
+        if (ImGui::SmallButton(ICON_X "###bell_update_dismiss"))
+            state.update.reset();
+        ImGui::SetItemTooltip("%s", Str::FtDismissUpdate.c_str());
+        ImGui::Spacing();
+    }
 
     // Minimized running tasks sit at the top of the popup: each shows its progress, a Show button to pop
     // it back out as a floating panel, and a Cancel button. They live above the log, not in it.

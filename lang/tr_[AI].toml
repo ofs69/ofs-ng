@@ -3022,6 +3022,10 @@ translation = "Tümünü temizle"
 english     = "No notifications"
 translation = "Bildirim yok"
 
+[FtDismissUpdate]
+english     = "Dismiss"
+translation = "Kapat"
+
 [FtIdleTip]
 english     = "Idle — UI throttled to save power"
 translation = "Boşta — güç tasarrufu için UI kısıtlandı"

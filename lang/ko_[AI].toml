@@ -3022,6 +3022,10 @@ translation = "모두 지우기"
 english     = "No notifications"
 translation = "알림 없음"
 
+[FtDismissUpdate]
+english     = "Dismiss"
+translation = "닫기"
+
 [FtIdleTip]
 english     = "Idle — UI throttled to save power"
 translation = "유휴 상태 — 전력 절약을 위해 UI 제한 중"

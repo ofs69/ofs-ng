@@ -3190,6 +3190,10 @@ description = "Footer bell popup — button that empties the notification log."
 english     = "No notifications"
 description = "Footer bell popup — shown when the log is empty."
 
+[FtDismissUpdate]
+english     = "Dismiss"
+description = "Footer bell popup — tooltip on the button that discards the persistent 'update available' banner."
+
 [FtIdleTip]
 english     = "Idle — UI throttled to save power"
 description = "Footer app-status tooltip when the render loop is idle-throttled."

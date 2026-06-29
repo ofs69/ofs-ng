@@ -3022,6 +3022,10 @@ translation = "すべてクリア"
 english     = "No notifications"
 translation = "通知はありません"
 
+[FtDismissUpdate]
+english     = "Dismiss"
+translation = "閉じる"
+
 [FtIdleTip]
 english     = "Idle — UI throttled to save power"
 translation = "アイドル — 省電力のため UI を抑制中"

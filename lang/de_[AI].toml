@@ -3022,6 +3022,10 @@ translation = "Alle löschen"
 english     = "No notifications"
 translation = "Keine Benachrichtigungen"
 
+[FtDismissUpdate]
+english     = "Dismiss"
+translation = "Verwerfen"
+
 [FtIdleTip]
 english     = "Idle — UI throttled to save power"
 translation = "Leerlauf — UI gedrosselt, um Energie zu sparen"
