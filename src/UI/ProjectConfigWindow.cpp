@@ -382,12 +382,22 @@ void ProjectConfigWindow::renderMetadataTab(const ScriptProject &project, EventQ
     }
     ImGui::SameLine();
     if (ImGui::Button(deleteLbl, {deleteW, 0.f})) {
-        eq.push(ModifyEvent<AppSettings>{[idx = selectedPresetIdx](AppSettings &s) {
-            if (idx >= 0 && idx < static_cast<int>(s.metadataPresets.size()))
-                s.metadataPresets.erase(s.metadataPresets.begin() + idx);
-        }});
-        selectedPresetIdx = -1;
-        newPresetName.clear();
+        const int delIdx = selectedPresetIdx;
+        confirmAsync(eq,
+                     {.title = Str::PcfPresetDeleteConfirmTitle.c_str(),
+                      .message = Str::PcfPresetDeleteConfirmBody.fmt(presets[delIdx].name.c_str()),
+                      .buttons = {Str::PcfDelete.c_str(), Str::AppCancel.c_str()},
+                      .severity = ofs::ModalSeverity::Warning},
+                     [this, eqp = &eq, delIdx](int idx) {
+                         if (idx != 0)
+                             return;
+                         eqp->push(ModifyEvent<AppSettings>{[delIdx](AppSettings &s) {
+                             if (delIdx >= 0 && delIdx < static_cast<int>(s.metadataPresets.size()))
+                                 s.metadataPresets.erase(s.metadataPresets.begin() + delIdx);
+                         }});
+                         selectedPresetIdx = -1;
+                         newPresetName.clear();
+                     });
     }
     ImGui::EndDisabled();
 

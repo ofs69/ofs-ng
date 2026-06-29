@@ -6,6 +6,7 @@
 #include "Format/BackupArchive.h"
 #include "Localization/Translator.h"
 #include "UI/Icons.h"
+#include "UI/Modals.h"           // confirmAsync
 #include "Util/FrameAllocator.h" // fmtScratch
 #include "Util/PathUtil.h"
 
@@ -79,8 +80,17 @@ void BackupRestoreWindow::render(bool &open, const ScriptProject &project, Event
     const bool hasSel = selected_ >= 0 && selected_ < static_cast<int>(entries_.size());
     ImGui::BeginDisabled(!hasSel);
     if (ImGui::Button(Str::BackupRestoreRestore.id("backup_do_restore"))) {
-        eq.push(RestoreBackupRequestEvent{ofs::util::toUtf8(entries_[selected_].path)});
-        open = false;
+        confirmAsync(eq,
+                     {.title = Str::BackupRestoreConfirmTitle.c_str(),
+                      .message = Str::BackupRestoreConfirmBody.c_str(),
+                      .buttons = {Str::BackupRestoreRestore.c_str(), Str::AppCancel.c_str()},
+                      .severity = ofs::ModalSeverity::Warning},
+                     [eqp = &eq, backupPath = ofs::util::toUtf8(entries_[selected_].path), openp = &open](int idx) {
+                         if (idx != 0)
+                             return;
+                         eqp->push(RestoreBackupRequestEvent{backupPath});
+                         *openp = false;
+                     });
     }
     ImGui::EndDisabled();
     ImGui::SameLine();

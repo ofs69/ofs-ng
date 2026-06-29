@@ -168,6 +168,14 @@ translation = "Klasörü Aç"
 english     = "Clear"
 translation = "Temizle"
 
+[PrefIntraClearConfirmTitle]
+english     = "Clear Output Folder?"
+translation = "Çıkış Klasörünü Temizle?"
+
+[PrefIntraClearConfirmBody]
+english     = "Clear the optimized-video output folder? Optimization stays off until you choose a folder again."
+translation = "Optimize edilmiş video çıkış klasörü temizlensin mi? Yeni bir klasör seçene kadar optimizasyon devre dışı kalır."
+
 [PrefIntraOutputDirHint]
 english     = "All optimized videos are written here. You manage this folder yourself — the app never deletes its contents."
 translation = "Tüm optimize edilmiş videolar buraya yazılır. Bu klasörü kendiniz yönetirsiniz — uygulama içeriğini hiçbir zaman silmez."
@@ -488,6 +496,14 @@ translation = "Boyut"
 english     = "Restore"
 translation = "Geri Yükle"
 
+[BackupRestoreConfirmTitle]
+english     = "Restore Backup?"
+translation = "Yedek Geri Yüklensin Mi?"
+
+[BackupRestoreConfirmBody]
+english     = "Replace the current project with this backup? Changes made since the backup will be lost."
+translation = "Mevcut proje bu yedekle değiştirilsin mi? Yedekten bu yana yapılan değişiklikler kaybolacak."
+
 [BackupRestoreRefresh]
 english     = "Refresh"
 translation = "Yenile"
@@ -639,6 +655,22 @@ translation = "Tema \"{0}\" içe aktarıldı."
 [PrefThemeImportFailed]
 english     = "Failed to import theme."
 translation = "Tema içe aktarılamadı."
+
+[PrefThemeResetConfirmTitle]
+english     = "Reset Theme?"
+translation = "Tema Sıfırlansın Mı?"
+
+[PrefThemeResetConfirmBody]
+english     = "Reset all colors and variables of the active theme to their defaults? This can't be undone."
+translation = "Aktif temanın tüm renklerini ve değişkenlerini varsayılanlarına sıfırla? Bu işlem geri alınamaz."
+
+[PrefThemeDeleteConfirmTitle]
+english     = "Delete Theme?"
+translation = "Tema Silinsin Mi?"
+
+[PrefThemeDeleteConfirmBody]
+english     = "Permanently delete the theme \"{0}\"? This can't be undone."
+translation = "\"{0}\" teması kalıcı olarak silinsin mi? Bu işlem geri alınamaz."
 
 # --- Theme tab: search + section headers ---
 
@@ -871,6 +903,14 @@ translation = "Yükle"
 [PcfDelete]
 english     = "Delete"
 translation = "Sil"
+
+[PcfPresetDeleteConfirmTitle]
+english     = "Delete Preset?"
+translation = "Ön Ayar Silinsin Mi?"
+
+[PcfPresetDeleteConfirmBody]
+english     = "Delete the metadata preset \"{0}\"?"
+translation = "\"{0}\" meta veri ön ayarı silinsin mi?"
 
 [PcfPresetLoaded]
 english     = "Preset \"{0}\" loaded."
@@ -2596,6 +2636,18 @@ translation = "Son Projeler"
 [WelClearRecentTip]
 english     = "Clear the recent-projects list"
 translation = "Son projeler listesini temizle"
+
+[WelClearRecentConfirmTitle]
+english     = "Clear Recent Projects?"
+translation = "Son Projeler Temizlensin Mi?"
+
+[WelClearRecentConfirmBody]
+english     = "Remove all entries from the recent-projects list? This won't delete any files."
+translation = "Son projeler listesindeki tüm girişler kaldırılsın mı? Bu işlem hiçbir dosyayı silmez."
+
+[WelClearRecentConfirmBtn]
+english     = "Clear List"
+translation = "Listeyi Temizle"
 
 [WelNoRecent]
 english     = "No recent projects"

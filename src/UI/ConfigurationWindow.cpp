@@ -355,7 +355,16 @@ void ConfigurationWindow::renderApplicationTab(EventQueue &eq) {
                 ofs::util::openInFileBrowser(ofs::util::fromUtf8(dir));
             ImGui::SameLine();
             if (ImGui::Button(clearLbl))
-                eq.push(ModifyEvent<AppSettings>{[](AppSettings &s) { s.intraOutputDir.clear(); }});
+                confirmAsync(eq,
+                             {.title = Str::PrefIntraClearConfirmTitle.c_str(),
+                              .message = Str::PrefIntraClearConfirmBody.c_str(),
+                              .buttons = {Str::PrefIntraClear.c_str(), Str::AppCancel.c_str()},
+                              .severity = ofs::ModalSeverity::Warning},
+                             [eqp = &eq](int idx) {
+                                 if (idx == 0)
+                                     eqp->push(
+                                         ModifyEvent<AppSettings>{[](AppSettings &s) { s.intraOutputDir.clear(); }});
+                             });
         }
         ImGui::SameLine();
         ofs::ui::helpMarker(Str::PrefIntraOutputDirHint.c_str());
@@ -973,8 +982,19 @@ void ConfigurationWindow::renderThemeTab(const ScriptProject &project, EventQueu
             ofs::util::openInFileBrowser(ofs::util::getPrefPath() / "themes");
         ImGui::SameLine();
         if (ImGui::Button(resetLbl)) {
-            t = t.isDark ? ofs::theme::defaultDark() : ofs::theme::defaultLight();
-            applyAndSave();
+            confirmAsync(eq,
+                         {.title = Str::PrefThemeResetConfirmTitle.c_str(),
+                          .message = Str::PrefThemeResetConfirmBody.c_str(),
+                          .buttons = {Str::PrefResetToDefaults.c_str(), Str::AppCancel.c_str()},
+                          .severity = ofs::ModalSeverity::Warning},
+                         [](int idx) {
+                             if (idx != 0)
+                                 return;
+                             ofs::theme::Theme &at = ofs::theme::getActive();
+                             at = at.isDark ? ofs::theme::defaultDark() : ofs::theme::defaultLight();
+                             ofs::theme::apply(at);
+                             ofs::theme::save();
+                         });
         }
         if (activeShipped) {
             ImGui::SameLine();
@@ -1006,9 +1026,22 @@ void ConfigurationWindow::renderThemeTab(const ScriptProject &project, EventQueu
         ImGui::SameLine();
         ImGui::BeginDisabled(activeShipped);
         if (ImGui::Button(Str::PrefDelete.iconId(ICON_TRASH, "theme_delete"), {halfW, 0.f})) {
-            ofs::theme::remove(appSettings.activeTheme);
-            availableThemes = ofs::theme::list();
-            switchTo("Dark");
+            confirmAsync(eq,
+                         {.title = Str::PrefThemeDeleteConfirmTitle.c_str(),
+                          .message = Str::PrefThemeDeleteConfirmBody.fmt(appSettings.activeTheme.c_str()),
+                          .buttons = {Str::PrefDelete.c_str(), Str::AppCancel.c_str()},
+                          .severity = ofs::ModalSeverity::Warning},
+                         [this, eqp = &eq](int idx) {
+                             if (idx != 0)
+                                 return;
+                             ofs::theme::remove(appSettings.activeTheme);
+                             availableThemes = ofs::theme::list();
+                             ofs::theme::Theme loaded;
+                             if (ofs::theme::load("Dark", &loaded)) {
+                                 eqp->push(ModifyEvent<AppSettings>{[](AppSettings &s) { s.activeTheme = "Dark"; }});
+                                 ofs::theme::apply(loaded);
+                             }
+                         });
         }
         ImGui::EndDisabled();
 

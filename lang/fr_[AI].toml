@@ -168,6 +168,14 @@ translation = "Ouvrir le dossier"
 english     = "Clear"
 translation = "Effacer"
 
+[PrefIntraClearConfirmTitle]
+english     = "Clear Output Folder?"
+translation = "Vider le dossier de sortie ?"
+
+[PrefIntraClearConfirmBody]
+english     = "Clear the optimized-video output folder? Optimization stays off until you choose a folder again."
+translation = "Vider le dossier de sortie des vidéos optimisées ? L'optimisation reste désactivée jusqu'à ce que vous choisissiez à nouveau un dossier."
+
 [PrefIntraOutputDirHint]
 english     = "All optimized videos are written here. You manage this folder yourself — the app never deletes its contents."
 translation = "Toutes les vidéos optimisées sont enregistrées ici. Vous gérez ce dossier vous-même — l'application n'en supprime jamais le contenu."
@@ -488,6 +496,14 @@ translation = "Taille"
 english     = "Restore"
 translation = "Restaurer"
 
+[BackupRestoreConfirmTitle]
+english     = "Restore Backup?"
+translation = "Restaurer la sauvegarde ?"
+
+[BackupRestoreConfirmBody]
+english     = "Replace the current project with this backup? Changes made since the backup will be lost."
+translation = "Remplacer le projet actuel par cette sauvegarde ? Les modifications effectuées depuis la sauvegarde seront perdues."
+
 [BackupRestoreRefresh]
 english     = "Refresh"
 translation = "Actualiser"
@@ -639,6 +655,22 @@ translation = "Thème « {0} » importé."
 [PrefThemeImportFailed]
 english     = "Failed to import theme."
 translation = "Échec de l'importation du thème."
+
+[PrefThemeResetConfirmTitle]
+english     = "Reset Theme?"
+translation = "Réinitialiser le thème ?"
+
+[PrefThemeResetConfirmBody]
+english     = "Reset all colors and variables of the active theme to their defaults? This can't be undone."
+translation = "Réinitialiser toutes les couleurs et variables du thème actif à leurs valeurs par défaut ? Cette action est irréversible."
+
+[PrefThemeDeleteConfirmTitle]
+english     = "Delete Theme?"
+translation = "Supprimer le thème ?"
+
+[PrefThemeDeleteConfirmBody]
+english     = "Permanently delete the theme \"{0}\"? This can't be undone."
+translation = "Supprimer définitivement le thème \"{0}\" ? Cette action est irréversible."
 
 # --- Theme tab: search + section headers ---
 
@@ -871,6 +903,14 @@ translation = "Charger"
 [PcfDelete]
 english     = "Delete"
 translation = "Supprimer"
+
+[PcfPresetDeleteConfirmTitle]
+english     = "Delete Preset?"
+translation = "Supprimer le préréglage ?"
+
+[PcfPresetDeleteConfirmBody]
+english     = "Delete the metadata preset \"{0}\"?"
+translation = "Supprimer le préréglage de métadonnées \"{0}\" ?"
 
 [PcfPresetLoaded]
 english     = "Preset \"{0}\" loaded."
@@ -2596,6 +2636,18 @@ translation = "Projets récents"
 [WelClearRecentTip]
 english     = "Clear the recent-projects list"
 translation = "Effacer la liste des projets récents"
+
+[WelClearRecentConfirmTitle]
+english     = "Clear Recent Projects?"
+translation = "Effacer les projets récents ?"
+
+[WelClearRecentConfirmBody]
+english     = "Remove all entries from the recent-projects list? This won't delete any files."
+translation = "Supprimer toutes les entrées de la liste des projets récents ? Aucun fichier ne sera supprimé."
+
+[WelClearRecentConfirmBtn]
+english     = "Clear List"
+translation = "Effacer la liste"
 
 [WelNoRecent]
 english     = "No recent projects"

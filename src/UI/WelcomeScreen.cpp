@@ -8,6 +8,7 @@
 #include "UI/FogBackground.h"
 #include "UI/Icons.h"
 #include "UI/ImGuiHelpers.h"     // buttonW
+#include "UI/Modals.h"           // confirmAsync
 #include "UI/Theme.h"            // AppCol_Warning, getActive
 #include "Util/FrameAllocator.h" // fmtScratch
 #include "Util/Version.h"        // versionTitle (shared with the OS window title)
@@ -113,7 +114,15 @@ void WelcomeScreen::render(EventQueue &eq, const AppSettings &settings) {
         const float clearW = ImGui::CalcTextSize(ICON_TRASH).x + ImGui::GetStyle().FramePadding.x * 2.0f;
         ImGui::SameLine(startX + blockW - clearW);
         if (ImGui::SmallButton(ICON_TRASH "###welcome_clear_recent"))
-            eq.push(ClearRecentProjectsEvent{});
+            confirmAsync(eq,
+                         {.title = Str::WelClearRecentConfirmTitle.c_str(),
+                          .message = Str::WelClearRecentConfirmBody.c_str(),
+                          .buttons = {Str::WelClearRecentConfirmBtn.c_str(), Str::AppCancel.c_str()},
+                          .severity = ofs::ModalSeverity::Warning},
+                         [eqp = &eq](int idx) {
+                             if (idx == 0)
+                                 eqp->push(ClearRecentProjectsEvent{});
+                         });
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("%s", Str::WelClearRecentTip.c_str());
     }

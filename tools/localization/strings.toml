@@ -172,6 +172,14 @@ description = "Preferences › Application › Optimized Video: button that open
 english     = "Clear"
 description = "Preferences › Application › Optimized Video: button that clears the chosen output folder, disabling optimization again."
 
+[PrefIntraClearConfirmTitle]
+english     = "Clear Output Folder?"
+description = "Preferences › Application › Optimized Video: title of the confirm dialog raised by the Clear button."
+
+[PrefIntraClearConfirmBody]
+english     = "Clear the optimized-video output folder? Optimization stays off until you choose a folder again."
+description = "Preferences › Application › Optimized Video: body of the confirm dialog raised by the Clear button."
+
 [PrefIntraOutputDirHint]
 english     = "All optimized videos are written here. You manage this folder yourself — the app never deletes its contents."
 description = "Preferences › Application › Optimized Video: help-marker tooltip on the output-folder row explaining the folder is shared and user-managed."
@@ -530,6 +538,14 @@ description = "Restore-from-Backup window: table column header for a backup file
 english     = "Restore"
 description = "Restore-from-Backup window: button that loads the selected backup into the project."
 
+[BackupRestoreConfirmTitle]
+english     = "Restore Backup?"
+description = "Restore-from-Backup window: title of the confirm dialog raised by the Restore button."
+
+[BackupRestoreConfirmBody]
+english     = "Replace the current project with this backup? Changes made since the backup will be lost."
+description = "Restore-from-Backup window: body of the confirm dialog raised by the Restore button."
+
 [BackupRestoreRefresh]
 english     = "Refresh"
 description = "Restore-from-Backup window: button that rescans the backup folder for new files."
@@ -693,6 +709,25 @@ placeholders = [
 [PrefThemeImportFailed]
 english     = "Failed to import theme."
 description = "Notification when importing a theme from a file fails."
+
+[PrefThemeResetConfirmTitle]
+english     = "Reset Theme?"
+description = "Preferences › Theme: title of the confirm dialog raised by the Reset-to-Defaults button."
+
+[PrefThemeResetConfirmBody]
+english     = "Reset all colors and variables of the active theme to their defaults? This can't be undone."
+description = "Preferences › Theme: body of the confirm dialog raised by the Reset-to-Defaults button."
+
+[PrefThemeDeleteConfirmTitle]
+english     = "Delete Theme?"
+description = "Preferences › Theme: title of the confirm dialog raised by the Delete button."
+
+[PrefThemeDeleteConfirmBody]
+english      = "Permanently delete the theme \"{0}\"? This can't be undone."
+description  = "Preferences › Theme: body of the confirm dialog raised by the Delete button."
+placeholders = [
+    "{0} = theme name",
+]
 
 # --- Theme tab: search + section headers ---
 
@@ -928,6 +963,17 @@ description = "Project > Metadata: button that loads the selected preset into th
 [PcfDelete]
 english     = "Delete"
 description = "Project > Metadata: button that deletes the selected preset."
+
+[PcfPresetDeleteConfirmTitle]
+english     = "Delete Preset?"
+description = "Project > Metadata: title of the confirm dialog raised by the preset Delete button."
+
+[PcfPresetDeleteConfirmBody]
+english      = "Delete the metadata preset \"{0}\"?"
+description  = "Project > Metadata: body of the confirm dialog raised by the preset Delete button."
+placeholders = [
+    "{0} = preset name",
+]
 
 [PcfPresetLoaded]
 english      = "Preset \"{0}\" loaded."
@@ -2742,6 +2788,18 @@ description = "Welcome screen — heading above the recently-opened project list
 [WelClearRecentTip]
 english     = "Clear the recent-projects list"
 description = "Welcome screen — tooltip on the trash button that empties the recent list."
+
+[WelClearRecentConfirmTitle]
+english     = "Clear Recent Projects?"
+description = "Welcome screen — title of the confirm dialog raised by the clear-recents trash button."
+
+[WelClearRecentConfirmBody]
+english     = "Remove all entries from the recent-projects list? This won't delete any files."
+description = "Welcome screen — body of the confirm dialog raised by the clear-recents trash button."
+
+[WelClearRecentConfirmBtn]
+english     = "Clear List"
+description = "Welcome screen — confirm button of the clear-recents dialog."
 
 [WelNoRecent]
 english     = "No recent projects"

@@ -168,6 +168,14 @@ translation = "開啟資料夾"
 english     = "Clear"
 translation = "清除"
 
+[PrefIntraClearConfirmTitle]
+english     = "Clear Output Folder?"
+translation = "清除輸出資料夾？"
+
+[PrefIntraClearConfirmBody]
+english     = "Clear the optimized-video output folder? Optimization stays off until you choose a folder again."
+translation = "清除最佳化影片輸出資料夾？在您重新選擇資料夾前，最佳化功能將保持關閉。"
+
 [PrefIntraOutputDirHint]
 english     = "All optimized videos are written here. You manage this folder yourself — the app never deletes its contents."
 translation = "所有最佳化影片都寫入此處。此資料夾由您自行管理 — 應用程式不會刪除其中的內容。"
@@ -488,6 +496,14 @@ translation = "大小"
 english     = "Restore"
 translation = "還原"
 
+[BackupRestoreConfirmTitle]
+english     = "Restore Backup?"
+translation = "還原備份？"
+
+[BackupRestoreConfirmBody]
+english     = "Replace the current project with this backup? Changes made since the backup will be lost."
+translation = "以此備份取代目前的專案？備份後所做的變更將會遺失。"
+
 [BackupRestoreRefresh]
 english     = "Refresh"
 translation = "重新整理"
@@ -639,6 +655,22 @@ translation = "佈景主題「{0}」已匯入。"
 [PrefThemeImportFailed]
 english     = "Failed to import theme."
 translation = "匯入佈景主題失敗。"
+
+[PrefThemeResetConfirmTitle]
+english     = "Reset Theme?"
+translation = "重設佈景主題？"
+
+[PrefThemeResetConfirmBody]
+english     = "Reset all colors and variables of the active theme to their defaults? This can't be undone."
+translation = "將目前佈景主題的所有顏色與變數重設為預設值？此操作無法復原。"
+
+[PrefThemeDeleteConfirmTitle]
+english     = "Delete Theme?"
+translation = "刪除佈景主題？"
+
+[PrefThemeDeleteConfirmBody]
+english     = "Permanently delete the theme \"{0}\"? This can't be undone."
+translation = "永久刪除佈景主題 \"{0}\"？此操作無法復原。"
 
 # --- Theme tab: search + section headers ---
 
@@ -871,6 +903,14 @@ translation = "載入"
 [PcfDelete]
 english     = "Delete"
 translation = "刪除"
+
+[PcfPresetDeleteConfirmTitle]
+english     = "Delete Preset?"
+translation = "刪除預設值？"
+
+[PcfPresetDeleteConfirmBody]
+english     = "Delete the metadata preset \"{0}\"?"
+translation = "刪除中繼資料預設值 \"{0}\"？"
 
 [PcfPresetLoaded]
 english     = "Preset \"{0}\" loaded."
@@ -2596,6 +2636,18 @@ translation = "最近的專案"
 [WelClearRecentTip]
 english     = "Clear the recent-projects list"
 translation = "清除最近的專案清單"
+
+[WelClearRecentConfirmTitle]
+english     = "Clear Recent Projects?"
+translation = "清除最近的專案？"
+
+[WelClearRecentConfirmBody]
+english     = "Remove all entries from the recent-projects list? This won't delete any files."
+translation = "從最近使用的專案清單中移除所有項目？此操作不會刪除任何檔案。"
+
+[WelClearRecentConfirmBtn]
+english     = "Clear List"
+translation = "清除清單"
 
 [WelNoRecent]
 english     = "No recent projects"

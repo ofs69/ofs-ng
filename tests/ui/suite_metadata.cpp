@@ -117,6 +117,10 @@ void RegisterMetadataTests(ImGuiTestEngine *e) {
         IM_CHECK_EQ(proj.metadata.performers.size(), static_cast<size_t>(2));
 
         ctx->ItemClick("**/preset_delete"); // don't leak the preset into later runs
+        ctx->Yield(2);                      // let the confirm modal open
+        ctx->SetRef("//$FOCUSED");
+        ctx->ItemClick("**/###modalbtn0"); // confirm the delete
+        ctx->SetRef(kWin);
         ctx->Yield(2);
         ctx->WindowClose(kWin);
     };
@@ -255,6 +259,10 @@ void RegisterMetadataTests(ImGuiTestEngine *e) {
         IM_CHECK_EQ(proj.metadata.customFields[0].value.value("a", 0), 1);
 
         ctx->ItemClick("**/preset_delete"); // don't leak the preset into later runs
+        ctx->Yield(2);                      // let the confirm modal open
+        ctx->SetRef("//$FOCUSED");
+        ctx->ItemClick("**/###modalbtn0"); // confirm the delete
+        ctx->SetRef(kWin);
         ctx->Yield(2);
         ctx->WindowClose(kWin);
     };

@@ -168,6 +168,14 @@ translation = "Ordner öffnen"
 english     = "Clear"
 translation = "Löschen"
 
+[PrefIntraClearConfirmTitle]
+english     = "Clear Output Folder?"
+translation = "Ausgabeordner leeren?"
+
+[PrefIntraClearConfirmBody]
+english     = "Clear the optimized-video output folder? Optimization stays off until you choose a folder again."
+translation = "Den Ausgabeordner für optimierte Videos leeren? Die Optimierung bleibt deaktiviert, bis Sie erneut einen Ordner auswählen."
+
 [PrefIntraOutputDirHint]
 english     = "All optimized videos are written here. You manage this folder yourself — the app never deletes its contents."
 translation = "Alle optimierten Videos werden hier gespeichert. Sie verwalten diesen Ordner selbst — die App löscht dessen Inhalte niemals."
@@ -488,6 +496,14 @@ translation = "Größe"
 english     = "Restore"
 translation = "Wiederherstellen"
 
+[BackupRestoreConfirmTitle]
+english     = "Restore Backup?"
+translation = "Sicherung wiederherstellen?"
+
+[BackupRestoreConfirmBody]
+english     = "Replace the current project with this backup? Changes made since the backup will be lost."
+translation = "Das aktuelle Projekt durch diese Sicherung ersetzen? Änderungen seit der Sicherung gehen verloren."
+
 [BackupRestoreRefresh]
 english     = "Refresh"
 translation = "Aktualisieren"
@@ -639,6 +655,22 @@ translation = "Design \"{0}\" importiert."
 [PrefThemeImportFailed]
 english     = "Failed to import theme."
 translation = "Design konnte nicht importiert werden."
+
+[PrefThemeResetConfirmTitle]
+english     = "Reset Theme?"
+translation = "Design zurücksetzen?"
+
+[PrefThemeResetConfirmBody]
+english     = "Reset all colors and variables of the active theme to their defaults? This can't be undone."
+translation = "Alle Farben und Variablen des aktiven Designs auf die Standardwerte zurücksetzen? Dies kann nicht rückgängig gemacht werden."
+
+[PrefThemeDeleteConfirmTitle]
+english     = "Delete Theme?"
+translation = "Design löschen?"
+
+[PrefThemeDeleteConfirmBody]
+english     = "Permanently delete the theme \"{0}\"? This can't be undone."
+translation = "Das Design \"{0}\" dauerhaft löschen? Dies kann nicht rückgängig gemacht werden."
 
 # --- Theme tab: search + section headers ---
 
@@ -871,6 +903,14 @@ translation = "Laden"
 [PcfDelete]
 english     = "Delete"
 translation = "L?schen"
+
+[PcfPresetDeleteConfirmTitle]
+english     = "Delete Preset?"
+translation = "Voreinstellung löschen?"
+
+[PcfPresetDeleteConfirmBody]
+english     = "Delete the metadata preset \"{0}\"?"
+translation = "Die Metadaten-Voreinstellung \"{0}\" löschen?"
 
 [PcfPresetLoaded]
 english     = "Preset \"{0}\" loaded."
@@ -2596,6 +2636,18 @@ translation = "Zuletzt geöffnete Projekte"
 [WelClearRecentTip]
 english     = "Clear the recent-projects list"
 translation = "Liste der zuletzt geöffneten Projekte leeren"
+
+[WelClearRecentConfirmTitle]
+english     = "Clear Recent Projects?"
+translation = "Letzte Projekte löschen?"
+
+[WelClearRecentConfirmBody]
+english     = "Remove all entries from the recent-projects list? This won't delete any files."
+translation = "Alle Einträge aus der Liste der letzten Projekte entfernen? Es werden keine Dateien gelöscht."
+
+[WelClearRecentConfirmBtn]
+english     = "Clear List"
+translation = "Liste leeren"
 
 [WelNoRecent]
 english     = "No recent projects"

@@ -139,6 +139,10 @@ void RegisterThemeTests(ImGuiTestEngine *e) {
             !colorEq(ofs::theme::getActive().colors[AppCol_OverlayLineMajor], def.colors[AppCol_OverlayLineMajor]));
 
         ctx->ItemClick("theme_reset_all");
+        ctx->Yield(2); // let the confirm modal open
+        ctx->SetRef("//$FOCUSED");
+        ctx->ItemClick("**/###modalbtn0"); // confirm the reset
+        ctx->SetRef(kWin);
         ctx->Yield(2);
         IM_CHECK(colorEq(ofs::theme::getActive().colors[AppCol_OverlayLineMajor], def.colors[AppCol_OverlayLineMajor]));
         IM_CHECK(colorEq(ofs::theme::getActive().colors[AppCol_TempoMeasureLine], def.colors[AppCol_TempoMeasureLine]));

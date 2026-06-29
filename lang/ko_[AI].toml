@@ -168,6 +168,14 @@ translation = "폴더 열기"
 english     = "Clear"
 translation = "지우기"
 
+[PrefIntraClearConfirmTitle]
+english     = "Clear Output Folder?"
+translation = "출력 폴더를 지우시겠습니까?"
+
+[PrefIntraClearConfirmBody]
+english     = "Clear the optimized-video output folder? Optimization stays off until you choose a folder again."
+translation = "최적화된 비디오 출력 폴더를 지우시겠습니까? 폴더를 다시 선택할 때까지 최적화가 꺼진 상태로 유지됩니다."
+
 [PrefIntraOutputDirHint]
 english     = "All optimized videos are written here. You manage this folder yourself — the app never deletes its contents."
 translation = "모든 최적화된 비디오는 여기에 저장됩니다. 이 폴더는 직접 관리해야 하며 앱이 내용을 삭제하지 않습니다."
@@ -488,6 +496,14 @@ translation = "크기"
 english     = "Restore"
 translation = "복원"
 
+[BackupRestoreConfirmTitle]
+english     = "Restore Backup?"
+translation = "백업을 복원하시겠습니까?"
+
+[BackupRestoreConfirmBody]
+english     = "Replace the current project with this backup? Changes made since the backup will be lost."
+translation = "현재 프로젝트를 이 백업으로 교체하시겠습니까? 백업 이후 변경된 내용은 사라집니다."
+
 [BackupRestoreRefresh]
 english     = "Refresh"
 translation = "새로 고침"
@@ -639,6 +655,22 @@ translation = "테마 \"{0}\"을(를) 가져왔습니다."
 [PrefThemeImportFailed]
 english     = "Failed to import theme."
 translation = "테마 가져오기에 실패했습니다."
+
+[PrefThemeResetConfirmTitle]
+english     = "Reset Theme?"
+translation = "테마를 초기화하시겠습니까?"
+
+[PrefThemeResetConfirmBody]
+english     = "Reset all colors and variables of the active theme to their defaults? This can't be undone."
+translation = "현재 테마의 모든 색상과 변수를 기본값으로 초기화하시겠습니까? 이 작업은 취소할 수 없습니다."
+
+[PrefThemeDeleteConfirmTitle]
+english     = "Delete Theme?"
+translation = "테마를 삭제하시겠습니까?"
+
+[PrefThemeDeleteConfirmBody]
+english     = "Permanently delete the theme \"{0}\"? This can't be undone."
+translation = "테마 \"{0}\"을(를) 영구적으로 삭제하시겠습니까? 이 작업은 취소할 수 없습니다."
 
 # --- Theme tab: search + section headers ---
 
@@ -871,6 +903,14 @@ translation = "불러오기"
 [PcfDelete]
 english     = "Delete"
 translation = "삭제"
+
+[PcfPresetDeleteConfirmTitle]
+english     = "Delete Preset?"
+translation = "프리셋을 삭제하시겠습니까?"
+
+[PcfPresetDeleteConfirmBody]
+english     = "Delete the metadata preset \"{0}\"?"
+translation = "메타데이터 프리셋 \"{0}\"을(를) 삭제하시겠습니까?"
 
 [PcfPresetLoaded]
 english     = "Preset \"{0}\" loaded."
@@ -2596,6 +2636,18 @@ translation = "최근 프로젝트"
 [WelClearRecentTip]
 english     = "Clear the recent-projects list"
 translation = "최근 프로젝트 목록 지우기"
+
+[WelClearRecentConfirmTitle]
+english     = "Clear Recent Projects?"
+translation = "최근 프로젝트를 지우시겠습니까?"
+
+[WelClearRecentConfirmBody]
+english     = "Remove all entries from the recent-projects list? This won't delete any files."
+translation = "최근 프로젝트 목록에서 모든 항목을 제거하시겠습니까? 실제 파일은 삭제되지 않습니다."
+
+[WelClearRecentConfirmBtn]
+english     = "Clear List"
+translation = "목록 지우기"
 
 [WelNoRecent]
 english     = "No recent projects"
