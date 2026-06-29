@@ -257,8 +257,6 @@ void ProjectManager::onAxisSelected(const AxisSelectedEvent &event) {
     if (!inPanel(project, event.role))
         return; // can't activate an axis that isn't shown in the panel
     project.state.activeAxis = event.role;
-    if (!project.procPanelLocked)
-        project.procSelRegionId = -1;   // a locked processing panel stays pinned across an axis switch
     project.state.axesGrouping.reset(); // activating an axis dissolves any multi-axis group
 }
 
@@ -284,7 +282,6 @@ void ProjectManager::onSetAxisGrouping(const SetAxisGroupingEvent &event) {
 
     const AxisRoles prevGrouping = project.state.axesGrouping;
     project.state.activeAxis = lead;
-    project.procSelRegionId = -1;
     if (g.count() > 1)
         g.set(static_cast<size_t>(lead)); // the lead is always part of its group
     else

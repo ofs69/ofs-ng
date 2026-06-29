@@ -28,13 +28,16 @@ TEST_CASE("Default active axis is L0") {
     CHECK(f.project().state.activeAxis == StandardAxis::L0);
 }
 
-TEST_CASE("AxisSelected sets the active axis and clears the region selection") {
+TEST_CASE("AxisSelected sets the active axis and preserves the region selection") {
     PmFixture f;
     f.project().axes[ix(StandardAxis::R0)].showInStrip = true; // only panel-visible axes can be activated
     f.project().procSelRegionId = 7;                           // pretend a region was selected
     f.send(ofs::AxisSelectedEvent{StandardAxis::R0});
     CHECK(f.project().state.activeAxis == StandardAxis::R0);
-    CHECK(f.project().procSelRegionId == -1);
+    // Switching the active axis (keybind / command palette) must not deselect the region — that would
+    // pull the Processing panel off the shared dock window and steal its focus. Only an explicit
+    // click-away or Escape clears the selection.
+    CHECK(f.project().procSelRegionId == 7);
 }
 
 TEST_CASE("AxisSelected is a no-op for an axis not shown in the panel") {
