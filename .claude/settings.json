@@ -1,9 +1,9 @@
 {
   "permissions": {
     "deny": [
-      "Read(apidocs/_site/**)",
-      "Read(apidocs/api/*.yml)",
-      "Read(apidocs/api/.manifest)"
+      "Read(docs/apidocs/_site/**)",
+      "Read(docs/apidocs/api/*.yml)",
+      "Read(docs/apidocs/api/.manifest)"
     ]
   }
 }
