@@ -24,7 +24,11 @@ namespace {
 
 constexpr double kRegStart = 7.0;
 constexpr double kRegEnd = 9.0;
-constexpr float kEdgeGrab = ofs::ui::kBandBarEdgeW * 0.5f; // center of BandBar's edge zone
+// Center of BandBar's (now font-relative) edge zone. A function, not a constant — must be read within
+// a frame. Call sites already run inside the test context's frame loop.
+inline float edgeGrab() {
+    return ofs::ui::bandBarEdgeW() * 0.5f;
+}
 
 // Load fixture, park the playhead mid-timeline, create a 7–9 s region on L0.
 void setupRegion(ImGuiTestContext *ctx) {
@@ -66,7 +70,7 @@ void RegisterBandBarTests(ImGuiTestEngine *e) {
         setupRegion(ctx);
 
         ImVec2 leftEdge = regionBarPixel(ctx, kRegStart);
-        leftEdge.x += kEdgeGrab; // land inside the left resize zone
+        leftEdge.x += edgeGrab(); // land inside the left resize zone
         ctx->MouseMoveToPos(leftEdge);
         ctx->MouseDown(ImGuiMouseButton_Left);
         ctx->MouseMoveToPos(regionBarPixel(ctx, kRegStart - 0.5)); // drag left
@@ -82,7 +86,7 @@ void RegisterBandBarTests(ImGuiTestEngine *e) {
         setupRegion(ctx);
 
         ImVec2 rightEdge = regionBarPixel(ctx, kRegEnd);
-        rightEdge.x -= kEdgeGrab; // land inside the right resize zone
+        rightEdge.x -= edgeGrab(); // land inside the right resize zone
         ctx->MouseMoveToPos(rightEdge);
         ctx->MouseDown(ImGuiMouseButton_Left);
         ctx->MouseMoveToPos(regionBarPixel(ctx, kRegEnd + 0.5)); // drag right

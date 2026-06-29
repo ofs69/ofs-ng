@@ -346,10 +346,10 @@ void VideoControlsWindow::drawBookmarkBar(const ScriptProject &project, EventQue
     if (bmDrag.isDragging) {
         if (ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
             bool altHeld = ImGui::GetIO().KeyAlt;
-            // Snap to the playhead when the cursor is within kBandBarSnapPx of it, matching the chapter
-            // band's edge/move snap so a bookmark can be parked exactly on the current frame.
+            // Snap to the playhead when the cursor is within the shared band snap distance of it, matching
+            // the chapter band's edge/move snap so a bookmark can be parked exactly on the current frame.
             const float mouseX = ImGui::GetIO().MousePos.x;
-            const bool nearPlayhead = std::abs(mouseX - toX(playheadTime)) < ofs::ui::kBandBarSnapPx;
+            const bool nearPlayhead = std::abs(mouseX - toX(playheadTime)) < ofs::ui::bandBarSnapPx();
             const double droppedTime = nearPlayhead ? playheadTime : toTime(mouseX);
             bmDrag.previewTime = altHeld ? bmDrag.originalTime : droppedTime;
             ImGui::SetMouseCursor(altHeld ? ImGuiMouseCursor_Hand : ImGuiMouseCursor_ResizeEW);

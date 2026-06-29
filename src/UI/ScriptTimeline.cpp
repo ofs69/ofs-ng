@@ -37,8 +37,16 @@ namespace ofs {
 static float stripWidth() {
     return ImGui::GetFontSize() * 3.5f;
 }
+// Source-dot radius and the click hit-radius around it, both font-relative so the dots and their
+// grab zones stay the same physical size at any font scale / DPI (≈8 px and ≈12 px at the 18 px
+// default). Call within a frame.
+static float dotRadius() {
+    return ImGui::GetFontSize() * 0.45f;
+}
+static float dotHitRadius() {
+    return ImGui::GetFontSize() * 0.67f;
+}
 static constexpr float kLodThreshSq = 32.0f;
-static constexpr float kDotR = 8.0f;
 static constexpr double kDotFadeStart = 10.0;
 static constexpr double kDotFadeEnd = 40.0;
 // Spring tuning for the curve-emphasis ease. zeta < 1 overshoots ("bounce back"). The emphasis weight
@@ -76,7 +84,7 @@ static double screenXToTime(float x, double visibleTime, double offsetTime, cons
     return offsetTime + (double)((x - pos.x) / size.x) * visibleTime;
 }
 
-// Time width of one dot-decimation bucket: dots closer than ~2*kDotR px are collapsed to one.
+// Time width of one dot-decimation bucket: dots closer than ~2*dotRadius() px are collapsed to one.
 // The bucket grid is anchored to absolute time 0 (`it->at / bucket`), so panning never re-shuffles
 // which dot in a cluster wins — that is what keeps decimation steady during playback. To also stay
 // steady across *zoom*, the bucket size is snapped to a fixed power-of-two ladder rather than varying
@@ -85,7 +93,7 @@ static double screenXToTime(float x, double visibleTime, double offsetTime, cons
 // its neighbor — dots reveal or merge in place instead of a different cluster member popping in.
 // Both the renderer and the hit-test call this so a clickable dot is exactly a drawn dot.
 static double dotBucketDuration(double visibleTime, float width) {
-    double minBucket = static_cast<double>(kDotR) * 2.0 * visibleTime / static_cast<double>(width);
+    double minBucket = static_cast<double>(dotRadius()) * 2.0 * visibleTime / static_cast<double>(width);
     if (!(minBucket > 0.0))
         return 1.0; // degenerate (zero-width view); any positive value keeps the bucket math finite
     constexpr double kLadderUnit = 0.001; // 1 ms — the absolute-time anchor the ladder is built on
@@ -152,7 +160,7 @@ static void forEachVisibleDot(const ScriptProject &project, StandardAxis role,
 static const ScriptAxisAction *findNearestAction(const ScriptProject &project, StandardAxis role,
                                                  const VectorSet<ScriptAxisAction> &actions, float mouseX, float mouseY,
                                                  double visibleTime, double offsetTime, const ImVec2 &pos,
-                                                 const ImVec2 &size, float radius = 12.0f) {
+                                                 const ImVec2 &size, float radius = dotHitRadius()) {
     const ScriptAxisAction *closest = nullptr;
     float closestDist2 = radius * radius;
     forEachVisibleDot(project, role, actions, visibleTime, offsetTime, size.x, [&](const ScriptAxisAction &a) {
@@ -528,8 +536,8 @@ void ScriptTimelineWindow::renderCurves(const ScriptProject &project, ImDrawList
                 float dotAlpha = (1.0f - fadeT * fadeT) * std::clamp(aw, 0.0f, 1.0f);
                 if (dotAlpha > 0.1f) {
                     auto alpha = static_cast<ImU32>(255.0f * dotAlpha);
-                    const float rOuter = kDotR * dotScale;
-                    const float rInner = kDotR * 0.7f * dotScale;
+                    const float rOuter = dotRadius() * dotScale;
+                    const float rInner = dotRadius() * 0.7f * dotScale;
                     forEachVisibleDot(
                         project, ax.role, ax.actions, viewState.visibleTime, offsetTime, curveSize.x,
                         [&](const ScriptAxisAction &a) {
@@ -974,7 +982,7 @@ void ScriptTimelineWindow::render(const ScriptProject &project, EventQueue &eq, 
         bool scrollActive = selectionState.isSelecting || regionDragState.mode != ofs::ui::BandBarDragState::Mode::None;
         if (scrollActive) {
             float mouseX = ImGui::GetMousePos().x;
-            constexpr float kEdgeZone = 60.0f;
+            const float kEdgeZone = ImGui::GetFontSize() * 3.3f; // ≈60 px at the 18 px default, DPI-relative
             double maxSpeed = viewState.visibleTime * 2.0;
             auto dt = static_cast<double>(ImGui::GetIO().DeltaTime);
 

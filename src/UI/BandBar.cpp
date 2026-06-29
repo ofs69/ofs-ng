@@ -10,8 +10,6 @@
 namespace ofs::ui {
 
 static constexpr float kChPad = kBandBarPad;
-static constexpr float kEdgeW = kBandBarEdgeW;
-static constexpr float kSnapPx = kBandBarSnapPx;
 
 void drawBandBar(ImDrawList *dl, ImVec2 barMin, ImVec2 barMax, std::span<const BandItem> bands,
                  BandBarDragState &dragState, double playheadTime, double minTime, double maxTime, double minDur,
@@ -21,6 +19,9 @@ void drawBandBar(ImDrawList *dl, ImVec2 barMin, ImVec2 barMax, std::span<const B
     const float barH = barMax.y - barMin.y;
     if (barW <= 0.0f || barH <= 0.0f)
         return;
+
+    const float kEdgeW = bandBarEdgeW();
+    const float kSnapPx = bandBarSnapPx();
 
     // Register the bar's rect as an addressable, non-interactive item so UI tests can
     // anchor to its exact geometry via ItemInfo instead of re-deriving heights/offsets.

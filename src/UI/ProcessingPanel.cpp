@@ -415,6 +415,21 @@ static bool beginNodeParamTable(const char *id) {
     return true;
 }
 
+// formRow for a node param whose label is data-driven (an effect/script param name) and can exceed the
+// fixed label column. Elide with "…" and surface the full name on hover, rather than letting the column
+// silently clip it. Native param rows (short, localized) keep plain formRow.
+static void nodeParamLabelRow(const char *label) {
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    ImGui::AlignTextToFramePadding();
+    const float avail = nodeLabelW() - ImGui::GetStyle().CellPadding.x * 2.0f;
+    const char *shown = ofs::ui::elide(label, avail);
+    ImGui::TextUnformatted(shown);
+    if (shown != label && ImGui::IsItemHovered())
+        ImGui::SetTooltip("%s", label);
+    ImGui::TableNextColumn();
+}
+
 // Right-align an output-pin label to the node's right content edge. imnodes lays pins out left-aligned,
 // so without this the label floats near the left. The indent floors to 1px when the label already fills
 // the content width: ImGui::Indent(0) would apply the default IndentSpacing instead of no indent.
@@ -549,7 +564,7 @@ static void renderEffectNodeBody(const ProcessingGraphNode &node, const EffectDe
             if (def) {
                 for (int pi = 0; pi < static_cast<int>(def->paramDefs.size()); ++pi) {
                     const auto &pd = def->paramDefs[static_cast<size_t>(pi)];
-                    ofs::ui::formRow(pd.displayName.c_str());
+                    nodeParamLabelRow(pd.displayName.c_str());
                     ImGui::SetNextItemWidth(-FLT_MIN);
                     const char *wid = fmtScratch("##{}", pd.key);
                     if (pd.type == EffectParamDef::Type::Float) {
@@ -977,7 +992,7 @@ void ProcessingPanel::renderNode(const ProcessingGraphNode &node, const EffectRe
             if (beginNodeParamTable("##scriptparams")) {
                 for (int pi = 0; pi < static_cast<int>(cs->params.size()); ++pi) {
                     const auto &pd = cs->params[static_cast<size_t>(pi)];
-                    ofs::ui::formRow(pd.name.c_str());
+                    nodeParamLabelRow(pd.name.c_str());
                     ImGui::SetNextItemWidth(-FLT_MIN);
                     const char *wid = fmtScratch("##sp{}_{}", node.id, pi);
                     const bool clamp = pd.max > pd.min; // a real range was declared
@@ -1249,7 +1264,7 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
         ImGui::OpenPopup("##addnode");
     }
 
-    const AddNodeRequest addReq = renderAddNodeMenu(effectReg);
+    const AddNodeRequest addReq = renderAddNodeMenu(effectReg, stdWindowPad);
     const ImVec2 newNodePos{addReq.posX, addReq.posY};
 
     renderGraphContextMenus(region, eq, selId, stdWindowPad);
@@ -1674,10 +1689,13 @@ void ProcessingPanel::renderGraphContextMenus(const ProcessingRegion &region, Ev
     ImGui::PopStyleVar();
 }
 
-ProcessingPanel::AddNodeRequest ProcessingPanel::renderAddNodeMenu(const EffectRegistryState &effectReg) {
+ProcessingPanel::AddNodeRequest ProcessingPanel::renderAddNodeMenu(const EffectRegistryState &effectReg,
+                                                                   ImVec2 windowPad) {
     AddNodeRequest req;
     ImVec2 newNodePos{};
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, {8.0f, 8.0f});
+    // Restore the theme's WindowPadding (captured before BeginNodeEditor zeroed it), matching the node/
+    // link context menus instead of a fixed 8 px that wouldn't scale with the font/DPI.
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, windowPad);
     if (ImGui::BeginPopup("##addnode")) {
         newNodePos = ImGui::GetMousePosOnOpeningCurrentPopup();
 
@@ -2035,8 +2053,11 @@ void ProcessingPanel::renderHeader(const ScriptProject &project, EventQueue &eq,
     ImGui::TextDisabled("%s \xe2\x80\x93 %s", TimeUtil::formatTime(region.startTime, true),
                         TimeUtil::formatTime(region.endTime, true));
 
-    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(3.0f, 3.0f));
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(5.0f, 2.0f));
+    // Tight, font-relative chip grid (≈3 px spacing, ≈5×2 px padding at the 18 px default) so the chips
+    // and their gaps scale with the font/DPI instead of shrinking to hairlines at high DPI.
+    const float em = ImGui::GetFontSize();
+    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(em * 0.18f, em * 0.18f));
+    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(em * 0.28f, em * 0.12f));
 
     auto renderChipRow = [&](size_t first, size_t last, bool sameLineBefore) {
         bool rowStarted = false;
@@ -2071,7 +2092,7 @@ void ProcessingPanel::renderHeader(const ScriptProject &project, EventQueue &eq,
         }
     };
 
-    ImGui::SameLine(0.0f, 15.0f);
+    ImGui::SameLine(0.0f, em * 0.85f); // ≈15 px at the 18 px default
     renderChipRow(0, 9, false);
     renderChipRow(10, kStandardAxisCount - 1, true);
 

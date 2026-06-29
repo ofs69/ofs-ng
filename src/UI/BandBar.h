@@ -8,17 +8,22 @@
 
 namespace ofs::ui {
 
-// Width (px) of the left/right resize-grab zones at each band's edges. Shared so UI
-// tests can target the zone instead of duplicating the literal.
-inline constexpr float kBandBarEdgeW = 6.0f;
-
 // Vertical padding (px) above and below the band fill inside the bar.
 inline constexpr float kBandBarPad = 2.0f;
 
-// Snap distance (px): while dragging a band edge/body — or a bookmark — within this many pixels of the
-// playhead, the dragged time snaps to the exact playhead time. Shared so the chapter band and the
-// bookmark drag snap identically.
-inline constexpr float kBandBarSnapPx = 8.0f;
+// Width of the left/right resize-grab zones at each band's edges. Font-relative (≈6 px at the 18 px
+// default) so the zone stays physically grabbable at any DPI. Shared so UI tests can target the same
+// zone instead of duplicating the literal. Call within a frame (reads ImGui::GetFontSize()).
+inline float bandBarEdgeW() {
+    return ImGui::GetFontSize() / 3.0f;
+}
+
+// Snap distance: while dragging a band edge/body — or a bookmark — within this many pixels of the
+// playhead, the dragged time snaps to the exact playhead time. Font-relative (≈8 px at the 18 px
+// default). Shared so the chapter band and the bookmark drag snap identically. Call within a frame.
+inline float bandBarSnapPx() {
+    return ImGui::GetFontSize() * 0.45f;
+}
 
 // Height (px) a band bar must be to vertically fit its centered text label at the
 // current font size. Both the timeline region bar and the video chapter/bookmark bar

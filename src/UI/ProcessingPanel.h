@@ -60,7 +60,7 @@ class ProcessingPanel {
         bool addScript = false; // a ready library/user script picked from the catalog
         int scriptIndex = -1;   // index into m_scriptCatalog
     };
-    AddNodeRequest renderAddNodeMenu(const EffectRegistryState &effectReg);
+    AddNodeRequest renderAddNodeMenu(const EffectRegistryState &effectReg, ImVec2 windowPad);
 
     // Modal bodies raised from render(): each latches on a one-shot flag (New Script / Save embedded) or a
     // pending-graph-load condition (Trust / Remap), then hands a deferred [this]-capturing body to the
