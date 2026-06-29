@@ -264,9 +264,10 @@ TitleBarResult renderTitleBar(const char *appName, const char *projectTitle, boo
         // Widen to fit the project name (plus a little trailing slack), capped at ~half the bar so a
         // long name can't crowd the caption buttons; past the cap the name is elided below.
         const float boxW = std::min(barW * 0.52f, magW + nameWidth + boxPadX * 2.0f + ImGui::GetFontSize() * 1.5f);
-        // Center on the midpoint of the available region [appNameRight … barW-buttonsZoneW]
-        // rather than the full bar width, so the box doesn't lean toward the caption buttons.
-        float boxX = (appNameRight + (barW - buttonsZoneW)) * 0.5f - boxW * 0.5f;
+        // Always center on the full bar width so the box sits at the true middle of the title bar.
+        // The clamps only engage on a narrow window, keeping the box clear of the app name and the
+        // caption buttons rather than overlapping them.
+        float boxX = barW * 0.5f - boxW * 0.5f;
         boxX = std::max(boxX, appNameRight + 12.0f);
         boxX = std::min(boxX, barW - buttonsZoneW - boxW - 8.0f);
         const float boxY = (ImGui::GetWindowHeight() - boxH) * 0.5f;
