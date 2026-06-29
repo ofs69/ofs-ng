@@ -11,6 +11,7 @@
 #include <imgui_internal.h> // ImGuiWindow::DockNode, ImGuiDockNode, FindWindowByName
 #include <imgui_te_context.h>
 #include <imgui_te_engine.h>
+#include <imnodes.h> // GetNodeDimensions / GetStyle, to assert node-width stability
 #include <string>
 
 // The Processing panel and the Video Player are the same dock window (shared "###video_player" id),
@@ -685,6 +686,58 @@ void RegisterProcessingTests(ImGuiTestEngine *e) {
         ctx->Yield(2);
 
         IM_CHECK_EQ(proj.procSelRegionId, -1);
+    };
+
+    // A node's measured width must not creep upward when it scrolls off the LEFT edge of the canvas.
+    // Output labels used to right-align to the node's own previous-frame ImNodes::GetNodeDimensions,
+    // making the rendered width monotonic (it can only hold or grow). On-screen that is a stable fixed
+    // point, but once the node's content crosses into negative window-relative coordinates ImGui's
+    // IM_TRUNC line-start rounding flips from floor to truncate-toward-zero, so each frame measures the
+    // right-aligned label a little wider, the feedback latches it in, and the node grows without bound.
+    // Width now anchors to an intrinsic constant, independent of position.
+    //
+    // In the app this is what dragging any node does to the *others*: dragging off the canvas edge makes
+    // imnodes auto-pan the camera, the panel feeds the pan back into every untouched node's stored
+    // position (syncPositions), and nodes pushed off the left edge grow — Math nodes especially, since
+    // (unlike the title-pinned Input/Output nodes) their narrow title lets the output mirror drive width.
+    // The test-engine mouse can't drive auto-pan, so we reproduce it directly by walking a Math node off
+    // the left edge a few pixels per frame.
+    IM_REGISTER_TEST(e, "processing", "node_width_stable_offscreen_left")->TestFunc = [](ImGuiTestContext *ctx) {
+        setupRegionInDefaultLayout(ctx);
+        auto &proj = *getTestState().project;
+
+        // A Math node has a narrow title and a right-aligned output with no wide, stable body anchor, so
+        // the output mirror dominates its width (Input/Output nodes are title-pinned and never drift).
+        addNodeViaMenu(ctx, "Add", std::string("**/") + ICON_PLUS + "  Add  (A + B)");
+        const int nodeId = proj.regions[0].nodeGraph.nodes.back().id;
+        const float baseX = proj.regions[0].nodeGraph.nodes.back().posX;
+
+        // Fractional node padding mimics a non-100% DPI scale (applyDpiToImNodes multiplies the themed
+        // base by the display scale); at integer padding the rounding had nothing to round away and the
+        // bug stayed latent. Process-global imnodes state — restore it so later tests are unaffected.
+        const ImVec2 savedPadding = ImNodes::GetStyle().NodePadding;
+        ImNodes::GetStyle().NodePadding = ImVec2(10.5f, 8.0f);
+
+        ctx->Yield(4); // let the node settle to its steady-state width
+        const float w0 = ImNodes::GetNodeDimensions(ofs::GraphId::nodeBody(nodeId)).x;
+
+        // Walk the node leftward past the canvas origin so its content crosses x = 0 into negative
+        // window-relative coordinates — the regime where the truncate-toward-zero rounding bites. The
+        // fractional step keeps it sweeping rounding boundaries the whole way.
+        for (int i = 1; i <= 200; ++i) {
+            for (auto &n : proj.regions[0].nodeGraph.nodes)
+                if (n.id == nodeId)
+                    n.posX = baseX - static_cast<float>(i) * 7.137f;
+            ctx->Yield();
+        }
+
+        const float w1 = ImNodes::GetNodeDimensions(ofs::GraphId::nodeBody(nodeId)).x;
+        ImNodes::GetStyle().NodePadding = savedPadding;
+
+        // Rendering in negative coordinates jitters the width by ~1px regardless (inherent ImGui rounding,
+        // bounded). The regression instead grew with distance off-screen — tens of px here and climbing —
+        // so a few px of slack cleanly separates the fixed, bounded behaviour from the unbounded feedback.
+        IM_CHECK_LE(w1, w0 + 4.0f);
     };
 
     // Escape while a footer InputText is being edited must cancel the edit (ImGui's own behavior), NOT

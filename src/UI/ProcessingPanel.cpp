@@ -369,25 +369,37 @@ static float nodeLabelW() {
     return ImGui::GetFontSize() * 6.0f;
 } // ≈96 px at the 16 px reference
 
+// The fixed inner content width every node body anchors to (the param-table width). Every node either
+// fills this with a 2-column table or a spacer Dummy, and every output label right-aligns to it, so a
+// node's width is a pure function of this font-relative constant — DPI-tracking, but never derived from
+// the node's own measured size.
+//
+// Crucially the right-align target must NOT come from ImNodes::GetNodeDimensions() (the previous frame's
+// measured rect). Positioning a node's content using its own prior width makes the width monotonic: it
+// can only hold or grow, never shrink. On-screen that is a stable fixed point, but dragging a node off
+// the canvas edge auto-pans the camera and pushes the *other* nodes off the LEFT edge, into negative
+// window-relative coordinates — where ImGui's line-start rounding (IM_TRUNC) truncates toward zero
+// instead of flooring, so each frame measures the label a little wider, the feedback latches it in, and
+// the node grows without bound (Math nodes worst, as their narrow title lets the output drive width).
+// Anchoring to an intrinsic constant breaks the loop entirely.
+static float nodeContentW() {
+    return nodeLabelW() + nodeWidgetW();
+}
+
 static bool beginNodeParamTable(const char *id) {
-    if (!ImGui::BeginTable(id, 2, ImGuiTableFlags_None, {nodeLabelW() + nodeWidgetW(), 0.f}))
+    if (!ImGui::BeginTable(id, 2, ImGuiTableFlags_None, {nodeContentW(), 0.f}))
         return false;
     ImGui::TableSetupColumn("##L", ImGuiTableColumnFlags_WidthFixed, nodeLabelW());
     ImGui::TableSetupColumn("##R", ImGuiTableColumnFlags_WidthStretch);
     return true;
 }
 
-// Right-align an output-pin label to the node's right content edge. imnodes lays pins out
-// left-aligned, so without this the label floats near the left and never tracks node width.
-// GetNodeDimensions returns the previous frame's padded node rect (stable frame-to-frame); strip
-// the horizontal node padding on both sides to recover the content width the label is indented
-// within. The rect is zero the first frame a node appears, so the indent floors to 1px then snaps
-// into place next frame. The floor must stay > 0: ImGui::Indent(0) applies the default IndentSpacing.
+// Right-align an output-pin label to the node's right content edge. imnodes lays pins out left-aligned,
+// so without this the label floats near the left. The indent floors to 1px when the label already fills
+// the content width: ImGui::Indent(0) would apply the default IndentSpacing instead of no indent.
 static void renderRightAlignedOutput(int nodeId, int slot, const char *label) {
     ImNodes::BeginOutputAttribute(GraphId::outPin(nodeId, slot));
-    const float contentW =
-        ImNodes::GetNodeDimensions(GraphId::nodeBody(nodeId)).x - 2.0f * ImNodes::GetStyle().NodePadding.x;
-    ImGui::Indent(std::max(1.0f, contentW - ImGui::CalcTextSize(label).x));
+    ImGui::Indent(std::max(1.0f, nodeContentW() - ImGui::CalcTextSize(label).x));
     ImGui::TextUnformatted(label);
     ImNodes::EndOutputAttribute();
 }
@@ -415,9 +427,7 @@ template <typename F> static void renderOutputPinRow(int nodeId, const char *lab
     const float rowStartX = ImGui::GetCursorPosX();
     left();
     ImGui::SameLine();
-    const float contentW =
-        ImNodes::GetNodeDimensions(GraphId::nodeBody(nodeId)).x - 2.0f * ImNodes::GetStyle().NodePadding.x;
-    const float target = rowStartX + contentW - ImGui::CalcTextSize(label).x;
+    const float target = rowStartX + nodeContentW() - ImGui::CalcTextSize(label).x;
     if (target > ImGui::GetCursorPosX())
         ImGui::SetCursorPosX(target);
     ImGui::TextUnformatted(label);
@@ -433,8 +443,7 @@ static void renderCompileStatus(EventQueue &eq, const ProcessingGraphNode &node,
         ImGui::TextDisabled("%s", Str::ProcNoScriptSelected.c_str());
     } else if (cs == nullptr) {
         // Glyph-only (text in a tooltip) so the compiling state is the same compact width as the
-        // resolved states below. A wider transient label would inflate the node, and the output-pin
-        // right-alignment (renderOutputPinRow) latches that width in — the node never shrinks back.
+        // resolved states below — a wider transient label would briefly widen the node mid-compile.
         ImGui::TextDisabled("%s", ICON_HOURGLASS);
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("%s", Str::ProcCompiling.c_str());
@@ -678,6 +687,7 @@ void ProcessingPanel::renderNode(const ProcessingGraphNode &node, const EffectRe
         ImNodes::EndInputAttribute();
 
         ImNodes::BeginStaticAttribute(GraphId::staticAttr(node.id));
+        ImGui::Dummy({nodeContentW(), 0.0f});
         ImNodes::EndStaticAttribute();
 
         renderOutputPin(node.id);
@@ -738,11 +748,9 @@ void ProcessingPanel::renderNode(const ProcessingGraphNode &node, const EffectRe
             }
             snapshotOnDragStart(eq, regionId, region);
         } else {
-            // No editable params (a stateless node carries no onNodeUi hook), and for generators no input
-            // pins either, so the body has nothing of stable width. Without an anchor imnodes re-measures
-            // the node a little wider every frame (it sizes the title bar from the previous frame's node
-            // width), so it grows unbounded. Pin the width with a fixed-width spacer.
-            ImGui::Dummy({nodeWidgetW(), 0.0f});
+            // No editable params (a stateless node carries no onNodeUi hook), so the body would have no
+            // content. Anchor it to the standard width so the node matches its peers (see nodeContentW).
+            ImGui::Dummy({nodeContentW(), 0.0f});
         }
         ImNodes::EndStaticAttribute();
 
@@ -839,9 +847,9 @@ void ProcessingPanel::renderNode(const ProcessingGraphNode &node, const EffectRe
         ImGui::TextUnformatted("in");
         ImNodes::EndInputAttribute();
 
-        // No params; pin the body width so imnodes doesn't re-measure the title bar wider each frame.
+        // No params; anchor the body to the standard width (see nodeContentW).
         ImNodes::BeginStaticAttribute(GraphId::staticAttr(node.id));
-        ImGui::Dummy({nodeWidgetW(), 0.0f});
+        ImGui::Dummy({nodeContentW(), 0.0f});
         ImNodes::EndStaticAttribute();
 
         renderOutputPin(node.id);
@@ -885,7 +893,7 @@ void ProcessingPanel::renderNode(const ProcessingGraphNode &node, const EffectRe
         }
 
         ImNodes::BeginStaticAttribute(GraphId::staticAttr(node.id));
-        ImGui::PushItemWidth(nodeLabelW() + nodeWidgetW());
+        ImGui::PushItemWidth(nodeContentW());
 
         // Embedded nodes carry no body widgets here — their actions (fork/load) and compile status
         // share the output-pin row below, so the node stays compact. File nodes keep their picker.
@@ -983,12 +991,9 @@ void ProcessingPanel::renderNode(const ProcessingGraphNode &node, const EffectRe
         } else if (embedded) {
             // An embedded node has no file-picker combo, and while it is compiling (cs == nullptr) —
             // or if it errored / declares no params — the table above is skipped too, leaving the
-            // static attribute empty. The output-pin row can't anchor the width (it right-aligns to
-            // the previous frame's node size, so it only mirrors the width, never pins it), so imnodes
-            // re-measures the node a little wider every frame and it grows unbounded while compiling
-            // (same failure the plugin-node spacer guards against). Pin it to the param-table width so
-            // there is also no resize jump once params appear.
-            ImGui::Dummy({nodeLabelW() + nodeWidgetW(), 0.0f});
+            // static attribute empty. Anchor it to the standard width so there is no resize jump once
+            // params appear (see nodeContentW).
+            ImGui::Dummy({nodeContentW(), 0.0f});
         }
 
         ImGui::PopItemWidth();
