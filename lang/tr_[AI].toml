@@ -2555,6 +2555,14 @@ translation = "Sağa Genişlet"
 english     = "Grow Both Sides"
 translation = "Her İki Yana Genişlet"
 
+[TlSplitAtPlayhead]
+english     = "Split at Playhead"
+translation = "Oynatma başında böl"
+
+[TlSplitReq]
+english     = "Move the playhead inside, at least 0.5 s from each edge"
+translation = "Oynatma başını içeri, her kenardan en az 0,5 sn uzağa taşıyın"
+
 [TlNeedActiveAxis]
 english     = "Select an axis first"
 translation = "Önce bir eksen seçin"

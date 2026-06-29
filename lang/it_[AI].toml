@@ -2555,6 +2555,14 @@ translation = "Espandi a destra"
 english     = "Grow Both Sides"
 translation = "Espandi entrambi i lati"
 
+[TlSplitAtPlayhead]
+english     = "Split at Playhead"
+translation = "Dividi alla testina"
+
+[TlSplitReq]
+english     = "Move the playhead inside, at least 0.5 s from each edge"
+translation = "Sposta la testina all'interno, ad almeno 0,5 s da ciascun bordo"
+
 [TlNeedActiveAxis]
 english     = "Select an axis first"
 translation = "Seleziona prima un asse"

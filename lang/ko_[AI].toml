@@ -2555,6 +2555,14 @@ translation = "오른쪽으로 확장"
 english     = "Grow Both Sides"
 translation = "양쪽으로 확장"
 
+[TlSplitAtPlayhead]
+english     = "Split at Playhead"
+translation = "재생 헤드에서 분할"
+
+[TlSplitReq]
+english     = "Move the playhead inside, at least 0.5 s from each edge"
+translation = "재생 헤드를 안쪽으로, 양쪽 끝에서 0.5초 이상 떨어뜨리세요"
+
 [TlNeedActiveAxis]
 english     = "Select an axis first"
 translation = "먼저 축을 선택하세요"

@@ -54,6 +54,7 @@ UndoSystem::UndoSystem(ScriptProject &project, EventQueue &eq, size_t maxBytes)
     eq.on<CreateRegionEvent>([this](const CreateRegionEvent &) { captureTentative(); });
     eq.on<DeleteRegionEvent>([this](const DeleteRegionEvent &) { captureTentative(); });
     eq.on<BakeRegionEvent>([this](const BakeRegionEvent &) { captureTentative(); });
+    eq.on<SplitRegionEvent>([this](const SplitRegionEvent &) { captureTentative(); });
     eq.on<AssignAxisToRegionEvent>([this](const AssignAxisToRegionEvent &) { captureTentative(); });
     eq.on<LoadGraphEvent>([this](const LoadGraphEvent &) { captureTentative(); });
     eq.on<ApplyGraphRemapEvent>([this](const ApplyGraphRemapEvent &) { captureTentative(); });

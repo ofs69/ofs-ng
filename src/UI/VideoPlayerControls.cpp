@@ -610,6 +610,32 @@ void VideoControlsWindow::drawBookmarkBar(const ScriptProject &project, EventQue
                     eq.push(SeekEvent{ch.endTime});
                     ImGui::CloseCurrentPopup();
                 }
+                ImGui::Separator();
+                // Split at the playhead into two chapters — only when the playhead sits inside the chapter
+                // far enough from each edge that both halves clear the minimum. The right half keeps the
+                // name but takes a new color so the two read as distinct.
+                const bool canSplit = playheadTime2 > ch.startTime + kMinDur && playheadTime2 < ch.endTime - kMinDur;
+                ImGui::BeginDisabled(!canSplit);
+                if (ImGui::MenuItem(Str::TlSplitAtPlayhead.iconId(ICON_SPLIT, "vpc_ch_split")) && canSplit) {
+                    eq.push(ModifyBookmarkChapterEvent{.apply = [idx = barState.ctxIdx, splitT = playheadTime2,
+                                                                 seed = project.state.autoNameSeed](
+                                                                    BookmarkChapterState &s) {
+                        if (idx < 0 || idx >= static_cast<int>(s.chapters.size()))
+                            return;
+                        if (splitT - s.chapters[idx].startTime < kMinDur || s.chapters[idx].endTime - splitT < kMinDur)
+                            return;
+                        Chapter right = s.chapters[idx];
+                        right.startTime = splitT;
+                        right.color = ofs::util::goldenRatioColor(static_cast<size_t>(seed) + s.chapters.size());
+                        s.chapters[idx].endTime = splitT;
+                        s.chapters.push_back(std::move(right));
+                    }});
+                    ImGui::CloseCurrentPopup();
+                }
+                if (!canSplit &&
+                    ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled | ImGuiHoveredFlags_ForTooltip))
+                    ImGui::SetTooltip("%s", Str::TlSplitReq.c_str());
+                ImGui::EndDisabled();
                 if (ImGui::MenuItem(Str::VpcDelete.iconId(ICON_TRASH, "vpc_ch_delete"))) {
                     eq.push(ModifyBookmarkChapterEvent{.apply = [idx = barState.ctxIdx](BookmarkChapterState &s) {
                         if (idx >= 0 && idx < static_cast<int>(s.chapters.size()))

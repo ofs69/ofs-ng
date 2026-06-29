@@ -2555,6 +2555,14 @@ translation = "Expandir à Direita"
 english     = "Grow Both Sides"
 translation = "Expandir Ambos os Lados"
 
+[TlSplitAtPlayhead]
+english     = "Split at Playhead"
+translation = "Dividir no cursor"
+
+[TlSplitReq]
+english     = "Move the playhead inside, at least 0.5 s from each edge"
+translation = "Mova o cursor para dentro, a pelo menos 0,5 s de cada borda"
+
 [TlNeedActiveAxis]
 english     = "Select an axis first"
 translation = "Selecione um eixo primeiro"

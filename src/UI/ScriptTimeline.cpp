@@ -1365,6 +1365,20 @@ void ScriptTimelineWindow::renderRegionBar(VideoPlayer &videoPlayer, const Scrip
                 ImGui::CloseCurrentPopup();
             }
 
+            // Split at the playhead into two regions — only when the playhead sits inside the region far
+            // enough from each edge that both halves clear the 0.5 s minimum.
+            constexpr double kMinRegionDur = 0.5;
+            const bool canSplit =
+                playheadTime > ctxReg->startTime + kMinRegionDur && playheadTime < ctxReg->endTime - kMinRegionDur;
+            ImGui::BeginDisabled(!canSplit);
+            if (ImGui::MenuItem(Str::TlSplitAtPlayhead.iconId(ICON_SPLIT, "tl_region_split")) && canSplit) {
+                eq.push(SplitRegionEvent{.regionId = ctxRegionId, .splitTime = playheadTime});
+                ImGui::CloseCurrentPopup();
+            }
+            if (!canSplit)
+                disabledReq(Str::TlSplitReq.c_str());
+            ImGui::EndDisabled();
+
             // Grow the region into the empty space up to its neighbors. Regions never overlap and are
             // kept sorted by startTime, so the nearest occupied edge on each side bounds the growth;
             // the timeline ends bound it where there is no neighbor.

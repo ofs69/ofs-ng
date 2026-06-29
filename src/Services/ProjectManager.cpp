@@ -125,6 +125,7 @@ ProjectManager::ProjectManager(ScriptProject &project, EventQueue &eq, const App
     eq.on<CreateRegionEvent>([this](const CreateRegionEvent &e) { onCreateRegion(e); });
     eq.on<DeleteRegionEvent>([this](const DeleteRegionEvent &e) { onDeleteRegion(e); });
     eq.on<ModifyRegionEvent>([this](const ModifyRegionEvent &e) { onModifyRegion(e); });
+    eq.on<SplitRegionEvent>([this](const SplitRegionEvent &e) { onSplitRegion(e); });
     eq.on<MoveRegionNodesEvent>([this](const MoveRegionNodesEvent &e) { onMoveRegionNodes(e); });
     eq.on<BakeRegionEvent>([this](const BakeRegionEvent &e) { onBakeRegion(e); });
     eq.on<AssignAxisToRegionEvent>([this](const AssignAxisToRegionEvent &e) { onAssignAxis(e); });
@@ -2136,6 +2137,42 @@ void ProjectManager::onDeleteRegion(const DeleteRegionEvent &event) {
     }
     setDirty();
     eq.push(RegionChangedEvent{.kind = RegionChangeKind::Deleted});
+}
+
+void ProjectManager::onSplitRegion(const SplitRegionEvent &event) {
+    auto *region = project.findRegion(event.regionId);
+    if (!region)
+        return;
+    constexpr double kMinRegionDur = 0.5;
+    const double t = event.splitTime;
+    // Both halves must meet the minimum. The UI already gates the menu item; re-check so a stale or
+    // programmatic call can't produce a sub-minimum sliver.
+    if (t - region->startTime < kMinRegionDur || region->endTime - t < kMinRegionDur)
+        return;
+
+    int newId = 0;
+    for (const auto &r : project.regions)
+        newId = std::max(newId, r.id + 1);
+
+    // The right half is a full copy (graph, roles, showSourceActions) so both sides keep processing;
+    // only id/name/color/start are freshened. Shrink the left half *before* push_back, since that may
+    // reallocate and invalidate `region`.
+    ProcessingRegion right = *region;
+    right.id = newId;
+    right.startTime = t;
+    right.name = ofs::generateMnemonic(project.state.autoNameSeed + newId);
+    right.color = ofs::util::goldenRatioColor(static_cast<size_t>(project.state.autoNameSeed) + project.regions.size());
+    const AxisRoles roles = right.axisRoles;
+    region->endTime = t;
+
+    project.regions.push_back(std::move(right));
+    project.sortRegions();
+
+    for (size_t i = 0; i < kStandardAxisCount; ++i)
+        if (roles.test(i))
+            eq.push(AxisModifiedEvent{static_cast<StandardAxis>(i)});
+    setDirty();
+    eq.push(RegionChangedEvent{.kind = RegionChangeKind::Created});
 }
 
 void ProjectManager::onModifyRegion(const ModifyRegionEvent &event) {

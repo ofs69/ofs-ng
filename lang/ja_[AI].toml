@@ -2555,6 +2555,14 @@ translation = "右に拡張"
 english     = "Grow Both Sides"
 translation = "両側に拡張"
 
+[TlSplitAtPlayhead]
+english     = "Split at Playhead"
+translation = "再生ヘッドで分割"
+
+[TlSplitReq]
+english     = "Move the playhead inside, at least 0.5 s from each edge"
+translation = "再生ヘッドを内側へ、各端から 0.5 秒以上離してください"
+
 [TlNeedActiveAxis]
 english     = "Select an axis first"
 translation = "先に軸を選択してください"

@@ -2704,6 +2704,14 @@ description = "Timeline region-bar right-click menu — extend the region's end 
 english     = "Grow Both Sides"
 description = "Timeline region-bar right-click menu — extend both edges to the neighboring regions (or the timeline bounds)."
 
+[TlSplitAtPlayhead]
+english     = "Split at Playhead"
+description = "Region-bar and chapter-bar right-click menu — split the region/chapter at the playhead into two adjacent bars. Shared between both menus."
+
+[TlSplitReq]
+english     = "Move the playhead inside, at least 0.5 s from each edge"
+description = "Disabled-item tooltip: why Split is unavailable (the playhead is outside the region/chapter or too close to an edge for both halves to meet the 0.5 s minimum). Shared between the region and chapter menus."
+
 [TlNeedActiveAxis]
 english     = "Select an axis first"
 description = "Disabled-item tooltip in the timeline region-bar menu: the add-region actions need an active axis to seed the new region."

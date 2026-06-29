@@ -182,6 +182,66 @@ TEST_CASE("ProjectManager: AddActionAtTimeEvent clamps an out-of-range position 
     CHECK(axis.actions[1].pos == 0);   // -30 -> 0
 }
 
+TEST_CASE("ProjectManager: SplitRegionEvent splits at the playhead into two graph-copied halves") {
+    TestProject tp;
+    ofs::AppSettings appSettings;
+    appSettings.autoBackupEnabled = false;
+    ofs::JobSystem jobSystem;
+    ofs::EffectRegistryState effectReg;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    tp.eq.freeze();
+    jobSystem.start();
+
+    tp.project.axes[0].showInStrip = true;
+    tp.eq.push(ofs::CreateRegionEvent{
+        .axisRole = StandardAxis::L0, .startTime = 0.0, .endTime = 10.0, .timelineDuration = 100.0});
+    tp.eq.drain();
+    REQUIRE(tp.project.regions.size() == 1);
+    const int origId = tp.project.regions[0].id;
+    const size_t graphNodes = tp.project.regions[0].nodeGraph.nodes.size();
+    const ImU32 origColor = tp.project.regions[0].color;
+    const std::string origName = tp.project.regions[0].name;
+
+    tp.eq.push(ofs::SplitRegionEvent{.regionId = origId, .splitTime = 4.0});
+    tp.eq.drain();
+
+    REQUIRE(tp.project.regions.size() == 2); // regions stay sorted by startTime
+    const auto &left = tp.project.regions[0];
+    const auto &right = tp.project.regions[1];
+    CHECK(left.startTime == doctest::Approx(0.0));
+    CHECK(left.endTime == doctest::Approx(4.0));
+    CHECK(right.startTime == doctest::Approx(4.0));
+    CHECK(right.endTime == doctest::Approx(10.0));
+    CHECK(left.id == origId);                          // the left half is the original, shrunk
+    CHECK(right.id != origId);                         // the right half is a fresh region
+    CHECK(right.nodeGraph.nodes.size() == graphNodes); // graph copied, not a fresh default
+    CHECK(right.color != origColor);                   // new color so the halves read as distinct
+    CHECK(right.name != origName);                     // new name for the split-off region
+}
+
+TEST_CASE("ProjectManager: SplitRegionEvent no-ops when a half would fall below the minimum") {
+    TestProject tp;
+    ofs::AppSettings appSettings;
+    appSettings.autoBackupEnabled = false;
+    ofs::JobSystem jobSystem;
+    ofs::EffectRegistryState effectReg;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    tp.eq.freeze();
+    jobSystem.start();
+
+    tp.project.axes[0].showInStrip = true;
+    tp.eq.push(ofs::CreateRegionEvent{
+        .axisRole = StandardAxis::L0, .startTime = 0.0, .endTime = 10.0, .timelineDuration = 100.0});
+    tp.eq.drain();
+    const int origId = tp.project.regions[0].id;
+
+    tp.eq.push(ofs::SplitRegionEvent{.regionId = origId, .splitTime = 0.3}); // left half 0.3 s < 0.5 s
+    tp.eq.drain();
+
+    REQUIRE(tp.project.regions.size() == 1); // unchanged
+    CHECK(tp.project.regions[0].endTime == doctest::Approx(10.0));
+}
+
 TEST_CASE("ProjectManager: MoveActionEvent clamps a negative target time to 0") {
     TestProject tp;
     ofs::AppSettings appSettings;

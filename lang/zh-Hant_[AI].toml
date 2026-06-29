@@ -2555,6 +2555,14 @@ translation = "向右擴展"
 english     = "Grow Both Sides"
 translation = "向兩側擴展"
 
+[TlSplitAtPlayhead]
+english     = "Split at Playhead"
+translation = "在播放磁頭處分割"
+
+[TlSplitReq]
+english     = "Move the playhead inside, at least 0.5 s from each edge"
+translation = "將播放磁頭移到內側，距每個邊緣至少 0.5 秒"
+
 [TlNeedActiveAxis]
 english     = "Select an axis first"
 translation = "請先選擇一個軸"

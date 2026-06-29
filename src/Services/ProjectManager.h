@@ -121,6 +121,7 @@ class ProjectManager {
     void onModifyRegion(const ModifyRegionEvent &event);
     void onMoveRegionNodes(const MoveRegionNodesEvent &event);
     void onBakeRegion(const BakeRegionEvent &event);
+    void onSplitRegion(const SplitRegionEvent &event);
     void onAssignAxis(const AssignAxisToRegionEvent &event);
     co::Fire onSaveGraph(SaveGraphEvent event);
     co::Fire onLoadGraph(LoadGraphEvent event);

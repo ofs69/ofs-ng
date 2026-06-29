@@ -37,6 +37,14 @@ struct BakeRegionEvent {
     int regionId;
 };
 
+// Split a region at `splitTime` into two adjacent regions. The handler no-ops unless the playhead lies
+// strictly inside the region and both halves meet the minimum region duration. The right half is a full
+// copy of the graph/roles so both sides keep processing; it gets a fresh id, name and color.
+struct SplitRegionEvent {
+    int regionId;
+    double splitTime;
+};
+
 // Emitted by ProjectManager after a region create/delete/bake *actually* completed — a create that found
 // room, a delete/bake that found its target. The request handlers bail on a no-op (no free slot, missing
 // region), so observers (the audio-feedback cue) react to this outcome rather than the
