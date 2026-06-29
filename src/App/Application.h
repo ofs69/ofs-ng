@@ -70,6 +70,12 @@ class Application {
     // rebuild the DPI-derived default dock layout so panel sizes track the new scale without a restart.
     virtual void onDisplayScaleChanged(float newScale) {}
 
+    // Fired from beginFrame when the user's base font size changes at runtime (Preferences). The style's
+    // FontSizeBase has already been set to the new value by the time this runs. Default: nothing. OfsApp
+    // overrides it to refit the layout — a larger/smaller font stretches the UI like DPI does, so the
+    // text-holding dock panels must re-size. Mirrors onDisplayScaleChanged for the DPI axis.
+    virtual void onFontSizeBaseChanged() {}
+
     // UI frame-rate cap in FPS (0 = unlimited / full refresh). Realized tear-free as an integer
     // swap-interval divisor of the display refresh in updateSwapInterval().
     virtual int frameCapFps() const { return 0; }
@@ -113,6 +119,10 @@ class Application {
     // appContentScale(). On Windows the two are equal; on macOS this stays ~1 while the framebuffer
     // scale carries the DPI. Seeded by initImGui so beginFrame's change check never fires on frame 1.
     float currentContentScale = 0.f;
+    // The base font size currently baked into the style (FontSizeBase). Drives beginFrame's runtime
+    // font-change detection; 0 until the first frame applies one, so the change check never fires on
+    // frame 1 (it only compares once a real previous value exists).
+    float currentFontSizeBase = 0.f;
 
     void endFrame();
 

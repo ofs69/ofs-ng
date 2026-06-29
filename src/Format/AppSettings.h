@@ -12,6 +12,12 @@ namespace ofs {
 // refuses a file newer than this rather than silently misreading fields.
 inline constexpr int kAppSettingsVersion = 1;
 
+// The reference UI font size (px, at 100% DPI) the dock-layout panel sizing is authored against, and
+// the shipped default for `fontSizeBase`. A different font size scales the layout proportionally, the
+// same way DPI does (see DockLayout's buildDefault and OfsApp::layoutContentScale). Keep the
+// `fontSizeBase` default equal to this so the default layout is never pre-scaled.
+inline constexpr float kDefaultFontSizeBase = 18.0f;
+
 struct MetadataPreset {
     std::string name;
     FunscriptMetadata metadata;
@@ -78,7 +84,7 @@ struct AppSettings {
     // Slider position in 0..1; UiSoundService squares it into a perceptual gain (0.5 ⇒ the 0.25 gain the
     // app shipped with before the taper).
     float uiSoundVolume = 0.5f;
-    float fontSizeBase = 18.0f;
+    float fontSizeBase = kDefaultFontSizeBase;
     bool showSimulator = true;
     bool showStatistics = true;
     bool showToolOptions = true;      // the Active Tool Options panel (active mode/navigator/selection onUi)

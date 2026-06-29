@@ -1,3 +1,5 @@
+#include "Core/Events.h" // ofs::ModifyEvent
+#include "Format/AppSettings.h"
 #include "Format/LayoutStore.h"
 #include "UI/DockLayout.h" // ofs::ui::applyDefaultLayout
 #include "helpers/OfsAppTestAccess.h"
@@ -314,6 +316,46 @@ void RegisterLayoutTests(ImGuiTestEngine *e) {
             IM_CHECK(!coLocated(ctx, "Video Controls###video_controls", "Statistics###statistics"));
 
             selectDefaultLayout(ctx); // clean baseline for later tests
+            ctx->Yield(3);
+        };
+
+    // A runtime base-font-size change refits the active layout the same way a DPI change does: beginFrame
+    // applies the new FontSizeBase and fires onFontSizeBaseChanged → revertToActiveLayout → the deferred
+    // apply rebuilds the Default font-aware (DockLayout's layoutUiScale folds the font factor into the
+    // panel ratios). Pin FontScaleDpi to isolate the font axis; doubling the font widens the text column.
+    IM_REGISTER_TEST(e, "layouts", "runtime_font_size_change_refits_default_layout")->TestFunc =
+        [](ImGuiTestContext *ctx) {
+            loadFixture(ctx);
+            auto &eq = *getTestState().eventQueue;
+            const float beforeFont = getTestState().appSettings->fontSizeBase;
+
+            ImGuiStyle &style = ImGui::GetStyle();
+            const float savedDpi = style.FontScaleDpi;
+            style.FontScaleDpi = 1.0f; // isolate the font-size axis from DPI scaling
+
+            auto columnWidth = [&]() -> float {
+                ImGuiDockNode *c = columnNode(ctx, "Statistics###statistics");
+                return c != nullptr ? c->Size.x : -1.0f;
+            };
+
+            selectDefaultLayout(ctx); // built at 1x DPI / the current (default) font
+            const float colBefore = columnWidth();
+            IM_CHECK_GT(colBefore, 0.0f);
+
+            // Double the base font: beginFrame applies it and fires the refit; the Default rebuilds with
+            // wider text panels (ratio 0.2→0.4, both under the 0.5 clamp).
+            eq.push(ofs::ModifyEvent<ofs::AppSettings>{
+                [beforeFont](ofs::AppSettings &s) { s.fontSizeBase = beforeFont * 2.0f; }});
+            ctx->Yield(4); // drain → next beginFrame detects the change → onUpdate consumes the rebuild
+            IM_CHECK_GT(columnWidth(), colBefore * 1.4f);
+
+            // Restore the font (column shrinks back), then the DPI, and rebuild for a clean baseline.
+            eq.push(
+                ofs::ModifyEvent<ofs::AppSettings>{[beforeFont](ofs::AppSettings &s) { s.fontSizeBase = beforeFont; }});
+            ctx->Yield(4);
+            IM_CHECK_LT(columnWidth(), colBefore * 1.4f);
+            style.FontScaleDpi = savedDpi;
+            ofs::ui::applyDefaultLayout();
             ctx->Yield(3);
         };
 

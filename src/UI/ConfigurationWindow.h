@@ -29,8 +29,8 @@ class ConfigurationWindow {
     std::string themeName_;                             // Save-As / Duplicate name input (grows; UTF-8 safe)
     std::string themeFilter_;                           // Theme-tab color/var fuzzy search box (UTF-8 safe)
     bool prevOpen = false;
-    float openFontSize = 0.f;
     bool openHwdec = false;
+    int fontSizeEdit_ = 0; // live buffer for the font-size InputInt; seeded on open, committed on edit-end
 };
 
 } // namespace ofs

@@ -1,4 +1,5 @@
 #include "UI/DockLayout.h"
+#include "Format/AppSettings.h" // kDefaultFontSizeBase — the font size the split ratios are authored against
 #include "imgui.h"
 #include "imgui_internal.h" // DockBuilder* API — not part of the public imgui.h API.
 #include <algorithm>
@@ -6,16 +7,30 @@
 namespace ofs::ui {
 
 namespace {
-// The split ratios below were authored at 100% DPI. The viewport is a fixed pixel count (see the DPI
-// model in Application: io.DisplaySize is physical pixels, and DPI is applied as a content scale via
-// style.FontScaleDpi + ScaleAllSizes), so a constant ratio yields a constant pixel slot while the text
-// and widgets inside it grow by the DPI scale. A panel sized to hold fixed content (a text column, a
-// compact widget strip) therefore clips at higher DPI. Scale such a panel's ratio by the DPI so it
-// keeps roughly the content capacity it was authored for; clamp so a very high DPI can't starve the
-// flexible video/timeline area. Flexible panels (video, timeline canvas, simulator view) hold
-// resolution-driven content, not text, so they keep their bare authored ratio.
-float fixedPanelRatio(float baseRatio, float dpi, float maxRatio) {
-    return std::clamp(baseRatio * dpi, baseRatio, maxRatio);
+// The split ratios below were authored at 100% DPI and the reference font size (kDefaultFontSizeBase).
+// The viewport is a fixed pixel count (see the DPI model in Application: io.DisplaySize is physical
+// pixels, and DPI is applied as a content scale via style.FontScaleDpi + ScaleAllSizes), so a constant
+// ratio yields a constant pixel slot while the text and widgets inside it grow by the DPI scale *and*
+// by the user's chosen font size. A panel sized to hold fixed content (a text column, a compact widget
+// strip) therefore clips at higher DPI or a larger font. Scale such a panel's ratio by the combined UI
+// scale so it keeps roughly the content capacity it was authored for; clamp so an extreme scale can't
+// starve the flexible video/timeline area. Flexible panels (video, timeline canvas, simulator view)
+// hold resolution-driven content, not text, so they keep their bare authored ratio.
+float fixedPanelRatio(float baseRatio, float uiScale, float maxRatio) {
+    return std::clamp(baseRatio * uiScale, baseRatio, maxRatio);
+}
+
+// Combined UI scale relative to the authored baseline: DPI content scale times the font size relative
+// to the reference. Drives the fixed-panel sizing so the default layout adapts to both DPI and the
+// user's font-size preference. Mirrors OfsApp::layoutContentScale (which feeds saved-layout scaling),
+// reading the live style instead of AppSettings — the two are kept in lockstep each frame.
+float layoutUiScale() {
+    const ImGuiStyle &style = ImGui::GetStyle();
+    float dpi = style.FontScaleDpi;
+    if (dpi <= 0.f)
+        dpi = 1.f;
+    const float fontFactor = style.FontSizeBase > 0.f ? style.FontSizeBase / ofs::kDefaultFontSizeBase : 1.f;
+    return dpi * fontFactor;
 }
 
 // Discards any existing arrangement and builds the hardcoded default split layout.
@@ -24,19 +39,17 @@ void buildDefault(ImGuiID dockspaceId, ImGuiViewport *viewport) {
     ImGui::DockBuilderAddNode(dockspaceId, ImGuiDockNodeFlags_DockSpace);
     ImGui::DockBuilderSetNodeSize(dockspaceId, viewport->Size);
 
-    // FontScaleDpi is the live content scale (set each frame from the display scale, see Application);
-    // it is already current by the time this runs (first frame / explicit reset). Guard the unset case.
-    float dpi = ImGui::GetStyle().FontScaleDpi;
-    if (dpi <= 0.f)
-        dpi = 1.f;
+    // The live content scale combines DPI (FontScaleDpi, set each frame from the display scale) with the
+    // user's font size; it is already current by the time this runs (first frame / explicit reset).
+    const float uiScale = layoutUiScale();
 
     ImGuiID dockMainId = dockspaceId;
     ImGuiID dockIdBottom = ImGui::DockBuilderSplitNode(dockMainId, ImGuiDir_Down, 0.30f, nullptr, &dockMainId);
     // The right column holds text-heavy panels (Statistics label/value rows, Tool Options); its width
     // must grow with the content scale or those rows clip. Cap at half the viewport so the video keeps
-    // the larger share even at very high DPI.
-    ImGuiID dockIdRight =
-        ImGui::DockBuilderSplitNode(dockMainId, ImGuiDir_Right, fixedPanelRatio(0.2f, dpi, 0.5f), nullptr, &dockMainId);
+    // the larger share even at very high DPI / font size.
+    ImGuiID dockIdRight = ImGui::DockBuilderSplitNode(dockMainId, ImGuiDir_Right, fixedPanelRatio(0.2f, uiScale, 0.5f),
+                                                      nullptr, &dockMainId);
     // The right column is split into three rows, top to bottom: Statistics, Tool Options, and the
     // Simulator. Peel each off the bottom in turn so the remaining top portion keeps splitting: Simulator
     // (bottom quarter), then Tool Options (a slim middle band), leaving Statistics with the top.
@@ -52,7 +65,7 @@ void buildDefault(ImGuiID dockspaceId, ImGuiViewport *viewport) {
     // the second carries the bookmark/chapter band — fit in this slim slot. The rows are fixed-height
     // (frame height), so the slot must grow with the content scale or the second row clips at high DPI.
     ImGuiID dockIdTimelineControls = ImGui::DockBuilderSplitNode(
-        dockIdTimeline, ImGuiDir_Down, fixedPanelRatio(0.28f, dpi, 0.6f), nullptr, &dockIdTimeline);
+        dockIdTimeline, ImGuiDir_Down, fixedPanelRatio(0.28f, uiScale, 0.6f), nullptr, &dockIdTimeline);
 
     // The Processing panel renders into this same node via the "###video_player" shared id slug, so
     // only one window is ever docked here — one window per node keeps a hidden tab bar from being reset.

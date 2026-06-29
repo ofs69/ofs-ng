@@ -695,6 +695,16 @@ void VideoControlsWindow::render(const ScriptProject &project, EventQueue &eq, V
     auto duration = static_cast<float>(videoPlayer.getDuration());
     float position = duration > 0.0f ? static_cast<float>(project.playback.cursorPos / duration) : 0.0f;
 
+    // The volume/speed sliders sit in the same content-sized columns as the transport buttons and time
+    // readout. A fill (-FLT_MIN) slider there would ratchet: the column measures its own given width as
+    // content, so a larger font pushes the column wider (via the siblings) but the slider then re-fills
+    // and never lets it shrink back. Size each slider from its sibling's deterministic width instead.
+    const float btnW = ImGui::GetFrameHeight() * 1.6f;
+    const float itemSpacing = ImGui::GetStyle().ItemSpacing.x;
+    const float transportGroupW = btnW * 5.0f + itemSpacing * 4.0f;
+    const float minSliderW = ImGui::GetFrameHeight() * 2.0f;
+    float timeAnchorW = 0.0f;
+
     if (ImGui::BeginTable("##controls", 3, 0)) {
         ImGui::TableSetupColumn("##c1", ImGuiTableColumnFlags_WidthFixed);
         ImGui::TableSetupColumn("##c2", ImGuiTableColumnFlags_WidthStretch);
@@ -706,7 +716,6 @@ void VideoControlsWindow::render(const ScriptProject &project, EventQueue &eq, V
         ImGui::TableSetColumnIndex(0);
         constexpr float seekTime = 3.0f;
         {
-            const float btnW = ImGui::GetFrameHeight() * 1.6f;
             // Frame-step back/forward through the navigator seam (Frame granularity = one overlay-grid
             // step), the same resolution the prev/next-step keys use.
             if (ImGui::Button(ICON_STEP_BACKWARD, {btnW, 0.f}))
@@ -737,8 +746,10 @@ void VideoControlsWindow::render(const ScriptProject &project, EventQueue &eq, V
 
         ImGui::TableSetColumnIndex(2);
         ImGui::AlignTextToFramePadding();
-        ImGui::TextUnformatted(fmtScratch("{} / {}", TimeUtil::formatTime(project.playback.cursorPos, true),
-                                          TimeUtil::formatTime(videoPlayer.getDuration(), true)));
+        const char *timeStr = fmtScratch("{} / {}", TimeUtil::formatTime(project.playback.cursorPos, true),
+                                         TimeUtil::formatTime(videoPlayer.getDuration(), true));
+        ImGui::TextUnformatted(timeStr);
+        timeAnchorW = ImGui::CalcTextSize(timeStr).x;
 
         // ── Row 2: Volume | Bookmark bar | Speed ─────────────────────────────
         ImGui::TableNextRow();
@@ -755,9 +766,10 @@ void VideoControlsWindow::render(const ScriptProject &project, EventQueue &eq, V
                     eq.push(VolumeChangedEvent{controlsState.preMuteVolume});
                 }
             }
+            const float muteW = ImGui::GetItemRectSize().x;
             ImGui::SetItemTooltip("%s", muted ? Str::VpcUnmute.c_str() : Str::VpcMute.c_str());
             ImGui::SameLine();
-            ImGui::SetNextItemWidth(-FLT_MIN);
+            ImGui::SetNextItemWidth(std::max(minSliderW, transportGroupW - muteW - itemSpacing));
             // Show the gain as a percent (0–130%) so the >100% boost reads as a boost, not a bare "1.3".
             float volPct = volume * 100.0f;
             if (ImGui::SliderFloat("##Volume", &volPct, 0.0f, 130.0f, "%.0f%%", ImGuiSliderFlags_AlwaysClamp)) {
@@ -770,6 +782,7 @@ void VideoControlsWindow::render(const ScriptProject &project, EventQueue &eq, V
         drawBookmarkBar(project, eq, videoPlayer);
 
         ImGui::TableSetColumnIndex(2);
+        const float speedRowStartX = ImGui::GetCursorPosX();
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted(Str::VpcSpeed);
         ImGui::SameLine();
@@ -790,7 +803,8 @@ void VideoControlsWindow::render(const ScriptProject &project, EventQueue &eq, V
             ImGui::EndPopup();
         }
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(-FLT_MIN);
+        const float speedUsedW = ImGui::GetCursorPosX() - speedRowStartX;
+        ImGui::SetNextItemWidth(std::max(minSliderW, timeAnchorW - speedUsedW));
         if (ImGui::SliderFloat("##Speed", &currentSpeed, 0.1f, 2.0f, "%.2fx", ImGuiSliderFlags_AlwaysClamp))
             eq.push(PlaybackSpeedEvent{currentSpeed});
 

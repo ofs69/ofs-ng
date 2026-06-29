@@ -90,6 +90,7 @@ class OfsApp : public ofs::Application {
     float fontSizeBase() const override;
     int frameCapFps() const override;
     void onDisplayScaleChanged(float newScale) override;
+    void onFontSizeBaseChanged() override;
 
     // Frame-loop hook (see Application): supplies the title and routes the caption-button actions to
     // the window. All window mechanics live in Window; this only translates UI intent.
@@ -144,7 +145,11 @@ class OfsApp : public ofs::Application {
     bool renderNewLayoutBody();      // interior of the New Layout modal; returns true to close
     void saveActiveLayout();         // snapshot current dock arrangement into the active preset
     void revertToActiveLayout();     // reload the active layout's saved state, discarding live tweaks
-    // current/savedScale factor to DPI-correct a saved layout on apply (1 when savedScale is unknown).
+    // The scale a layout's node pixels are captured/applied in: DPI content scale times the font size
+    // relative to the reference (kDefaultFontSizeBase). Both DPI and font size stretch the UI, so both
+    // feed the layout scale — see DockLayout's layoutUiScale, which mirrors this from the live style.
+    float layoutContentScale() const;
+    // current/savedScale factor to correct a saved layout on apply (1 when savedScale is unknown).
     float layoutScaleFactor(float savedScale) const;
     void initCommands(); // registers all Commands + default KeyChord bindings
     void onSeekEvent(const ofs::SeekEvent &event);

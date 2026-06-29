@@ -286,6 +286,11 @@ void Application::beginFrame() {
     }
     if (float fsb = fontSizeBase(); fsb > 0.f) {
         ImGui::GetStyle().FontSizeBase = fsb;
+        // Style is already updated; let the app refit the layout on an actual runtime change. Guard the
+        // seed case (0) so this never fires on the first frame — only on a real font-size change.
+        if (currentFontSizeBase != 0.f && currentFontSizeBase != fsb)
+            onFontSizeBaseChanged();
+        currentFontSizeBase = fsb;
     }
 
     FrameAllocator::instance().reset();

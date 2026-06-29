@@ -32,15 +32,17 @@ ConfigurationWindow::ConfigurationWindow(const AppSettings &appSettings) : appSe
 
 void ConfigurationWindow::render(const ScriptProject &project, EventQueue &eq, bool &open) {
     if (prevOpen && !open) {
-        if (appSettings.fontSizeBase != openFontSize || appSettings.hwdecEnabled != openHwdec)
+        // Font size applies live (layout refits on change); only the video hardware-decode toggle needs
+        // a restart, since it's bound when the mpv player is created.
+        if (appSettings.hwdecEnabled != openHwdec)
             showInfo(eq, Str::PrefRestartTitle.c_str(), Str::PrefRestartBody.c_str());
     }
 
     if (open && !prevOpen) {
         availableLanguages = ofs::loc::Translator::instance().available();
         availableThemes = ofs::theme::list();
-        openFontSize = appSettings.fontSizeBase;
         openHwdec = appSettings.hwdecEnabled;
+        fontSizeEdit_ = static_cast<int>(appSettings.fontSizeBase);
     }
     prevOpen = open;
 
@@ -381,9 +383,14 @@ void ConfigurationWindow::renderApplicationTab(EventQueue &eq) {
     if (beginForm("##view_form")) {
         formRow(Str::PrefFontSize);
         ImGui::SetNextItemWidth(-FLT_MIN);
-        float fontSize = appSettings.fontSizeBase;
-        if (ImGui::SliderFloat("##font_size", &fontSize, 10.0f, 40.0f, "%.0f px"))
-            eq.push(ModifyEvent<AppSettings>{[fontSize](AppSettings &s) { s.fontSizeBase = fontSize; }});
+        // Commit on edit-end (Enter / focus-loss / step button) rather than per-keystroke, so typing a
+        // multi-digit size doesn't momentarily clamp through an out-of-range prefix and thrash the layout.
+        ImGui::InputInt("##font_size", &fontSizeEdit_);
+        if (ImGui::IsItemDeactivatedAfterEdit()) {
+            fontSizeEdit_ = ImClamp(fontSizeEdit_, 10, 40);
+            eq.push(ModifyEvent<AppSettings>{
+                [v = fontSizeEdit_](AppSettings &s) { s.fontSizeBase = static_cast<float>(v); }});
+        }
         endForm();
     }
 

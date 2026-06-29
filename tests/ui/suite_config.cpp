@@ -57,7 +57,7 @@ void closePrefs(ImGuiTestContext *ctx) {
 void RegisterConfigTests(ImGuiTestEngine *e) {
     // ── Application tab: HW-decoding checkbox round-trips through AppSettings ──────────
     // Restored to its open-time value before closing so the "Restart Required" modal (which fires only
-    // when hwdec/fontSize differ from the open snapshot) is not raised here — that branch has its own test.
+    // when hwdec differs from the open snapshot) is not raised here — that branch has its own test.
     IM_REGISTER_TEST(e, "config", "app_hwdec_toggle")->TestFunc = [](ImGuiTestContext *ctx) {
         openAppTab(ctx);
         const auto *s = getTestState().appSettings;
@@ -105,8 +105,8 @@ void RegisterConfigTests(ImGuiTestEngine *e) {
     };
 
     // ── Application tab: changing a restart-gated setting raises the info modal on close ──
-    // hwdec (like fontSize) is captured at open; closing with it changed fires showInfo("Restart
-    // Required"). Dismiss the modal and restore the global value so later suites see a clean slate.
+    // hwdec is captured at open; closing with it changed fires showInfo("Restart Required"). Dismiss
+    // the modal and restore the global value so later suites see a clean slate.
     IM_REGISTER_TEST(e, "config", "app_restart_modal_on_close")->TestFunc = [](ImGuiTestContext *ctx) {
         openAppTab(ctx);
         auto &eq = *getTestState().eventQueue;
@@ -128,6 +128,27 @@ void RegisterConfigTests(ImGuiTestEngine *e) {
         eq.push(ofs::ModifyEvent<ofs::AppSettings>{[before](ofs::AppSettings &s) { s.hwdecEnabled = before; }});
         ctx->Yield(2);
         IM_CHECK_EQ(getTestState().appSettings->hwdecEnabled, before);
+    };
+
+    // ── Application tab: font size InputInt commits live and does not gate a restart ──
+    // The size applies live (the layout refits on change), so unlike hwdec, closing after a change must
+    // not raise "Restart Required". Restore the global default through the event queue afterwards.
+    IM_REGISTER_TEST(e, "config", "app_font_size_no_restart")->TestFunc = [](ImGuiTestContext *ctx) {
+        openAppTab(ctx);
+        auto &eq = *getTestState().eventQueue;
+        const float before = getTestState().appSettings->fontSizeBase;
+
+        ctx->ItemInputValue("**/##font_size", 28);
+        ctx->Yield(2);
+        IM_CHECK_LT(std::abs(getTestState().appSettings->fontSizeBase - 28.0f), 0.01f);
+
+        ctx->WindowClose(kWin);
+        ctx->Yield(3);
+        IM_CHECK(!anyModalOpen()); // font size is not restart-gated
+
+        eq.push(ofs::ModifyEvent<ofs::AppSettings>{[before](ofs::AppSettings &s) { s.fontSizeBase = before; }});
+        ctx->Yield(2);
+        IM_CHECK_LT(std::abs(getTestState().appSettings->fontSizeBase - before), 0.01f);
     };
 
     // ── Simulator tab: feature-toggle checkboxes write SimulatorState ─────────────────

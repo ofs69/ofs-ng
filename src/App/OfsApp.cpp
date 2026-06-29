@@ -1032,11 +1032,25 @@ void OfsApp::onDisplayScaleChanged(float) {
     revertToActiveLayout();
 }
 
+void OfsApp::onFontSizeBaseChanged() {
+    // A larger/smaller base font stretches the UI like DPI does: the layout's text-holding panels were
+    // sized for the old font and now clip or waste space. Re-apply the active layout at the new size —
+    // the Default rebuilds font-aware (DockLayout's layoutUiScale), a user layout rescales by the new
+    // layoutContentScale. Same deferred path / discard-live-tweaks semantics as onDisplayScaleChanged.
+    revertToActiveLayout();
+}
+
+float OfsApp::layoutContentScale() const {
+    const float fontFactor =
+        appSettings.fontSizeBase > 0.f ? appSettings.fontSizeBase / ofs::kDefaultFontSizeBase : 1.f;
+    return contentScale() * fontFactor;
+}
+
 float OfsApp::layoutScaleFactor(float savedScale) const {
     // COMPAT(2026-06-29): savedScale 0 means a layout saved before this field existed — apply it
     // verbatim (factor 1) rather than guessing the scale it was captured at. Drop with the 0 path in
     // LayoutStore::from_json once pre-DPI-aware layouts.json files are gone.
-    return savedScale > 0.f ? contentScale() / savedScale : 1.f;
+    return savedScale > 0.f ? layoutContentScale() / savedScale : 1.f;
 }
 
 bool OfsApp::canAppIdle() const {
@@ -1796,7 +1810,7 @@ void OfsApp::saveActiveLayout() {
     for (auto &preset : layoutStore.layouts) {
         if (preset.name == layoutStore.activeLayoutName) {
             preset.ini.assign(ini, n);
-            preset.savedScale = contentScale(); // node sizes in the ini are in this scale's pixels
+            preset.savedScale = layoutContentScale(); // node sizes in the ini are in this scale's pixels
             layoutStore.save();
             eventQueue.push(
                 ofs::NotifyEvent{.level = ofs::NotifyLevel::Success, .message = Str::AppLayoutSaved.fmt(preset.name)});
@@ -1853,7 +1867,7 @@ bool OfsApp::renderNewLayoutBody() {
         size_t n = 0;
         const char *ini = ImGui::SaveIniSettingsToMemory(&n);
         layoutStore.layouts.push_back(
-            {.name = newLayoutName_, .ini = std::string(ini, n), .savedScale = contentScale()});
+            {.name = newLayoutName_, .ini = std::string(ini, n), .savedScale = layoutContentScale()});
         layoutStore.activeLayoutName = newLayoutName_;
         layoutStore.save();
         eventQueue.push(
