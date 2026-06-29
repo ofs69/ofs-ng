@@ -65,10 +65,6 @@ jobs:
         with:
           dotnet-version: '10.0.x'
 
-      # No ccache here by design: release artifacts ship to users, so the build is from a
-      # clean cache every time — no chance of a stale object in a published binary. (Release
-      # is infrequent and tag-unique, so the cache would barely hit anyway.)
-
       # --- Linux: SDL3 build deps (no libmpv at build time; runtime-loaded) ---
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
@@ -89,25 +85,6 @@ jobs:
       - name: Set up Ninja (Windows)
         if: runner.os == 'Windows'
         uses: seanmiddleditch/gha-setup-ninja@v5
-
-      # Cache the libmpv + ffmpeg downloads (Windows only — Linux loads the system libmpv at runtime and
-      # invokes the system ffmpeg, so the build downloads nothing). This caches downloads, not build
-      # output, so it can never put a stale object into a published binary. The archive filenames are
-      # fixed (mpv-dev-{avx,noavx}.7z, ffmpeg-git-essentials.7z) and do NOT encode a version, so the key
-      # hashes src/CMakeLists.txt — the file that holds both URLs — to force a re-download when it changes.
-      # ffmpeg-git-essentials.7z is a rolling build, so the cache effectively pins whatever was first fetched
-      # under a given key (good for reproducibility). No restore-keys on purpose: a loose fallback could
-      # resurrect a stale archive under the same name. On a hit, the configure step's file(DOWNLOAD) sees
-      # each .7z already present and skips the fetch.
-      - name: Cache libmpv + ffmpeg downloads (Windows)
-        if: runner.os == 'Windows'
-        uses: actions/cache@v4
-        with:
-          path: |
-            build/mpv-dev-*.7z
-            build/ffmpeg-git-essentials.7z
-            build/7zr.exe
-          key: deps-${{ runner.os }}-${{ matrix.label }}-${{ hashFiles('src/CMakeLists.txt') }}
 
       # OFS_CLANG_TIDY=OFF: linting is the nightly job's (and PR CI's) responsibility, never the
       # artifact build's — running it here only adds (uncached, slow) wall time. It also keeps the
