@@ -397,11 +397,15 @@ static bool beginNodeParamTable(const char *id) {
 // Right-align an output-pin label to the node's right content edge. imnodes lays pins out left-aligned,
 // so without this the label floats near the left. The indent floors to 1px when the label already fills
 // the content width: ImGui::Indent(0) would apply the default IndentSpacing instead of no indent.
-static void renderRightAlignedOutput(int nodeId, int slot, const char *label) {
+static void renderRightAlignedOutput(int nodeId, int slot, const char *label, float contentW) {
     ImNodes::BeginOutputAttribute(GraphId::outPin(nodeId, slot));
-    ImGui::Indent(std::max(1.0f, nodeContentW() - ImGui::CalcTextSize(label).x));
+    ImGui::Indent(std::max(1.0f, contentW - ImGui::CalcTextSize(label).x));
     ImGui::TextUnformatted(label);
     ImNodes::EndOutputAttribute();
+}
+
+static void renderRightAlignedOutput(int nodeId, int slot, const char *label) {
+    renderRightAlignedOutput(nodeId, slot, label, nodeContentW());
 }
 
 static void renderOutputPin(int nodeId) {
@@ -623,12 +627,17 @@ void ProcessingPanel::renderNode(const ProcessingGraphNode &node, const EffectRe
     ImNodes::BeginNode(GraphId::nodeBody(node.id));
 
     switch (node.type) {
-    case GraphNodeType::Input:
+    case GraphNodeType::Input: {
+        // An I/O node has no param body, so anchor the lone output label to the title width rather than
+        // the standard body width — that keeps the Input node as compact as its Output-node mirror
+        // (which auto-sizes to its title). Title width is intrinsic, so it stays position-stable.
+        const char *title = fmtScratch("{}  {} in", ICON_LOG_IN, standardAxisTag(node.role));
         ImNodes::BeginNodeTitleBar();
-        ImGui::Text("%s  %s in", ICON_LOG_IN, standardAxisTag(node.role).data());
+        ImGui::TextUnformatted(title);
         ImNodes::EndNodeTitleBar();
-        renderRightAlignedOutput(node.id, 0, "signal");
+        renderRightAlignedOutput(node.id, 0, "signal", ImGui::CalcTextSize(title).x);
         break;
+    }
 
     case GraphNodeType::Output: {
         ImNodes::BeginNodeTitleBar();
