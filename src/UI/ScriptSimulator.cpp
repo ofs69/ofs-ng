@@ -786,7 +786,7 @@ void ScriptSimulator::render(const ScriptProject &project, EventQueue &eq, bool 
         return;
 
     const float fs = ImGui::GetFontSize();
-    ImGui::SetNextWindowSizeConstraints({fs * 22.f, fs * 18.f}, {FLT_MAX, FLT_MAX});
+    ImGui::SetNextWindowSizeConstraints({fs * 14.f, fs * 8.f}, {FLT_MAX, FLT_MAX});
     // NoNavInputs so the editor's unmodified arrow/Space shortcuts keep working while this panel has
     // focus, instead of being claimed by ImGui keyboard nav (see Application.cpp).
     ImGui::Begin(Str::SimTitle.id("Simulator"), &open,
