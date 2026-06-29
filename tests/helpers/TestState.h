@@ -9,6 +9,8 @@
 #include <imgui_te_context.h>
 #include <string>
 
+class OfsApp;
+
 namespace ofs {
 class PluginManager;
 class CommandRegistry;
@@ -42,6 +44,9 @@ struct TestSharedState {
     const ofs::AppSettings *appSettings = nullptr;
     // The Processing panel, so node-editor tests can drive deleteSelected() over a real imnodes selection.
     ofs::ProcessingPanel *processingPanel = nullptr;
+    // The running app, so the layout suite can drive the protected DPI-change hook directly (the real
+    // SDL display-scale trigger can't be simulated in the headless test window).
+    OfsApp *app = nullptr;
 };
 
 // Populated by OfsTestApp::init() before any test runs.

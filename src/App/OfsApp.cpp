@@ -1017,6 +1017,16 @@ int OfsApp::frameCapFps() const {
     return appSettings.maxFps;
 }
 
+void OfsApp::onDisplayScaleChanged(float) {
+    // The built-in Default arrangement bakes the DPI scale into its split ratios at build time (see
+    // DockLayout::buildDefault), so a runtime scale change leaves panel widths stale. Schedule the same
+    // deferred rebuild that "Reset Layout" uses; it re-runs in onUpdate at the new scale, before windows
+    // are submitted. A saved user layout is a fixed absolute-pixel arrangement we can't regenerate, so it
+    // is left untouched — matching what a restart does (it reloads that layout's ini verbatim too).
+    if (layoutStore.activeLayoutName == "Default")
+        pendingDefaultReset_ = true;
+}
+
 bool OfsApp::canAppIdle() const {
 #ifdef OFS_TEST_ENGINE
     // Under the imgui_test_engine harness (ui-tests) frames are driven programmatically with

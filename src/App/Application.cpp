@@ -257,6 +257,10 @@ void Application::beginFrame() {
         style.FontScaleDpi = newScale;
         applyDpiToImNodes(newScale);
         currentDpiScale = newScale;
+        // Style is fully re-scaled; let the app re-derive any DPI-dependent layout (the default dock
+        // arrangement bakes the scale into its split ratios at build time). initImGui seeds
+        // currentDpiScale, so this never fires on the first frame — only on an actual runtime change.
+        onDisplayScaleChanged(newScale);
     }
     if (float fsb = fontSizeBase(); fsb > 0.f) {
         ImGui::GetStyle().FontSizeBase = fsb;

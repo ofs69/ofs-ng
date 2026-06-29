@@ -1,4 +1,6 @@
 #include "Format/LayoutStore.h"
+#include "UI/DockLayout.h" // ofs::ui::applyDefaultLayout
+#include "helpers/OfsAppTestAccess.h"
 #include "helpers/TestState.h"
 #include <imgui.h>
 #include <imgui_internal.h> // ImGuiWindow::DockNode, ImGuiDockNode, DockBuilder*
@@ -216,5 +218,102 @@ void RegisterLayoutTests(ImGuiTestEngine *e) {
         IM_CHECK(node != nullptr);
         IM_CHECK((node->MergedFlags & ImGuiDockNodeFlags_NoTabBar) == 0);
         IM_CHECK(!ofs::LayoutStore::load().locked);
+    };
+
+    // The built-in Default layout scales its fixed-content panels (right-column width, Video Controls
+    // strip height) with the DPI content scale (style.FontScaleDpi) so text rows don't clip when display
+    // scaling is raised. Build the default at 1x and 2x and assert those nodes grew. The viewport pixel
+    // size is constant across DPI here, so a raw-pixel comparison isolates the ratio change.
+    IM_REGISTER_TEST(e, "layouts", "default_layout_scales_fixed_panels_with_dpi")->TestFunc =
+        [](ImGuiTestContext *ctx) {
+            loadFixture(ctx);
+            selectDefaultLayout(ctx);
+
+            auto columnWidth = [&]() -> float {
+                ImGuiDockNode *c = columnNode(ctx, "Statistics###statistics");
+                return c != nullptr ? c->Size.x : -1.0f;
+            };
+            auto controlsHeight = [&]() -> float {
+                ImGuiDockNode *n = dockedNode(ctx, "Video Controls###video_controls");
+                return n != nullptr ? n->Size.y : -1.0f;
+            };
+
+            ImGuiStyle &style = ImGui::GetStyle();
+            const float savedDpi = style.FontScaleDpi;
+
+            // buildDefault reads FontScaleDpi at build time; drive it directly. The per-frame DPI sync
+            // only rewrites the style when the display scale actually changes (it doesn't, in tests), so
+            // this value survives the Yields below.
+            style.FontScaleDpi = 1.0f;
+            ofs::ui::applyDefaultLayout();
+            ctx->Yield(3);
+            const float colAt1x = columnWidth();
+            const float ctrlAt1x = controlsHeight();
+            IM_CHECK_GT(colAt1x, 0.0f);
+            IM_CHECK_GT(ctrlAt1x, 0.0f);
+
+            style.FontScaleDpi = 2.0f;
+            ofs::ui::applyDefaultLayout();
+            ctx->Yield(3);
+            const float colAt2x = columnWidth();
+            const float ctrlAt2x = controlsHeight();
+
+            // Ratios double (0.2→0.4, 0.28→0.56, both under their clamps); 1.4x is a safe lower bound.
+            IM_CHECK_GT(colAt2x, colAt1x * 1.4f);
+            IM_CHECK_GT(ctrlAt2x, ctrlAt1x * 1.4f);
+
+            // Restore the real content scale and rebuild so later tests start from a clean baseline.
+            style.FontScaleDpi = savedDpi;
+            ofs::ui::applyDefaultLayout();
+            ctx->Yield(3);
+        };
+
+    // A runtime content-scale change rebuilds the Default arrangement (via the onDisplayScaleChanged
+    // hook → the deferred reset onUpdate consumes) so panels track the new scale without a restart — but
+    // leaves a saved *user* layout untouched (it's a fixed arrangement that can't be regenerated). The
+    // real SDL display-scale trigger can't be simulated headless, so drive the hook directly after
+    // setting FontScaleDpi.
+    IM_REGISTER_TEST(e, "layouts", "runtime_scale_change_rebuilds_default_only")->TestFunc = [](ImGuiTestContext *ctx) {
+        loadFixture(ctx);
+        OfsApp &app = *getTestState().app;
+        ImGuiStyle &style = ImGui::GetStyle();
+        const float savedDpi = style.FontScaleDpi;
+
+        auto columnWidth = [&]() -> float {
+            ImGuiDockNode *c = columnNode(ctx, "Statistics###statistics");
+            return c != nullptr ? c->Size.x : -1.0f;
+        };
+
+        // Default active: a scale change rebuilds it wider.
+        selectDefaultLayout(ctx); // built at the test's 1x scale
+        const float colBefore = columnWidth();
+        IM_CHECK_GT(colBefore, 0.0f);
+
+        style.FontScaleDpi = 2.0f;
+        OfsAppTestAccess::dispatchDisplayScaleChanged(app, 2.0f);
+        ctx->Yield(3); // onUpdate consumes the pending reset and rebuilds at 2x
+        IM_CHECK_GT(columnWidth(), colBefore * 1.4f);
+
+        style.FontScaleDpi = savedDpi;
+        OfsAppTestAccess::dispatchDisplayScaleChanged(app, savedDpi);
+        ctx->Yield(3);
+
+        // User layout active: the same hook must NOT reset it — a redocked arrangement survives.
+        createLayout(ctx, "DpiRuntimeUser");
+        revealTabBar(ctx, "Video Controls###video_controls");
+        ctx->DockInto("Video Controls###video_controls", "Statistics###statistics");
+        ctx->Yield(3);
+        IM_CHECK(coLocated(ctx, "Video Controls###video_controls", "Statistics###statistics"));
+
+        style.FontScaleDpi = 2.0f;
+        OfsAppTestAccess::dispatchDisplayScaleChanged(app, 2.0f);
+        ctx->Yield(3);
+        // Still co-located ⇒ no default rebuild fired for the user layout.
+        IM_CHECK(coLocated(ctx, "Video Controls###video_controls", "Statistics###statistics"));
+
+        // Restore scale and return to a clean Default baseline for later tests.
+        style.FontScaleDpi = savedDpi;
+        selectDefaultLayout(ctx);
+        ctx->Yield(3);
     };
 }

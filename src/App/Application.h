@@ -64,6 +64,12 @@ class Application {
 
     virtual float fontSizeBase() const { return 0.f; }
 
+    // Fired from beginFrame when the display content scale (DPI) changes at runtime — e.g. the window is
+    // dragged to a monitor at a different scaling. The style has already been re-scaled to `newScale`
+    // (FontScaleDpi + ScaleAllSizes) by the time this runs. Default: nothing. OfsApp overrides it to
+    // rebuild the DPI-derived default dock layout so panel sizes track the new scale without a restart.
+    virtual void onDisplayScaleChanged(float newScale) {}
+
     // UI frame-rate cap in FPS (0 = unlimited / full refresh). Realized tear-free as an integer
     // swap-interval divisor of the display refresh in updateSwapInterval().
     virtual int frameCapFps() const { return 0; }

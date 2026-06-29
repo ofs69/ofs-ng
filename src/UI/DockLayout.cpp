@@ -1,19 +1,42 @@
 #include "UI/DockLayout.h"
 #include "imgui.h"
 #include "imgui_internal.h" // DockBuilder* API — not part of the public imgui.h API.
+#include <algorithm>
 
 namespace ofs::ui {
 
 namespace {
+// The split ratios below were authored at 100% DPI. The viewport is a fixed pixel count (see the DPI
+// model in Application: io.DisplaySize is physical pixels, and DPI is applied as a content scale via
+// style.FontScaleDpi + ScaleAllSizes), so a constant ratio yields a constant pixel slot while the text
+// and widgets inside it grow by the DPI scale. A panel sized to hold fixed content (a text column, a
+// compact widget strip) therefore clips at higher DPI. Scale such a panel's ratio by the DPI so it
+// keeps roughly the content capacity it was authored for; clamp so a very high DPI can't starve the
+// flexible video/timeline area. Flexible panels (video, timeline canvas, simulator view) hold
+// resolution-driven content, not text, so they keep their bare authored ratio.
+float fixedPanelRatio(float baseRatio, float dpi, float maxRatio) {
+    return std::clamp(baseRatio * dpi, baseRatio, maxRatio);
+}
+
 // Discards any existing arrangement and builds the hardcoded default split layout.
 void buildDefault(ImGuiID dockspaceId, ImGuiViewport *viewport) {
     ImGui::DockBuilderRemoveNode(dockspaceId);
     ImGui::DockBuilderAddNode(dockspaceId, ImGuiDockNodeFlags_DockSpace);
     ImGui::DockBuilderSetNodeSize(dockspaceId, viewport->Size);
 
+    // FontScaleDpi is the live content scale (set each frame from the display scale, see Application);
+    // it is already current by the time this runs (first frame / explicit reset). Guard the unset case.
+    float dpi = ImGui::GetStyle().FontScaleDpi;
+    if (dpi <= 0.f)
+        dpi = 1.f;
+
     ImGuiID dockMainId = dockspaceId;
     ImGuiID dockIdBottom = ImGui::DockBuilderSplitNode(dockMainId, ImGuiDir_Down, 0.30f, nullptr, &dockMainId);
-    ImGuiID dockIdRight = ImGui::DockBuilderSplitNode(dockMainId, ImGuiDir_Right, 0.2f, nullptr, &dockMainId);
+    // The right column holds text-heavy panels (Statistics label/value rows, Tool Options); its width
+    // must grow with the content scale or those rows clip. Cap at half the viewport so the video keeps
+    // the larger share even at very high DPI.
+    ImGuiID dockIdRight =
+        ImGui::DockBuilderSplitNode(dockMainId, ImGuiDir_Right, fixedPanelRatio(0.2f, dpi, 0.5f), nullptr, &dockMainId);
     // The right column is split into three rows, top to bottom: Statistics, Tool Options, and the
     // Simulator. Peel each off the bottom in turn so the remaining top portion keeps splitting: Simulator
     // (bottom quarter), then Tool Options (a slim middle band), leaving Statistics with the top.
@@ -26,9 +49,10 @@ void buildDefault(ImGuiID dockspaceId, ImGuiViewport *viewport) {
     // The Video Controls window holds only two compact widget rows (transport/seek/time +
     // volume/bookmarks/speed), so it needs far less height than the timeline above it. With the
     // layout locked (the intended clean presentation) the node sheds its tab bar, so both rows —
-    // the second carries the bookmark/chapter band — fit in this slim slot.
-    ImGuiID dockIdTimelineControls =
-        ImGui::DockBuilderSplitNode(dockIdTimeline, ImGuiDir_Down, 0.28f, nullptr, &dockIdTimeline);
+    // the second carries the bookmark/chapter band — fit in this slim slot. The rows are fixed-height
+    // (frame height), so the slot must grow with the content scale or the second row clips at high DPI.
+    ImGuiID dockIdTimelineControls = ImGui::DockBuilderSplitNode(
+        dockIdTimeline, ImGuiDir_Down, fixedPanelRatio(0.28f, dpi, 0.6f), nullptr, &dockIdTimeline);
 
     // The Processing panel renders into this same node via the "###video_player" shared id slug, so
     // only one window is ever docked here — one window per node keeps a hidden tab bar from being reset.

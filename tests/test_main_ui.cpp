@@ -60,6 +60,7 @@ class OfsTestApp : public OfsApp {
         g_testState.videoPlayer = OfsAppTestAccess::videoPlayer(*this);
         g_testState.appSettings = &OfsAppTestAccess::appSettings(*this);
         g_testState.processingPanel = &OfsAppTestAccess::processingPanel(*this);
+        g_testState.app = this;
 
         // Keep the update checker off the real network for the whole suite: the silent startup check
         // (and any test that doesn't install its own override) resolves through this stub, which reports

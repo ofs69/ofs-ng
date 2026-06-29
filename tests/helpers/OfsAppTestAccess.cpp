@@ -34,6 +34,9 @@ const ofs::AppSettings &OfsAppTestAccess::appSettings(OfsApp &app) {
 ofs::ProcessingPanel &OfsAppTestAccess::processingPanel(OfsApp &app) {
     return *app.processingPanel;
 }
+void OfsAppTestAccess::dispatchDisplayScaleChanged(OfsApp &app, float newScale) {
+    app.onDisplayScaleChanged(newScale);
+}
 
 std::string localizedCommandTitle(const char *commandId) {
     const ofs::CommandRegistry &reg = *getTestState().commandRegistry;

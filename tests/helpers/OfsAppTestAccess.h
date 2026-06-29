@@ -33,4 +33,9 @@ struct OfsAppTestAccess {
     static ofs::VideoPlayer *videoPlayer(OfsApp &app);
     static const ofs::AppSettings &appSettings(OfsApp &app);
     static ofs::ProcessingPanel &processingPanel(OfsApp &app);
+
+    // Invoke the protected runtime DPI-change hook. The real trigger (SDL_GetWindowDisplayScale changing
+    // mid-session) can't be produced in the headless test window, so the layout suite calls this after
+    // setting style.FontScaleDpi to the simulated scale.
+    static void dispatchDisplayScaleChanged(OfsApp &app, float newScale);
 };
