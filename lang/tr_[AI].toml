@@ -2628,6 +2628,10 @@ translation = "(adsız)"
 english     = "Add Bookmark at Playhead"
 translation = "Oynatma Konumuna Yer İşareti Ekle"
 
+[VpcBarHint]
+english     = "Right-click to add a chapter or bookmark"
+translation = "Bölüm veya yer imi eklemek için sağ tıklayın"
+
 [VpcAddChapterPlayhead]
 english     = "Add Chapter at Playhead"
 translation = "Oynatma Konumuna Bölüm Ekle"

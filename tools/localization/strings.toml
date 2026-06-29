@@ -2783,6 +2783,10 @@ description = "Bookmark hover tooltip — placeholder shown when a bookmark has 
 english     = "Add Bookmark at Playhead"
 description = "Bookmark strip right-click menu — add a bookmark at the current playhead time."
 
+[VpcBarHint]
+english     = "Right-click to add a chapter or bookmark"
+description = "Faint centered prompt drawn on the empty bookmark/chapter strip (nothing placed) to reveal that right-click adds a chapter or bookmark."
+
 [VpcAddChapterPlayhead]
 english     = "Add Chapter at Playhead"
 description = "Bookmark strip right-click menu — add a chapter starting at the current playhead time."

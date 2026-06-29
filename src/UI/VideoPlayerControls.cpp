@@ -8,6 +8,7 @@
 #include "Localization/Translator.h"
 #include "UI/BandBar.h"
 #include "UI/Icons.h"
+#include "UI/ImGuiHelpers.h"
 #include "UI/Modals.h"
 #include "UI/Theme.h"
 #include "UI/TimelinePreviewPopup.h"
@@ -262,6 +263,16 @@ void VideoControlsWindow::drawBookmarkBar(const ScriptProject &project, EventQue
     // distinct from the seek bar above, even when no bookmarks or chapters are placed.
     dl->AddRectFilled(barMin, barMax, ofs::theme::GetColorU32(AppCol_HudBg));
     dl->AddRect(barMin, barMax, ofs::theme::GetColorU32(ImGuiCol_Border));
+
+    // With nothing placed the strip is an empty track and the right-click that adds a chapter/bookmark
+    // is otherwise undiscoverable; prompt it (elided so a narrow bar can't overrun), mirroring the
+    // timeline's region bar.
+    if (bcState.chapters.empty() && bcState.bookmarks.empty()) {
+        const char *hint = ofs::ui::elide(Str::VpcBarHint.c_str(), (barMax.x - barMin.x) - ImGui::GetFontSize());
+        const ImVec2 ts = ImGui::CalcTextSize(hint);
+        dl->AddText({(barMin.x + barMax.x - ts.x) * 0.5f, (barMin.y + barMax.y - ts.y) * 0.5f},
+                    ofs::theme::GetColorU32(ImGuiCol_TextDisabled), hint);
+    }
 
     const int bandCount = static_cast<int>(bcState.chapters.size());
     auto *bandData = ofs::FrameAllocator::instance().allocArray<ofs::ui::BandItem>(bandCount);

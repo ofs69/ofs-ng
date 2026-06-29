@@ -2628,6 +2628,10 @@ translation = "(名称未設定)"
 english     = "Add Bookmark at Playhead"
 translation = "再生ヘッドにブックマークを追加"
 
+[VpcBarHint]
+english     = "Right-click to add a chapter or bookmark"
+translation = "右クリックでチャプターまたはブックマークを追加"
+
 [VpcAddChapterPlayhead]
 english     = "Add Chapter at Playhead"
 translation = "再生ヘッドにチャプターを追加"

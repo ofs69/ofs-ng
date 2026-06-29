@@ -2628,6 +2628,10 @@ translation = "(sans nom)"
 english     = "Add Bookmark at Playhead"
 translation = "Ajouter un signet à la tête de lecture"
 
+[VpcBarHint]
+english     = "Right-click to add a chapter or bookmark"
+translation = "Clic droit pour ajouter un chapitre ou un signet"
+
 [VpcAddChapterPlayhead]
 english     = "Add Chapter at Playhead"
 translation = "Ajouter un chapitre à la tête de lecture"
