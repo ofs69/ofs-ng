@@ -2464,8 +2464,8 @@ english     = "Right-click to add a processing region"
 translation = "Щёлкните правой кнопкой, чтобы добавить регион обработки"
 
 [TlPointGestures]
-english     = "Shift+click: add point · Alt+drag: value only · Ctrl+click: select"
-translation = "Shift+щелчок: добавить точку · Alt+перетаскивание: только значение · Ctrl+щелчок: выбрать"
+english     = "Shift+click: add point\nAlt+drag: value only\nCtrl+click: select"
+translation = "Shift+щелчок: добавить точку\nAlt+перетаскивание: только значение\nCtrl+щелчок: выбрать"
 
 [TlHideFromPanel]
 english     = "Hide from panel"

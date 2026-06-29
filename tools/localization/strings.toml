@@ -2610,8 +2610,8 @@ english     = "Right-click to add a processing region"
 description = "Faint centered prompt drawn on the empty region bar (no regions placed) to reveal that right-click adds one."
 
 [TlPointGestures]
-english     = "Shift+click: add point · Alt+drag: value only · Ctrl+click: select"
-description = "Muted hint line in the timeline point hover tooltip — the curve's modifier gestures. 'Shift'/'Alt'/'Ctrl' are key names; the '·' separates the three gestures."
+english     = "Shift+click: add point\nAlt+drag: value only\nCtrl+click: select"
+description = "Muted multi-line hint in the timeline point hover tooltip — the curve's modifier gestures, one per line. 'Shift'/'Alt'/'Ctrl' are key names; keep each gesture on its own line (\\n)."
 
 [TlHideFromPanel]
 english     = "Hide from panel"

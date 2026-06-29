@@ -2464,8 +2464,8 @@ english     = "Right-click to add a processing region"
 translation = "右クリックで処理リージョンを追加"
 
 [TlPointGestures]
-english     = "Shift+click: add point · Alt+drag: value only · Ctrl+click: select"
-translation = "Shift+クリック: 点を追加 · Alt+ドラッグ: 値のみ · Ctrl+クリック: 選択"
+english     = "Shift+click: add point\nAlt+drag: value only\nCtrl+click: select"
+translation = "Shift+クリック: 点を追加\nAlt+ドラッグ: 値のみ\nCtrl+クリック: 選択"
 
 [TlHideFromPanel]
 english     = "Hide from panel"
