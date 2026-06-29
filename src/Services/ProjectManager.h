@@ -5,6 +5,7 @@
 #include "Core/GraphPresetEvents.h"
 #include "Core/ProjectLifecycleEvents.h"
 #include "Core/SceneViewEvents.h"
+#include "Core/SceneViewTransition.h"
 #include "Core/StandardAxis.h"
 #include "Format/AppSettings.h"
 #include "Format/Project.h"
@@ -139,10 +140,12 @@ class ProjectManager {
     // current activeSceneView if it has none yet), or defaultSceneView when outside any chapter.
     // Updates lastSceneViewIdx so resolveActiveSceneView() won't re-restore over the edit.
     SceneView &sceneViewAtCursor();
-    // Resolve the scene view for the current cursor: if the active chapter changed since last
-    // frame, set project.activeSceneView (chapter override or defaultSceneView) and push a
-    // RestoreSceneViewEvent so the video window snaps its camera. Called once per update().
-    void resolveActiveSceneView();
+    // Resolve the scene view for the current cursor: when the active chapter changes, start a glide
+    // from the current activeSceneView toward the new chapter's view (or defaultSceneView), then each
+    // frame advance it by `dt`, write the interpolated value to project.activeSceneView, and push a
+    // RestoreSceneViewEvent so the video window follows. The initial resolve after a load snaps (no
+    // glide). Called once per update(). A capture (sceneViewAtCursor) cancels any in-flight glide.
+    void resolveActiveSceneView(float dt);
     void onClearRegionSelection(const ClearRegionSelectionEvent &event);
     void onSetProcPanelLocked(const SetProcPanelLockedEvent &event);
     void onUpdateTimelineView(const UpdateTimelineViewEvent &event);
@@ -244,6 +247,20 @@ class ProjectManager {
     // Active-chapter index from the last resolveActiveSceneView() (-1 = outside any chapter).
     // Sentinel -2 forces a restore on the first update after a load. See resolveActiveSceneView.
     int lastSceneViewIdx = -2;
+    // Chapter-cross scene-view glide duration (seconds). Zero under the UI test engine so per-chapter
+    // restore tests assert the settled view without waiting out the wall-clock animation — the glide
+    // itself is covered by the unit suite (which is built without OFS_TEST_ENGINE). Timing only; the
+    // resolved target view is identical either way.
+#ifdef OFS_TEST_ENGINE
+    static constexpr float kSceneGlideSeconds = 0.0f;
+#else
+    static constexpr float kSceneGlideSeconds = 0.25f;
+#endif
+    // Animates project.activeSceneView across a chapter crossing. The owner picks the target view (the
+    // functionality); the transition owns the timed ease (the animation). A capture cancels it.
+    SceneViewTransition sceneTransition{kSceneGlideSeconds};
+    // The scene view for chapter `idx` (its override, or defaultSceneView if it has none / idx < 0).
+    [[nodiscard]] SceneView sceneViewForChapter(int idx) const;
     // A just-loaded project's resume position, awaiting the opened media's real duration before it can
     // seek (see onDurationChanged). Set on load, consumed by the first valid DurationChangedEvent.
     std::optional<double> pendingResumeSeek;

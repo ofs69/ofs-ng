@@ -241,6 +241,7 @@ add_executable(ofs-unit-tests
         util/test_json_util.cpp
         util/test_fuzzy_match.cpp
         util/test_fault_throttle.cpp
+        util/test_smoothed_float.cpp
         util/test_semver.cpp
         util/test_pref_version_guard.cpp
         services/test_command_registry.cpp
@@ -255,6 +256,7 @@ add_executable(ofs-unit-tests
         # flavor, so there is no shared object lib for them. PathUtil bakes this
         # binary's OFS_TEST_PREF_SUBDIR value; ModalManager is built WITHOUT
         # OFS_TEST_ENGINE (the engine copy rides the full-window binaries' app compile).
+        ${CMAKE_SOURCE_DIR}/src/Core/SceneView.cpp
         ${CMAKE_SOURCE_DIR}/src/Scenegraph/VrCamera.cpp
         ${CMAKE_SOURCE_DIR}/src/Services/UndoSystem.cpp
         ${CMAKE_SOURCE_DIR}/src/Services/SnapshotCodec.cpp

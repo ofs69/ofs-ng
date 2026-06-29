@@ -4,6 +4,7 @@
 #include "Core/SceneView.h"
 #include "Core/ScriptProject.h"
 #include "UI/OverlayViewport.h"
+#include "Util/SmoothedFloat.h"
 #include "Video/VideoPlayerSettings.h"
 #include "imgui.h"
 #include <functional>
@@ -34,9 +35,10 @@ class VideoPlayerWindow {
   private:
     bool open = true;
 
-    // 2D Pan/Zoom
-    float zoomFactor = 1.0f;
-    float targetZoomFactor = 1.0f;
+    // 2D Pan/Zoom. The zoom eases toward its target via SmoothedFloat (animation rule), driven by
+    // wheel input and chapter-cross glides; the window owns only the target and the per-step side
+    // effects (zoom-toward-cursor pan, render-resolution sizing).
+    SmoothedFloat zoom_{1.0f};
     ImVec2 translation = {0.0f, 0.0f};
     bool dragging = false;
 
@@ -44,8 +46,9 @@ class VideoPlayerWindow {
     std::unique_ptr<VrShader> vrShader;
     // Neutral camera: yaw centered, pitch 0 (forward, +Z). y stays in [0,1] (pitch ±90°).
     ImVec2 vrRotation = {0.5f, 0.5f};
-    float vrZoom = 0.5f;
-    float targetVrZoom = 0.5f;
+    SmoothedFloat vrZoom_{0.5f};
+    // Response time constant (s) for the eased zoom chase; ~1/15 keeps the prior wheel-zoom feel.
+    static constexpr float kZoomTau = 1.0f / 15.0f;
     // World sphere direction grabbed under the cursor at drag-start; kept pinned to the pointer for
     // the whole drag (see ofs::vrcam::dragRotation). Only meaningful while `dragging`.
     glm::vec3 vrGrabDir = {0.0f, 0.0f, 1.0f};
@@ -66,6 +69,16 @@ class VideoPlayerWindow {
     // Set by the RestoreSceneViewEvent handler; applied to the live camera transients on the next
     // render (where contentSize is known to denormalize the pan). Cleared once applied.
     std::optional<VideoFraming> pendingFraming;
+    // The pending restore's *final* framing (== pendingFraming on a snap) and whether it is a glide
+    // step. While gliding, the render resolution keys off `pendingSettle` (the constant final zoom) so
+    // the FBO resizes once, and the live zoom lerp is suppressed (see `gliding`) so it doesn't fight
+    // the per-frame interpolation ProjectManager drives.
+    VideoFraming pendingSettle;
+    bool pendingAnimating_ = false;
+    // True while a chapter-cross glide is being driven frame-by-frame from ProjectManager. Set when an
+    // animating restore is applied, cleared on a snap/final frame or a frame with no restore — so if a
+    // glide is cancelled mid-flight (e.g. an overlay drag), the live zoom lerp resumes and settles.
+    bool gliding = false;
     // True while a view-reset (middle-double-click gesture or the "Reset Video View" command) is
     // pending: pendingFraming is set to the defaults, and once applied next render we also push a
     // CaptureVideoFramingEvent to persist it. Distinguishes the reset path from a RestoreSceneView
@@ -75,6 +88,8 @@ class VideoPlayerWindow {
     // and the ResetVideoFramingEvent handler so both reset through one path.
     void requestFramingReset() {
         pendingFraming = VideoFraming{};
+        pendingSettle = VideoFraming{};
+        pendingAnimating_ = false;
         framingResetPending_ = true;
     }
     // Build a VideoFraming snapshot of the current camera (pan stored as a fraction of contentSize,

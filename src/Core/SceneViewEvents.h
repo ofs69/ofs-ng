@@ -5,11 +5,20 @@
 namespace ofs {
 
 // ProjectManager → VideoPlayerWindow: the active scene changed (the cursor crossed into a
-// different chapter, or a capture happened); snap the live video camera to this framing.
+// different chapter, or a capture happened); apply this framing to the live video camera.
 // The overlay-anchor half is applied via ScriptProject::activeSceneView, read directly
 // during render, so it is not carried here.
+//
+// A chapter crossing glides over ~250ms: ProjectManager pushes one of these per frame with
+// `framing` set to the interpolated value. `settle` is the glide's *final* framing — the render
+// resolution keys off it so the FBO resizes once, not every animated frame. `animating` is true on
+// the in-flight frames (the window suppresses its own zoom lerp so it doesn't fight the interpolation)
+// and false on a one-shot snap (initial load / reset) or the glide's final frame. On a snap,
+// `framing == settle`.
 struct RestoreSceneViewEvent {
     VideoFraming framing;
+    VideoFraming settle;
+    bool animating = false;
 };
 
 // Capture-on-adjust is split into two half-events because the overlay anchor and the video

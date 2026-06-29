@@ -58,4 +58,11 @@ struct SceneView {
     bool inverted = false;
 };
 
+// Linear interpolation at parameter t (apply easing at the call site). VR angle fields (normalized
+// yaw, radian yaws) take the shortest arc so a wrap-around (e.g. 0.95→0.05) glides the short way, not
+// the long spin. `inverted` is discrete — it can't tween, so it snaps to `b` at the midpoint (t≥0.5).
+VideoFraming lerp(const VideoFraming &a, const VideoFraming &b, float t);
+OverlayAnchor lerp(const OverlayAnchor &a, const OverlayAnchor &b, float t);
+SceneView lerp(const SceneView &a, const SceneView &b, float t);
+
 } // namespace ofs

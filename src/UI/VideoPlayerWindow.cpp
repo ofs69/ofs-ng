@@ -28,13 +28,13 @@ static void drawCenteredPlaceholder(const char *text) {
 
 VideoPlayerWindow::VideoPlayerWindow(EventQueue &eq) {
     vrShader = std::make_unique<VrShader>();
-    targetZoomFactor = zoomFactor;
-    targetVrZoom = vrZoom;
     // Snap the live camera when the cursor crosses into a scene with remembered framing. Applied
     // next render (pendingFraming), where contentSize is known to denormalize the stored pan. A restore
     // is the newer intent, so it cancels any still-pending reset (and is never treated as one).
     eq.on<RestoreSceneViewEvent>([this](const RestoreSceneViewEvent &e) {
         pendingFraming = e.framing;
+        pendingSettle = e.settle;
+        pendingAnimating_ = e.animating;
         framingResetPending_ = false;
     });
     // "Reset Video View" command / palette / context menu — same path as the middle-double-click gesture.
@@ -46,10 +46,10 @@ VideoPlayerWindow::~VideoPlayerWindow() = default;
 VideoFraming VideoPlayerWindow::currentFraming(const ImVec2 &contentSize) const {
     const ImVec2 invContent{contentSize.x > 0.f ? 1.f / contentSize.x : 0.f,
                             contentSize.y > 0.f ? 1.f / contentSize.y : 0.f};
-    return {.zoomFactor = targetZoomFactor,
+    return {.zoomFactor = zoom_.target(),
             .translation = {translation.x * invContent.x, translation.y * invContent.y},
             .vrRotation = vrRotation,
-            .vrZoom = targetVrZoom};
+            .vrZoom = vrZoom_.target()};
 }
 
 void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &eq, VideoPlayer &player) {
@@ -124,18 +124,29 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
         if (framingResetPending_ && state.locked) {
             framingResetPending_ = false;
             pendingFraming.reset();
+            gliding = false;
         } else {
             const VideoFraming &f = *pendingFraming;
-            zoomFactor = targetZoomFactor = f.zoomFactor;
-            vrZoom = targetVrZoom = f.vrZoom;
+            // Display the (possibly interpolated) framing, but pin the eased target — which also drives
+            // the render resolution below — to the glide's final zoom, so the FBO resizes once and the
+            // eased chase (gated on !gliding) has nothing to chase mid-glide.
+            zoom_.snap(f.zoomFactor);
+            zoom_.setTarget(pendingSettle.zoomFactor);
+            vrZoom_.snap(f.vrZoom);
+            vrZoom_.setTarget(pendingSettle.vrZoom);
             vrRotation = f.vrRotation;
             translation = {f.translation.x * contentSize.x, f.translation.y * contentSize.y};
+            gliding = pendingAnimating_;
             pendingFraming.reset();
             if (framingResetPending_) {
                 framingResetPending_ = false;
                 eq.push(CaptureVideoFramingEvent{currentFraming(contentSize)});
             }
         }
+    } else {
+        // No restore this frame: a glide that was cancelled (e.g. an overlay drag) leaves the eased
+        // chase to finish settling toward the pinned target on its own.
+        gliding = false;
     }
 
     // Middle double-click resets the view (2D pan/zoom or VR camera). Routed through requestFramingReset
@@ -153,21 +164,21 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
 
     // Calculate multiplier based on mode. Use the *target* zoom (not the animating value) so the
     // render resolution jumps once to its final size instead of requesting a new texture every
-    // frame of the lerp — that per-frame resize churn reallocated the FBO and disturbed playback.
-    // The displayed quad still scales with the live zoomFactor below, so the visual zoom stays smooth.
+    // frame of the chase — that per-frame resize churn reallocated the FBO and disturbed playback.
+    // The displayed quad still scales with the live zoom (zoom_.value()) below, so it stays smooth.
     float multiplier = 1.0f;
     if (state.activeMode == VideoMode::VrMode) {
         const float pi = std::numbers::pi_v<float>;
         const float hfovRad = VrShader::hfovDegrees * (pi / 180.0f);
         const float k = 0.5f * std::tan(hfovRad * 0.5f);
-        multiplier = pi / std::atan(k / targetVrZoom);
+        multiplier = pi / std::atan(k / vrZoom_.target());
 
         if (contentSize.y > 0.0f) {
             float windowAspect = contentSize.x / contentSize.y;
             multiplier *= std::max(1.0f, windowAspect / videoAspect);
         }
     } else {
-        multiplier = targetZoomFactor;
+        multiplier = zoom_.target();
     }
 
     int reqWidth = std::max(1, std::min((int)(baseSize.x * multiplier * state.resolutionScale), player.getWidth()));
@@ -184,18 +195,13 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
         if (!state.locked) {
             // Handle VR zoom
             if (hovered && ImGui::GetIO().MouseWheel != 0) {
-                targetVrZoom *= (1.0f + ImGui::GetIO().MouseWheel * 0.1f);
-                targetVrZoom = std::clamp(targetVrZoom, 0.05f, 2.0f);
+                vrZoom_.setTarget(
+                    std::clamp(vrZoom_.target() * (1.0f + ImGui::GetIO().MouseWheel * 0.1f), 0.05f, 2.0f));
                 framingChanged = true;
             }
 
-            if (vrZoom != targetVrZoom) {
-                float lerpFactor = std::min(15.0f * ImGui::GetIO().DeltaTime, 1.0f);
-                vrZoom += (targetVrZoom - vrZoom) * lerpFactor;
-                if (std::abs(vrZoom - targetVrZoom) < 0.0001f) {
-                    vrZoom = targetVrZoom;
-                }
-            }
+            if (!gliding)
+                vrZoom_.advance(ImGui::GetIO().DeltaTime, kZoomTau);
 
             // Handle VR rotation. Grab-to-pan: pin the world point under the cursor and keep it under
             // the pointer for the whole drag, so the view tracks the mouse exactly (a flat
@@ -211,10 +217,11 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
             if (hovered && !overlayHoveredPrev && ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
                 ImGui::GetActiveID() == 0) {
                 dragging = true;
-                vrGrabDir = ofs::vrcam::unproject(cursorNdc(), vrRotation, vrZoom, contentAspect);
+                vrGrabDir = ofs::vrcam::unproject(cursorNdc(), vrRotation, vrZoom_.value(), contentAspect);
             }
             if (dragging && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
-                vrRotation = ofs::vrcam::dragRotation(vrGrabDir, cursorNdc(), vrRotation, vrZoom, contentAspect);
+                vrRotation =
+                    ofs::vrcam::dragRotation(vrGrabDir, cursorNdc(), vrRotation, vrZoom_.value(), contentAspect);
             }
             if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && dragging) {
                 dragging = false;
@@ -249,7 +256,7 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
                 self->vrShader->use();
                 self->vrShader->setProjMtx(&orthoProjection[0][0]);
                 self->vrShader->setRotation(self->vrRotation.x, self->vrRotation.y);
-                self->vrShader->setZoom(self->vrZoom);
+                self->vrShader->setZoom(self->vrZoom_.value());
                 self->vrShader->setAspectRatio(self->lastContentWidth / self->lastContentHeight);
                 self->vrShader->setVideoAspectRatio(self->lastVideoAspect);
             },
@@ -263,21 +270,15 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
         if (!state.locked) {
             // Handle 2D zoom
             if (hovered && ImGui::GetIO().MouseWheel != 0) {
-                targetZoomFactor *= (1.0f + ImGui::GetIO().MouseWheel * 0.1f);
-                targetZoomFactor = std::clamp(targetZoomFactor, 0.1f, 10.0f);
+                zoom_.setTarget(std::clamp(zoom_.target() * (1.0f + ImGui::GetIO().MouseWheel * 0.1f), 0.1f, 10.0f));
                 framingChanged = true;
             }
 
-            if (zoomFactor != targetZoomFactor) {
-                float oldZoom = zoomFactor;
-                float lerpFactor = std::min(15.0f * ImGui::GetIO().DeltaTime, 1.0f);
-                zoomFactor += (targetZoomFactor - zoomFactor) * lerpFactor;
+            if (!gliding && !zoom_.settled()) {
+                const float oldZoom = zoom_.value();
+                const float newZoom = zoom_.advance(ImGui::GetIO().DeltaTime, kZoomTau);
 
-                if (std::abs(zoomFactor - targetZoomFactor) < 0.0001f) {
-                    zoomFactor = targetZoomFactor;
-                }
-
-                // Zoom towards mouse
+                // Zoom towards mouse: keep the point under the cursor fixed as the scale changes.
                 ImVec2 mousePos = ImGui::GetMousePos();
                 ImVec2 contentStartPos = ImGui::GetWindowPos() + ImGui::GetCursorPos();
                 // The center of the video is the center of the content region, plus the current pan translation
@@ -288,7 +289,7 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
                 float zoomPointX = mouseOffsetFromCenter.x / currentVideoSize.x;
                 float zoomPointY = mouseOffsetFromCenter.y / currentVideoSize.y;
 
-                float scaleChange = (zoomFactor - oldZoom);
+                float scaleChange = (newZoom - oldZoom);
                 translation.x -= zoomPointX * scaleChange * baseSize.x;
                 translation.y -= zoomPointY * scaleChange * baseSize.y;
             }
@@ -311,7 +312,7 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
         if (framingChanged)
             eq.push(CaptureVideoFramingEvent{currentFraming(contentSize)});
 
-        ImVec2 displaySize = baseSize * zoomFactor;
+        ImVec2 displaySize = baseSize * zoom_.value();
         ImVec2 pos = (contentSize - displaySize) * 0.5f + translation;
         imageMin = contentScreenMin + pos;
         imageSize = displaySize;
@@ -335,7 +336,7 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
                            .imageMin = imageMin,
                            .imageSize = imageSize,
                            .vrRotation = vrRotation,
-                           .vrZoom = vrZoom,
+                           .vrZoom = vrZoom_.value(),
                            .valid = true};
         overlayHovered = overlayCallback(ImGui::GetWindowDrawList(), vp, windowHovered);
     }

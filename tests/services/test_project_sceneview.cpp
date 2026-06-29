@@ -66,13 +66,56 @@ TEST_CASE("resolveActiveSceneView restores the chapter view, then the fallback, 
     outside.center3dNorm = {0.9f, 0.9f};
     f.send(ofs::CaptureOverlayAnchorEvent{outside});
 
-    // Crossing back into chapter a resolves to its remembered view.
+    // Crossing back into chapter a glides to its remembered view; one full-duration step settles it.
     f.project().playback.cursorPos = 2.0;
-    f.pm.update(0.0f);
+    f.pm.update(0.25f);
     CHECK(f.project().activeSceneView.anchor.center3dNorm.x == doctest::Approx(0.1f));
 
-    // Crossing back out resolves to the project default.
+    // Crossing back out glides to the project default.
     f.project().playback.cursorPos = 9.0;
-    f.pm.update(0.0f);
+    f.pm.update(0.25f);
     CHECK(f.project().activeSceneView.anchor.center3dNorm.x == doctest::Approx(0.9f));
+}
+
+TEST_CASE("Crossing a chapter glides activeSceneView rather than snapping") {
+    PmFixture f;
+    f.project().bookmarks.chapters.push_back({.startTime = 0.0, .endTime = 5.0, .name = "a"});
+
+    // Seed chapter a, then the default, so the two views differ along center3dNorm.x.
+    f.project().playback.cursorPos = 2.0;
+    f.send(ofs::CaptureOverlayAnchorEvent{ofs::OverlayAnchor{.center3dNorm = {0.0f, 0.0f}}});
+    f.project().playback.cursorPos = 9.0;
+    f.send(ofs::CaptureOverlayAnchorEvent{ofs::OverlayAnchor{.center3dNorm = {1.0f, 0.0f}}});
+
+    // Cross into chapter a. A partial step lands strictly between the two endpoints (mid-glide).
+    f.project().playback.cursorPos = 2.0;
+    f.pm.update(0.1f);
+    const float mid = f.project().activeSceneView.anchor.center3dNorm.x;
+    CHECK(mid > 0.0f);
+    CHECK(mid < 1.0f);
+
+    // Further steps converge onto chapter a's value.
+    f.pm.update(0.1f);
+    f.pm.update(0.1f);
+    CHECK(f.project().activeSceneView.anchor.center3dNorm.x == doctest::Approx(0.0f));
+}
+
+TEST_CASE("A capture cancels an in-flight glide so the edit is not overwritten") {
+    PmFixture f;
+    f.project().bookmarks.chapters.push_back({.startTime = 0.0, .endTime = 5.0, .name = "a"});
+
+    f.project().playback.cursorPos = 2.0;
+    f.send(ofs::CaptureOverlayAnchorEvent{ofs::OverlayAnchor{.center3dNorm = {0.0f, 0.0f}}});
+    f.project().playback.cursorPos = 9.0;
+    f.send(ofs::CaptureOverlayAnchorEvent{ofs::OverlayAnchor{.center3dNorm = {1.0f, 0.0f}}});
+
+    // Begin a glide back into chapter a, then capture mid-glide.
+    f.project().playback.cursorPos = 2.0;
+    f.pm.update(0.1f);
+    f.send(ofs::CaptureOverlayAnchorEvent{ofs::OverlayAnchor{.center3dNorm = {0.42f, 0.0f}}});
+
+    // The capture stuck, and a later step does not drag it back toward chapter a's stored value.
+    CHECK(f.project().activeSceneView.anchor.center3dNorm.x == doctest::Approx(0.42f));
+    f.pm.update(0.1f);
+    CHECK(f.project().activeSceneView.anchor.center3dNorm.x == doctest::Approx(0.42f));
 }

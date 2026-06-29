@@ -1208,7 +1208,7 @@ void ProjectManager::update(float dt) {
         finalizePendingWrite(pendingWrite->future.get());
     }
 
-    resolveActiveSceneView();
+    resolveActiveSceneView(dt);
 
     if (!appSettings.autoBackupEnabled || !hasActiveProject())
         return;
@@ -1585,26 +1585,46 @@ void ProjectManager::onOverlaySettingsChanged(const OverlaySettingsChangedEvent 
     setDirty();
 }
 
-void ProjectManager::resolveActiveSceneView() {
-    const int idx = project.bookmarks.chapterIndexAt(project.playback.cursorPos);
-    if (idx == lastSceneViewIdx)
-        return;
-    lastSceneViewIdx = idx;
+SceneView ProjectManager::sceneViewForChapter(int idx) const {
     // A chapter without its own snapshot (or no chapter) falls back to the project default, so a
     // timeline scrub is deterministic rather than dependent on the previously active scene.
-    const SceneView *view = &project.defaultSceneView;
     if (idx >= 0) {
         const auto &chapterView = project.bookmarks.chapters[idx].sceneView;
         if (chapterView)
-            view = &*chapterView;
+            return *chapterView;
     }
-    project.activeSceneView = *view;
-    eq.push(RestoreSceneViewEvent{view->framing});
+    return project.defaultSceneView;
+}
+
+void ProjectManager::resolveActiveSceneView(float dt) {
+    const int idx = project.bookmarks.chapterIndexAt(project.playback.cursorPos);
+    if (idx != lastSceneViewIdx) {
+        const bool firstResolve = lastSceneViewIdx == -2; // initial resolve after a load: snap, don't glide
+        lastSceneViewIdx = idx;
+        const SceneView target = sceneViewForChapter(idx);
+        if (firstResolve) {
+            sceneTransition.snap(target);
+            project.activeSceneView = target;
+            eq.push(RestoreSceneViewEvent{.framing = target.framing, .settle = target.framing, .animating = false});
+            return;
+        }
+        // Glide from whatever is shown right now, so re-crossing mid-glide retargets without a pop.
+        sceneTransition.start(project.activeSceneView, target);
+    }
+
+    if (!sceneTransition.active())
+        return; // settled — nothing to advance
+
+    project.activeSceneView = sceneTransition.advance(dt);
+    const bool done = !sceneTransition.active();
+    eq.push(RestoreSceneViewEvent{
+        .framing = project.activeSceneView.framing, .settle = sceneTransition.target().framing, .animating = !done});
 }
 
 SceneView &ProjectManager::sceneViewAtCursor() {
     const int idx = project.bookmarks.chapterIndexAt(project.playback.cursorPos);
-    lastSceneViewIdx = idx; // a capture is for the current scene; don't re-restore over it
+    lastSceneViewIdx = idx;   // a capture is for the current scene; don't re-restore over it
+    sceneTransition.cancel(); // an edit cancels any in-flight glide so it isn't overwritten by the lerp
     if (idx < 0)
         return project.defaultSceneView;
     auto &ch = project.bookmarks.chapters[idx];
