@@ -242,6 +242,50 @@ TEST_CASE("ProjectManager: SplitRegionEvent no-ops when a half would fall below 
     CHECK(tp.project.regions[0].endTime == doctest::Approx(10.0));
 }
 
+// A split is one undo step: UndoSystem snapshots on SplitRegionEvent (it registers before
+// ProjectManager), so undo restores the single pre-split region and redo re-applies the split.
+TEST_CASE("ProjectManager: SplitRegionEvent is one undo step (undo merges, redo re-splits)") {
+    TestProject tp;
+    ofs::AppSettings appSettings;
+    appSettings.autoBackupEnabled = false;
+    ofs::JobSystem jobSystem;
+    ofs::EffectRegistryState effectReg;
+    ofs::UndoSystem undo(tp.project, tp.eq); // before pm so its snapshot captures the pre-split state
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    tp.eq.freeze();
+    jobSystem.start();
+
+    tp.project.axes[0].showInStrip = true;
+    tp.eq.push(ofs::CreateRegionEvent{
+        .axisRole = StandardAxis::L0, .startTime = 0.0, .endTime = 10.0, .timelineDuration = 100.0});
+    tp.eq.drain();
+    undo.endFrame(); // commit the create as its own step, separate from the split below
+    REQUIRE(tp.project.regions.size() == 1);
+    const int origId = tp.project.regions[0].id;
+
+    tp.eq.push(ofs::SplitRegionEvent{.regionId = origId, .splitTime = 4.0});
+    tp.eq.drain();
+    undo.endFrame();
+    REQUIRE(tp.project.regions.size() == 2);
+    REQUIRE(undo.canUndo());
+
+    // Undo merges the two halves back into the single original region [0,10].
+    tp.eq.push(ofs::UndoEvent{});
+    tp.eq.drain();
+    REQUIRE(tp.project.regions.size() == 1);
+    CHECK(tp.project.regions[0].id == origId);
+    CHECK(tp.project.regions[0].startTime == doctest::Approx(0.0));
+    CHECK(tp.project.regions[0].endTime == doctest::Approx(10.0));
+
+    // Redo re-applies the split.
+    REQUIRE(undo.canRedo());
+    tp.eq.push(ofs::RedoEvent{});
+    tp.eq.drain();
+    REQUIRE(tp.project.regions.size() == 2);
+    CHECK(tp.project.regions[0].endTime == doctest::Approx(4.0));
+    CHECK(tp.project.regions[1].startTime == doctest::Approx(4.0));
+}
+
 TEST_CASE("ProjectManager: MoveActionEvent clamps a negative target time to 0") {
     TestProject tp;
     ofs::AppSettings appSettings;
