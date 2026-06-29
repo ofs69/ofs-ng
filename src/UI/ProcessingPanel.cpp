@@ -1653,7 +1653,7 @@ ProcessingPanel::AddNodeRequest ProcessingPanel::renderAddNodeMenu(const EffectR
             m_newScriptPosY = newNodePos.y;
             m_newScriptLinkPin = m_pendingLinkPin;
             m_pendingLinkPin = -1;
-            m_newScriptName[0] = '\0';
+            m_newScriptName.clear();
             m_newScriptDisplayName.clear();
             m_newScriptDescription.clear();
             m_newScriptSignal = 0;
@@ -2242,7 +2242,7 @@ void ProcessingPanel::maybeShowNewScriptModal(EventQueue &eq) {
                      m_focusScriptNameNextFrame = false;
                  }
                  ImGui::SetNextItemWidth(-FLT_MIN);
-                 entered = ImGui::InputText("##scriptname", m_newScriptName, sizeof(m_newScriptName),
+                 entered = ImGui::InputText("##scriptname", &m_newScriptName,
                                             ImGuiInputTextFlags_EnterReturnsTrue | ImGuiInputTextFlags_AutoSelectAll);
 
                  // Optional add-menu metadata baked into the new .cs header. Hints spell out the

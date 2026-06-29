@@ -686,10 +686,10 @@ void ShortcutWindow::render(bool &open, EventQueue &eq, const AppSettings &appSe
             eq, {.title = Str::ScSavePresetTitle.c_str(), .width = 380.0f, .body = [this, eqp = &eq]() -> bool {
                      ImGui::TextUnformatted(Str::ScPresetNameLabel);
                      ImGui::SetNextItemWidth(-FLT_MIN);
-                     const bool enter = ImGui::InputText("###presetname", m_presetNameBuf, sizeof(m_presetNameBuf),
-                                                         ImGuiInputTextFlags_EnterReturnsTrue);
+                     const bool enter =
+                         ImGui::InputText("###presetname", &m_presetNameBuf, ImGuiInputTextFlags_EnterReturnsTrue);
                      ImGui::Spacing();
-                     const bool hasName = m_presetNameBuf[0] != '\0';
+                     const bool hasName = !m_presetNameBuf.empty();
                      ImGui::BeginDisabled(!hasName);
                      const bool save =
                          ImGui::Button(Str::ScSave.id("presetsaveconfirm"), {buttonW(Str::ScSave), 0.f}) ||
@@ -911,7 +911,7 @@ void ShortcutWindow::renderPresetBar() {
 
     ImGui::SameLine();
     if (ImGui::Button(Str::ScSaveAs.id("presetsaveas"))) {
-        m_presetNameBuf[0] = '\0';
+        m_presetNameBuf.clear();
         m_openSaveAsModal = true;
     }
     ImGui::SetItemTooltip("%s", Str::ScPresetSaveAsTip.c_str());

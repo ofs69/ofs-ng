@@ -77,7 +77,7 @@ class ShortcutWindow {
     std::vector<PresetInfo> m_presets;
     bool m_presetsLoaded = false;     // false ⇒ refresh m_presets on the next render (re-open)
     std::string m_selectedPresetSlug; // current combo selection
-    char m_presetNameBuf[128] = {};   // Save-As name input
+    std::string m_presetNameBuf;      // Save-As name input
     bool m_openSaveAsModal = false;   // latches the Save-As modal
     std::string m_pendingLoadSlug;    // non-empty ⇒ raise the load-confirm modal
     std::string m_pendingLoadName;    // display name for the load-confirm message

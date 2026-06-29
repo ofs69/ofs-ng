@@ -110,8 +110,8 @@ class ProcessingPanel {
     bool m_scriptCreateConfirmed = false; // consumed by the node-create block next frame
     float m_newScriptPosX = 0.0f;         // screen-space drop position captured at menu time
     float m_newScriptPosY = 0.0f;
-    int m_newScriptLinkPin = -1; // link pin to auto-connect, or -1
-    char m_newScriptName[96] = {};
+    int m_newScriptLinkPin = -1;        // link pin to auto-connect, or -1
+    std::string m_newScriptName;        // file name; std::string so localized text isn't byte-capped
     std::string m_newScriptDisplayName; // !ofs:name — add-menu display name (optional); std::string so localized text
                                         // isn't byte-capped
     std::string m_newScriptDescription; // !ofs:description — add-menu tooltip (optional)
