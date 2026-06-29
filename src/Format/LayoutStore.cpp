@@ -9,12 +9,17 @@ static std::filesystem::path getLayoutsPath() {
 }
 
 void to_json(nlohmann::json &j, const DockLayoutPreset &p) {
-    j = {{"name", p.name}, {"ini", p.ini}};
+    j = {{"name", p.name}, {"ini", p.ini}, {"savedScale", p.savedScale}};
 }
 
 void from_json(const nlohmann::json &j, DockLayoutPreset &p) {
     p.name = j.value("name", "");
     p.ini = j.value("ini", "");
+    // COMPAT(2026-06-29): savedScale is absent in layouts.json written before DPI-aware layouts; it
+    // reads back as 0, which layoutScaleFactor treats as "unknown scale → apply verbatim". Reading the
+    // additive field without bumping the store version also keeps old builds able to load new files.
+    // Retire (make savedScale required, drop the 0 path) once no pre-date layouts.json are in the wild.
+    p.savedScale = j.value("savedScale", 0.f);
 }
 
 void to_json(nlohmann::json &j, const LayoutStore &s) {

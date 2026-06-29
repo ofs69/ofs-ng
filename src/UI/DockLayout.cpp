@@ -133,4 +133,28 @@ void applyDefaultLayout() {
     buildDefault(ImGui::GetID("MyDockSpace"), ImGui::GetMainViewport());
 }
 
+void applyLayoutIni(const std::string &ini, float scaleFactor) {
+    // ApplyAll runs synchronously inside LoadIniSettingsFromMemory and builds the live dock nodes from
+    // the parsed settings, so their SizeRefs exist to scale by the time it returns.
+    ImGui::LoadIniSettingsFromMemory(ini.data(), ini.size());
+    if (scaleFactor <= 0.f || scaleFactor == 1.f)
+        return;
+
+    // Scale every node's reference size. DockNodeTreeUpdatePosSize honors a split child's SizeRef
+    // absolutely when its sibling's subtree holds the central node, handing the central side the
+    // remainder (imgui.cpp, "use explicit size from the other, and remainder for the central node"). So
+    // scaling uniformly grows the peripheral panels by the factor while the central editor absorbs the
+    // slack — it is not the no-op that uniform scaling would be without a central node. Splits with no
+    // central node on either side distribute by ratio, which a uniform scale leaves unchanged (the
+    // intended behavior: a panel column's internal proportions are preserved as the column resizes).
+    ImGuiContext &g = *ImGui::GetCurrentContext();
+    for (int i = 0; i < g.DockContext.Nodes.Data.Size; ++i) {
+        auto *node = static_cast<ImGuiDockNode *>(g.DockContext.Nodes.Data[i].val_p);
+        if (node == nullptr)
+            continue;
+        node->SizeRef.x *= scaleFactor;
+        node->SizeRef.y *= scaleFactor;
+    }
+}
+
 } // namespace ofs::ui

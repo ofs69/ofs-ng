@@ -304,6 +304,19 @@ The reader sees the code that *exists*; a comment about code that *doesn't* only
 
 **SHOULD** write a comment when it captures something not visible at the call site: the rationale for a non-obvious choice, an invariant or ordering constraint the reader must preserve, a subtle edge case, a workaround for an external-library quirk (with a reference), or a deliberate deviation from the obvious approach. Prefer clarifying names and structure over a comment; reach for a comment only when the intent still won't fit in the code itself. The existing rationale comments in `Theme.cpp`, `EventQueue.h`, and the `ScriptProject` mutation rules are the bar — match that, not filler.
 
+## Backwards-compatibility markers
+
+Now that the app is in production (see the README/release notes), code that exists **only** to keep reading or migrating data written by an older build — a legacy serialization default, a field absent in old files, a one-way migration of stale on-disk/pref/`Ofs.Api` state — **MUST** carry a dedicated, greppable tag so the compatibility debt is auditable and can be retired deliberately rather than rediscovered by accident:
+
+```cpp
+// COMPAT(YYYY-MM-DD): <what old data/behavior this supports; the condition under which it can be removed>
+```
+
+- The date is **when the shim was added**, not a deadline — it tells a future reader how fresh (or stale) the concern is.
+- Grep `COMPAT(` to enumerate every compatibility shim and its age. Once the named retirement condition holds (a major-version boundary, or enough time that no pre-date files remain), the block can go.
+- Tag the **backward-reading** path, not a forward-compatible write. An additive JSON field that old builds simply ignore needs no tag; the **new** code's "default this field when absent" branch is the shim, and that is what gets the marker.
+- This is **not** a license to add back-compat for data that never shipped — the single-build native `HostApi` is rebuilt with its `Ofs.Api`, so a host-side pointer there can't legitimately be null. Only real version skew (old file/plugin/pref vs. newer host) earns a `COMPAT` tag.
+
 ## Libraries
 
 ### Keep

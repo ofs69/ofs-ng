@@ -135,7 +135,7 @@ bool OfsApp::init() {
     if (layoutStore.activeLayoutName != "Default") {
         for (const auto &preset : layoutStore.layouts) {
             if (preset.name == layoutStore.activeLayoutName) {
-                ImGui::LoadIniSettingsFromMemory(preset.ini.data(), preset.ini.size());
+                ofs::ui::applyLayoutIni(preset.ini, layoutScaleFactor(preset.savedScale));
                 break;
             }
         }
@@ -530,7 +530,7 @@ void OfsApp::onUpdate(float dt) {
         ofs::ui::applyDefaultLayout();
         pendingDefaultReset_ = false;
     } else if (pendingLayoutApply_) {
-        ImGui::LoadIniSettingsFromMemory(pendingLayoutIni_.data(), pendingLayoutIni_.size());
+        ofs::ui::applyLayoutIni(pendingLayoutIni_, layoutScaleFactor(pendingLayoutSavedScale_));
         pendingLayoutApply_ = false;
         pendingLayoutIni_.clear();
     }
@@ -1018,13 +1018,19 @@ int OfsApp::frameCapFps() const {
 }
 
 void OfsApp::onDisplayScaleChanged(float) {
-    // The built-in Default arrangement bakes the DPI scale into its split ratios at build time (see
-    // DockLayout::buildDefault), so a runtime scale change leaves panel widths stale. Schedule the same
-    // deferred rebuild that "Reset Layout" uses; it re-runs in onUpdate at the new scale, before windows
-    // are submitted. A saved user layout is a fixed absolute-pixel arrangement we can't regenerate, so it
-    // is left untouched — matching what a restart does (it reloads that layout's ini verbatim too).
-    if (layoutStore.activeLayoutName == "Default")
-        pendingDefaultReset_ = true;
+    // A runtime content-scale change makes the active arrangement stale: the Default layout bakes the
+    // scale into its split ratios, and a user layout's node sizes were captured in its save scale's
+    // pixels. Re-apply the active layout's saved baseline at the new scale — the same deferred path
+    // "Reset Layout" uses, which rebuilds the Default and rescales a user layout's nodes on load. Any
+    // unsaved live tweaks are discarded, matching the existing revert-on-reselect behavior.
+    revertToActiveLayout();
+}
+
+float OfsApp::layoutScaleFactor(float savedScale) const {
+    // COMPAT(2026-06-29): savedScale 0 means a layout saved before this field existed — apply it
+    // verbatim (factor 1) rather than guessing the scale it was captured at. Drop with the 0 path in
+    // LayoutStore::from_json once pre-DPI-aware layouts.json files are gone.
+    return savedScale > 0.f ? contentScale() / savedScale : 1.f;
 }
 
 bool OfsApp::canAppIdle() const {
@@ -1236,6 +1242,7 @@ void OfsApp::renderLayoutMenu() {
         if (ImGui::MenuItem(preset.name.c_str(), nullptr, active) && !active) {
             layoutStore.activeLayoutName = preset.name;
             pendingLayoutIni_ = preset.ini;
+            pendingLayoutSavedScale_ = preset.savedScale;
             pendingLayoutApply_ = true;
             layoutStore.save();
         }
@@ -1783,6 +1790,7 @@ void OfsApp::saveActiveLayout() {
     for (auto &preset : layoutStore.layouts) {
         if (preset.name == layoutStore.activeLayoutName) {
             preset.ini.assign(ini, n);
+            preset.savedScale = contentScale(); // node sizes in the ini are in this scale's pixels
             layoutStore.save();
             eventQueue.push(
                 ofs::NotifyEvent{.level = ofs::NotifyLevel::Success, .message = Str::AppLayoutSaved.fmt(preset.name)});
@@ -1800,6 +1808,7 @@ void OfsApp::revertToActiveLayout() {
     for (const auto &preset : layoutStore.layouts) {
         if (preset.name == layoutStore.activeLayoutName) {
             pendingLayoutIni_ = preset.ini;
+            pendingLayoutSavedScale_ = preset.savedScale;
             pendingLayoutApply_ = true;
             return;
         }
@@ -1837,7 +1846,8 @@ bool OfsApp::renderNewLayoutBody() {
     if (ImGui::Button(Str::AppNewLayoutCreate.id("newlayout_create")) || (entered && canCreate)) {
         size_t n = 0;
         const char *ini = ImGui::SaveIniSettingsToMemory(&n);
-        layoutStore.layouts.push_back({.name = newLayoutName_, .ini = std::string(ini, n)});
+        layoutStore.layouts.push_back(
+            {.name = newLayoutName_, .ini = std::string(ini, n), .savedScale = contentScale()});
         layoutStore.activeLayoutName = newLayoutName_;
         layoutStore.save();
         eventQueue.push(

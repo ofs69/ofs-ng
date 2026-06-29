@@ -268,52 +268,93 @@ void RegisterLayoutTests(ImGuiTestEngine *e) {
             ctx->Yield(3);
         };
 
-    // A runtime content-scale change rebuilds the Default arrangement (via the onDisplayScaleChanged
-    // hook → the deferred reset onUpdate consumes) so panels track the new scale without a restart — but
-    // leaves a saved *user* layout untouched (it's a fixed arrangement that can't be regenerated). The
-    // real SDL display-scale trigger can't be simulated headless, so drive the hook directly after
-    // setting FontScaleDpi.
-    IM_REGISTER_TEST(e, "layouts", "runtime_scale_change_rebuilds_default_only")->TestFunc = [](ImGuiTestContext *ctx) {
+    // A runtime content-scale change re-applies the active layout's saved baseline at the new scale (via
+    // the onDisplayScaleChanged hook → revertToActiveLayout → the deferred apply onUpdate consumes) so
+    // panels track the new scale without a restart. The real SDL display-scale trigger can't be
+    // simulated headless: drive the hook directly. FontScaleDpi drives the Default rebuild; the user
+    // layout's node rescale keys off the window content scale (unchangeable headless), so the user case
+    // here asserts the re-apply (discard of unsaved tweaks); the rescale math is covered separately.
+    IM_REGISTER_TEST(e, "layouts", "runtime_scale_change_reapplies_active_layout")->TestFunc =
+        [](ImGuiTestContext *ctx) {
+            loadFixture(ctx);
+            OfsApp &app = *getTestState().app;
+            ImGuiStyle &style = ImGui::GetStyle();
+            const float savedDpi = style.FontScaleDpi;
+
+            auto columnWidth = [&]() -> float {
+                ImGuiDockNode *c = columnNode(ctx, "Statistics###statistics");
+                return c != nullptr ? c->Size.x : -1.0f;
+            };
+
+            // Default active: a scale change rebuilds it wider (buildDefault reads FontScaleDpi).
+            selectDefaultLayout(ctx); // built at the test's 1x scale
+            const float colBefore = columnWidth();
+            IM_CHECK_GT(colBefore, 0.0f);
+
+            style.FontScaleDpi = 2.0f;
+            OfsAppTestAccess::dispatchDisplayScaleChanged(app, 2.0f);
+            ctx->Yield(3); // onUpdate consumes the pending reset and rebuilds at 2x
+            IM_CHECK_GT(columnWidth(), colBefore * 1.4f);
+
+            style.FontScaleDpi = savedDpi;
+            OfsAppTestAccess::dispatchDisplayScaleChanged(app, savedDpi);
+            ctx->Yield(3);
+
+            // User layout active: the hook re-applies its saved baseline, discarding an unsaved redock.
+            createLayout(ctx, "DpiRuntimeUser"); // saved baseline: the built-in arrangement
+            IM_CHECK(!coLocated(ctx, "Video Controls###video_controls", "Statistics###statistics"));
+            revealTabBar(ctx, "Video Controls###video_controls");
+            ctx->DockInto("Video Controls###video_controls", "Statistics###statistics"); // unsaved tweak
+            ctx->Yield(3);
+            IM_CHECK(coLocated(ctx, "Video Controls###video_controls", "Statistics###statistics"));
+
+            OfsAppTestAccess::dispatchDisplayScaleChanged(app, savedDpi);
+            ctx->Yield(3);
+            // Reverted to the saved baseline ⇒ the unsaved redock is gone.
+            IM_CHECK(!coLocated(ctx, "Video Controls###video_controls", "Statistics###statistics"));
+
+            selectDefaultLayout(ctx); // clean baseline for later tests
+            ctx->Yield(3);
+        };
+
+    // A saved user layout's node sizes were captured at its save-time content scale; applyLayoutIni
+    // rescales them by current/saved on load. The dockspace has a central node, so scaling every node's
+    // SizeRef grows the peripheral panels (their SizeRef is honored) while the central video area absorbs
+    // the slack — at 2x the right column widens and the video narrows.
+    IM_REGISTER_TEST(e, "layouts", "saved_layout_rescales_for_dpi_on_apply")->TestFunc = [](ImGuiTestContext *ctx) {
         loadFixture(ctx);
-        OfsApp &app = *getTestState().app;
-        ImGuiStyle &style = ImGui::GetStyle();
-        const float savedDpi = style.FontScaleDpi;
+        selectDefaultLayout(ctx);
 
         auto columnWidth = [&]() -> float {
             ImGuiDockNode *c = columnNode(ctx, "Statistics###statistics");
             return c != nullptr ? c->Size.x : -1.0f;
         };
+        auto centralWidth = [&]() -> float {
+            ImGuiDockNode *c = dockedNode(ctx, "Video Player###video_player");
+            return c != nullptr ? c->Size.x : -1.0f;
+        };
 
-        // Default active: a scale change rebuilds it wider.
-        selectDefaultLayout(ctx); // built at the test's 1x scale
-        const float colBefore = columnWidth();
-        IM_CHECK_GT(colBefore, 0.0f);
+        // Capture the scale-1 arrangement, as a saved layout's ini holds it.
+        size_t n = 0;
+        const char *iniRaw = ImGui::SaveIniSettingsToMemory(&n);
+        const std::string ini(iniRaw, n);
 
-        style.FontScaleDpi = 2.0f;
-        OfsAppTestAccess::dispatchDisplayScaleChanged(app, 2.0f);
-        ctx->Yield(3); // onUpdate consumes the pending reset and rebuilds at 2x
-        IM_CHECK_GT(columnWidth(), colBefore * 1.4f);
-
-        style.FontScaleDpi = savedDpi;
-        OfsAppTestAccess::dispatchDisplayScaleChanged(app, savedDpi);
+        ofs::ui::applyLayoutIni(ini, 1.0f); // verbatim baseline
         ctx->Yield(3);
+        const float col1 = columnWidth();
+        const float central1 = centralWidth();
+        IM_CHECK_GT(col1, 0.0f);
+        IM_CHECK_GT(central1, 0.0f);
 
-        // User layout active: the same hook must NOT reset it — a redocked arrangement survives.
-        createLayout(ctx, "DpiRuntimeUser");
-        revealTabBar(ctx, "Video Controls###video_controls");
-        ctx->DockInto("Video Controls###video_controls", "Statistics###statistics");
+        ofs::ui::applyLayoutIni(ini, 2.0f); // apply the scale-1 layout as if at 2x
         ctx->Yield(3);
-        IM_CHECK(coLocated(ctx, "Video Controls###video_controls", "Statistics###statistics"));
+        IM_CHECK_GT(columnWidth(), col1 * 1.4f); // peripheral column grew
+        IM_CHECK_LT(centralWidth(), central1);   // central video absorbed the slack
 
-        style.FontScaleDpi = 2.0f;
-        OfsAppTestAccess::dispatchDisplayScaleChanged(app, 2.0f);
-        ctx->Yield(3);
-        // Still co-located ⇒ no default rebuild fired for the user layout.
-        IM_CHECK(coLocated(ctx, "Video Controls###video_controls", "Statistics###statistics"));
-
-        // Restore scale and return to a clean Default baseline for later tests.
-        style.FontScaleDpi = savedDpi;
-        selectDefaultLayout(ctx);
+        // Rebuild Default directly to drop the rescaled nodes. selectDefaultLayout() can't here: the active
+        // layout was never switched off "Default", so its menu item is a no-op and would leak the 2x
+        // arrangement into the next suite.
+        ofs::ui::applyDefaultLayout();
         ctx->Yield(3);
     };
 }

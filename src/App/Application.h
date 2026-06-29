@@ -74,6 +74,10 @@ class Application {
     // swap-interval divisor of the display refresh in updateSwapInterval().
     virtual int frameCapFps() const { return 0; }
 
+    // The content scale (DPI) currently baked into the ImGui style — see appContentScale / the
+    // currentContentScale field. Subclasses need it to DPI-correct saved dock layouts on apply.
+    float contentScale() const { return currentContentScale; }
+
     // Merge the CJK glyph font into the default font. Split out of loadFonts() because inflating it from
     // the asset archive (~68 ms) is pure waste for a Latin-script UI. Idempotent: OfsApp calls it eagerly
     // when the UI language is CJK, otherwise from onStartupComplete() once the window is on screen.
@@ -104,7 +108,11 @@ class Application {
     ImGuiStyle defaultStyle;
     ImNodesStyle themedNodesUnscaled; // the themed imnodes style at 1× DPI; base for DPI re-scaling
     bool hasThemedNodes = false;      // set once onThemeApplied runs with an imnodes context
-    float currentDpiScale = 0.f;
+    // The content scale currently baked into the ImGui style (FontScaleDpi/ScaleAllSizes). This is the
+    // display scale net of the backend's framebuffer scale, not the raw display scale — see
+    // appContentScale(). On Windows the two are equal; on macOS this stays ~1 while the framebuffer
+    // scale carries the DPI. Seeded by initImGui so beginFrame's change check never fires on frame 1.
+    float currentContentScale = 0.f;
 
     void endFrame();
 

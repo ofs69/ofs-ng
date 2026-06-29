@@ -144,7 +144,9 @@ class OfsApp : public ofs::Application {
     bool renderNewLayoutBody();      // interior of the New Layout modal; returns true to close
     void saveActiveLayout();         // snapshot current dock arrangement into the active preset
     void revertToActiveLayout();     // reload the active layout's saved state, discarding live tweaks
-    void initCommands();             // registers all Commands + default KeyChord bindings
+    // current/savedScale factor to DPI-correct a saved layout on apply (1 when savedScale is unknown).
+    float layoutScaleFactor(float savedScale) const;
+    void initCommands(); // registers all Commands + default KeyChord bindings
     void onSeekEvent(const ofs::SeekEvent &event);
 
     // Live global hold-repeat cadence, read fresh each tick so Shortcut-window edits apply instantly.
@@ -197,6 +199,7 @@ class OfsApp : public ofs::Application {
     std::string newLayoutName_;
     bool focusNewLayoutName_ = false;
     std::string pendingLayoutIni_;
+    float pendingLayoutSavedScale_ = 0.f; // save scale of the pending ini, for the apply-time rescale
     bool pendingLayoutApply_ = false;
     bool pendingDefaultReset_ = false;
     ofs::RebindState rebindState;

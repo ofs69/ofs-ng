@@ -72,6 +72,34 @@ static void routeAssertsToStderr() {
 #endif
 }
 
+// The content scale the app must apply to its ImGui style (FontScaleDpi + ScaleAllSizes) so the UI
+// reaches the monitor's physical DPI. ImGui 1.92 splits two concerns: *layout size* (in DisplaySize
+// units) is driven by FontScaleDpi/ScaleAllSizes, while *crispness* (font rasterizer density) is set
+// automatically from io.DisplayFramebufferScale by the backend — the app must not double-count it.
+//
+// The total magnification from design units to physical pixels should equal the display scale. The
+// SDL3 backend already provides part of it via the framebuffer scale: on Windows DisplaySize is in
+// physical pixels (framebuffer scale ≈ 1), so the app must supply the whole display scale; on macOS
+// DisplaySize is in logical points and the framebuffer scale already equals the display scale, so the
+// app must supply only 1×. Both fall out of displayScale / framebufferScale. The framebuffer scale is
+// derived exactly as imgui_impl_sdl3.cpp does, so this tracks the backend on every platform.
+static float appContentScale(SDL_Window *window) {
+    float displayScale = SDL_GetWindowDisplayScale(window);
+    if (displayScale <= 0.f)
+        displayScale = 1.f;
+#if defined(__APPLE__)
+    float framebufferScale = displayScale; // backend uses SDL_GetWindowDisplayScale as the fb scale here
+#else
+    int w = 0, h = 0, pw = 0, ph = 0;
+    SDL_GetWindowSize(window, &w, &h);
+    SDL_GetWindowSizeInPixels(window, &pw, &ph);
+    float framebufferScale = (w > 0) ? static_cast<float>(pw) / static_cast<float>(w) : 1.f;
+#endif
+    if (framebufferScale <= 0.f)
+        framebufferScale = 1.f;
+    return displayScale / framebufferScale;
+}
+
 Application::Application() = default;
 
 Application::~Application() {
@@ -120,16 +148,13 @@ void Application::initImGui() {
 
     ImGui::StyleColorsDark();
 
-    float dpiScale = SDL_GetWindowDisplayScale(window->getNativeWindow());
-    if (dpiScale <= 0.f) {
-        dpiScale = 1.f;
-    }
+    float contentScale = appContentScale(window->getNativeWindow());
 
     defaultStyle = ImGui::GetStyle();
     ImGuiStyle &style = ImGui::GetStyle();
-    style.FontScaleDpi = dpiScale;
-    style.ScaleAllSizes(dpiScale);
-    currentDpiScale = dpiScale;
+    style.FontScaleDpi = contentScale;
+    style.ScaleAllSizes(contentScale);
+    currentContentScale = contentScale;
 
     loadFonts();
 
@@ -153,13 +178,13 @@ void Application::initImGui() {
 void Application::onThemeApplied() {
     ImGuiStyle &style = ImGui::GetStyle();
     defaultStyle = style; // themed, unscaled — the base future DPI changes scale from
-    style.ScaleAllSizes(currentDpiScale);
-    style.FontScaleDpi = currentDpiScale;
+    style.ScaleAllSizes(currentContentScale);
+    style.FontScaleDpi = currentContentScale;
 
     if (ImNodes::GetCurrentContext() != nullptr) {
         themedNodesUnscaled = ImNodes::GetStyle(); // apply() just wrote the unscaled themed nodes
         hasThemedNodes = true;
-        applyDpiToImNodes(currentDpiScale);
+        applyDpiToImNodes(currentContentScale);
     }
 
     Heatmap::rebuildColorLut(); // theme drives the heatmap gradient LUT
@@ -246,20 +271,17 @@ void Application::shutdownImGui() {
 }
 
 void Application::beginFrame() {
-    float newScale = SDL_GetWindowDisplayScale(window->getNativeWindow());
-    if (newScale <= 0.f) {
-        newScale = 1.f;
-    }
-    if (newScale != currentDpiScale) {
+    float newScale = appContentScale(window->getNativeWindow());
+    if (newScale != currentContentScale) {
         ImGuiStyle &style = ImGui::GetStyle();
         style = defaultStyle;
         style.ScaleAllSizes(newScale);
         style.FontScaleDpi = newScale;
         applyDpiToImNodes(newScale);
-        currentDpiScale = newScale;
+        currentContentScale = newScale;
         // Style is fully re-scaled; let the app re-derive any DPI-dependent layout (the default dock
         // arrangement bakes the scale into its split ratios at build time). initImGui seeds
-        // currentDpiScale, so this never fires on the first frame — only on an actual runtime change.
+        // currentContentScale, so this never fires on the first frame — only on an actual runtime change.
         onDisplayScaleChanged(newScale);
     }
     if (float fsb = fontSizeBase(); fsb > 0.f) {

@@ -14,6 +14,10 @@ inline constexpr int kLayoutStoreVersion = 1;
 struct DockLayoutPreset {
     std::string name;
     std::string ini;
+    // The UI content scale (DPI) in effect when this layout was captured. The ini stores absolute
+    // node pixel sizes, so applying it at a different scale needs them scaled by current/savedScale.
+    // 0 = unknown (a layout saved by a build that predates this field): applied verbatim, no rescale.
+    float savedScale = 0.f;
 };
 
 void to_json(nlohmann::json &j, const DockLayoutPreset &p);
