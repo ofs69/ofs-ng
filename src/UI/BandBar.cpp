@@ -183,10 +183,19 @@ void drawBandBar(ImDrawList *dl, ImVec2 barMin, ImVec2 barMax, std::span<const B
 
         if (!bands[i].name.empty()) {
             const float cy = (barMin.y + barMax.y) * 0.5f;
-            const ImVec2 ts = ImGui::CalcTextSize(bands[i].name.data(), bands[i].name.data() + bands[i].name.size());
-            if (ts.x > 0.f && ts.x <= x1 - x0 - 6.f)
+            const float avail = x1 - x0 - 6.f;
+            ImVec2 ts = ImGui::CalcTextSize(bands[i].name.data(), bands[i].name.data() + bands[i].name.size());
+            if (ts.x > 0.f && avail > 0.f) {
+                // Elide rather than fit-or-drop: a zoomed-out band must still show an identifying prefix
+                // (the draw-list "never fit-or-drop" rule). Only allocate the … copy when it overflows.
+                std::string_view shown = bands[i].name;
+                if (ts.x > avail) {
+                    shown = ofs::ui::elide(fmtScratch("{}", bands[i].name), avail);
+                    ts = ImGui::CalcTextSize(shown.data(), shown.data() + shown.size());
+                }
                 ofs::ui::addTextShadow(dl, {(x0 + x1 - ts.x) * 0.5f, cy - ts.y * 0.5f},
-                                       ofs::theme::GetColorU32(AppCol_BandBarText), bands[i].name);
+                                       ofs::theme::GetColorU32(AppCol_BandBarText), shown);
+            }
         }
 
         // Selection highlight, drawn last so it sits above the fill, hatch and label.

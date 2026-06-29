@@ -2135,6 +2135,74 @@ translation = "Библиотечный скрипт"
 english     = "Script"
 translation = "Скрипт"
 
+[ProcCatMath]
+english     = "Math"
+translation = "Математика"
+
+[ProcCatGenerate]
+english     = "Generate"
+translation = "Генерация"
+
+[ProcCatModify]
+english     = "Modify"
+translation = "Изменение"
+
+[ProcCatCombine]
+english     = "Combine"
+translation = "Объединение"
+
+[ProcNodeEffect]
+english     = "Effect"
+translation = "Эффект"
+
+[ProcNodeConstant]
+english     = "Constant"
+translation = "Константа"
+
+[ProcNodeDiscretize]
+english     = "Discretize"
+translation = "Дискретизация"
+
+[ProcNodeFunctionalize]
+english     = "Functionalize"
+translation = "Функционализация"
+
+[ProcMathAdd]
+english     = "Add"
+translation = "Сложение"
+
+[ProcMathSubtract]
+english     = "Subtract"
+translation = "Вычитание"
+
+[ProcMathMultiply]
+english     = "Multiply"
+translation = "Умножение"
+
+[ProcMathDivide]
+english     = "Divide"
+translation = "Деление"
+
+[ProcPinIn]
+english     = "in"
+translation = "Вх"
+
+[ProcPinOut]
+english     = "out"
+translation = "Вых"
+
+[ProcPinSignal]
+english     = "signal"
+translation = "сигнал"
+
+[ProcParamValue]
+english     = "Value"
+translation = "Значение"
+
+[ProcParamKeepActions]
+english     = "Keep actions"
+translation = "Сохранять действия"
+
 [ProcEffectSmooth]
 english     = "Denoise"
 translation = "Шумоподавление"

@@ -2135,6 +2135,74 @@ translation = "库脚本"
 english     = "Script"
 translation = "脚本"
 
+[ProcCatMath]
+english     = "Math"
+translation = "数学"
+
+[ProcCatGenerate]
+english     = "Generate"
+translation = "生成"
+
+[ProcCatModify]
+english     = "Modify"
+translation = "修改"
+
+[ProcCatCombine]
+english     = "Combine"
+translation = "合并"
+
+[ProcNodeEffect]
+english     = "Effect"
+translation = "效果"
+
+[ProcNodeConstant]
+english     = "Constant"
+translation = "常量"
+
+[ProcNodeDiscretize]
+english     = "Discretize"
+translation = "离散化"
+
+[ProcNodeFunctionalize]
+english     = "Functionalize"
+translation = "函数化"
+
+[ProcMathAdd]
+english     = "Add"
+translation = "相加"
+
+[ProcMathSubtract]
+english     = "Subtract"
+translation = "相减"
+
+[ProcMathMultiply]
+english     = "Multiply"
+translation = "相乘"
+
+[ProcMathDivide]
+english     = "Divide"
+translation = "相除"
+
+[ProcPinIn]
+english     = "in"
+translation = "输入"
+
+[ProcPinOut]
+english     = "out"
+translation = "输出"
+
+[ProcPinSignal]
+english     = "signal"
+translation = "信号"
+
+[ProcParamValue]
+english     = "Value"
+translation = "值"
+
+[ProcParamKeepActions]
+english     = "Keep actions"
+translation = "保留动作"
+
 [ProcEffectSmooth]
 english     = "Denoise"
 translation = "降噪"

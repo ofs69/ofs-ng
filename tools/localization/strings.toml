@@ -2269,6 +2269,74 @@ description = "Processing: add-node tooltip suffix marking a first-party, read-o
 english     = "Script"
 description = "Processing: add-node tooltip suffix marking a user-folder (file-backed) script."
 
+[ProcCatMath]
+english     = "Math"
+description = "Processing add-node menu: heading of the group holding the arithmetic nodes (Add/Subtract/Multiply/Divide/Constant)."
+
+[ProcCatGenerate]
+english     = "Generate"
+description = "Processing add-node menu/node title: bucket for nodes that synthesize a signal from nothing (0 inputs)."
+
+[ProcCatModify]
+english     = "Modify"
+description = "Processing add-node menu/node title: bucket for nodes that reshape one input signal (1 input)."
+
+[ProcCatCombine]
+english     = "Combine"
+description = "Processing add-node menu/node title: bucket for nodes that merge two or more input signals."
+
+[ProcNodeEffect]
+english     = "Effect"
+description = "Processing node title: fallback category word for an effect node whose definition is missing."
+
+[ProcNodeConstant]
+english     = "Constant"
+description = "Processing: the Constant math node — outputs a fixed value. Used as both the add-menu item and the placed node's title."
+
+[ProcNodeDiscretize]
+english     = "Discretize"
+description = "Processing: the Discretize node — quantizes a continuous signal into discrete actions. Add-menu item and node title."
+
+[ProcNodeFunctionalize]
+english     = "Functionalize"
+description = "Processing: the Functionalize node — turns discrete actions into a continuous function. Add-menu item and node title."
+
+[ProcMathAdd]
+english     = "Add"
+description = "Processing math node verb: outputs A + B. The (A + B) formula shown after it is symbolic and stays literal."
+
+[ProcMathSubtract]
+english     = "Subtract"
+description = "Processing math node verb: outputs A minus B. The formula shown after it is symbolic and stays literal."
+
+[ProcMathMultiply]
+english     = "Multiply"
+description = "Processing math node verb: outputs A times B. The formula shown after it is symbolic and stays literal."
+
+[ProcMathDivide]
+english     = "Divide"
+description = "Processing math node verb: outputs A divided by B. The formula shown after it is symbolic and stays literal."
+
+[ProcPinIn]
+english     = "in"
+description = "Processing node input-pin label (and index-fallback prefix, e.g. in0/in1). Lowercase; sits next to a pin dot."
+
+[ProcPinOut]
+english     = "out"
+description = "Processing node output-pin label (and index-fallback prefix, e.g. out0/out1), and the 'out' word in the Output node title. Lowercase."
+
+[ProcPinSignal]
+english     = "signal"
+description = "Processing Output node: label of its single input pin, the resolved axis signal it writes."
+
+[ProcParamValue]
+english     = "Value"
+description = "Processing Constant node: form-row label for the fixed numeric value it outputs."
+
+[ProcParamKeepActions]
+english     = "Keep actions"
+description = "Processing Discretize node: form-row label for the toggle that preserves existing action times."
+
 [ProcEffectSmooth]
 english     = "Denoise"
 description = "Processing: display name of the built-in Denoise effect (add-node menu and node body). It is a moving average that removes high-frequency noise."

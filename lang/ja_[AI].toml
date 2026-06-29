@@ -2135,6 +2135,74 @@ translation = "ライブラリスクリプト"
 english     = "Script"
 translation = "スクリプト"
 
+[ProcCatMath]
+english     = "Math"
+translation = "数式"
+
+[ProcCatGenerate]
+english     = "Generate"
+translation = "生成"
+
+[ProcCatModify]
+english     = "Modify"
+translation = "変更"
+
+[ProcCatCombine]
+english     = "Combine"
+translation = "結合"
+
+[ProcNodeEffect]
+english     = "Effect"
+translation = "エフェクト"
+
+[ProcNodeConstant]
+english     = "Constant"
+translation = "定数"
+
+[ProcNodeDiscretize]
+english     = "Discretize"
+translation = "離散化"
+
+[ProcNodeFunctionalize]
+english     = "Functionalize"
+translation = "関数化"
+
+[ProcMathAdd]
+english     = "Add"
+translation = "加算"
+
+[ProcMathSubtract]
+english     = "Subtract"
+translation = "減算"
+
+[ProcMathMultiply]
+english     = "Multiply"
+translation = "乗算"
+
+[ProcMathDivide]
+english     = "Divide"
+translation = "除算"
+
+[ProcPinIn]
+english     = "in"
+translation = "入力"
+
+[ProcPinOut]
+english     = "out"
+translation = "出力"
+
+[ProcPinSignal]
+english     = "signal"
+translation = "信号"
+
+[ProcParamValue]
+english     = "Value"
+translation = "値"
+
+[ProcParamKeepActions]
+english     = "Keep actions"
+translation = "アクションを保持"
+
 [ProcEffectSmooth]
 english     = "Denoise"
 translation = "ノイズ除去"

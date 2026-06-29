@@ -874,14 +874,16 @@ void ConfigurationWindow::renderThemeTab(const ScriptProject &project, EventQueu
         bool changed = false;
         auto &marks = gradient.getMarks();
         {
-            constexpr float kBarH = 14.f;
+            const float kBarH = ImGui::GetFontSize();
             ImVec2 barMin = ImGui::GetCursorScreenPos();
             drawHGradientBar(ImGui::GetWindowDrawList(), barMin, {barMin.x + avail, barMin.y + kBarH}, marks);
             ImGui::Dummy({avail, kBarH});
         }
         ImGui::PushID(id);
         const ImGuiStyle &style = ImGui::GetStyle();
-        constexpr float kPosW = 58.f;
+        // Position field holds a "%.3f" in [0,1] — size it to that sample so it scales with font/DPI
+        // instead of a fixed pixel width. ("0.000" is a numeric format sample, not translatable text.)
+        const float kPosW = ImGui::CalcTextSize("0.000").x + style.FramePadding.x * 2.f;
         // Each stop is a fixed-width [swatch | position | remove] group; wrap to a new line when the
         // next group would overflow the panel's right edge.
         const float groupW = ImGui::GetFrameHeight() + kPosW + ImGui::CalcTextSize("-").x + style.FramePadding.x * 2.f +

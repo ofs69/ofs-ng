@@ -2135,6 +2135,74 @@ translation = "라이브러리 스크립트"
 english     = "Script"
 translation = "스크립트"
 
+[ProcCatMath]
+english     = "Math"
+translation = "수학"
+
+[ProcCatGenerate]
+english     = "Generate"
+translation = "생성"
+
+[ProcCatModify]
+english     = "Modify"
+translation = "수정"
+
+[ProcCatCombine]
+english     = "Combine"
+translation = "결합"
+
+[ProcNodeEffect]
+english     = "Effect"
+translation = "효과"
+
+[ProcNodeConstant]
+english     = "Constant"
+translation = "상수"
+
+[ProcNodeDiscretize]
+english     = "Discretize"
+translation = "이산화"
+
+[ProcNodeFunctionalize]
+english     = "Functionalize"
+translation = "함수화"
+
+[ProcMathAdd]
+english     = "Add"
+translation = "더하기"
+
+[ProcMathSubtract]
+english     = "Subtract"
+translation = "빼기"
+
+[ProcMathMultiply]
+english     = "Multiply"
+translation = "곱하기"
+
+[ProcMathDivide]
+english     = "Divide"
+translation = "나누기"
+
+[ProcPinIn]
+english     = "in"
+translation = "입력"
+
+[ProcPinOut]
+english     = "out"
+translation = "출력"
+
+[ProcPinSignal]
+english     = "signal"
+translation = "신호"
+
+[ProcParamValue]
+english     = "Value"
+translation = "값"
+
+[ProcParamKeepActions]
+english     = "Keep actions"
+translation = "동작 유지"
+
 [ProcEffectSmooth]
 english     = "Denoise"
 translation = "노이즈 제거"

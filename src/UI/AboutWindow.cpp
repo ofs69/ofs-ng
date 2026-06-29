@@ -231,9 +231,15 @@ void AboutWindow::render(bool &open, const UpdateChecker::Status &update, EventQ
 
     constexpr ImGuiTableFlags tableFlags = ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH |
                                            ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingStretchProp;
+    // Size the license column to the widest string it will actually hold (the SPDX ids plus the
+    // translated header) rather than a magic literal, so combos like "CC0-1.0 / Apache-2.0" don't clip.
+    float licenseColW = ImGui::CalcTextSize(Str::AboutColLicense.c_str()).x;
+    for (const Attribution &e : kAttributions)
+        licenseColW = std::max(licenseColW, ImGui::CalcTextSize(e.license).x);
+    licenseColW += ImGui::GetStyle().CellPadding.x * 2.0f;
     if (ImGui::BeginTable("##about_thirdparty", 2, tableFlags, {0.0f, em * 9.0f})) {
         ImGui::TableSetupColumn(Str::AboutColComponent, ImGuiTableColumnFlags_WidthStretch);
-        ImGui::TableSetupColumn(Str::AboutColLicense, ImGuiTableColumnFlags_WidthFixed, em * 8.0f);
+        ImGui::TableSetupColumn(Str::AboutColLicense, ImGuiTableColumnFlags_WidthFixed, licenseColW);
         ImGui::TableSetupScrollFreeze(0, 1);
         ImGui::TableHeadersRow();
 

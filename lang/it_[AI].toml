@@ -2135,6 +2135,74 @@ translation = "Script libreria"
 english     = "Script"
 translation = "Script"
 
+[ProcCatMath]
+english     = "Math"
+translation = "Matematica"
+
+[ProcCatGenerate]
+english     = "Generate"
+translation = "Genera"
+
+[ProcCatModify]
+english     = "Modify"
+translation = "Modifica"
+
+[ProcCatCombine]
+english     = "Combine"
+translation = "Combina"
+
+[ProcNodeEffect]
+english     = "Effect"
+translation = "Effetto"
+
+[ProcNodeConstant]
+english     = "Constant"
+translation = "Costante"
+
+[ProcNodeDiscretize]
+english     = "Discretize"
+translation = "Discretizza"
+
+[ProcNodeFunctionalize]
+english     = "Functionalize"
+translation = "Funzionalizza"
+
+[ProcMathAdd]
+english     = "Add"
+translation = "Addiziona"
+
+[ProcMathSubtract]
+english     = "Subtract"
+translation = "Sottrai"
+
+[ProcMathMultiply]
+english     = "Multiply"
+translation = "Moltiplica"
+
+[ProcMathDivide]
+english     = "Divide"
+translation = "Dividi"
+
+[ProcPinIn]
+english     = "in"
+translation = "In"
+
+[ProcPinOut]
+english     = "out"
+translation = "Out"
+
+[ProcPinSignal]
+english     = "signal"
+translation = "segnale"
+
+[ProcParamValue]
+english     = "Value"
+translation = "Valore"
+
+[ProcParamKeepActions]
+english     = "Keep actions"
+translation = "Mantieni le azioni"
+
 [ProcEffectSmooth]
 english     = "Denoise"
 translation = "Riduzione rumore"

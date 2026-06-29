@@ -2135,6 +2135,74 @@ translation = "Skrypt biblioteczny"
 english     = "Script"
 translation = "Skrypt"
 
+[ProcCatMath]
+english     = "Math"
+translation = "Matematyka"
+
+[ProcCatGenerate]
+english     = "Generate"
+translation = "Generuj"
+
+[ProcCatModify]
+english     = "Modify"
+translation = "Modyfikuj"
+
+[ProcCatCombine]
+english     = "Combine"
+translation = "Połącz"
+
+[ProcNodeEffect]
+english     = "Effect"
+translation = "Efekt"
+
+[ProcNodeConstant]
+english     = "Constant"
+translation = "Stała"
+
+[ProcNodeDiscretize]
+english     = "Discretize"
+translation = "Dyskretyzuj"
+
+[ProcNodeFunctionalize]
+english     = "Functionalize"
+translation = "Funkcjonalizuj"
+
+[ProcMathAdd]
+english     = "Add"
+translation = "Dodaj"
+
+[ProcMathSubtract]
+english     = "Subtract"
+translation = "Odejmij"
+
+[ProcMathMultiply]
+english     = "Multiply"
+translation = "Pomnóż"
+
+[ProcMathDivide]
+english     = "Divide"
+translation = "Podziel"
+
+[ProcPinIn]
+english     = "in"
+translation = "Wej"
+
+[ProcPinOut]
+english     = "out"
+translation = "Wyj"
+
+[ProcPinSignal]
+english     = "signal"
+translation = "sygnał"
+
+[ProcParamValue]
+english     = "Value"
+translation = "Wartość"
+
+[ProcParamKeepActions]
+english     = "Keep actions"
+translation = "Zachowaj akcje"
+
 [ProcEffectSmooth]
 english     = "Denoise"
 translation = "Odszumianie"

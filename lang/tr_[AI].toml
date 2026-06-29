@@ -2135,6 +2135,74 @@ translation = "Kütüphane betiği"
 english     = "Script"
 translation = "Betik"
 
+[ProcCatMath]
+english     = "Math"
+translation = "Matematik"
+
+[ProcCatGenerate]
+english     = "Generate"
+translation = "Oluştur"
+
+[ProcCatModify]
+english     = "Modify"
+translation = "Değiştir"
+
+[ProcCatCombine]
+english     = "Combine"
+translation = "Birleştir"
+
+[ProcNodeEffect]
+english     = "Effect"
+translation = "Efekt"
+
+[ProcNodeConstant]
+english     = "Constant"
+translation = "Sabit"
+
+[ProcNodeDiscretize]
+english     = "Discretize"
+translation = "Ayrıklaştır"
+
+[ProcNodeFunctionalize]
+english     = "Functionalize"
+translation = "İşlevselleştir"
+
+[ProcMathAdd]
+english     = "Add"
+translation = "Topla"
+
+[ProcMathSubtract]
+english     = "Subtract"
+translation = "Çıkar"
+
+[ProcMathMultiply]
+english     = "Multiply"
+translation = "Çarp"
+
+[ProcMathDivide]
+english     = "Divide"
+translation = "Böl"
+
+[ProcPinIn]
+english     = "in"
+translation = "Giriş"
+
+[ProcPinOut]
+english     = "out"
+translation = "Çıkış"
+
+[ProcPinSignal]
+english     = "signal"
+translation = "sinyal"
+
+[ProcParamValue]
+english     = "Value"
+translation = "Değer"
+
+[ProcParamKeepActions]
+english     = "Keep actions"
+translation = "Eylemleri koru"
+
 [ProcEffectSmooth]
 english     = "Denoise"
 translation = "Gürültü Gider"

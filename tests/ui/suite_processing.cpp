@@ -61,9 +61,9 @@ static void setupRegionInDefaultLayout(ImGuiTestContext *ctx) {
     ctx->Yield(3);
 }
 
-// Right-click the empty graph canvas, filter the add-node menu to `filter`, and click the item whose
-// full (icon + label) text is `label`. Leaves the freshly-created node as nodeGraph.nodes.back().
-static void addNodeViaMenu(ImGuiTestContext *ctx, const char *filter, const std::string &label) {
+// Right-click the empty graph canvas to open the add-node popup over the panel center. Leaves the
+// popup open with focus in the filter box.
+static void openAddNodePopup(ImGuiTestContext *ctx) {
     ImGuiWindow *panel = ImGui::FindWindowByName(kCenterWin);
     IM_CHECK(panel != nullptr);
     ctx->MouseMoveToPos(panel->Rect().GetCenter());
@@ -72,6 +72,25 @@ static void addNodeViaMenu(ImGuiTestContext *ctx, const char *filter, const std:
     ctx->MouseClick(ImGuiMouseButton_Right);
     ctx->Yield(2);
     IM_CHECK(anyPopupOpen());
+}
+
+// Add a *native* node by walking the unfiltered submenu tree and clicking by stable ###id (pass a null
+// submenu for a top-level item). Language-independent — unlike a typed filter or an English label, this
+// works under the translated loc suite. Data-driven items (effects/scripts) still use addNodeViaMenu.
+static void addNativeNode(ImGuiTestContext *ctx, const char *submenuId, const char *itemId) {
+    openAddNodePopup(ctx);
+    if (submenuId != nullptr) {
+        ctx->ItemClick((std::string("**/") + submenuId).c_str());
+        ctx->Yield();
+    }
+    ctx->ItemClick((std::string("**/") + itemId).c_str());
+    ctx->Yield(2);
+}
+
+// Filter the add-node menu to `filter` and click the item whose full (icon + label) text is `label`.
+// For data-driven items (effect/script display names) whose label stays English under the loc suite.
+static void addNodeViaMenu(ImGuiTestContext *ctx, const char *filter, const std::string &label) {
+    openAddNodePopup(ctx);
     ctx->KeyCharsReplace(filter);
     ctx->Yield(2);
     ctx->ItemClick(label.c_str());
@@ -294,11 +313,10 @@ void RegisterProcessingTests(ImGuiTestEngine *e) {
             IM_CHECK(anyPopupOpen()); // the regression: this stayed closed when unfocused
 
             // And the menu actually instantiates a node, proving the whole add path works from here.
-            // Filter to Constant (icon + label) and click it — a node should land in the graph.
-            ctx->KeyCharsReplace("Constant");
-            ctx->Yield(2);
-            const std::string item = std::string("**/") + ICON_HASH + "  Constant";
-            ctx->ItemClick(item.c_str());
+            // Walk Math → Constant by id (language-independent) — a node should land in the graph.
+            ctx->ItemClick("**/procmenu_math");
+            ctx->Yield();
+            ctx->ItemClick("**/procadd_const");
             ctx->Yield(2);
 
             IM_CHECK_EQ(proj.regions[0].nodeGraph.nodes.size(), before + 1);
@@ -311,7 +329,7 @@ void RegisterProcessingTests(ImGuiTestEngine *e) {
         auto &proj = *getTestState().project;
         const size_t before = proj.regions[0].nodeGraph.nodes.size();
 
-        addNodeViaMenu(ctx, "Add", std::string("**/") + ICON_PLUS + "  Add  (A + B)");
+        addNativeNode(ctx, "procmenu_math", "procadd_add");
 
         IM_CHECK_EQ(proj.regions[0].nodeGraph.nodes.size(), before + 1);
         IM_CHECK(proj.regions[0].nodeGraph.nodes.back().type == ofs::GraphNodeType::Add);
@@ -346,7 +364,7 @@ void RegisterProcessingTests(ImGuiTestEngine *e) {
         auto &proj = *getTestState().project;
         auto &eq = *getTestState().eventQueue;
 
-        addNodeViaMenu(ctx, "Constant", std::string("**/") + ICON_HASH + "  Constant");
+        addNativeNode(ctx, "procmenu_math", "procadd_const");
         const size_t afterAdd = proj.regions[0].nodeGraph.nodes.size();
         const int newId = proj.regions[0].nodeGraph.nodes.back().id;
 
@@ -604,10 +622,10 @@ void RegisterProcessingTests(ImGuiTestEngine *e) {
         ctx->Yield(2);
         IM_CHECK(anyPopupOpen());
 
-        // No KeyCharsReplace: stay in the unfiltered menu tree. Open Math, then click Constant.
-        ctx->ItemClick((std::string("**/") + ICON_CALCULATOR + "  Math").c_str());
+        // No KeyCharsReplace: stay in the unfiltered menu tree. Open Math, then click Constant by id.
+        ctx->ItemClick("**/procmenu_math");
         ctx->Yield(2);
-        ctx->ItemClick((std::string("**/") + ICON_HASH + "  Constant").c_str());
+        ctx->ItemClick("**/procadd_const");
         ctx->Yield(2);
 
         IM_CHECK_EQ(proj.regions[0].nodeGraph.nodes.size(), before + 1);
@@ -632,10 +650,8 @@ void RegisterProcessingTests(ImGuiTestEngine *e) {
         ctx->Yield(2);
         IM_CHECK(anyPopupOpen());
 
-        // Filter to Script so the "Script…" item is shown, then click it to raise the modal.
-        ctx->KeyCharsReplace("Script");
-        ctx->Yield(2);
-        ctx->ItemClick((std::string("**/") + ICON_BRACES + "  Script\xe2\x80\xa6").c_str());
+        // Click the top-level "Script…" item by id (unfiltered, language-independent) to raise the modal.
+        ctx->ItemClick("**/procnew_script");
         ctx->Yield(3); // modal opens next frame
 
         // Type a name (renders the "creates <file>" status row), then Cancel — no stub is written.
@@ -676,7 +692,7 @@ void RegisterProcessingTests(ImGuiTestEngine *e) {
             setupRegionInDefaultLayout(ctx);
             auto &proj = *getTestState().project;
 
-            addNodeViaMenu(ctx, "Constant", std::string("**/") + ICON_HASH + "  Constant");
+            addNativeNode(ctx, "procmenu_math", "procadd_const");
             const size_t afterAdd = proj.regions[0].nodeGraph.nodes.size();
             const int newId = proj.regions[0].nodeGraph.nodes.back().id;
 
@@ -741,7 +757,7 @@ void RegisterProcessingTests(ImGuiTestEngine *e) {
 
         // A Math node has a narrow title and a right-aligned output with no wide, stable body anchor, so
         // the output mirror dominates its width (Input/Output nodes are title-pinned and never drift).
-        addNodeViaMenu(ctx, "Add", std::string("**/") + ICON_PLUS + "  Add  (A + B)");
+        addNativeNode(ctx, "procmenu_math", "procadd_add");
         const int nodeId = proj.regions[0].nodeGraph.nodes.back().id;
         const float baseX = proj.regions[0].nodeGraph.nodes.back().posX;
 
@@ -822,7 +838,7 @@ void RegisterProcessingTests(ImGuiTestEngine *e) {
     IM_REGISTER_TEST(e, "processing", "node_context_menu_deletes_node")->TestFunc = [](ImGuiTestContext *ctx) {
         setupRegionInDefaultLayout(ctx);
         auto &proj = *getTestState().project;
-        addNodeViaMenu(ctx, "Constant", std::string("**/") + ICON_HASH + "  Constant");
+        addNativeNode(ctx, "procmenu_math", "procadd_const");
         const size_t afterAdd = proj.regions[0].nodeGraph.nodes.size();
         const int newId = proj.regions[0].nodeGraph.nodes.back().id;
 
@@ -840,7 +856,7 @@ void RegisterProcessingTests(ImGuiTestEngine *e) {
     IM_REGISTER_TEST(e, "processing", "node_context_menu_duplicates_node")->TestFunc = [](ImGuiTestContext *ctx) {
         setupRegionInDefaultLayout(ctx);
         auto &proj = *getTestState().project;
-        addNodeViaMenu(ctx, "Constant", std::string("**/") + ICON_HASH + "  Constant");
+        addNativeNode(ctx, "procmenu_math", "procadd_const");
         const size_t afterAdd = proj.regions[0].nodeGraph.nodes.size();
         const int origId = proj.regions[0].nodeGraph.nodes.back().id;
 

@@ -78,20 +78,41 @@ static ResolvedScriptName resolveScriptName(std::string_view raw) {
     return {.finalName = finalName, .empty = empty, .badChars = badChars};
 }
 
+// Localized verb + the symbolic formula. The (A + B) notation and the operand letters stay literal —
+// they're math symbols (matching the node's A/B pins), not translatable words. Frame-arena result.
 static const char *mathNodeLabel(GraphNodeType t) {
     switch (t) {
     case GraphNodeType::Add:
-        return "Add  (A + B)";
+        return fmtScratch("{}  (A + B)", Str::ProcMathAdd.c_str());
     case GraphNodeType::Subtract:
-        return "Subtract  (A \xe2\x88\x92 B)";
+        return fmtScratch("{}  (A \xe2\x88\x92 B)", Str::ProcMathSubtract.c_str());
     case GraphNodeType::Multiply:
-        return "Multiply  (A \xc3\x97 B)";
+        return fmtScratch("{}  (A \xc3\x97 B)", Str::ProcMathMultiply.c_str());
     case GraphNodeType::Divide:
-        return "Divide  (A \xc3\xb7 B)";
+        return fmtScratch("{}  (A \xc3\xb7 B)", Str::ProcMathDivide.c_str());
     case GraphNodeType::Constant:
-        return "Constant";
+        return Str::ProcNodeConstant.c_str();
     default:
         return "";
+    }
+}
+
+// Stable, language-independent ###id suffix for a math add-menu item, so the translated label can't
+// change the widget identity (and the UI tests can target it by id regardless of UI language).
+static const char *mathNodeMenuId(GraphNodeType t) {
+    switch (t) {
+    case GraphNodeType::Add:
+        return "procadd_add";
+    case GraphNodeType::Subtract:
+        return "procadd_sub";
+    case GraphNodeType::Multiply:
+        return "procadd_mul";
+    case GraphNodeType::Divide:
+        return "procadd_div";
+    case GraphNodeType::Constant:
+        return "procadd_const";
+    default:
+        return "procadd_x";
     }
 }
 
@@ -108,11 +129,11 @@ inline constexpr GraphNodeType kMathMenuTypes[] = {GraphNodeType::Add, GraphNode
 static const char *nodeCategoryLabel(NodeCategory cat) {
     switch (cat) {
     case NodeCategory::Generate:
-        return "Generate";
+        return Str::ProcCatGenerate.c_str();
     case NodeCategory::Modify:
-        return "Modify";
+        return Str::ProcCatModify.c_str();
     case NodeCategory::Combine:
-        return "Combine";
+        return Str::ProcCatCombine.c_str();
     }
     return "";
 }
@@ -409,7 +430,7 @@ static void renderRightAlignedOutput(int nodeId, int slot, const char *label) {
 }
 
 static void renderOutputPin(int nodeId) {
-    renderRightAlignedOutput(nodeId, 0, "out");
+    renderRightAlignedOutput(nodeId, 0, Str::ProcPinOut.c_str());
 }
 
 // Resolve the label for pin slot `k`: the declared pin name, or a "<prefix>{k}" index fallback when the
@@ -631,20 +652,21 @@ void ProcessingPanel::renderNode(const ProcessingGraphNode &node, const EffectRe
         // An I/O node has no param body, so anchor the lone output label to the title width rather than
         // the standard body width — that keeps the Input node as compact as its Output-node mirror
         // (which auto-sizes to its title). Title width is intrinsic, so it stays position-stable.
-        const char *title = fmtScratch("{}  {} in", ICON_LOG_IN, standardAxisTag(node.role));
+        const char *title = fmtScratch("{}  {} {}", ICON_LOG_IN, standardAxisTag(node.role), Str::ProcPinIn.c_str());
         ImNodes::BeginNodeTitleBar();
         ImGui::TextUnformatted(title);
         ImNodes::EndNodeTitleBar();
-        renderRightAlignedOutput(node.id, 0, "signal", ImGui::CalcTextSize(title).x);
+        renderRightAlignedOutput(node.id, 0, Str::ProcPinSignal.c_str(), ImGui::CalcTextSize(title).x);
         break;
     }
 
     case GraphNodeType::Output: {
         ImNodes::BeginNodeTitleBar();
-        ImGui::Text("%s  %s out", ICON_LOG_OUT, standardAxisTag(node.role).data());
+        ImGui::TextUnformatted(
+            fmtScratch("{}  {} {}", ICON_LOG_OUT, standardAxisTag(node.role), Str::ProcPinOut.c_str()));
         ImNodes::EndNodeTitleBar();
         ImNodes::BeginInputAttribute(GraphId::inPin(node.id, 0));
-        ImGui::TextUnformatted("signal");
+        ImGui::TextUnformatted(Str::ProcPinSignal.c_str());
         ImNodes::EndInputAttribute();
         break;
     }
@@ -657,7 +679,7 @@ void ProcessingPanel::renderNode(const ProcessingGraphNode &node, const EffectRe
         {
             // Category prefix + the effect's own name in brackets, mirroring the Script node's
             // "Script  [name]" so a Denoise/RDP node is identifiable without reading the body.
-            const char *catName = def ? nodeCategoryLabel(def->category) : "Effect";
+            const char *catName = def ? nodeCategoryLabel(def->category) : Str::ProcNodeEffect.c_str();
             const char *catIcon = def ? nodeCategoryIcon(def->category) : ICON_BOX;
             const char *dispName = def ? def->displayName.c_str() : node.effect.type.c_str();
             ImGui::TextUnformatted(fmtScratch("{}  {}  [{}]", catIcon, catName, dispName));
@@ -666,7 +688,7 @@ void ProcessingPanel::renderNode(const ProcessingGraphNode &node, const EffectRe
 
         if (!def || !def->ignoresInput) {
             ImNodes::BeginInputAttribute(GraphId::inPin(node.id, 0));
-            ImGui::TextUnformatted("in");
+            ImGui::TextUnformatted(Str::ProcPinIn.c_str());
             ImNodes::EndInputAttribute();
         }
 
@@ -728,7 +750,7 @@ void ProcessingPanel::renderNode(const ProcessingGraphNode &node, const EffectRe
             ImNodes::BeginInputAttribute(GraphId::inPin(node.id, i));
             const char *pinName = (entry && i < static_cast<int>(entry->inputNames.size()))
                                       ? entry->inputNames[static_cast<size_t>(i)].c_str()
-                                      : fmtScratch("in{}", i);
+                                      : fmtScratch("{}{}", Str::ProcPinIn.c_str(), i);
             const bool connected = region.nodeGraph.findLinkToPin(node.id, i) != nullptr;
             ImGui::TextUnformatted(connected ? pinName : fmtScratch("{}  = 50", pinName));
             ImNodes::EndInputAttribute();
@@ -767,19 +789,19 @@ void ProcessingPanel::renderNode(const ProcessingGraphNode &node, const EffectRe
         static const std::vector<std::string> kNoNames;
         const std::vector<std::string> &outNames = entry ? entry->outputNames : kNoNames;
         for (int k = 0; k < outputCount; ++k)
-            renderRightAlignedOutput(node.id, k, pinLabel(outNames, k, "out"));
+            renderRightAlignedOutput(node.id, k, pinLabel(outNames, k, Str::ProcPinOut.c_str()));
         break;
     }
 
     case GraphNodeType::Constant: {
         ImNodes::BeginNodeTitleBar();
-        ImGui::TextUnformatted(fmtScratch("{}  Constant", ICON_HASH));
+        ImGui::TextUnformatted(fmtScratch("{}  {}", ICON_HASH, Str::ProcNodeConstant.c_str()));
         ImNodes::EndNodeTitleBar();
 
         ImNodes::BeginStaticAttribute(GraphId::staticAttr(node.id));
         if (beginNodeParamTable("##constparams")) {
 
-            ofs::ui::formRow("Value");
+            ofs::ui::formRow(Str::ProcParamValue);
             float val = node.constantValue;
             ImGui::SetNextItemWidth(-FLT_MIN);
             if (ImGui::DragFloat("##val", &val, 0.1f, 0.0f, 0.0f, "%.1f")) {
@@ -801,16 +823,16 @@ void ProcessingPanel::renderNode(const ProcessingGraphNode &node, const EffectRe
 
     case GraphNodeType::Discretize: {
         ImNodes::BeginNodeTitleBar();
-        ImGui::TextUnformatted(fmtScratch("{}  Discretize", ICON_BAR_CHART));
+        ImGui::TextUnformatted(fmtScratch("{}  {}", ICON_BAR_CHART, Str::ProcNodeDiscretize.c_str()));
         ImNodes::EndNodeTitleBar();
 
         ImNodes::BeginInputAttribute(GraphId::inPin(node.id, 0));
-        ImGui::TextUnformatted("in");
+        ImGui::TextUnformatted(Str::ProcPinIn.c_str());
         ImNodes::EndInputAttribute();
 
         ImNodes::BeginStaticAttribute(GraphId::staticAttr(node.id));
         if (beginNodeParamTable("##discparams")) {
-            ofs::ui::formRow("Keep actions");
+            ofs::ui::formRow(Str::ProcParamKeepActions);
             bool keep = !node.effect.params.empty() && node.effect.params[0] != 0.0f;
             if (ImGui::Checkbox("##keepactions", &keep)) {
                 ProcessingRegion updated = region;
@@ -849,11 +871,11 @@ void ProcessingPanel::renderNode(const ProcessingGraphNode &node, const EffectRe
 
     case GraphNodeType::Functionalize: {
         ImNodes::BeginNodeTitleBar();
-        ImGui::TextUnformatted(fmtScratch("{}  Functionalize", ICON_CHART_SPLINE));
+        ImGui::TextUnformatted(fmtScratch("{}  {}", ICON_CHART_SPLINE, Str::ProcNodeFunctionalize.c_str()));
         ImNodes::EndNodeTitleBar();
 
         ImNodes::BeginInputAttribute(GraphId::inPin(node.id, 0));
-        ImGui::TextUnformatted("in");
+        ImGui::TextUnformatted(Str::ProcPinIn.c_str());
         ImNodes::EndInputAttribute();
 
         // No params; anchor the body to the standard width (see nodeContentW).
@@ -878,12 +900,14 @@ void ProcessingPanel::renderNode(const ProcessingGraphNode &node, const EffectRe
             std::string_view stem = node.scriptFile;
             if (stem.ends_with(".cs"))
                 stem.remove_suffix(3);
-            ImGui::TextUnformatted(stem.empty() ? fmtScratch("{}  Script", ICON_BRACES)
-                                                : fmtScratch("{}  Script  [{}]", ICON_BRACES, stem));
+            ImGui::TextUnformatted(stem.empty()
+                                       ? fmtScratch("{}  {}", ICON_BRACES, Str::ProcScript.c_str())
+                                       : fmtScratch("{}  {}  [{}]", ICON_BRACES, Str::ProcScript.c_str(), stem));
         } else if (node.scriptFile.empty()) {
-            ImGui::TextUnformatted(fmtScratch("{}  Script", ICON_BRACES));
+            ImGui::TextUnformatted(fmtScratch("{}  {}", ICON_BRACES, Str::ProcScript.c_str()));
         } else {
-            ImGui::TextUnformatted(fmtScratch("{}  Script  [{}]", ICON_BRACES, node.scriptFile.c_str()));
+            ImGui::TextUnformatted(
+                fmtScratch("{}  {}  [{}]", ICON_BRACES, Str::ProcScript.c_str(), node.scriptFile.c_str()));
         }
         ImNodes::EndNodeTitleBar();
 
@@ -895,7 +919,7 @@ void ProcessingPanel::renderNode(const ProcessingGraphNode &node, const EffectRe
         const int scriptOutputCount = std::max<int>(1, node.scriptOutputCount);
         for (int i = 0; i < node.scriptInputCount; ++i) {
             ImNodes::BeginInputAttribute(GraphId::inPin(node.id, i));
-            const char *pinName = pinLabel(scriptInNames, i, "in");
+            const char *pinName = pinLabel(scriptInNames, i, Str::ProcPinIn.c_str());
             const bool connected = region.nodeGraph.findLinkToPin(node.id, i) != nullptr;
             ImGui::TextUnformatted(connected ? pinName : fmtScratch("{}  = 50", pinName));
             ImNodes::EndInputAttribute();
@@ -1012,7 +1036,7 @@ void ProcessingPanel::renderNode(const ProcessingGraphNode &node, const EffectRe
         // keeping its label flush to the node's right edge beside the pin. Embedded and file nodes share
         // this layout; only the buttons differ (fork/load vs. edit/reload/folder + watch). Extra output
         // pins (a multi-output script) render as plain right-aligned rows below.
-        renderOutputPinRow(node.id, pinLabel(scriptOutNames, 0, "out"), [&] {
+        renderOutputPinRow(node.id, pinLabel(scriptOutNames, 0, Str::ProcPinOut.c_str()), [&] {
             if (embedded) {
                 // iconId(): "<icon> <translated label>###<stable id>" — the ###id keeps the widget
                 // identity language-independent so a translated label can't reset its state.
@@ -1074,7 +1098,7 @@ void ProcessingPanel::renderNode(const ProcessingGraphNode &node, const EffectRe
             renderCompileStatus(eq, node, cs, /*noScript=*/!embedded && node.scriptFile.empty());
         });
         for (int k = 1; k < scriptOutputCount; ++k)
-            renderRightAlignedOutput(node.id, k, pinLabel(scriptOutNames, k, "out"));
+            renderRightAlignedOutput(node.id, k, pinLabel(scriptOutNames, k, Str::ProcPinOut.c_str()));
         break;
     }
     }
@@ -1764,17 +1788,19 @@ ProcessingPanel::AddNodeRequest ProcessingPanel::renderAddNodeMenu(const EffectR
         };
 
         if (!filtering) {
-            if (ImGui::BeginMenu(fmtScratch("{}  Math", ICON_CALCULATOR))) {
+            if (ImGui::BeginMenu(fmtScratch("{}  {}###procmenu_math", ICON_CALCULATOR, Str::ProcCatMath.c_str()))) {
                 ImGui::PushStyleColor(ImGuiCol_Text, mathCol);
                 for (const auto t : kMathMenuTypes) {
-                    if (ImGui::MenuItem(fmtScratch("{}  {}", mathNodeIcon(t), mathNodeLabel(t))))
+                    if (ImGui::MenuItem(
+                            fmtScratch("{}  {}###{}", mathNodeIcon(t), mathNodeLabel(t), mathNodeMenuId(t))))
                         req.type = t;
                 }
                 ImGui::PopStyleColor();
                 ImGui::EndMenu();
             }
 
-            if (ImGui::MenuItem(fmtScratch("{}  Script\xe2\x80\xa6", ICON_BRACES)))
+            if (ImGui::MenuItem(
+                    fmtScratch("{}  {}\xe2\x80\xa6###procnew_script", ICON_BRACES, Str::ProcScript.c_str())))
                 requestNewScript();
 
             // Generate / Modify / Combine submenus hold native effects and ready-to-add library/user
@@ -1797,16 +1823,19 @@ ProcessingPanel::AddNodeRequest ProcessingPanel::renderAddNodeMenu(const EffectR
                         }
                 if (!any)
                     continue;
-                if (!ImGui::BeginMenu(fmtScratch("{}  {}", nodeCategoryIcon(category), nodeCategoryLabel(category))))
+                if (!ImGui::BeginMenu(fmtScratch("{}  {}###procmenu_cat{}", nodeCategoryIcon(category),
+                                                 nodeCategoryLabel(category), static_cast<int>(category))))
                     continue;
                 if (isModify) {
                     ImGui::PushStyleColor(ImGuiCol_Text, discCol);
-                    if (ImGui::MenuItem(fmtScratch("{}  Discretize", ICON_BAR_CHART)))
+                    if (ImGui::MenuItem(fmtScratch("{}  {}###procnode_discretize", ICON_BAR_CHART,
+                                                   Str::ProcNodeDiscretize.c_str())))
                         req.type = GraphNodeType::Discretize;
                     ImGui::PopStyleColor();
                     renderDiscretizeTooltip();
                     ImGui::PushStyleColor(ImGuiCol_Text, funcCol);
-                    if (ImGui::MenuItem(fmtScratch("{}  Functionalize", ICON_CHART_SPLINE)))
+                    if (ImGui::MenuItem(fmtScratch("{}  {}###procnode_functionalize", ICON_CHART_SPLINE,
+                                                   Str::ProcNodeFunctionalize.c_str())))
                         req.type = GraphNodeType::Functionalize;
                     ImGui::PopStyleColor();
                     renderFunctionalizeTooltip();
@@ -1885,20 +1914,21 @@ ProcessingPanel::AddNodeRequest ProcessingPanel::renderAddNodeMenu(const EffectR
                 if (!ofs::util::fuzzyMatch(m_nodeFilter, mathNodeLabel(t)).matched)
                     continue;
                 if (!mathHeaderShown) {
-                    ImGui::SeparatorText(fmtScratch("{}  Math", ICON_CALCULATOR));
+                    ImGui::SeparatorText(fmtScratch("{}  {}", ICON_CALCULATOR, Str::ProcCatMath.c_str()));
                     mathHeaderShown = true;
                 }
                 ImGui::PushStyleColor(ImGuiCol_Text, mathCol);
-                if (ImGui::MenuItem(fmtScratch("{}  {}", mathNodeIcon(t), mathNodeLabel(t)))) {
+                if (ImGui::MenuItem(fmtScratch("{}  {}###{}", mathNodeIcon(t), mathNodeLabel(t), mathNodeMenuId(t)))) {
                     req.type = t;
                     ImGui::CloseCurrentPopup();
                 }
                 ImGui::PopStyleColor();
             }
 
-            if (ofs::util::fuzzyMatch(m_nodeFilter, "Script").matched) {
-                ImGui::SeparatorText(fmtScratch("{}  Script", ICON_BRACES));
-                if (ImGui::MenuItem(fmtScratch("{}  Script\xe2\x80\xa6", ICON_BRACES)))
+            if (ofs::util::fuzzyMatch(m_nodeFilter, Str::ProcScript.c_str()).matched) {
+                ImGui::SeparatorText(fmtScratch("{}  {}", ICON_BRACES, Str::ProcScript.c_str()));
+                if (ImGui::MenuItem(
+                        fmtScratch("{}  {}\xe2\x80\xa6###procnew_script", ICON_BRACES, Str::ProcScript.c_str())))
                     requestNewScript();
             }
 
@@ -1913,10 +1943,11 @@ ProcessingPanel::AddNodeRequest ProcessingPanel::renderAddNodeMenu(const EffectR
                     }
                 };
                 if (category == NodeCategory::Modify &&
-                    ofs::util::fuzzyMatchAny(m_nodeFilter, {"Discretize", catLabel}).matched) {
+                    ofs::util::fuzzyMatchAny(m_nodeFilter, {Str::ProcNodeDiscretize.c_str(), catLabel}).matched) {
                     header();
                     ImGui::PushStyleColor(ImGuiCol_Text, discCol);
-                    if (ImGui::MenuItem(fmtScratch("{}  Discretize", ICON_BAR_CHART))) {
+                    if (ImGui::MenuItem(fmtScratch("{}  {}###procnode_discretize", ICON_BAR_CHART,
+                                                   Str::ProcNodeDiscretize.c_str()))) {
                         req.type = GraphNodeType::Discretize;
                         ImGui::CloseCurrentPopup();
                     }
@@ -1924,10 +1955,11 @@ ProcessingPanel::AddNodeRequest ProcessingPanel::renderAddNodeMenu(const EffectR
                     renderDiscretizeTooltip();
                 }
                 if (category == NodeCategory::Modify &&
-                    ofs::util::fuzzyMatchAny(m_nodeFilter, {"Functionalize", catLabel}).matched) {
+                    ofs::util::fuzzyMatchAny(m_nodeFilter, {Str::ProcNodeFunctionalize.c_str(), catLabel}).matched) {
                     header();
                     ImGui::PushStyleColor(ImGuiCol_Text, funcCol);
-                    if (ImGui::MenuItem(fmtScratch("{}  Functionalize", ICON_CHART_SPLINE))) {
+                    if (ImGui::MenuItem(fmtScratch("{}  {}###procnode_functionalize", ICON_CHART_SPLINE,
+                                                   Str::ProcNodeFunctionalize.c_str()))) {
                         req.type = GraphNodeType::Functionalize;
                         ImGui::CloseCurrentPopup();
                     }
