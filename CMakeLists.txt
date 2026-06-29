@@ -23,9 +23,9 @@ set(OFS_SANITIZE "" CACHE STRING "Sanitizers to enable on the ofs-ng target, e.g
 # === AVX / target microarchitecture ===
 # ON (default): build the app for x86-64-v3 (AVX2/FMA/BMI) and pull the matching v3 libmpv — this is
 # the canonical "ofs-ng" binary. OFF: a baseline SSE2 build with the plain libmpv that still runs on
-# pre-AVX CPUs; its binary is named "ofs-ng-no-avx" so both variants can ship side by side. The two are
+# pre-AVX CPUs; its binary is named "ofs-ng-compat" so both variants can ship side by side. The two are
 # separate configurations — configure two build dirs (one per value) to produce both.
-option(OFS_AVX "Build for the x86-64-v3 (AVX2) microarchitecture; OFF produces the '-no-avx' build" ON)
+option(OFS_AVX "Build for the x86-64-v3 (AVX2) microarchitecture; OFF produces the '-compat' build" ON)
 
 # === Clang-Tidy ===
 # Tidy analysis is uncached and re-runs on every TU, so it is the slow part of a clang build. It

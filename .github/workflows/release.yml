@@ -1,19 +1,22 @@
 name: Release
 
-# Manual, tag-driven release. Builds Release × {Windows, Linux} × {AVX, non-AVX} = 4
-# artifacts, runs the CMake `dist` target on each, and attaches every zip (Windows
-# …-pdb.zip included) to a GitHub Release for the chosen tag.
+# Tag-driven release. Builds Release × {Windows, Linux} × {AVX, compat} = 4 artifacts, runs the CMake
+# `dist` target on each, and attaches every zip (Windows …-pdb.zip included) to a GitHub Release.
 #
-# Two ways to run it:
-#  - Artifacts only (no Release): leave `publish` unchecked. Builds the 4 variants and uploads each as
-#    a downloadable run artifact (run page -> Artifacts -> dist-*). `tag` may be left blank — it then
-#    builds the branch/ref you dispatch from, and the archive is named off `git describe` (commit hash
-#    when there is no tag). Nothing is pushed and no Release is created.
-#  - Full release: tick `publish` AND pass an existing `tag`. The tag must already exist in the repo
-#    (push it first: `git tag v1.2.0 && git push --tags`). The publish job attaches every zip to the
-#    GitHub Release for that tag. To trigger automatically on tag push instead, replace the
-#    `workflow_dispatch` block with:  on: { push: { tags: ['v*'] } }
+# Three ways it runs:
+#  - Automatic on tag push: push a semver tag (`git tag v1.2.0 && git push origin v1.2.0`) and this
+#    builds that tag and publishes a GitHub Release for it. A pre-release tag (one with a hyphen, e.g.
+#    v1.2.0-rc1) is marked as a pre-release automatically.
+#  - Manual full release: dispatch with `publish` ticked AND an existing `tag`. Attaches every zip to
+#    the Release for that tag (creating it if absent).
+#  - Manual artifacts only (no Release): dispatch with `publish` unchecked. Builds the 4 variants and
+#    uploads each as a downloadable run artifact (run page -> Artifacts -> dist-*). `tag` may be left
+#    blank — it then builds the branch/ref you dispatch from, and the archive is named off `git
+#    describe` (commit hash when there is no tag). Nothing is pushed and no Release is created.
 on:
+  push:
+    tags:
+      - 'v[0-9]*' # semver release tags: v0.1.1, v1.2.0-rc1, … (build + publish automatically)
   workflow_dispatch:
     inputs:
       tag:
@@ -47,9 +50,9 @@ jobs:
       matrix:
         include:
           - { os: windows-latest, avx: 'ON',  label: 'avx' }
-          - { os: windows-latest, avx: 'OFF', label: 'no-avx' }
+          - { os: windows-latest, avx: 'OFF', label: 'compat' }
           - { os: ubuntu-latest,  avx: 'ON',  label: 'avx' }
-          - { os: ubuntu-latest,  avx: 'OFF', label: 'no-avx' }
+          - { os: ubuntu-latest,  avx: 'OFF', label: 'compat' }
     steps:
       - uses: actions/checkout@v5
         with:
@@ -137,8 +140,8 @@ jobs:
         run: cmake --build build -j
 
       - name: Package (dist)
-        # Emits bin/dist/<variant>-<plat>-release-<tag>+<hash>.zip and, where the toolchain
-        # produces separate symbols, a sibling …-pdb.zip (Windows native .pdb + managed .pdb).
+        # Emits bin/dist/<plat>-<app>-<tag>+<hash>[-compat].zip and, where the toolchain produces
+        # separate symbols, a sibling <plat>[-compat]-<hash>-pdb.zip (Windows native .pdb + managed .pdb).
         run: cmake --build build --target dist
 
       - uses: actions/upload-artifact@v4
@@ -150,9 +153,10 @@ jobs:
   publish:
     name: Publish GitHub Release
     needs: build
-    # Opt-in: only when `publish` is ticked. Left off, the run stops after the build job and you just
-    # download the dist-* artifacts — no Release, nothing pushed.
-    if: ${{ inputs.publish }}
+    # Runs automatically for a tag push, and on a manual dispatch only when `publish` is ticked. A
+    # dispatch with publish off stops after the build job and you just download the dist-* artifacts —
+    # no Release, nothing pushed.
+    if: ${{ github.event_name == 'push' || inputs.publish }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -164,7 +168,13 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           GH_REPO: ${{ github.repository }}
         run: |
-          if [ -z "${{ inputs.tag }}" ]; then
+          # Effective tag: the pushed tag on a tag-push, otherwise the dispatch input.
+          if [ "${{ github.event_name }}" = "push" ]; then
+            TAG="${{ github.ref_name }}"
+          else
+            TAG="${{ inputs.tag }}"
+          fi
+          if [ -z "$TAG" ]; then
             echo "::error::publish=true requires a tag (the GitHub Release is created for it). Re-run with an existing tag, or leave publish off to get artifacts only."
             exit 1
           fi
@@ -174,10 +184,15 @@ jobs:
           echo "Uploading ${#files[@]} archives:"
           printf '  %s\n' "${files[@]}"
           flags=()
-          if [ "${{ inputs.prerelease }}" = "true" ]; then flags+=(--prerelease); fi
+          # Mark a pre-release when explicitly requested, or when the tag is a semver pre-release
+          # (carries a hyphen, e.g. v1.2.0-rc1).
+          prerelease=false
+          if [ "${{ inputs.prerelease }}" = "true" ]; then prerelease=true; fi
+          case "$TAG" in *-*) prerelease=true;; esac
+          if [ "$prerelease" = "true" ]; then flags+=(--prerelease); fi
           # Create the release for the tag; if it already exists, upload assets into it instead.
-          gh release create "${{ inputs.tag }}" "${files[@]}" \
-            --title "${{ inputs.tag }}" \
+          gh release create "$TAG" "${files[@]}" \
+            --title "$TAG" \
             --generate-notes \
             "${flags[@]}" \
-          || gh release upload "${{ inputs.tag }}" "${files[@]}" --clobber
+          || gh release upload "$TAG" "${files[@]}" --clobber

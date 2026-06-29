@@ -73,7 +73,7 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 )
 
 # AVX build: compile for x86-64-v3 (AVX2/FMA/BMI), matching the v3 libmpv. The baseline build
-# (-DOFS_AVX=OFF) stays SSE2 so it runs on pre-AVX CPUs, and its binary is suffixed "-no-avx" so both
+# (-DOFS_AVX=OFF) stays SSE2 so it runs on pre-AVX CPUs, and its binary is suffixed "-compat" so both
 # variants can ship side by side. See OFS_AVX in the root CMakeLists.
 #
 # x86-64-v3 / AVX2 are meaningful only on a 64-bit x86 target. On ARM (Apple Silicon, aarch64) the
@@ -94,7 +94,7 @@ if (OFS_AVX)
                 $<$<NOT:$<CXX_COMPILER_ID:MSVC>>:-march=x86-64-v3>)
     endif ()
 else ()
-    set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${PROJECT_NAME}-no-avx")
+    set_target_properties(${PROJECT_NAME} PROPERTIES OUTPUT_NAME "${PROJECT_NAME}-compat")
 endif ()
 
 # Instrument only this target (not the bundled libs); see OFS_SANITIZE in the root CMakeLists.txt.
@@ -159,12 +159,12 @@ add_custom_target(ofs_stage_assets ALL DEPENDS "${OFS_RUNTIME_DIR}/data.pak")
 add_dependencies(${PROJECT_NAME} ofs_stage_assets)
 
 # Distribution archive: package this build's runtime artifacts (app, runtime DLLs, data.pak, plugins,
-# managed assemblies) into dist/<app>-<platform>-<config>-<tag>+<shorthash>.zip, with the .pdb symbols
+# managed assemblies) into dist/<platform>-<app>-<tag>+<shorthash>[-compat].zip, with the .pdb symbols
 # split into a sibling …-pdb.zip so the shipped archive stays lean. MakeDist names each artifact
 # explicitly rather than zipping bin/ wholesale, because bin/<config> is shared by both AVX variants, so
 # a blanket copy would sweep in the other variant's exe/pdb. APP_FILE/SYSTEM_NAME/SDL_SHARED_FILE are
 # passed as resolved genexes so the binary extension, platform tag and SDL shared lib are correct
-# cross-platform; AVX guarantees the "-no-avx" marker. The localization_gen host tool is a build-time
+# cross-platform; AVX guarantees the "-compat" marker. The localization_gen host tool is a build-time
 # generator and is never listed. Not part of ALL — run it explicitly: `cmake --build <dir> --target
 # dist`. The git tag and short commit hash are resolved when the target runs (not at configure), so the
 # archive name always tracks the checked-out revision.

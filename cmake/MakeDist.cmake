@@ -1,6 +1,9 @@
-# Packages this build's runtime artifacts into dist/<app>-<platform>-<config>-<tag>+<shorthash>.zip, and
+# Packages this build's runtime artifacts into dist/<platform>-<app>-<tag>+<shorthash>[-compat].zip, and
 # (on Windows only — the sole toolchain we ship standalone symbol files for) the debug symbols into a
-# sibling dist/…-pdb.zip.
+# sibling dist/<platform>[-compat]-<shorthash>-pdb.zip. The platform leads so the asset you want is the
+# first thing the eye lands on and same-OS assets group together; the build config is folded in only when
+# it is not Release (a local Debug dist stays distinguishable while shipping Release names stay clean).
+# The pdb sidecar uses a short name (no app/version) since it is a dev-only crash-symbolication artifact.
 #
 # Driven by the `dist` custom target (see src/CMakeLists.txt) after the app is built. The git tag and
 # short commit hash are read here, at build time rather than configure time, so the archive name tracks
@@ -8,7 +11,7 @@
 # published release stays lean while its crash dumps can still be symbolicated from the symbol zip.
 #
 # Artifacts are named explicitly, NOT copied from bin/ wholesale: bin/<config> is shared by both AVX
-# variants (ofs-ng and ofs-ng-no-avx write into the same dir), so a blanket copy sweeps in the other
+# variants (ofs-ng and ofs-ng-compat write into the same dir), so a blanket copy sweeps in the other
 # variant's exe/pdb. localization_gen (a build-time host generator) is simply never listed.
 #
 # Platform: the file *set* is OS-specific — the binary extension, whether libmpv/SDL/nethost ship
@@ -22,11 +25,11 @@
 # Args (passed via -D on the `cmake -P` command line):
 #   BIN_DIR         directory holding the built app and its staged runtime files
 #   DIST_DIR        output directory for the .zip (created if absent)
-#   APP_NAME        archive base name and symbol-file stem (the app's OUTPUT_NAME, e.g. ofs-ng-no-avx)
-#   APP_FILE        exact binary filename incl. platform extension (ofs-ng.exe / ofs-ng-no-avx)
-#   CONFIG          build configuration ($<CONFIG>, e.g. Release/Debug) — folded into the archive name
+#   APP_NAME        archive base name and symbol-file stem (the app's OUTPUT_NAME, e.g. ofs-ng-compat)
+#   APP_FILE        exact binary filename incl. platform extension (ofs-ng.exe / ofs-ng-compat)
+#   CONFIG          build configuration ($<CONFIG>, e.g. Release/Debug) — named only when not Release
 #   SYSTEM_NAME     CMAKE_SYSTEM_NAME (Windows / Linux / Darwin) — gates the loose runtime DLLs
-#   AVX             OFS_AVX value (ON/OFF) — OFF guarantees a "-no-avx" marker in the archive name
+#   AVX             OFS_AVX value (ON/OFF) — OFF guarantees a "-compat" marker in the archive name
 #   SDL_SHARED_FILE resolved path to the SDL3 shared lib when SDL is linked dynamically; empty if static
 #   GIT_EXECUTABLE  path to git; empty/unset → tag and hash blank (built outside a checkout / no git)
 #   WORK_DIR        repository working directory to query
@@ -55,33 +58,40 @@ if (DEFINED GIT_EXECUTABLE AND NOT GIT_EXECUTABLE STREQUAL "")
             OUTPUT_VARIABLE _short OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
 endif ()
 
-# A non-AVX build renames its OUTPUT_NAME to "…-no-avx", so APP_NAME usually already carries the marker;
-# add it explicitly only when AVX is OFF and it is somehow absent, so the variant is always legible in
-# the archive name without ever doubling the token.
-set(_variant "${APP_NAME}")
-if (DEFINED AVX AND NOT AVX AND NOT _variant MATCHES "no-avx")
-    set(_variant "${_variant}-no-avx")
+# Base app name without the variant marker: a non-AVX build renames its OUTPUT_NAME to "…-compat", so
+# strip that suffix here and re-attach it in a controlled position (after the platform) below. Stripping
+# then re-adding keeps the marker emitted exactly once regardless of which token APP_NAME arrives with.
+set(_app "${APP_NAME}")
+string(REGEX REPLACE "-compat$" "" _app "${_app}")
+
+# Compat (SSE2 / pre-AVX) build marker. AVX=OFF is the source of truth; also honour an already-suffixed
+# APP_NAME so the variant stays legible even if AVX is somehow unset.
+set(_compat FALSE)
+if ((DEFINED AVX AND NOT AVX) OR APP_NAME MATCHES "-compat$")
+    set(_compat TRUE)
 endif ()
 
-# Short, stable platform tag so the OS a build targets is legible at a glance (win/linux/mac). Unknown
-# systems fall back to the lowercased CMAKE_SYSTEM_NAME rather than dropping the tag.
+# Full, stable platform word so the OS a build targets is legible at a glance (windows/linux/macos).
+# Unknown systems fall back to the lowercased CMAKE_SYSTEM_NAME rather than dropping the tag.
 if (_is_windows)
-    set(_plat "win")
+    set(_plat "windows")
 elseif (SYSTEM_NAME STREQUAL "Darwin")
-    set(_plat "mac")
+    set(_plat "macos")
 elseif (SYSTEM_NAME STREQUAL "Linux")
     set(_plat "linux")
 else ()
     string(TOLOWER "${SYSTEM_NAME}" _plat)
 endif ()
 
-# <variant>-<plat>-<config>-<tag>+<shorthash>: the hash rides as semver-style build metadata. It must
-# NOT be bracketed — the gh CLI glob-expands its asset arguments itself (so it works on a brackets-are-
-# literal Windows shell), and CMake file(GLOB) treats them the same, so "[<hash>]" silently matches
-# nothing in both. A tag-less history yields …-g<hash> (git-describe style); no git at all yields a bare
-# …-<config>, still a valid (if unhelpful) name rather than a failure.
-string(TOLOWER "${CONFIG}" _config_lc)
-set(_name "${_variant}-${_plat}-${_config_lc}")
+# <plat>-<app>-<tag>+<shorthash>[-<config>][-compat]: the platform leads so the asset you want is the
+# first thing the eye lands on, and same-OS assets group together in a sorted release list (app name and
+# version are constant across a release, so leading with them is just noise). The hash rides as
+# semver-style build metadata; it must NOT be bracketed — the gh CLI glob-expands its asset arguments
+# itself (so it works on a brackets-are-literal Windows shell), and CMake file(GLOB) treats them the
+# same, so "[<hash>]" silently matches nothing in both. A tag-less history yields …-g<hash> (git-describe
+# style); no git at all yields a bare <plat>-<app>, still a valid (if unhelpful) name rather than a
+# failure.
+set(_name "${_plat}-${_app}")
 if (NOT _tag STREQUAL "" AND NOT _short STREQUAL "")
     string(APPEND _name "-${_tag}+${_short}")
 elseif (NOT _tag STREQUAL "")
@@ -89,10 +99,30 @@ elseif (NOT _tag STREQUAL "")
 elseif (NOT _short STREQUAL "")
     string(APPEND _name "-g${_short}")
 endif ()
+# The build config is named only when it is not the shipping Release, so release zips stay clean while a
+# local Debug dist remains distinguishable.
+string(TOLOWER "${CONFIG}" _config_lc)
+if (NOT _config_lc STREQUAL "release")
+    string(APPEND _name "-${_config_lc}")
+endif ()
+if (_compat)
+    string(APPEND _name "-compat")
+endif ()
 set(_stage "${DIST_DIR}/${_name}")
 set(_zip "${DIST_DIR}/${_name}.zip")
-# Symbols travel in a sibling zip whose root folder is suffixed -pdb, so the two unpack side by side.
-set(_sym_name "${_name}-pdb")
+# Symbols travel in a separate sibling zip. It is a dev-only crash-symbolication sidecar, so it gets a
+# deliberately short name — platform, the compat marker, and the commit hash — rather than repeating the
+# app+version of the main archive. Platform+compat keep it unique across the two variants (each ships its
+# own .pdb set). This pdb naming is Windows-only in practice: no other toolchain we ship emits a separate
+# symbol file (see the symbol-staging block below), so the stage is created only on Windows.
+set(_sym_name "${_plat}")
+if (_compat)
+    string(APPEND _sym_name "-compat")
+endif ()
+if (NOT _short STREQUAL "")
+    string(APPEND _sym_name "-${_short}")
+endif ()
+string(APPEND _sym_name "-pdb")
 set(_sym "${DIST_DIR}/${_sym_name}")
 set(_sym_zip "${DIST_DIR}/${_sym_name}.zip")
 
