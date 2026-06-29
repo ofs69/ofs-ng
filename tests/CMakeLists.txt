@@ -235,6 +235,7 @@ add_executable(ofs-unit-tests
         format/test_backup_archive.cpp
         core/test_funscript_metadata.cpp
         util/test_time_util.cpp
+        util/test_subprocess.cpp
         util/test_benchmark.cpp
         util/test_path_util.cpp
         util/test_file_fingerprint.cpp
