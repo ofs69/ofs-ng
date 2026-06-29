@@ -201,8 +201,10 @@ void NavigatorRouter::onSetActiveNavigator(const SetActiveNavigatorEvent &event)
 
 void NavigatorRouter::onRegisterNavigator(const RegisterNavigatorEvent &event) {
     // Sole owner of the registry's plugin entries: publish the navigator so the footer lists it.
-    // Registration never activates it (no plugin-callable setter).
+    // Registration never activates it (no plugin-callable setter), except to restore the authored
+    // selection a project-load fallback left on native — see mode_lifecycle::onEntryRegistered.
     registry.add(event.entry);
+    mode_lifecycle::onEntryRegistered(registry, project.activeNavigator, project.storedNavigator, event.entry.id);
 }
 
 void NavigatorRouter::onUnregisterNavigators(const UnregisterNavigatorsEvent &event) {

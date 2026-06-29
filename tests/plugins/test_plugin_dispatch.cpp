@@ -1861,7 +1861,7 @@ TEST_CASE("A loaded project's dangling selection falls back without clobbering t
     CHECK(fx.tp.project.activeSelectionMode == "Ofs.ProbePlugin.probeselect");
 }
 
-TEST_CASE("Re-registering a fallen-back mode / navigator / selection mode does not silently re-activate it") {
+TEST_CASE("Re-registering the authored mode / navigator / selection mode after a fallback restores it") {
     DotNetFixture fx{"Ofs.ProbePlugin"};
     REQUIRE_DOTNET(fx);
 
@@ -1878,8 +1878,10 @@ TEST_CASE("Re-registering a fallen-back mode / navigator / selection mode does n
     REQUIRE(fx.tp.project.storedEditMode == "Ofs.ProbePlugin.intentmode");
     REQUIRE(fx.tp.project.storedSelectionMode == "Ofs.ProbePlugin.probeselect");
 
-    // A reload re-publishes the registrations, but must NOT re-activate them — the selection stays at the
-    // fallback until the user re-picks (a crashing/reloading plugin cannot force itself active).
+    // A reload re-publishes the registrations; because each id is still the authored/stored one, the
+    // effective id is restored to it (the deferred-restore path — the plugin reappearing for a project
+    // authored with it). A plugin still can't force a *non-authored* id active: the restore is gated on
+    // the stored id, and the user never picked these away (covered at the router level in the unit suite).
     EditModeEntry mode;
     mode.id = "Ofs.ProbePlugin.intentmode";
     mode.owningPlugin = "Ofs.ProbePlugin";
@@ -1896,10 +1898,10 @@ TEST_CASE("Re-registering a fallen-back mode / navigator / selection mode does n
     CHECK(fx.editModeReg.find("Ofs.ProbePlugin.intentmode") != nullptr); // re-published
     CHECK(fx.navReg.find("Ofs.ProbePlugin.fixedstep") != nullptr);
     CHECK(fx.selReg.find("Ofs.ProbePlugin.probeselect") != nullptr);
-    CHECK(fx.tp.project.activeEditMode == kNativeEditModeId);            // but still on native
-    CHECK(fx.tp.project.activeNavigator == kFollowOverlayNavigatorId);   // and follow-overlay
-    CHECK(fx.tp.project.activeSelectionMode == kNativeSelectionModeId);  // and native selection
-    CHECK(fx.tp.project.storedEditMode == "Ofs.ProbePlugin.intentmode"); // authored id still preserved
+    CHECK(fx.tp.project.activeEditMode == "Ofs.ProbePlugin.intentmode"); // restored to authored id
+    CHECK(fx.tp.project.activeNavigator == "Ofs.ProbePlugin.fixedstep");
+    CHECK(fx.tp.project.activeSelectionMode == "Ofs.ProbePlugin.probeselect");
+    CHECK(fx.tp.project.storedEditMode == "Ofs.ProbePlugin.intentmode"); // authored id unchanged
     CHECK(fx.tp.project.storedSelectionMode == "Ofs.ProbePlugin.probeselect");
 }
 

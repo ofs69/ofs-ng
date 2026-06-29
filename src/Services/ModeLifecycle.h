@@ -33,9 +33,10 @@ void setActive(Registry &registry, std::string &activeId, std::string &storedId,
 
 // A plugin is unloading (disabled / unloaded / hot-reloaded / crashed). If it owns the active entry, run
 // that entry's onExit best-effort and fall the *effective* id back to `nativeId`; the stored/authored id
-// is left intact so a re-save preserves it and a reload re-publishes without silently re-activating
-// (there is no plugin-callable setter). onExit is a safe no-op once the managed slot is released (the
-// guard turns a post-teardown/crash callback into a fallback). Then drop every entry the plugin owns.
+// is left intact so a re-save preserves it and a later re-register of that id restores it (see
+// onEntryRegistered) — a plugin still has no setter to activate an id the user never authored. onExit is
+// a safe no-op once the managed slot is released (the guard turns a post-teardown/crash callback into a
+// fallback). Then drop every entry the plugin owns.
 template <class Registry>
 void unregisterPlugin(Registry &registry, std::string &activeId, const std::string &pluginName, const char *nativeId) {
     if (const auto *active = registry.find(activeId); active && active->owningPlugin == pluginName) {
@@ -59,6 +60,24 @@ void onProjectLoaded(Registry &registry, std::string &activeId, const std::strin
                       nativeId);
         activeId = nativeId;
     }
+}
+
+// A plugin just registered `newId`. Restore it as the *effective* id iff it is the authored/stored id and
+// the effective id has fallen back to native because that plugin was absent — the deferred completion of
+// onProjectLoaded. At startup the project opens a frame before plugins load (LoadProjectEvent drains
+// before loadPlugins()), so onProjectLoaded sees no registered entry and falls back; without this the
+// authored mode would only restore on a same-session reopen, once the plugin is present. Also covers a
+// mid-session hot-reload of the authoring plugin. Guarded to the stored id, so a plugin can never
+// silently activate a mode the user did not choose (there is no plugin-callable setter); a user's
+// in-session pick moves storedId, so a late-registering old plugin won't override it.
+template <class Registry>
+void onEntryRegistered(Registry &registry, std::string &activeId, const std::string &storedId,
+                       const std::string &newId) {
+    if (newId != storedId || activeId == storedId)
+        return;
+    activeId = storedId;
+    if (const auto *next = registry.find(activeId); next && next->onEnter)
+        next->onEnter(next->userData);
 }
 
 } // namespace ofs::mode_lifecycle

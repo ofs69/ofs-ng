@@ -154,8 +154,11 @@ void SelectIntentRouter::onSetActiveSelectionMode(const SetActiveSelectionModeEv
 
 void SelectIntentRouter::onRegisterSelectionMode(const RegisterSelectionModeEvent &event) {
     // Sole owner of the registry's plugin entries: publish the mode so the footer lists it and a later
-    // user selection can activate it. Registration never activates it (no plugin-callable setter).
+    // user selection can activate it. Registration never activates it (no plugin-callable setter), except
+    // to restore the authored selection a project-load fallback left on native — see onEntryRegistered.
     registry.add(event.entry);
+    mode_lifecycle::onEntryRegistered(registry, project.activeSelectionMode, project.storedSelectionMode,
+                                      event.entry.id);
 }
 
 void SelectIntentRouter::onUnregisterSelectionModes(const UnregisterSelectionModesEvent &event) {

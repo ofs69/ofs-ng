@@ -329,3 +329,65 @@ TEST_CASE("Unregistering the active selection mode's plugin falls back to native
         .gesture = ofs::SelectGesture::Box, .axis = StandardAxis::L0, .startTime = 0.5, .endTime = 3.5});
     CHECK(f.project().axes[kL0].selection.size() == 3);
 }
+
+namespace {
+// Register a selection mode without activating it — mimics a plugin loading *after* the project, the
+// real startup order (LoadProjectEvent drains on frame 1; loadPlugins() runs in onStartupComplete()).
+void registerMode(PmFixture &f, const char *id, OfsSelectFn fn, const char *owner = "FakePlugin") {
+    ofs::SelectionModeEntry e;
+    e.id = id;
+    e.owningPlugin = owner;
+    e.onSelect = fn;
+    f.send(ofs::RegisterSelectionModeEvent{e});
+}
+} // namespace
+
+TEST_CASE("Registering the authored selection mode after a load fallback restores it as effective") {
+    PmFixture f;
+    f.seedL0_3();
+    // Project authored with a plugin mode, loaded before that plugin: onProjectLoaded falls back to native.
+    f.project().storedSelectionMode = "FakePlugin.drop";
+    f.project().activeSelectionMode = "FakePlugin.drop";
+    f.send(ofs::LoadProjectEvent{});
+    REQUIRE(f.project().activeSelectionMode == ofs::kNativeSelectionModeId);
+
+    // The plugin now loads and registers the authored mode — the deferred restore re-activates it.
+    registerMode(f, "FakePlugin.drop", selDrop);
+    CHECK(f.project().activeSelectionMode == "FakePlugin.drop");
+    CHECK(f.project().storedSelectionMode == "FakePlugin.drop");
+    // Resolution now runs through the restored plugin mode (drop ⇒ nothing selected).
+    f.send(ofs::SelectRequestEvent{
+        .gesture = ofs::SelectGesture::Box, .axis = StandardAxis::L0, .startTime = 0.5, .endTime = 3.5});
+    CHECK(f.project().axes[kL0].selection.empty());
+}
+
+TEST_CASE("Registering a non-authored selection mode after a fallback does not steal activation") {
+    PmFixture f;
+    f.seedL0_3();
+    f.project().storedSelectionMode = "FakePlugin.drop";
+    f.project().activeSelectionMode = "FakePlugin.drop";
+    f.send(ofs::LoadProjectEvent{});
+    REQUIRE(f.project().activeSelectionMode == ofs::kNativeSelectionModeId);
+
+    // A different plugin mode registering must not activate — only the authored id restores.
+    registerMode(f, "FakePlugin.other", selPass);
+    CHECK(f.project().activeSelectionMode == ofs::kNativeSelectionModeId);
+    CHECK(f.project().storedSelectionMode == "FakePlugin.drop"); // authored id still preserved
+}
+
+TEST_CASE("An in-session pick survives a late registration of the previously-authored mode") {
+    PmFixture f;
+    f.seedL0_3();
+    f.project().storedSelectionMode = "FakePlugin.drop";
+    f.project().activeSelectionMode = "FakePlugin.drop";
+    f.send(ofs::LoadProjectEvent{}); // falls back to native (FakePlugin.drop absent)
+
+    // User picks a different, present mode in-session — this moves the stored/authored id.
+    useMode(f, "FakePlugin.pass", selPass);
+    REQUIRE(f.project().storedSelectionMode == "FakePlugin.pass");
+
+    // The originally-authored plugin loads late: it must NOT override the user's in-session pick.
+    registerMode(f, "FakePlugin.drop", selDrop);
+    CHECK(f.project().activeSelectionMode == "FakePlugin.pass");
+    CHECK(f.project().storedSelectionMode == "FakePlugin.pass");
+}

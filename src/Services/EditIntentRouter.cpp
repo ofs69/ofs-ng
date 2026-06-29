@@ -302,8 +302,10 @@ void EditIntentRouter::onSetActiveEditMode(const SetActiveEditModeEvent &event) 
 
 void EditIntentRouter::onRegisterEditMode(const RegisterEditModeEvent &event) {
     // Sole owner of the registry's plugin entries: publish the mode so the footer lists it and a later
-    // user selection can activate it. Registration never activates (no plugin-callable setter).
+    // user selection can activate it. Registration never activates (no plugin-callable setter), except to
+    // restore the authored selection a project-load fallback left on native — see onEntryRegistered.
     registry.add(event.entry);
+    mode_lifecycle::onEntryRegistered(registry, project.activeEditMode, project.storedEditMode, event.entry.id);
 }
 
 void EditIntentRouter::onUnregisterEditModes(const UnregisterEditModesEvent &event) {
