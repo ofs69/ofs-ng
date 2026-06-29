@@ -23,11 +23,15 @@ Subcommands:
                      the English reference of untranslated keys, and preserve existing
                      translations. The one command to run after editing strings.toml.
   new <code>         Create a stub language file in lang/ (empty translations).
-  todo <id>          Write a focused batch file holding only the keys that still need
+  todo [id]          Write a focused batch file holding only the keys that still need
                      work (missing / empty / stale / bad-placeholder), with English +
                      description + placeholder docs — the unit of work to translate.
-  apply <id>         Merge a filled-in batch file back into the language file, validating
-                     placeholders and clearing the stale flag. Implies a sync.
+                     With no id, write one combined `all.batch.toml` grouping every
+                     language's pending keys (English once, a line per language) so a
+                     handful of stale keys can be filled across all catalogs in one pass.
+  apply [id]         Merge a filled-in batch file back into the language file, validating
+                     placeholders and clearing the stale flag. Implies a sync. With no id,
+                     apply the combined `all.batch.toml` into every language it names.
   check [id ...]     Validate language file(s) exactly as the build does, without a
                      build. No args = every file in lang/. Non-zero exit on any error.
 
@@ -135,6 +139,12 @@ def toml_string(s: str) -> str:
 
 def _field_line(name: str, value: str) -> str:
     return f"{name.ljust(_FIELD_W)} = {toml_string(value)}"
+
+
+def toml_key(name: str) -> str:
+    """A quoted TOML bare-key. Language ids carry `[`/`]` (the _[AI] suffix), so they
+    are not valid unquoted keys; quoting is always safe."""
+    return '"' + name.replace("\\", "\\\\").replace('"', '\\"') + '"'
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -432,6 +442,8 @@ def cmd_new(args: argparse.Namespace) -> int:
 
 def cmd_todo(args: argparse.Namespace) -> int:
     source = load_source()
+    if args.id is None:
+        return cmd_todo_all(source, args)
     p = find_lang_path(args.id)
     if p is None:
         die(f"no language file for '{args.id}'")
@@ -480,9 +492,142 @@ def cmd_todo(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_todo_all(source: dict[str, Entry], args: argparse.Namespace) -> int:
+    """Write one batch covering every language's pending keys.
+
+    For an incremental source edit a handful of keys go stale across all the complete
+    catalogs at once. Rather than an N-language todo/apply cycle, this groups the work by
+    key — English shown once, a line per language that needs it — so a single pass fills
+    every catalog. (For a from-scratch language, prefer the per-language fan-out instead;
+    this batch would hold thousands of lines.)
+    """
+    langs = [load_lang(p) for p in all_lang_paths()]
+    if not langs:
+        print("No language files found. Seed one with: translations.py new <code>")
+        return 0
+
+    # key -> [(lang_id, state, prefill)], only the languages that need work for that key.
+    per_key: dict[str, list[tuple[str, str, str]]] = {}
+    for key, entry in source.items():
+        needing: list[tuple[str, str, str]] = []
+        for lang in langs:
+            st = classify(key, entry, lang)
+            if st in NEEDS_WORK:
+                prefill = lang.entries.get(key, ("", ""))[1] if st in (STALE, BADPH) else ""
+                needing.append((lang.lang_id, st, prefill))
+        if needing:
+            per_key[key] = needing
+    if not per_key:
+        print("nothing to translate — every language is up to date.")
+        return 0
+
+    lang_ids = sorted({lid for needing in per_key.values() for lid, _, _ in needing})
+    width = max([len("english")] + [len(toml_key(lid)) for lid in lang_ids])
+    units = sum(len(v) for v in per_key.values())
+
+    out: list[str] = [
+        f"# Combined translation batch — {len(per_key)} key(s), {units} translation(s) "
+        f"across {len(lang_ids)} language(s).",
+        "#",
+        "# Fill each language line under a key. Keep every {N} placeholder from the source (any order).",
+        "# Leave a line blank to skip it. The trailing `# state` note is informational. When done:",
+        "#   python tools/translations.py apply",
+        "#",
+        "# state: missing=new key  empty=untranslated  stale=source English changed  badph=placeholders",
+        "#        no longer match. A stale/badph line is pre-filled with the existing translation to revise.",
+        "",
+    ]
+    for key in source:  # keep source order
+        if key not in per_key:
+            continue
+        entry = source[key]
+        out.append(f"[{key}]")
+        if entry.description:
+            out.append(f"# context: {entry.description}")
+        for doc in entry.placeholders:
+            out.append(f"# placeholder: {doc}")
+        out.append(f"{'english'.ljust(width)} = {toml_string(entry.english)}")
+        for lid, st, prefill in per_key[key]:
+            out.append(f"{toml_key(lid).ljust(width)} = {toml_string(prefill)}   # {st}")
+        out.append("")
+    text = "\n".join(out).rstrip("\n") + "\n"
+
+    dest = Path(args.out) if args.out else BATCH_DIR / "all.batch.toml"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_text(text, encoding="utf-8", newline="\n")
+    print(f"wrote {rel(dest)} — {len(per_key)} key(s), {units} translation(s) across "
+          f"{len(lang_ids)} language(s)")
+    return 0
+
+
+def apply_to_lang(source: dict[str, Entry], layout: list[tuple], path: Path,
+                  translations: dict[str, str]) -> tuple[int, int, int]:
+    """Merge a {key: translation} map into one language file and rewrite it.
+
+    Returns (applied, skipped, rejected). A blank translation is skipped; one whose {N}
+    placeholders don't match the source is rejected; an accepted one stamps the current
+    source English as the reference so the key is no longer stale.
+    """
+    lang = load_lang(path)
+    merged = dict(lang.entries)
+    applied = skipped = rejected = 0
+    for key, tr in translations.items():
+        if key not in source:
+            print(f"  skip '{key}': not a source key")
+            skipped += 1
+            continue
+        if tr.strip() == "":
+            skipped += 1
+            continue
+        if placeholder_indices(tr) != source[key].ph:
+            print(f"  reject '{lang.lang_id}/{key}': placeholders {sorted(placeholder_indices(tr))} "
+                  f"!= source {sorted(source[key].ph)}")
+            rejected += 1
+            continue
+        merged[key] = (source[key].english, tr)
+        applied += 1
+    synced, _ = sync_translations(source, merged)
+    text = render_lang(lang.lang_id, lang_display_name(lang.lang_id), lang.culture or "en",
+                       source, layout, synced)
+    path.write_text(text, encoding="utf-8", newline="\n")
+    return applied, skipped, rejected
+
+
+def cmd_apply_all(source: dict[str, Entry], layout: list[tuple], args: argparse.Namespace) -> int:
+    batch_path = Path(args.input) if args.input else BATCH_DIR / "all.batch.toml"
+    if not batch_path.exists():
+        die(f"batch file not found: {rel(batch_path)} (run `todo` first)")
+    with batch_path.open("rb") as f:
+        batch = tomllib.load(f)
+
+    # Pivot the by-key batch into a {lang_id: {key: translation}} map.
+    per_lang: dict[str, dict[str, str]] = {}
+    for key, tbl in batch.items():
+        if key.startswith("_") or not isinstance(tbl, dict):
+            continue
+        for field_name, val in tbl.items():
+            if field_name == "english" or not isinstance(val, str):
+                continue
+            per_lang.setdefault(field_name, {})[key] = val
+
+    tot_a = tot_s = tot_r = 0
+    for lang_id, trans in sorted(per_lang.items()):
+        p = find_lang_path(lang_id)
+        if p is None:
+            print(f"  skip language '{lang_id}': no file in lang/")
+            continue
+        a, s, r = apply_to_lang(source, layout, p, trans)
+        tot_a, tot_s, tot_r = tot_a + a, tot_s + s, tot_r + r
+        print(f"{rel(p)}: applied {a}, skipped {s}, rejected {r}")
+    print(f"total: applied {tot_a}, skipped {tot_s}, rejected {tot_r}")
+    return 1 if tot_r else 0
+
+
 def cmd_apply(args: argparse.Namespace) -> int:
     source = load_source()
     layout = source_layout()
+    if args.id is None:
+        return cmd_apply_all(source, layout, args)
     p = find_lang_path(args.id)
     if p is None:
         die(f"no language file for '{args.id}'")
@@ -492,35 +637,15 @@ def cmd_apply(args: argparse.Namespace) -> int:
     with batch_path.open("rb") as f:
         batch = tomllib.load(f)
 
-    lang = load_lang(p)
-    merged = dict(lang.entries)
-    applied, skipped, rejected = 0, 0, 0
+    translations: dict[str, str] = {}
     for key, tbl in batch.items():
         if key.startswith("_") or not isinstance(tbl, dict):
             continue
-        if key not in source:
-            print(f"  skip '{key}': not a source key")
-            skipped += 1
-            continue
-        tr = tbl.get("translation", "")
-        if tr.strip() == "":
-            skipped += 1
-            continue
-        if placeholder_indices(tr) != source[key].ph:
-            print(f"  reject '{key}': placeholders {sorted(placeholder_indices(tr))} != "
-                  f"source {sorted(source[key].ph)}")
-            rejected += 1
-            continue
-        # Stamp the current source English as the reference so the key is no longer stale.
-        merged[key] = (source[key].english, tr)
-        applied += 1
+        translations[key] = tbl.get("translation", "")
 
-    synced, _ = sync_translations(source, merged)
-    text = render_lang(lang.lang_id, lang_display_name(lang.lang_id), lang.culture or "en",
-                       source, layout, synced)
-    p.write_text(text, encoding="utf-8", newline="\n")
-    print(f"{rel(p)}: applied {applied}, skipped {skipped}, rejected {rejected}")
-    return 1 if rejected else 0
+    a, s, r = apply_to_lang(source, layout, p, translations)
+    print(f"{rel(p)}: applied {a}, skipped {s}, rejected {r}")
+    return 1 if r else 0
 
 
 def validate_lang(source: dict[str, Entry], path: Path) -> list[str]:
@@ -627,13 +752,15 @@ def build_parser() -> argparse.ArgumentParser:
     s.set_defaults(func=cmd_new)
 
     s = sub.add_parser("todo", help="write a batch of keys needing translation")
-    s.add_argument("id", help="language id")
-    s.add_argument("-o", "--out", help="output path (default: tools/localization/<id>.batch.toml)")
+    s.add_argument("id", nargs="?", help="language id (omit for a combined all-language batch)")
+    s.add_argument("-o", "--out", help="output path (default: tools/localization/<id>.batch.toml, "
+                                       "or all.batch.toml for the combined batch)")
     s.set_defaults(func=cmd_todo)
 
-    s = sub.add_parser("apply", help="merge a filled batch back into the language file")
-    s.add_argument("id", help="language id")
-    s.add_argument("-i", "--input", help="batch path (default: tools/localization/<id>.batch.toml)")
+    s = sub.add_parser("apply", help="merge a filled batch back into the language file(s)")
+    s.add_argument("id", nargs="?", help="language id (omit to apply the combined all.batch.toml)")
+    s.add_argument("-i", "--input", help="batch path (default: tools/localization/<id>.batch.toml, "
+                                         "or all.batch.toml for the combined batch)")
     s.set_defaults(func=cmd_apply)
 
     s = sub.add_parser("check", help="validate language file(s) like the build does")

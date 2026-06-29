@@ -61,8 +61,8 @@ Run from anywhere in the repo. `<id>` is a filename stem like `de_[AI]`.
 python tools/translations.py status [id ...]   # completion report (done/missing/empty/stale/badph)
 python tools/translations.py sync   [id ...]   # propagate source changes into language file(s)
 python tools/translations.py new    <code>     # create a stub language file in lang/
-python tools/translations.py todo   <id>       # write a batch of just-the-keys-needing-work
-python tools/translations.py apply  <id>       # merge a filled batch back in (validates placeholders)
+python tools/translations.py todo   [id]       # batch of just-the-keys-needing-work (no id = all languages)
+python tools/translations.py apply  [id]       # merge a filled batch back in (no id = the combined batch)
 python tools/translations.py check  [id ...]   # validate like the build, without building
 ```
 
@@ -89,6 +89,25 @@ You never have to open the full catalog. Work one language at a time through a f
 
 > Asking Claude Code to translate a language is just: run `todo`, fill the batch, run `apply`. Batch
 > files are git-ignored and transient.
+
+### One pass for all languages (the common case after a small source edit)
+
+Editing a handful of strings in `strings.toml` makes those keys **stale in every catalog at once**.
+Running the per-language loop a dozen times for three keys is busywork, so `todo`/`apply` with **no id**
+work over all languages together:
+
+1. `python tools/translations.py sync` — flags the stale keys everywhere.
+2. `python tools/translations.py todo` — writes `tools/localization/all.batch.toml`: one section per
+   pending key, the English shown **once**, and a line per language that needs it (a stale line is
+   pre-filled with its existing translation to revise). Only languages that need a key are listed.
+3. Fill each language line (keep every `{N}` placeholder), then
+   `python tools/translations.py apply` — merges the combined batch into every catalog it names,
+   rejecting any placeholder mismatch.
+4. `python tools/translations.py check` — confirm all catalogs are complete.
+
+A single agent fills the whole combined batch inline — no per-language fan-out. (The multi-agent
+fan-out is reserved for a *from-scratch* language, where the combined batch would be thousands of
+lines; for incremental edits, prefer this.)
 
 ### Checking a language
 
