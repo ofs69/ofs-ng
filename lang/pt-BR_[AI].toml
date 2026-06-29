@@ -2556,6 +2556,42 @@ translation = "Ir para o Fim"
 english     = "Speed"
 translation = "Velocidade"
 
+[VpcStepBack]
+english     = "Step back one frame"
+translation = "Voltar um quadro"
+
+[VpcStepForward]
+english     = "Step forward one frame"
+translation = "Avançar um quadro"
+
+[VpcSeekBack]
+english     = "Back {0} seconds"
+translation = "Voltar {0} segundos"
+
+[VpcSeekForward]
+english     = "Forward {0} seconds"
+translation = "Avançar {0} segundos"
+
+[VpcPlay]
+english     = "Play"
+translation = "Reproduzir"
+
+[VpcPause]
+english     = "Pause"
+translation = "Pausar"
+
+[VpcMute]
+english     = "Mute"
+translation = "Silenciar"
+
+[VpcUnmute]
+english     = "Unmute"
+translation = "Reativar som"
+
+[VpcSpeedPresets]
+english     = "Speed presets"
+translation = "Predefinições de velocidade"
+
 # ── Video Player window (UI/VideoPlayerWindow.cpp) ───────────────────────────
 # The video viewport. Chrome: window title, the two no-content placeholders, and the right-click
 # menu (Full/VR mode, the Resolution submenu + its tooltip, the Locked toggle). The "###video_player"
@@ -3071,6 +3107,10 @@ translation = "Digite um comando..."
 english     = "No matching commands"
 translation = "Nenhum comando correspondente"
 
+[TbOpenPalette]
+english     = "Open command palette"
+translation = "Abrir paleta de comandos"
+
 # ── Footer bar: notification center + status (UI/FooterBar.cpp) ───────────────
 # The bell popup chrome, the app-status tooltips, the background-evaluation status line, and the
 # word-bearing telemetry readouts (points / selection / view-window, below) carry the abbreviations
@@ -3089,6 +3129,14 @@ translation = "Tarefas em execução"
 [FtClearAll]
 english     = "Clear all"
 translation = "Limpar tudo"
+
+[FtBellTip]
+english     = "Notifications, tasks, and updates"
+translation = "Notificações, tarefas e atualizações"
+
+[FtUndoHistory]
+english     = "Undo history"
+translation = "Histórico de desfazer"
 
 [FtNoNotifications]
 english     = "No notifications"

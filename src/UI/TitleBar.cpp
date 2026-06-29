@@ -278,7 +278,7 @@ TitleBarResult renderTitleBar(const char *appName, const char *projectTitle, boo
         const bool boxHovered = ImGui::IsItemHovered();
         ImGui::SetMouseCursor(boxHovered ? ImGuiMouseCursor_Hand : ImGui::GetMouseCursor());
         if (boxHovered)
-            ImGui::SetTooltip("%s", projectTitle);
+            ImGui::SetTooltip("%s", fmtScratch("{}\n{}", projectTitle, Str::TbOpenPalette.c_str()));
 
         ImDrawList *dl = ImGui::GetWindowDrawList();
         const ImVec2 boxBR = boxTL + ImVec2(boxW, boxH);

@@ -664,19 +664,24 @@ void VideoControlsWindow::render(const ScriptProject &project, EventQueue &eq, V
             // step), the same resolution the prev/next-step keys use.
             if (ImGui::Button(ICON_STEP_BACKWARD, {btnW, 0.f}))
                 eq.push(StepRequestEvent{.direction = StepDirection::Backward, .granularity = StepGranularity::Frame});
+            ImGui::SetItemTooltip("%s", Str::VpcStepBack.c_str());
             ImGui::SameLine();
             if (ImGui::Button(ICON_BACKWARD, {btnW, 0.f}))
                 eq.push(SeekEvent{project.playback.cursorPos - seekTime});
+            ImGui::SetItemTooltip("%s", Str::VpcSeekBack.fmt(static_cast<int>(seekTime)));
             ImGui::SameLine();
             bool paused = videoPlayer.isPaused();
             if (ImGui::Button(paused ? ICON_PLAY : ICON_PAUSE, {btnW, 0.f}))
                 eq.push(PlayPauseEvent{});
+            ImGui::SetItemTooltip("%s", paused ? Str::VpcPlay.c_str() : Str::VpcPause.c_str());
             ImGui::SameLine();
             if (ImGui::Button(ICON_FORWARD, {btnW, 0.f}))
                 eq.push(SeekEvent{project.playback.cursorPos + seekTime});
+            ImGui::SetItemTooltip("%s", Str::VpcSeekForward.fmt(static_cast<int>(seekTime)));
             ImGui::SameLine();
             if (ImGui::Button(ICON_STEP_FORWARD, {btnW, 0.f}))
                 eq.push(StepRequestEvent{.direction = StepDirection::Forward, .granularity = StepGranularity::Frame});
+            ImGui::SetItemTooltip("%s", Str::VpcStepForward.c_str());
         }
 
         ImGui::TableSetColumnIndex(1);
@@ -703,6 +708,7 @@ void VideoControlsWindow::render(const ScriptProject &project, EventQueue &eq, V
                     eq.push(VolumeChangedEvent{controlsState.preMuteVolume});
                 }
             }
+            ImGui::SetItemTooltip("%s", muted ? Str::VpcUnmute.c_str() : Str::VpcMute.c_str());
             ImGui::SameLine();
             ImGui::SetNextItemWidth(-FLT_MIN);
             if (ImGui::SliderFloat("##Volume", &volume, 0.0f, 1.3f, "%.1f", ImGuiSliderFlags_AlwaysClamp)) {
@@ -721,6 +727,7 @@ void VideoControlsWindow::render(const ScriptProject &project, EventQueue &eq, V
         float currentSpeed = videoPlayer.getPlaybackSpeed();
         if (ImGui::Button(ICON_CHEVRON_UP "##speed_presets"))
             ImGui::OpenPopup("##speed_ctx");
+        ImGui::SetItemTooltip("%s", Str::VpcSpeedPresets.c_str());
         // Controls live at the bottom of the screen, so anchor the popup's lower-left to the
         // button's top-left (pivot y=1) to force it to grow upward.
         const ImVec2 btnTopLeft = ImGui::GetItemRectMin();

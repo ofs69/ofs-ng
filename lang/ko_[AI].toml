@@ -2556,6 +2556,42 @@ translation = "끝 지점으로 이동"
 english     = "Speed"
 translation = "속도"
 
+[VpcStepBack]
+english     = "Step back one frame"
+translation = "한 프레임 뒤로"
+
+[VpcStepForward]
+english     = "Step forward one frame"
+translation = "한 프레임 앞으로"
+
+[VpcSeekBack]
+english     = "Back {0} seconds"
+translation = "{0}초 뒤로"
+
+[VpcSeekForward]
+english     = "Forward {0} seconds"
+translation = "{0}초 앞으로"
+
+[VpcPlay]
+english     = "Play"
+translation = "재생"
+
+[VpcPause]
+english     = "Pause"
+translation = "일시정지"
+
+[VpcMute]
+english     = "Mute"
+translation = "음소거"
+
+[VpcUnmute]
+english     = "Unmute"
+translation = "음소거 해제"
+
+[VpcSpeedPresets]
+english     = "Speed presets"
+translation = "속도 프리셋"
+
 # ── Video Player window (UI/VideoPlayerWindow.cpp) ───────────────────────────
 # The video viewport. Chrome: window title, the two no-content placeholders, and the right-click
 # menu (Full/VR mode, the Resolution submenu + its tooltip, the Locked toggle). The "###video_player"
@@ -3071,6 +3107,10 @@ translation = "명령 입력..."
 english     = "No matching commands"
 translation = "일치하는 명령 없음"
 
+[TbOpenPalette]
+english     = "Open command palette"
+translation = "명령 팔레트 열기"
+
 # ── Footer bar: notification center + status (UI/FooterBar.cpp) ───────────────
 # The bell popup chrome, the app-status tooltips, the background-evaluation status line, and the
 # word-bearing telemetry readouts (points / selection / view-window, below) carry the abbreviations
@@ -3089,6 +3129,14 @@ translation = "실행 중인 작업"
 [FtClearAll]
 english     = "Clear all"
 translation = "모두 지우기"
+
+[FtBellTip]
+english     = "Notifications, tasks, and updates"
+translation = "알림, 작업 및 업데이트"
+
+[FtUndoHistory]
+english     = "Undo history"
+translation = "실행 취소 기록"
 
 [FtNoNotifications]
 english     = "No notifications"

@@ -2556,6 +2556,42 @@ translation = "Vai alla fine"
 english     = "Speed"
 translation = "Velocità"
 
+[VpcStepBack]
+english     = "Step back one frame"
+translation = "Indietro di un fotogramma"
+
+[VpcStepForward]
+english     = "Step forward one frame"
+translation = "Avanti di un fotogramma"
+
+[VpcSeekBack]
+english     = "Back {0} seconds"
+translation = "Indietro di {0} secondi"
+
+[VpcSeekForward]
+english     = "Forward {0} seconds"
+translation = "Avanti di {0} secondi"
+
+[VpcPlay]
+english     = "Play"
+translation = "Riproduci"
+
+[VpcPause]
+english     = "Pause"
+translation = "Pausa"
+
+[VpcMute]
+english     = "Mute"
+translation = "Disattiva audio"
+
+[VpcUnmute]
+english     = "Unmute"
+translation = "Riattiva audio"
+
+[VpcSpeedPresets]
+english     = "Speed presets"
+translation = "Preimpostazioni velocità"
+
 # ── Video Player window (UI/VideoPlayerWindow.cpp) ───────────────────────────
 # The video viewport. Chrome: window title, the two no-content placeholders, and the right-click
 # menu (Full/VR mode, the Resolution submenu + its tooltip, the Locked toggle). The "###video_player"
@@ -3071,6 +3107,10 @@ translation = "Digita un comando..."
 english     = "No matching commands"
 translation = "Nessun comando corrispondente"
 
+[TbOpenPalette]
+english     = "Open command palette"
+translation = "Apri tavolozza comandi"
+
 # ── Footer bar: notification center + status (UI/FooterBar.cpp) ───────────────
 # The bell popup chrome, the app-status tooltips, the background-evaluation status line, and the
 # word-bearing telemetry readouts (points / selection / view-window, below) carry the abbreviations
@@ -3089,6 +3129,14 @@ translation = "Attività in esecuzione"
 [FtClearAll]
 english     = "Clear all"
 translation = "Cancella tutto"
+
+[FtBellTip]
+english     = "Notifications, tasks, and updates"
+translation = "Notifiche, attività e aggiornamenti"
+
+[FtUndoHistory]
+english     = "Undo history"
+translation = "Cronologia annullamenti"
 
 [FtNoNotifications]
 english     = "No notifications"

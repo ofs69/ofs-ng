@@ -2556,6 +2556,42 @@ translation = "Sona Git"
 english     = "Speed"
 translation = "Hız"
 
+[VpcStepBack]
+english     = "Step back one frame"
+translation = "Bir kare geri"
+
+[VpcStepForward]
+english     = "Step forward one frame"
+translation = "Bir kare ileri"
+
+[VpcSeekBack]
+english     = "Back {0} seconds"
+translation = "{0} saniye geri"
+
+[VpcSeekForward]
+english     = "Forward {0} seconds"
+translation = "{0} saniye ileri"
+
+[VpcPlay]
+english     = "Play"
+translation = "Oynat"
+
+[VpcPause]
+english     = "Pause"
+translation = "Duraklat"
+
+[VpcMute]
+english     = "Mute"
+translation = "Sesi kapat"
+
+[VpcUnmute]
+english     = "Unmute"
+translation = "Sesi aç"
+
+[VpcSpeedPresets]
+english     = "Speed presets"
+translation = "Hız ön ayarları"
+
 # ── Video Player window (UI/VideoPlayerWindow.cpp) ───────────────────────────
 # The video viewport. Chrome: window title, the two no-content placeholders, and the right-click
 # menu (Full/VR mode, the Resolution submenu + its tooltip, the Locked toggle). The "###video_player"
@@ -3071,6 +3107,10 @@ translation = "Bir komut yazın..."
 english     = "No matching commands"
 translation = "Eşleşen komut yok"
 
+[TbOpenPalette]
+english     = "Open command palette"
+translation = "Komut paletini aç"
+
 # ── Footer bar: notification center + status (UI/FooterBar.cpp) ───────────────
 # The bell popup chrome, the app-status tooltips, the background-evaluation status line, and the
 # word-bearing telemetry readouts (points / selection / view-window, below) carry the abbreviations
@@ -3089,6 +3129,14 @@ translation = "Çalışan görevler"
 [FtClearAll]
 english     = "Clear all"
 translation = "Tümünü temizle"
+
+[FtBellTip]
+english     = "Notifications, tasks, and updates"
+translation = "Bildirimler, görevler ve güncellemeler"
+
+[FtUndoHistory]
+english     = "Undo history"
+translation = "Geri alma geçmişi"
 
 [FtNoNotifications]
 english     = "No notifications"

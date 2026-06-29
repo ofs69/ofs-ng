@@ -2556,6 +2556,42 @@ translation = "跳转到末尾"
 english     = "Speed"
 translation = "速度"
 
+[VpcStepBack]
+english     = "Step back one frame"
+translation = "后退一帧"
+
+[VpcStepForward]
+english     = "Step forward one frame"
+translation = "前进一帧"
+
+[VpcSeekBack]
+english     = "Back {0} seconds"
+translation = "后退 {0} 秒"
+
+[VpcSeekForward]
+english     = "Forward {0} seconds"
+translation = "前进 {0} 秒"
+
+[VpcPlay]
+english     = "Play"
+translation = "播放"
+
+[VpcPause]
+english     = "Pause"
+translation = "暂停"
+
+[VpcMute]
+english     = "Mute"
+translation = "静音"
+
+[VpcUnmute]
+english     = "Unmute"
+translation = "取消静音"
+
+[VpcSpeedPresets]
+english     = "Speed presets"
+translation = "速度预设"
+
 # ── Video Player window (UI/VideoPlayerWindow.cpp) ───────────────────────────
 # The video viewport. Chrome: window title, the two no-content placeholders, and the right-click
 # menu (Full/VR mode, the Resolution submenu + its tooltip, the Locked toggle). The "###video_player"
@@ -3071,6 +3107,10 @@ translation = "输入命令..."
 english     = "No matching commands"
 translation = "无匹配命令"
 
+[TbOpenPalette]
+english     = "Open command palette"
+translation = "打开命令面板"
+
 # ── Footer bar: notification center + status (UI/FooterBar.cpp) ───────────────
 # The bell popup chrome, the app-status tooltips, the background-evaluation status line, and the
 # word-bearing telemetry readouts (points / selection / view-window, below) carry the abbreviations
@@ -3089,6 +3129,14 @@ translation = "正在运行的任务"
 [FtClearAll]
 english     = "Clear all"
 translation = "全部清除"
+
+[FtBellTip]
+english     = "Notifications, tasks, and updates"
+translation = "通知、任务和更新"
+
+[FtUndoHistory]
+english     = "Undo history"
+translation = "撤销历史"
 
 [FtNoNotifications]
 english     = "No notifications"

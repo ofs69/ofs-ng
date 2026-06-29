@@ -258,6 +258,7 @@ void renderBell(NotificationState &state, EventQueue &eq, float lineH) {
     const bool hovered = ImGui::IsItemHovered();
     if (hovered)
         ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+    ImGui::SetItemTooltip("%s", Str::FtBellTip.c_str());
 
     ImDrawList *dl = ImGui::GetWindowDrawList();
     const float bellX = tl.x + pad;
@@ -798,16 +799,17 @@ float renderFooterBar(const FooterBarInfo &info, NotificationState &notification
         }
 
         // ── Undo history (stack depth) ───────────────────────────────────────────────────────────
-        // Icons + counts only — no words; the undo/redo glyphs carry the meaning. The history memory
-        // (used / limit) lives in the hover tooltip rather than cluttering the bar. The tooltip is pure
-        // icon + numbers + unit literal (px-rule), so it needs no translatable text.
+        // Icons + counts only — no words; the undo/redo glyphs carry the meaning. The tooltip names the
+        // zone ("Undo history") so the glyphs aren't a guess, then shows the history memory (used / limit)
+        // that would clutter the bar.
         if (info.undoMaxBytes > 0) {
             lead();
             constexpr double kMib = 1024.0 * 1024.0;
             const double usedMib = static_cast<double>(info.undoUsedBytes) / kMib;
             const double maxMib = static_cast<double>(info.undoMaxBytes) / kMib;
             ImGui::TextDisabled("%s", fmtScratch("{} {} {} {}", ICON_UNDO, info.undoSteps, ICON_REDO, info.redoSteps));
-            ImGui::SetItemTooltip("%s", fmtScratch("{} {:.1f} / {:.0f} MB", ICON_DATABASE, usedMib, maxMib));
+            ImGui::SetItemTooltip("%s", fmtScratch("{}\n{} {:.1f} / {:.0f} MB", Str::FtUndoHistory.c_str(),
+                                                   ICON_DATABASE, usedMib, maxMib));
         }
 
         // ── Right zone: eval spinner + worker count + managed heap + loop status (idle icon + UI fps),

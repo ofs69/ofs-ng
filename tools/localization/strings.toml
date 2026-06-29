@@ -2708,6 +2708,48 @@ description = "Chapter right-click menu — seek the playhead to the chapter's e
 english     = "Speed"
 description = "Video Controls — label for the playback-speed slider."
 
+[VpcStepBack]
+english     = "Step back one frame"
+description = "Video Controls transport — hover tooltip for the step-back button (one overlay-grid step)."
+
+[VpcStepForward]
+english     = "Step forward one frame"
+description = "Video Controls transport — hover tooltip for the step-forward button (one overlay-grid step)."
+
+[VpcSeekBack]
+english      = "Back {0} seconds"
+description  = "Video Controls transport — hover tooltip for the seek-back button; {0} is the seek amount in seconds."
+placeholders = [
+    "{0} = seconds",
+]
+
+[VpcSeekForward]
+english      = "Forward {0} seconds"
+description  = "Video Controls transport — hover tooltip for the seek-forward button; {0} is the seek amount in seconds."
+placeholders = [
+    "{0} = seconds",
+]
+
+[VpcPlay]
+english     = "Play"
+description = "Video Controls transport — hover tooltip for the play/pause button when paused (clicking plays)."
+
+[VpcPause]
+english     = "Pause"
+description = "Video Controls transport — hover tooltip for the play/pause button when playing (clicking pauses)."
+
+[VpcMute]
+english     = "Mute"
+description = "Video Controls — hover tooltip for the volume button when audible (clicking mutes)."
+
+[VpcUnmute]
+english     = "Unmute"
+description = "Video Controls — hover tooltip for the volume button when muted (clicking restores volume)."
+
+[VpcSpeedPresets]
+english     = "Speed presets"
+description = "Video Controls — hover tooltip for the chevron button that opens the playback-speed preset menu."
+
 # ── Video Player window (UI/VideoPlayerWindow.cpp) ───────────────────────────
 # The video viewport. Chrome: window title, the two no-content placeholders, and the right-click
 # menu (Full/VR mode, the Resolution submenu + its tooltip, the Locked toggle). The "###video_player"
@@ -3245,6 +3287,10 @@ description = "Command palette — hint text in the empty query field."
 english     = "No matching commands"
 description = "Command palette — shown when the query matches no command."
 
+[TbOpenPalette]
+english     = "Open command palette"
+description = "Title-bar center box hover tooltip — names the action (the box looks like a search field but opens the command palette). Shown below the project name."
+
 # ── Footer bar: notification center + status (UI/FooterBar.cpp) ───────────────
 # The bell popup chrome, the app-status tooltips, the background-evaluation status line, and the
 # word-bearing telemetry readouts (points / selection / view-window, below) carry the abbreviations
@@ -3263,6 +3309,14 @@ description = "Footer bell popup — section heading above the list of backgroun
 [FtClearAll]
 english     = "Clear all"
 description = "Footer bell popup — button that empties the notification log."
+
+[FtBellTip]
+english     = "Notifications, tasks, and updates"
+description = "Footer bell button hover tooltip — names what the bell opens (the only entry point to the notification log, background tasks, and the update banner)."
+
+[FtUndoHistory]
+english     = "Undo history"
+description = "Footer undo/redo zone hover tooltip — worded label shown above the used/limit memory line."
 
 [FtNoNotifications]
 english     = "No notifications"
