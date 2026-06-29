@@ -89,6 +89,28 @@ static void rightClickNode(ImGuiTestContext *ctx, int nodeId) {
     ctx->Yield(2);
 }
 
+// Right-click the link between two nodes. imnodes exposes no pin/link screen position, so probe the
+// bezier: walk down the vertical band at the horizontal midpoint between the source node's right edge
+// and the target node's left edge until IsLinkHovered fires, then right-click. Returns false if the link
+// was never hit (the caller asserts). Reliable for the default graph, whose endpoints share a row.
+static bool rightClickLink(ImGuiTestContext *ctx, int fromNodeId, int toNodeId) {
+    const ImVec2 from = ImNodes::GetNodeScreenSpacePos(ofs::GraphId::nodeBody(fromNodeId));
+    const ImVec2 fromDim = ImNodes::GetNodeDimensions(ofs::GraphId::nodeBody(fromNodeId));
+    const ImVec2 to = ImNodes::GetNodeScreenSpacePos(ofs::GraphId::nodeBody(toNodeId));
+    const float midX = ((from.x + fromDim.x) + to.x) * 0.5f;
+    int linkId = 0;
+    for (float y = from.y; y <= from.y + fromDim.y; y += 2.0f) {
+        ctx->MouseMoveToPos(ImVec2(midX, y));
+        ctx->Yield();
+        if (ImNodes::IsLinkHovered(&linkId)) {
+            ctx->MouseClick(ImGuiMouseButton_Right);
+            ctx->Yield(2);
+            return true;
+        }
+    }
+    return false;
+}
+
 void RegisterProcessingTests(ImGuiTestEngine *e) {
     IM_REGISTER_TEST(e, "processing", "bake_button_present_with_selected_region")->TestFunc =
         [](ImGuiTestContext *ctx) {
@@ -850,5 +872,58 @@ void RegisterProcessingTests(ImGuiTestEngine *e) {
 
         IM_CHECK(proj.regions[0].nodeGraph.links.empty());
         IM_CHECK_EQ(proj.regions[0].nodeGraph.nodes.size(), nodeCount); // node kept
+    };
+
+    // Link context menu → Delete removes the right-clicked link but keeps both endpoint nodes. The
+    // default graph wires Input→Output, giving exactly one link to target.
+    IM_REGISTER_TEST(e, "processing", "link_context_menu_deletes_link")->TestFunc = [](ImGuiTestContext *ctx) {
+        setupRegionInDefaultLayout(ctx);
+        auto &proj = *getTestState().project;
+        auto &g = proj.regions[0].nodeGraph;
+        IM_CHECK_EQ(g.links.size(), size_t(1));
+        const int fromId = g.nodes[0].id; // Input
+        const int toId = g.nodes[1].id;   // Output
+        const size_t nodeCount = g.nodes.size();
+
+        IM_CHECK(rightClickLink(ctx, fromId, toId));
+        IM_CHECK(anyPopupOpen());
+        ctx->ItemClick("**/proc_link_del");
+        ctx->Yield(2);
+
+        IM_CHECK(proj.regions[0].nodeGraph.links.empty());
+        IM_CHECK_EQ(proj.regions[0].nodeGraph.nodes.size(), nodeCount); // endpoints kept
+    };
+
+    // The F shortcut fits the graph, and a non-empty selection frames only the selected nodes. Selecting
+    // just the Output node and fitting must center *it*, not the Input→Output midpoint — so the Output
+    // node lands further left than a whole-graph fit, which leaves it in the right half of the view.
+    IM_REGISTER_TEST(e, "processing", "fit_key_frames_selection")->TestFunc = [](ImGuiTestContext *ctx) {
+        setupRegionInDefaultLayout(ctx);
+        auto &proj = *getTestState().project;
+        auto &g = proj.regions[0].nodeGraph;
+        IM_CHECK(g.nodes.size() >= 2);
+        const int outId = g.nodes[1].id; // Output (buildDefaultGraph pushes Input then Output)
+
+        // Hover the canvas so the graph is focused (F is focus-gated), nudge the nodes off-center so the
+        // fit definitely moves them, then fit the whole graph as the baseline.
+        ImGuiWindow *panel = ImGui::FindWindowByName(kCenterWin);
+        ctx->MouseMoveToPos(panel->Rect().GetCenter());
+        for (auto &n : g.nodes)
+            n.posX += 1500.0f;
+        ImNodes::ClearNodeSelection();
+        ctx->Yield(2);
+        ctx->KeyPress(ImGuiKey_F);
+        ctx->Yield(3);
+        const float outAllFit = g.nodes[1].posX;
+
+        // Now frame only the Output node and fit again. Its center moves onto the canvas center, left of
+        // where the whole-graph fit parked it.
+        ImNodes::SelectNode(ofs::GraphId::nodeBody(outId));
+        ctx->Yield();
+        ctx->KeyPress(ImGuiKey_F);
+        ctx->Yield(3);
+        const float outSelFit = g.nodes[1].posX;
+
+        IM_CHECK_LT(outSelFit, outAllFit);
     };
 }
