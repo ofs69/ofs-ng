@@ -242,6 +242,29 @@ TEST_CASE("ProjectManager: SplitRegionEvent no-ops when a half would fall below 
     CHECK(tp.project.regions[0].endTime == doctest::Approx(10.0));
 }
 
+TEST_CASE("ProjectManager: SplitRegionEvent no-ops on an unknown region id") {
+    TestProject tp;
+    ofs::AppSettings appSettings;
+    appSettings.autoBackupEnabled = false;
+    ofs::JobSystem jobSystem;
+    ofs::EffectRegistryState effectReg;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    tp.eq.freeze();
+    jobSystem.start();
+
+    tp.project.axes[0].showInStrip = true;
+    tp.eq.push(ofs::CreateRegionEvent{
+        .axisRole = StandardAxis::L0, .startTime = 0.0, .endTime = 10.0, .timelineDuration = 100.0});
+    tp.eq.drain();
+    const int origId = tp.project.regions[0].id;
+
+    tp.eq.push(ofs::SplitRegionEvent{.regionId = origId + 999, .splitTime = 4.0}); // no such region
+    tp.eq.drain();
+
+    REQUIRE(tp.project.regions.size() == 1); // unchanged
+    CHECK(tp.project.regions[0].endTime == doctest::Approx(10.0));
+}
+
 // A split is one undo step: UndoSystem snapshots on SplitRegionEvent (it registers before
 // ProjectManager), so undo restores the single pre-split region and redo re-applies the split.
 TEST_CASE("ProjectManager: SplitRegionEvent is one undo step (undo merges, redo re-splits)") {

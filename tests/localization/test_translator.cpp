@@ -3,6 +3,7 @@
 #include "Localization/Translator.h"
 #include "Util/PathUtil.h"
 #include <algorithm>
+#include <cstring>
 #include <doctest/doctest.h>
 #include <filesystem>
 #include <fstream>
@@ -189,6 +190,13 @@ TEST_CASE("trLookup/trId/trFormat resolve through the active table") {
 
     CHECK(std::string(ofs::loc::trLookup(idx(Tr::PrefTitle))) == "Einstellungen");
     CHECK(std::string(ofs::loc::trLookup(9999)) == ""); // out of range -> empty
+
+    // sv()/trLookupSv resolve through the same table, length-carrying (no strlen).
+    const std::string_view sv = Str::PrefTitle.sv();
+    CHECK(sv == "Einstellungen");
+    CHECK(sv.size() == std::strlen(ofs::loc::trLookup(idx(Tr::PrefTitle))));
+    CHECK(ofs::loc::trLookupSv(9999).empty()); // out of range -> empty view
+
     CHECK(std::string(Str::PrefTitle.id("stable")) == "Einstellungen###stable");
     CHECK(std::string(Str::PrefThemeSaved.fmt(5)) == "Thema 5 gespeichert");
     // The "}{" translation is a malformed format string: trFormat must swallow the
