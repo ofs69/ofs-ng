@@ -1570,16 +1570,22 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
     maybeShowTrustModal(project, eq, selId);
     maybeShowRemapModal(project, eq, selId, region);
 
-    // Escape closes the panel — clearing the region selection reverts the shared dock window to the
-    // video player. Deliberately NOT gated on panel focus: selecting a region (e.g. clicking its band
-    // on the timeline) opens the panel without moving focus to it, and Escape must still close it.
-    // This block only runs while a region is selected (the panel is open), so that is the real gate.
+    // Escape: clear a node/link selection first (the node-editor convention), and only close the panel
+    // on a second press when nothing is selected. Closing clears the region selection, reverting the
+    // shared dock window to the video player. Deliberately NOT gated on panel focus: selecting a region
+    // (e.g. clicking its band on the timeline) opens the panel without moving focus to it, and Escape
+    // must still close it — and that case has no node selection, so it closes on the first press.
     // Guarded so Escape still does its normal job first: dismiss any open popup/modal (a separate
     // window), or cancel an in-progress text edit anywhere (itemActiveAtFrameStart is global and was
     // sampled before this frame's InputTexts ran — see above).
     if (ImGui::IsKeyPressed(ImGuiKey_Escape) && !itemActiveAtFrameStart &&
         !ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel)) {
-        eq.push(ClearRegionSelectionEvent{});
+        if (ImNodes::NumSelectedNodes() > 0 || ImNodes::NumSelectedLinks() > 0) {
+            ImNodes::ClearNodeSelection();
+            ImNodes::ClearLinkSelection();
+        } else {
+            eq.push(ClearRegionSelectionEvent{});
+        }
     }
 
     ImGui::End();

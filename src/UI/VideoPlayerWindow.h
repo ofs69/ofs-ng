@@ -41,6 +41,7 @@ class VideoPlayerWindow {
     SmoothedFloat zoom_{1.0f};
     ImVec2 translation = {0.0f, 0.0f};
     bool dragging = false;
+    ImVec2 dragStartTranslation_ = {0.0f, 0.0f}; // pan at drag start; release persists only if it moved
 
     // VR State
     std::unique_ptr<VrShader> vrShader;

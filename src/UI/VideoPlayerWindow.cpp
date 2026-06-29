@@ -301,13 +301,17 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
             if (hovered && !overlayHoveredPrev && ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
                 ImGui::GetActiveID() == 0) {
                 dragging = true;
+                dragStartTranslation_ = translation;
             }
             if (dragging && ImGui::IsMouseDown(ImGuiMouseButton_Left)) {
                 translation += ImGui::GetIO().MouseDelta;
             }
             if (ImGui::IsMouseReleased(ImGuiMouseButton_Left) && dragging) {
                 dragging = false;
-                framingChanged = true;
+                // Only persist framing if the pan actually moved — a plain click (press+release, no
+                // drag) must not stamp a no-op CaptureVideoFramingEvent every time.
+                if (translation.x != dragStartTranslation_.x || translation.y != dragStartTranslation_.y)
+                    framingChanged = true;
             }
             // Signal the drag-to-pan gesture; nothing else hints the unlocked video is draggable.
             if (dragging || (hovered && !overlayHoveredPrev && ImGui::GetActiveID() == 0))

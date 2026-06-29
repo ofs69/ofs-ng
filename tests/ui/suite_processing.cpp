@@ -724,16 +724,52 @@ void RegisterProcessingTests(ImGuiTestEngine *e) {
         auto &proj = *getTestState().project;
         IM_CHECK(proj.procSelRegionId != -1); // CreateRegionEvent auto-selected it
 
+        // Escape now clears a node/link selection first. A prior test may have left a selection in the
+        // shared imnodes context; clear it deterministically by clicking the empty canvas, so this test
+        // exercises the pure close path (no selection → first Escape closes).
+        ImGuiWindow *panel = ImGui::FindWindowByName(kCenterWin);
+        IM_CHECK(panel != nullptr);
+        ctx->MouseMoveToPos(panel->Rect().GetCenter());
+        ctx->MouseClick(ImGuiMouseButton_Left);
+        ctx->Yield();
+
         // Focus a sibling window so the panel renders unfocused — the reported scenario.
         ctx->WindowFocus("Timeline###timeline");
         ctx->Yield();
         ImGuiWindow *nav = ImGui::GetCurrentContext()->NavWindow;
-        ImGuiWindow *panel = ImGui::FindWindowByName(kCenterWin);
         IM_CHECK(nav == nullptr || nav->RootWindow != panel); // precondition: panel isn't focused
 
         ctx->KeyPress(ImGuiKey_Escape);
         ctx->Yield(2);
 
+        IM_CHECK_EQ(proj.procSelRegionId, -1);
+    };
+
+    // Escape with a node selected clears the selection first (node-editor convention) and leaves the
+    // panel open; only the next Escape (nothing selected) closes it.
+    IM_REGISTER_TEST(e, "processing", "escape_clears_node_selection_first")->TestFunc = [](ImGuiTestContext *ctx) {
+        setupRegionInDefaultLayout(ctx);
+        auto &proj = *getTestState().project;
+        IM_CHECK(!proj.regions.empty());
+
+        // Add a node and select it by clicking its title bar.
+        addNativeNode(ctx, "procmenu_math", "procadd_const");
+        const int nodeId = proj.regions[0].nodeGraph.nodes.back().id;
+        const ImVec2 p = ImNodes::GetNodeScreenSpacePos(ofs::GraphId::nodeBody(nodeId));
+        ctx->MouseMoveToPos(ImVec2(p.x + 12.0f, p.y + 8.0f));
+        ctx->MouseClick(ImGuiMouseButton_Left);
+        ctx->Yield();
+        IM_CHECK(ImNodes::NumSelectedNodes() > 0); // precondition: the node is selected
+
+        // First Escape clears the selection but keeps the panel open (region still selected).
+        ctx->KeyPress(ImGuiKey_Escape);
+        ctx->Yield(2);
+        IM_CHECK_EQ(ImNodes::NumSelectedNodes(), 0);
+        IM_CHECK(proj.procSelRegionId != -1);
+
+        // Second Escape (nothing selected) closes the panel.
+        ctx->KeyPress(ImGuiKey_Escape);
+        ctx->Yield(2);
         IM_CHECK_EQ(proj.procSelRegionId, -1);
     };
 

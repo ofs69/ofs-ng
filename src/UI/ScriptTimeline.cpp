@@ -302,7 +302,9 @@ void ScriptTimelineWindow::renderStrip(const ScriptProject &project, EventQueue 
                 eq.push(AxisSelectedEvent{.role = clickedRole}); // dissolve + select
                 stripDrag.anchorRow = row;
             }
-        } else if (ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
+        } else if (ImGui::IsMouseReleased(ImGuiMouseButton_Right)) {
+            // Open on release, matching the region band's context menu (BandBar) so right-click feels
+            // identical across adjacent timeline surfaces.
             ctxAxis = clickedRole;
             ctxFromGear = false;
             ImGui::OpenPopup("##timeline_ctx");
@@ -747,7 +749,9 @@ void ScriptTimelineWindow::renderTimeline(const ScriptProject &project, EventQue
                 editState.emptyClickTime =
                     screenXToTime(mouseX, viewState.visibleTime, offsetTime, curvePos, curveSize);
             }
-        } else if (ImGui::IsMouseClicked(ImGuiMouseButton_Right)) {
+        } else if (ImGui::IsMouseReleased(ImGuiMouseButton_Right)) {
+            // Open on release, matching the region band's context menu (BandBar) so right-click feels
+            // identical across adjacent timeline surfaces.
             ctxAxis = (project.state.activeAxis < StandardAxis::Count) ? project.state.activeAxis : StandardAxis::Count;
             ctxFromGear = false;
             ImGui::OpenPopup("##timeline_ctx");

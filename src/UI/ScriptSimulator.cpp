@@ -673,7 +673,8 @@ void ScriptSimulator::render3D(const ScriptProject &project, EventQueue &eq, dou
             ImGui::SetActiveID(resizeId, simWindow);
             if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
                 const ImVec2 delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Left);
-                const float d = (delta.x + delta.y) * 0.5f;
+                // Alt cancels the resize (snap back to the start size), matching the other overlay drags.
+                const float d = ImGui::GetIO().KeyAlt ? 0.f : (delta.x + delta.y) * 0.5f;
                 if (vr)
                     a.vrAngularSize = std::max(0.05f, startResize3dSize + d * 0.003f);
                 else if (overlayVp_.imageSize.y > 0.f)
@@ -688,7 +689,9 @@ void ScriptSimulator::render3D(const ScriptProject &project, EventQueue &eq, dou
             ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
             ImGui::SetActiveID(moveId, simWindow);
             if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
-                if (vr) {
+                if (ImGui::GetIO().KeyAlt) {
+                    a = dragStart3dAnchor_; // Alt cancels the move (snap back to the drag-start anchor)
+                } else if (vr) {
                     vrScreenToAnchor(mouse, overlayVp_, a.vrYaw, a.vrPitch);
                 } else {
                     const ImVec2 cur = screenToNorm(mouse, overlayVp_);
@@ -1056,6 +1059,13 @@ bool ScriptSimulator::renderOverlay(ImDrawList *dl, const ScriptProject &project
         // direction; VR center rigid-rotates both endpoints by the cursor's spherical displacement; the
         // width grip maps the cursor's perpendicular distance from the bar axis to the bar thickness.
         const auto applyDrag = [&](DragTarget target, bool moveCenter) {
+            // Alt cancels an in-progress drag: snap the whole bar back to where the gesture began,
+            // matching the bookmark/band/timeline drags (CHEATSHEET). The capture push below then
+            // pins it there until release.
+            if (ImGui::GetIO().KeyAlt) {
+                a = dragStartAnchor_;
+                return;
+            }
             const ImVec2 mouse = ImGui::GetMousePos();
             const float perpPx = std::abs((mouse.x - barCenter.x) * perp.x + (mouse.y - barCenter.y) * perp.y);
             if (vr) {
