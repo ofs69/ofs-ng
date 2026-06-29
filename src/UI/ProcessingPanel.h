@@ -7,6 +7,7 @@
 #include <vector>
 
 struct ImNodesEditorContext;
+struct ImVec2;
 
 namespace ofs {
 
@@ -75,7 +76,7 @@ class ProcessingPanel {
                       bool anyPending);
     // Node/link right-click context menus (Duplicate / Disconnect / Delete). Begun inside the editor
     // scope alongside the add-node popup; acts on m_ctxNodeId / m_ctxLinkId captured when opened.
-    void renderGraphContextMenus(const ProcessingRegion &region, EventQueue &eq, int selId) const;
+    void renderGraphContextMenus(const ProcessingRegion &region, EventQueue &eq, int selId, ImVec2 windowPad) const;
     void maybeShowNewScriptModal(EventQueue &eq);
     void maybeShowSaveScriptModal(EventQueue &eq);
     void maybeShowTrustModal(const ScriptProject &project, EventQueue &eq, int selId);

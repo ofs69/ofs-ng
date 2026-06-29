@@ -1172,6 +1172,10 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
     const bool overLink = ImNodes::IsLinkHovered(&hoveredLinkId);
     const bool overGraphElement = overNode || overPin || overLink;
 
+    // Capture the theme's window padding before BeginNodeEditor zeroes it (imnodes pushes
+    // WindowPadding {0,0} for its canvas child); the context-menu popups restore it below.
+    const ImVec2 stdWindowPad = ImGui::GetStyle().WindowPadding;
+
     ImNodes::BeginNodeEditor();
 
     // HACK (re-evaluate on every imgui/imnodes upgrade): imnodes renders the canvas into an internal child
@@ -1224,7 +1228,7 @@ void ProcessingPanel::render(const ScriptProject &project, EventQueue &eq, const
     const AddNodeRequest addReq = renderAddNodeMenu(effectReg);
     const ImVec2 newNodePos{addReq.posX, addReq.posY};
 
-    renderGraphContextMenus(region, eq, selId);
+    renderGraphContextMenus(region, eq, selId, stdWindowPad);
 
     int saveReqNodeId = -1; // set by an embedded Script node's "Save to scripts folder" button
     int loadReqNodeId = -1; // set by an embedded Script node's "Load from disk..." button
@@ -1565,7 +1569,12 @@ bool ProcessingPanel::deleteSelected(const ScriptProject &project, EventQueue &e
     return true;
 }
 
-void ProcessingPanel::renderGraphContextMenus(const ProcessingRegion &region, EventQueue &eq, int selId) const {
+void ProcessingPanel::renderGraphContextMenus(const ProcessingRegion &region, EventQueue &eq, int selId,
+                                              ImVec2 windowPad) const {
+    // Both popups open inside the imnodes canvas, where BeginNodeEditor has zeroed WindowPadding — restore
+    // the theme's padding (captured before the editor scope) so the menus aren't cramped.
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, windowPad);
+
     // Node context menu — Duplicate / Disconnect / Delete on the right-clicked node. Input/Output are the
     // region's fixed axis endpoints: they can be disconnected but never duplicated or deleted, so those
     // items are hidden for them. Each action follows the panel's copy-region → push-ModifyRegion recipe,
@@ -1620,6 +1629,8 @@ void ProcessingPanel::renderGraphContextMenus(const ProcessingRegion &region, Ev
         }
         ImGui::EndPopup();
     }
+
+    ImGui::PopStyleVar();
 }
 
 ProcessingPanel::AddNodeRequest ProcessingPanel::renderAddNodeMenu(const EffectRegistryState &effectReg) {
