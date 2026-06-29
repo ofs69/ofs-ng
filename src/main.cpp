@@ -5,10 +5,12 @@
 #include "Util/InstanceLock.h"
 #include "Util/Log.h"
 #include "Util/PathUtil.h"
+#include "Util/PrefVersionGuard.h"
 #include <OfsBuildInfo.h> // generated: git commit (long/short) + tag baked into the binary
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL_messagebox.h>
 #include <algorithm>
+#include <spdlog/fmt/fmt.h>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -67,6 +69,22 @@ int main(int argc, char *argv[]) {
                   ofs::generated::kGitCommitShort.empty() ? "unknown"sv : ofs::generated::kGitCommitShort,
                   ofs::generated::kGitCommitLong.empty() ? "unknown"sv : ofs::generated::kGitCommitLong,
                   ofs::generated::kGitTag.empty() ? "none"sv : ofs::generated::kGitTag);
+
+    // Refuse to start if this pref dir was last written by a newer, incompatible build. Running an
+    // older build would let it overwrite the newer preferences with its old format and lose data, so
+    // we bail out before touching anything rather than clobber. (Must follow Log::init for diagnostics
+    // and precede any pref write.)
+    const std::string_view thisVersion = ofs::generated::kGitTag.empty() ? "this build"sv : ofs::generated::kGitTag;
+    if (const ofs::PrefVersionStatus pref = ofs::checkPrefDirVersion(thisVersion); !pref.ok) {
+        const std::string msg = fmt::format(
+            "Your settings folder was last used by a newer version of ofs-ng ({}).\n\n"
+            "Running this older version could overwrite and corrupt those settings, so it "
+            "will not start.\n\nPlease update to the newer version, or move the settings "
+            "folder aside to start fresh:\n{}",
+            pref.writtenBy.empty() ? "unknown" : pref.writtenBy, ofs::util::toUtf8(ofs::util::getPrefPath()));
+        SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_ERROR, "ofs-ng", msg.c_str(), nullptr);
+        return 0;
+    }
 
     ofs::ScriptProject project;
     ofs::EventQueue eventQueue;

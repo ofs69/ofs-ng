@@ -242,6 +242,7 @@ add_executable(ofs-unit-tests
         util/test_fuzzy_match.cpp
         util/test_fault_throttle.cpp
         util/test_semver.cpp
+        util/test_pref_version_guard.cpp
         services/test_command_registry.cpp
         services/test_video_transcoder.cpp
         services/test_waveform_peaks.cpp
@@ -273,6 +274,7 @@ add_executable(ofs-unit-tests
         ${CMAKE_SOURCE_DIR}/src/UI/ProcessingGraphOps.cpp
         ${CMAKE_SOURCE_DIR}/src/UI/ModalManager.cpp
         ${CMAKE_SOURCE_DIR}/src/Util/PathUtil.cpp
+        ${CMAKE_SOURCE_DIR}/src/Util/PrefVersionGuard.cpp
         ${CMAKE_SOURCE_DIR}/src/Util/FileFingerprint.cpp
         # Pure transcode helpers (ofs::transcode) live in VideoTranscoder.cpp; Subprocess.cpp resolves
         # the Process/runCaptured symbols its worker references (no process is spawned by the tests).
