@@ -46,6 +46,31 @@ struct SelectionChangedEvent {
 struct UndoEvent {};
 struct RedoEvent {};
 
+// Emitted by UndoSystem after an undo/redo *actually* navigated the history (the stack was non-empty and
+// the document was restored). A no-op press at the end of a stack emits nothing. Lets observers (the
+// audio-feedback cue) react to the outcome instead of the UndoEvent/RedoEvent *request*, which fires even
+// when there is nothing to undo. `redo` gives the direction. Derived/informational only — not undoable.
+struct HistoryNavigatedEvent {
+    bool redo = false;
+};
+
+// Emitted by ProjectManager when an axis's panel/strip presence or timeline-row visibility *actually*
+// flips. The toggle/preset handlers can no-op (L0 is always in-panel; a bulk show/hide preset may find
+// nothing to change; all scratch slots may already be full), so observers (the audio-feedback cue) react
+// to this outcome instead of the AddScratchAxis/RemoveAxis/Toggle*/Show* *request*. One per logical
+// gesture — a bulk show/hide preset emits a single aggregate change, not one per axis it touches.
+// Derived/informational only — not undoable (the originating edit, where there is one, already is).
+enum class AxisPresence { AddedToStrip, RemovedFromStrip, Shown, Hidden };
+struct AxisPresenceChangedEvent {
+    AxisPresence change;
+};
+
+// Emitted by ProjectManager when the multi-axis edit group is *actually* formed or changed to a different
+// multi-axis set. Re-issuing the same group, or a request that resolves to plain single-axis editing,
+// emits nothing — so observers (the audio-feedback cue) chirp only on a real grouping, not on every
+// SetAxisGroupingEvent *request* (which also fires to dissolve a group). Transient view state, not undoable.
+struct AxisGroupingChangedEvent {};
+
 struct RemoveSelectedActionsEvent {
     StandardAxis axis;
     bool fanToGroup = true; // see AddActionAtTimeEvent::fanToGroup

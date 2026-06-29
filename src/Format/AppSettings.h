@@ -75,7 +75,9 @@ struct AppSettings {
     // UI sound feedback: short SFX played for notifications (success/error/warning). Independent of
     // `volume` (the video-soundtrack master) — UiSoundService reads these live on each play.
     bool uiSoundsEnabled = true;
-    float uiSoundVolume = 0.25f; // 0..1
+    // Slider position in 0..1; UiSoundService squares it into a perceptual gain (0.5 ⇒ the 0.25 gain the
+    // app shipped with before the taper).
+    float uiSoundVolume = 0.5f;
     float fontSizeBase = 18.0f;
     bool showSimulator = true;
     bool showStatistics = true;

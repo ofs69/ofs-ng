@@ -264,6 +264,7 @@ void UndoSystem::undo() {
     history.popUndo();
     history.pushRedo(codec.pack(takeSnapshot()));
     restoreSnapshot(restored);
+    eq.push(HistoryNavigatedEvent{.redo = false});
     OFS_CORE_INFO("Undo performed. Undo: {}, Redo: {}, in {:.3f} ms", history.undoCount(), history.redoCount(),
                   sw.elapsedMs());
 }
@@ -277,6 +278,7 @@ void UndoSystem::redo() {
     history.popRedo();
     history.pushUndo(codec.pack(takeSnapshot()));
     restoreSnapshot(restored);
+    eq.push(HistoryNavigatedEvent{.redo = true});
     OFS_CORE_INFO("Redo performed. Undo: {}, Redo: {}, in {:.3f} ms", history.undoCount(), history.redoCount(),
                   sw.elapsedMs());
 }

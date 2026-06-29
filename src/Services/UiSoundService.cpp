@@ -11,6 +11,7 @@
 #include <SDL3/SDL_init.h>
 #include <SDL3/SDL_timer.h> // SDL_GetTicks
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
 #include <string_view>
 
@@ -38,16 +39,21 @@ namespace {
 // for the "negative/down/back" one — and the melodic notification tones by contour (does the tune rise
 // or fall), which carries positive-vs-negative far better than absolute brightness. Swap a filename to
 // retune; rerun the script's --check to re-verify the orderings.
-// Default per-cue debounce window (ms): a same-cue burst within this window collapses to one chirp. A
-// cue the user triggers in quick succession (undo/redo held down) overrides it with the shorter rapid
-// window so its repeats still register instead of being swallowed.
-constexpr uint32_t kDefaultDebounceMs = 60;
-constexpr uint32_t kRapidDebounceMs = 20;
+// Number of pooled playback voices. Each play takes one; a sound overlapping itself or others spreads
+// across the pool and rings out instead of being cut. Sized well above the handful of UI sounds that can
+// realistically overlap, so a voice is essentially never stolen mid-clip.
+constexpr int kVoiceCount = 16;
+// Linear fade applied to the head and tail of every decoded clip, so a sound whose waveform doesn't start
+// or end at a zero-crossing doesn't click. A few ms is inaudible as a fade but kills the boundary pop.
+constexpr float kEdgeFadeMs = 3.0f;
+// Perceptual volume taper. Loudness is ~logarithmic, so the linear slider position is squared into a gain
+// before it reaches SDL — this spreads the audible range evenly across the slider instead of bunching it
+// at the bottom. The default uiSoundVolume (0.5) squares to the 0.25 gain the app shipped with.
+constexpr float kVolumeExponent = 2.0f;
 
 struct CueSound {
     UiCue cue;
     std::string_view asset;
-    uint32_t debounceMs = kDefaultDebounceMs;
 };
 constexpr CueSound kCueSounds[] = {
     // Notifications: melodic tones ordered by contour — success rises, warning is flat, error falls
@@ -59,10 +65,10 @@ constexpr CueSound kCueSounds[] = {
     // reuse those tones; this covers the Info case — confirmations, file dialogs, the axis picker).
     {.cue = UiCue::ModalOpened, .asset = "data/audio/OGG/Coffee1.ogg"},
     // History: a mirrored ~30 ms tick pair distinguished by pitch — undo "back" (low), redo "forward"
-    // (high). Kept extra short, with the rapid debounce, because undo/redo are held and fire in quick
-    // succession, so a longer clip would smear and a longer window would swallow repeats.
-    {.cue = UiCue::Undo, .asset = "data/audio/Audio/switch14.ogg", .debounceMs = kRapidDebounceMs}, // 7361 / 805
-    {.cue = UiCue::Redo, .asset = "data/audio/Audio/switch13.ogg", .debounceMs = kRapidDebounceMs}, // 7554 / 2362
+    // (high). Kept extra short because undo/redo are held and fire in quick succession, so a longer clip
+    // would smear.
+    {.cue = UiCue::Undo, .asset = "data/audio/Audio/switch14.ogg"}, // 7361 / 805
+    {.cue = UiCue::Redo, .asset = "data/audio/Audio/switch13.ogg"}, // 7554 / 2362
     // Regions: created "up" (brighter/higher) vs deleted "down" (darker/lower); baked = decisive commit.
     {.cue = UiCue::RegionCreated, .asset = "data/audio/Audio/switch2.ogg"},  // 5477 /  357
     {.cue = UiCue::RegionDeleted, .asset = "data/audio/Audio/switch24.ogg"}, // 3299 /  113
@@ -103,13 +109,17 @@ UiCue cueForLevel(NotifyLevel level) {
 
 UiSoundService::UiSoundService(EventQueue &eq, const AppSettings &settings) : settings_(settings) {
     eq.on<NotifyEvent>([this](const NotifyEvent &e) { onNotify(e); });
-    // The existing undo/redo request events drive the history cues — no separate "applied" signal needed.
-    // A no-op press (empty stack) still chirps, which reads as ordinary key feedback.
-    eq.on<UndoEvent>([this](const UndoEvent &) { play(UiCue::Undo); });
-    eq.on<RedoEvent>([this](const RedoEvent &) { play(UiCue::Redo); });
-    eq.on<CreateRegionEvent>([this](const CreateRegionEvent &) { play(UiCue::RegionCreated); });
-    eq.on<DeleteRegionEvent>([this](const DeleteRegionEvent &) { play(UiCue::RegionDeleted); });
-    eq.on<BakeRegionEvent>([this](const BakeRegionEvent &) { play(UiCue::RegionBaked); });
+    // History cues are driven by HistoryNavigatedEvent — emitted by UndoSystem only when an undo/redo
+    // actually moved the stack — not by the Undo/RedoEvent *request*, so a no-op press at the end of the
+    // history is silent. undo "back" (low), redo "forward" (high).
+    eq.on<HistoryNavigatedEvent>([this](const HistoryNavigatedEvent &e) { play(e.redo ? UiCue::Redo : UiCue::Undo); });
+    // Regions: ProjectManager emits RegionChangedEvent only on a *completed* create/delete/bake — a request
+    // that found no room or no target is silent. Created "up", deleted "down", baked = decisive commit.
+    eq.on<RegionChangedEvent>([this](const RegionChangedEvent &e) {
+        play(e.kind == RegionChangeKind::Created   ? UiCue::RegionCreated
+             : e.kind == RegionChangeKind::Deleted ? UiCue::RegionDeleted
+                                                   : UiCue::RegionBaked);
+    });
     // Bookmarks and chapters reuse the region create/delete cues — ProjectManager collapses every
     // add/remove call site into this one count-changed signal.
     eq.on<BookmarkChapterCountChangedEvent>([this](const BookmarkChapterCountChangedEvent &e) {
@@ -126,23 +136,33 @@ UiSoundService::UiSoundService(EventQueue &eq, const AppSettings &settings) : se
              : sev == ModalSeverity::Warning ? UiCue::Warning
                                              : UiCue::ModalOpened);
     });
-    eq.on<AddScratchAxisEvent>([this](const AddScratchAxisEvent &) { play(UiCue::AxisAdded); });
-    eq.on<RemoveAxisEvent>([this](const RemoveAxisEvent &) { play(UiCue::AxisRemoved); });
-    // The two visibility toggles get distinct cues. The "Show in Panel" toggle adds/removes the axis from
-    // the strip, so it shares the create/remove-scratch-axis cue (AxisAdded/AxisRemoved); the timeline-row
-    // eye toggle is just a view change and gets its own pair (AxisShown/AxisHidden).
-    eq.on<ToggleAxisVisibilityEvent>(
-        [this](const ToggleAxisVisibilityEvent &e) { play(e.visible ? UiCue::AxisShown : UiCue::AxisHidden); });
-    eq.on<ToggleAxisPanelVisibilityEvent>(
-        [this](const ToggleAxisPanelVisibilityEvent &e) { play(e.inPanel ? UiCue::AxisAdded : UiCue::AxisRemoved); });
+    // Axis presence: ProjectManager emits AxisPresenceChangedEvent only on a *real* flip — scratch
+    // add/remove, the "Show in Panel" strip toggle, and the bulk multi-axis / L0-only presets all map to
+    // the strip add/remove cue pair; the timeline-row eye toggle is just a view change and gets its own
+    // pair (AxisShown/AxisHidden). A no-op request (L0 always in-panel, a preset with nothing to change,
+    // all scratch slots full) emits nothing, so it stays silent.
+    eq.on<AxisPresenceChangedEvent>([this](const AxisPresenceChangedEvent &e) {
+        switch (e.change) {
+        case AxisPresence::AddedToStrip:
+            play(UiCue::AxisAdded);
+            break;
+        case AxisPresence::RemovedFromStrip:
+            play(UiCue::AxisRemoved);
+            break;
+        case AxisPresence::Shown:
+            play(UiCue::AxisShown);
+            break;
+        case AxisPresence::Hidden:
+            play(UiCue::AxisHidden);
+            break;
+        }
+    });
     // Any active-axis change chirps. This fires on programmatic selection too (project load, axis
-    // add/remove, undo restore, a plugin); the per-cue debounce keeps a burst from machine-gunning.
+    // add/remove, undo restore, a plugin); the per-frame coalescing keeps a same-frame burst to one chirp.
     eq.on<AxisSelectedEvent>([this](const AxisSelectedEvent &) { play(UiCue::AxisActivated); });
-    eq.on<SetAxisGroupingEvent>([this](const SetAxisGroupingEvent &) { play(UiCue::AxisGrouped); });
-    // The Axes-menu layout presets bulk-show / bulk-hide the main axes, so they reuse the panel-presence
-    // pair: expand to multi-axis = "added", collapse to L0 only = "removed".
-    eq.on<ShowMultiAxisEvent>([this](const ShowMultiAxisEvent &) { play(UiCue::AxisAdded); });
-    eq.on<ShowL0OnlyEvent>([this](const ShowL0OnlyEvent &) { play(UiCue::AxisRemoved); });
+    // AxisGroupingChangedEvent fires only when a real multi-axis group forms/changes, not on the
+    // SetAxisGroupingEvent request (which also fires to dissolve a group or re-issue the same one).
+    eq.on<AxisGroupingChangedEvent>([this](const AxisGroupingChangedEvent &) { play(UiCue::AxisGrouped); });
 
     // No SelectionChangedEvent cue on purpose: the action selection changes on every timeline click and
     // box-select drag, so cueing it would machine-gun during normal editing.
@@ -165,8 +185,23 @@ UiSoundService::UiSoundService(EventQueue &eq, const AppSettings &settings) : se
     SDL_AudioSpec devSpec{};
     SDL_GetAudioDeviceFormat(device_, &devSpec, nullptr);
 
-    // Decode each distinct asset once (deduped — several levels may map to one file) into its own
-    // device-bound stream. SDL mixes all bound streams, so different sounds overlap cleanly.
+    // A fixed pool of device-bound voices, shared across all sounds. SDL mixes all bound streams, so any
+    // subset can sound at once; each play sets the chosen voice's source format to its clip's. Created in
+    // the device format (src == dst) as a neutral default, overwritten per play.
+    voices_.reserve(kVoiceCount);
+    for (int i = 0; i < kVoiceCount; ++i) {
+        SDL_AudioStream *stream = SDL_CreateAudioStream(&devSpec, &devSpec);
+        if (stream == nullptr) {
+            OFS_CORE_WARN("UI sounds: SDL_CreateAudioStream failed: {}", SDL_GetError());
+            continue;
+        }
+        SDL_BindAudioStream(device_, stream);
+        SDL_ResumeAudioStreamDevice(stream);
+        voices_.push_back({.stream = stream});
+    }
+
+    // Decode each distinct asset once (deduped — several cues may map to one file) to interleaved S16,
+    // keeping its source format and length for playback on any pooled voice.
     std::vector<std::string_view> loaded; // parallel to sounds_, for dedup
     auto loadSound = [&](std::string_view asset) -> int {
         for (size_t i = 0; i < loaded.size(); ++i)
@@ -181,41 +216,44 @@ UiSoundService::UiSoundService(EventQueue &eq, const AppSettings &settings) : se
         short *out = nullptr;
         const int frames = stb_vorbis_decode_memory(reinterpret_cast<const unsigned char *>(bytes->data()),
                                                     static_cast<int>(bytes->size()), &channels, &rate, &out);
-        if (frames < 0 || out == nullptr) {
+        if (frames < 0 || out == nullptr || channels <= 0 || rate <= 0) {
             OFS_CORE_WARN("UI sounds: failed to decode {}", asset);
-            return -1;
-        }
-
-        const SDL_AudioSpec srcSpec{.format = SDL_AUDIO_S16, .channels = channels, .freq = rate};
-        SDL_AudioStream *stream = SDL_CreateAudioStream(&srcSpec, &devSpec);
-        if (stream == nullptr) {
-            OFS_CORE_WARN("UI sounds: SDL_CreateAudioStream failed: {}", SDL_GetError());
             std::free(out);
             return -1;
         }
-        SDL_BindAudioStream(device_, stream);
-        SDL_ResumeAudioStreamDevice(stream);
 
         Sound sound;
+        sound.spec = {.format = SDL_AUDIO_S16, .channels = channels, .freq = rate};
+        sound.durationMs = static_cast<uint32_t>(static_cast<int64_t>(frames) * 1000 / rate);
         sound.pcm.assign(out, out + static_cast<size_t>(frames) * static_cast<size_t>(channels));
-        sound.stream = stream;
         std::free(out);
+
+        // Linear head/tail fade so a clip that doesn't begin/end at a zero-crossing doesn't click. Capped
+        // at half the clip so a very short tick still gets a symmetric in/out ramp.
+        const int fade = std::min(frames / 2, static_cast<int>(static_cast<float>(rate) * kEdgeFadeMs / 1000.0f));
+        for (int f = 0; f < fade; ++f) {
+            const float g = static_cast<float>(f + 1) / static_cast<float>(fade + 1);
+            for (int c = 0; c < channels; ++c) {
+                int16_t &head = sound.pcm[static_cast<size_t>(f) * channels + c];
+                int16_t &tail = sound.pcm[static_cast<size_t>(frames - 1 - f) * channels + c];
+                head = static_cast<int16_t>(static_cast<float>(head) * g);
+                tail = static_cast<int16_t>(static_cast<float>(tail) * g);
+            }
+        }
 
         sounds_.push_back(std::move(sound));
         loaded.push_back(asset);
         return static_cast<int>(sounds_.size() - 1);
     };
 
-    for (const auto &m : kCueSounds) {
+    for (const auto &m : kCueSounds)
         cueSound_[static_cast<int>(m.cue)] = loadSound(m.asset);
-        cueDebounceMs_[static_cast<int>(m.cue)] = m.debounceMs;
-    }
 }
 
 UiSoundService::~UiSoundService() {
-    for (auto &s : sounds_)
-        if (s.stream)
-            SDL_DestroyAudioStream(s.stream); // unbinds from the device
+    for (auto &v : voices_)
+        if (v.stream)
+            SDL_DestroyAudioStream(v.stream); // unbinds from the device
     if (device_ != 0) {
         SDL_CloseAudioDevice(device_);
         SDL_QuitSubSystem(SDL_INIT_AUDIO);
@@ -227,35 +265,68 @@ void UiSoundService::onNotify(const NotifyEvent &e) {
 }
 
 void UiSoundService::play(UiCue cue) {
-    if (device_ == 0 || !settings_.uiSoundsEnabled || cue == UiCue::kCount)
+    if (device_ == 0 || cue == UiCue::kCount)
         return;
     const int idx = cueSound_[static_cast<size_t>(cue)];
     if (idx < 0)
         return;
+    // Record the sound, deduped by index: queued any number of times this frame, it plays once at flush.
+    // Keying on the sound (not the cue) collapses two distinct cues that resolve to the same asset too.
+    pendingSound_[static_cast<size_t>(idx)] = true;
+}
 
-    // Debounce per *sound*, not per cue: collapse a burst (a flurry of error toasts, a multi-region delete
-    // that pushes one DeleteRegionEvent per region) into a single chirp instead of machine-gunning. Keying
-    // on the shared stream also stops two distinct cues that resolve to the same asset from clobbering each
-    // other — the SDL_ClearAudioStream below would otherwise cut the first off mid-play. The window comes
-    // from the cue, so a rapidly-repeated cue can opt into a shorter one via kCueSounds.
-    const uint64_t now = SDL_GetTicks();
-    uint64_t &last = lastPlayedMs_[static_cast<size_t>(idx)];
-    if (last != 0 && now - last < cueDebounceMs_[static_cast<size_t>(cue)])
+void UiSoundService::update() {
+    if (device_ == 0 || voices_.empty())
         return;
-    last = now;
+    // Settings are read live so a preference edit takes effect immediately; if sounds were just disabled,
+    // drop whatever this frame queued rather than letting it backlog.
+    const bool enabled = settings_.uiSoundsEnabled;
+    for (size_t i = 0; i < pendingSound_.size(); ++i) {
+        if (!pendingSound_[i])
+            continue;
+        pendingSound_[i] = false;
+        if (enabled && i < sounds_.size())
+            trigger(i);
+    }
+}
 
-    Sound &s = sounds_[static_cast<size_t>(idx)];
-    // Subtle per-trigger variation so a repeated cue never sounds mechanically identical. Gain only ever
-    // attenuates, so a play never exceeds the user's configured volume; pitch wobbles ±3% around natural.
-    // Stateless distributions, constructed once; play() is main-thread only, so the shared rng_ is safe.
-    static std::uniform_real_distribution<float> gainJitter(0.85f, 1.0f);
-    static std::uniform_real_distribution<float> pitchJitter(0.97f, 1.03f);
-    SDL_SetAudioStreamGain(s.stream, std::clamp(settings_.uiSoundVolume, 0.0f, 1.0f) * gainJitter(rng_));
-    SDL_SetAudioStreamFrequencyRatio(s.stream, pitchJitter(rng_));
-    // Drop anything still queued from a rapid re-trigger so feedback stays prompt, then queue this play.
-    SDL_ClearAudioStream(s.stream);
-    SDL_PutAudioStreamData(s.stream, s.pcm.data(), static_cast<int>(s.pcm.size() * sizeof(int16_t)));
-    SDL_FlushAudioStream(s.stream);
+void UiSoundService::trigger(size_t soundIdx) {
+    Sound &s = sounds_[soundIdx];
+
+    // Subtle per-trigger variation so a repeated cue never sounds mechanically identical. Both jitters are
+    // normal distributions clustered tight around natural, so most plays sit near the original and the
+    // occasional one varies gently — smoother than a uniform spread that lingers at the extremes. Gain is
+    // one-sided (never above the configured volume); pitch wobbles a hair either way. Constructed once;
+    // trigger() is main-thread only, so the shared rng_ is safe.
+    static std::normal_distribution<float> gainJitter(0.96f, 0.03f);
+    static std::normal_distribution<float> pitchJitter(1.0f, 0.012f);
+    const float vol = std::pow(std::clamp(settings_.uiSoundVolume, 0.0f, 1.0f), kVolumeExponent);
+    const float gain = vol * std::clamp(gainJitter(rng_), 0.88f, 1.0f);
+    const float pitch = std::clamp(pitchJitter(rng_), 0.97f, 1.03f);
+
+    // Take a free voice (clip already finished), else steal the one closest to finishing — that cuts the
+    // least remaining audio, and with kVoiceCount voices it essentially never happens for UI feedback.
+    const uint64_t now = SDL_GetTicks();
+    size_t pick = 0;
+    for (size_t v = 0; v < voices_.size(); ++v) {
+        if (voices_[v].freeAtMs <= now) {
+            pick = v;
+            break;
+        }
+        if (voices_[v].freeAtMs < voices_[pick].freeAtMs)
+            pick = v;
+    }
+    Voice &voice = voices_[pick];
+
+    SDL_ClearAudioStream(voice.stream); // empty for a free voice; flushes the old clip when stealing
+    SDL_SetAudioStreamFormat(voice.stream, &s.spec, nullptr);
+    SDL_SetAudioStreamGain(voice.stream, gain);
+    SDL_SetAudioStreamFrequencyRatio(voice.stream, pitch);
+    SDL_PutAudioStreamData(voice.stream, s.pcm.data(), static_cast<int>(s.pcm.size() * sizeof(int16_t)));
+    SDL_FlushAudioStream(voice.stream);
+    // Pitch scales playback duration (a higher ratio plays faster). Mark when the voice frees, with a small
+    // margin so we don't reclaim a stream that's still draining its final samples.
+    voice.freeAtMs = now + static_cast<uint64_t>(static_cast<float>(s.durationMs) / pitch) + 20;
 }
 
 } // namespace ofs

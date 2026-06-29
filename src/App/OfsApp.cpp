@@ -511,6 +511,10 @@ OfsApp::~OfsApp() {
 void OfsApp::onUpdate(float dt) {
     eventQueue.drain();
 
+    // Emit the audio cues queued by the events just drained — one play per distinct sound this frame.
+    if (uiSoundService)
+        uiSoundService->update();
+
     // Commit (or drop) the undo snapshot of any discrete edit applied during this drain: a real edit
     // becomes undoable this frame, a no-op edit (e.g. a region create that found no room) records none.
     if (undoSystem)

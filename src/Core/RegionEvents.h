@@ -37,6 +37,16 @@ struct BakeRegionEvent {
     int regionId;
 };
 
+// Emitted by ProjectManager after a region create/delete/bake *actually* completed — a create that found
+// room, a delete/bake that found its target. The request handlers bail on a no-op (no free slot, missing
+// region), so observers (the audio-feedback cue) react to this outcome rather than the
+// Create/Delete/BakeRegionEvent *request*. Derived/informational only — not undoable (the originating
+// edit already is).
+enum class RegionChangeKind { Created, Deleted, Baked };
+struct RegionChangedEvent {
+    RegionChangeKind kind;
+};
+
 struct AssignAxisToRegionEvent {
     int regionId;
     StandardAxis axis;

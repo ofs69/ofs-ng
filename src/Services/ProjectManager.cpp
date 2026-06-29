@@ -281,6 +281,7 @@ void ProjectManager::onSetAxisGrouping(const SetAxisGroupingEvent &event) {
     if (lead >= StandardAxis::Count)
         return; // nothing valid to activate or group
 
+    const AxisRoles prevGrouping = project.state.axesGrouping;
     project.state.activeAxis = lead;
     project.procSelRegionId = -1;
     if (g.count() > 1)
@@ -288,6 +289,10 @@ void ProjectManager::onSetAxisGrouping(const SetAxisGroupingEvent &event) {
     else
         g.reset(); // a single-axis "group" is just normal single-axis editing
     project.state.axesGrouping = g;
+    // Cue only a *real* multi-axis grouping that differs from before; dissolving back to single-axis
+    // editing or re-issuing the same group is silent (the request fires for both).
+    if (g.count() > 1 && g != prevGrouping)
+        eq.push(AxisGroupingChangedEvent{});
 }
 
 void ProjectManager::onSaveProjectEvent(const SaveProjectEvent &event) {
@@ -1905,6 +1910,7 @@ void ProjectManager::onAddScratchAxis(const AddScratchAxisEvent &) {
                     a.selection = {};
                 },
                 eq);
+            eq.push(AxisPresenceChangedEvent{.change = AxisPresence::AddedToStrip});
             eq.push(AxisSelectedEvent{role});
             return;
         }
@@ -1942,22 +1948,30 @@ void ProjectManager::onRemoveAxis(const RemoveAxisEvent &event) {
         }
     }
     setDirty(true);
+    eq.push(AxisPresenceChangedEvent{.change = AxisPresence::RemovedFromStrip});
 }
 
 void ProjectManager::onToggleAxisVisibility(const ToggleAxisVisibilityEvent &event) {
+    const bool was = project.axes[static_cast<size_t>(event.axisRole)].isVisible;
     project.mutate(event.axisRole, [v = event.visible](AxisState &a) { a.isVisible = v; }, eq, /*affectsData=*/false);
     setDirty(true);
+    if (was != event.visible)
+        eq.push(AxisPresenceChangedEvent{.change = event.visible ? AxisPresence::Shown : AxisPresence::Hidden});
 }
 
 void ProjectManager::onToggleAxisPanelVisibility(const ToggleAxisPanelVisibilityEvent &event) {
     if (event.axisRole == StandardAxis::L0)
         return; // L0 is always shown in the panel
+    const bool was = project.axes[static_cast<size_t>(event.axisRole)].showInStrip;
     bool wasActive = (project.state.activeAxis == event.axisRole);
     if (!event.inPanel)
         project.state.axesGrouping.reset(static_cast<size_t>(event.axisRole)); // hidden from strip ⇒ out of group
     project.mutate(
         event.axisRole, [v = event.inPanel](AxisState &a) { a.showInStrip = v; }, eq,
         /*affectsData=*/false);
+    if (was != event.inPanel)
+        eq.push(AxisPresenceChangedEvent{.change = event.inPanel ? AxisPresence::AddedToStrip
+                                                                 : AxisPresence::RemovedFromStrip});
     if (!event.inPanel && wasActive) {
         for (size_t i = 0; i < kStandardAxisCount; ++i) {
             if (project.axes[i].showInStrip) {
@@ -1983,8 +1997,10 @@ void ProjectManager::onShowMultiAxis(const ShowMultiAxisEvent &) {
             eq);
         changed = true;
     }
-    if (changed)
+    if (changed) {
         setDirty(true);
+        eq.push(AxisPresenceChangedEvent{.change = AxisPresence::AddedToStrip});
+    }
 }
 
 void ProjectManager::onShowL0Only(const ShowL0OnlyEvent &) {
@@ -2015,8 +2031,10 @@ void ProjectManager::onShowL0Only(const ShowL0OnlyEvent &) {
     // Re-select L0: it sets the active axis (the prior one may have just been hidden) and dissolves any
     // multi-axis group, which can no longer be valid now that only L0 is in the strip.
     eq.push(AxisSelectedEvent{StandardAxis::L0});
-    if (changed)
+    if (changed) {
         setDirty(true);
+        eq.push(AxisPresenceChangedEvent{.change = AxisPresence::RemovedFromStrip});
+    }
 }
 
 void ProjectManager::onToggleAxisLock(const ToggleAxisLockEvent &event) {
@@ -2079,6 +2097,7 @@ void ProjectManager::onCreateRegion(const CreateRegionEvent &event) {
         if (roles.test(i))
             eq.push(AxisModifiedEvent{static_cast<StandardAxis>(i)});
     setDirty();
+    eq.push(RegionChangedEvent{.kind = RegionChangeKind::Created});
 }
 
 void ProjectManager::onDeleteRegion(const DeleteRegionEvent &event) {
@@ -2096,6 +2115,7 @@ void ProjectManager::onDeleteRegion(const DeleteRegionEvent &event) {
         eq.push(AxisModifiedEvent{static_cast<StandardAxis>(i)});
     }
     setDirty();
+    eq.push(RegionChangedEvent{.kind = RegionChangeKind::Deleted});
 }
 
 void ProjectManager::onModifyRegion(const ModifyRegionEvent &event) {
@@ -2207,6 +2227,7 @@ void ProjectManager::onBakeRegion(const BakeRegionEvent &event) {
             },
             eq);
     }
+    eq.push(RegionChangedEvent{.kind = RegionChangeKind::Baked});
 }
 
 void ProjectManager::onAssignAxis(const AssignAxisToRegionEvent &event) {
