@@ -12,11 +12,12 @@ SDL3, Dear ImGui, OpenGL, and libmpv.
 
 ## Features
 
-- **Multi-axis timeline** 
-- **Live 3D simulator**
-- **Node-based processing graph**
-- **C# plugin system**
-- **Localized UI**
+- **Multi-axis timeline** — edit every standard axis (stroke, surge, sway, twist, roll, pitch, …)
+  alongside scratch axes on one synchronized timeline.
+- **Live 3D simulator** — a real-time 3D preview that plays back the script as you edit.
+- **Node-based processing graph** — compose per-region effects and transforms in a visual node editor.
+- **C# plugin system** — extend the editor with managed .NET plugins; no C ABI to deal with.
+- **Localized UI** — every string is translatable, with multiple languages shipped.
 
 ## Platform support
 
@@ -45,13 +46,13 @@ git submodule update --init --recursive
 
 ofs-ng builds with CMake. You need:
 
-- A **C++20 toolchain** (MSVC on Windows; GCC or Clang on Linux)
+- A **C++20 toolchain** — **MSVC** (Windows) or **Clang** (Linux). GCC is currently
+  **not supported**: it hits an internal compiler error (ICE) building the project.
 - **CMake** 3.16+
-- The **.NET SDK** — required in practice. The build links **NetHost** (located via
-  `cmake/FindNetHost.cmake`, sourced from the SDK install), and the C# plugin system and the
-  runtime-compiled C# script nodes both depend on it. The plugin and script builds skip
-  themselves if `dotnet` isn't found, so a `dotnet`-less build technically completes — but it
-  ships none of that functionality and isn't worth running. Treat it as a hard requirement.
+- The **.NET SDK** — required in practice. The build links **NetHost** (via
+  `cmake/FindNetHost.cmake`), and the C# plugin system and runtime-compiled script nodes depend on
+  it. A `dotnet`-less build completes but ships none of that functionality — treat it as a hard
+  requirement.
 - **libmpv** — auto-downloaded on the first Windows build; install via your package manager
   on Linux
 - **ffmpeg** and **ffprobe** — used at runtime for video transcoding. Bundled next to the
@@ -76,8 +77,9 @@ The test suite runs through CTest (build first, then):
 ctest --test-dir build --output-on-failure
 ```
 
-It registers four suites: `unit` (no window), `plugins` (PluginManager + real CoreCLR;
-self-skips without the .NET SDK), `ui-smoke` (full window + imgui_test_engine), and
+It registers four suites: `unit` (no window), `plugins` (PluginManager + real CoreCLR; the
+.NET runtime is mandatory, so this suite **fails** — never skips — if it can't init the host),
+`ui-smoke` (full window + imgui_test_engine), and
 `ui-smoke-loc` (the UI suite re-run under a machine translation to catch dropped widget ids).
 Run a single suite with `-R`, e.g. `ctest --test-dir build -R ui-smoke --output-on-failure`.
 
@@ -99,3 +101,9 @@ needed only when `Ofs.Api` itself changes incompatibly.
 
 Hint: setting **_Threaded Optimization_ to _Off_** for `ofs-ng.exe` in the NVIDIA Control Panel
 (Manage 3D settings → Program Settings) may reduce CPU usage.
+
+## License
+
+ofs-ng is licensed under the **GNU General Public License v3.0** — see [LICENSE](LICENSE) for the
+full text. As a complete rewrite of [OpenFunscripter](https://github.com/OpenFunscripter/OFS), it
+continues under the same GPLv3 license.
