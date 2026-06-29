@@ -442,7 +442,11 @@ if (DOTNET_EXECUTABLE AND TARGET Ofs.PluginHost)
             -p:PassOutputPathToReferencedProjects=false --nologo -v q
             COMMENT "Building C# test plugin: Ofs.TestPlugin"
             VERBATIM)
-    add_dependencies(Ofs.TestPlugin Ofs.Api)
+    # Like every other Ofs.Api dependent, `dotnet build` rebuilds the Ofs.Api reference into Ofs.Api's
+    # own bin/obj, so two of them running at once collide on Ofs.Api.{deps,runtimeconfig}.json. Depending
+    # only on Ofs.Api would let these test plugins race the managed-side chain (see managed/CMakeLists.txt).
+    # Extend that linear chain through them: after Ofs.Core (its tail), then ProbePlugin after TestPlugin.
+    add_dependencies(Ofs.TestPlugin Ofs.Api Ofs.Core)
 
     # A second real plugin used by test_plugin_dispatch.cpp: it encodes every host callback as an
     # observable seek (dispatch/HostApi coverage) and provides the second loaded plugin the
@@ -455,7 +459,7 @@ if (DOTNET_EXECUTABLE AND TARGET Ofs.PluginHost)
             -p:PassOutputPathToReferencedProjects=false --nologo -v q
             COMMENT "Building C# test plugin: Ofs.ProbePlugin"
             VERBATIM)
-    add_dependencies(Ofs.ProbePlugin Ofs.Api)
+    add_dependencies(Ofs.ProbePlugin Ofs.Api Ofs.TestPlugin)
 
     add_dependencies(ofs-plugin-tests Ofs.TestPlugin Ofs.ProbePlugin Ofs.PluginHost)
     if (TARGET Ofs.ScriptHost)

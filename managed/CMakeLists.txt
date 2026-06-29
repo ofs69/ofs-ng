@@ -113,7 +113,8 @@ add_dependencies(SamplePlugin Ofs.Api)
 # makes their GenerateDepsFile tasks collide on Ofs.Api.deps.json ("being used by another process").
 # So chain the dependents into one linear order — Ofs.Api → PluginHost → ScriptHost → SamplePlugin →
 # Ofs.Core — so no two of them ever run `dotnet build` concurrently. (PluginHost→Api and
-# ScriptHost→PluginHost already exist above; these two close the gap.)
+# ScriptHost→PluginHost already exist above; these two close the gap.) The two C# test plugins in
+# tests/CMakeLists.txt are the same kind of Ofs.Api dependent and extend this chain after Ofs.Core.
 add_dependencies(SamplePlugin Ofs.ScriptHost)
 
 add_cs_plugin(Ofs.Core "${CMAKE_CURRENT_SOURCE_DIR}/plugins/Ofs.Core/Ofs.Core.csproj")
