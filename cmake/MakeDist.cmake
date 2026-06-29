@@ -1,9 +1,10 @@
 # Packages this build's runtime artifacts into dist/<platform>-<app>-<tag>+<shorthash>[-compat].zip, and
 # (on Windows only — the sole toolchain we ship standalone symbol files for) the debug symbols into a
-# sibling dist/<platform>[-compat]-<shorthash>-pdb.zip. The platform leads so the asset you want is the
-# first thing the eye lands on and same-OS assets group together; the build config is folded in only when
-# it is not Release (a local Debug dist stays distinguishable while shipping Release names stay clean).
-# The pdb sidecar uses a short name (no app/version) since it is a dev-only crash-symbolication artifact.
+# sibling dist/zzz-ignore-<platform>[-compat]-<shorthash>-pdb.zip. The platform leads so the asset you want
+# is the first thing the eye lands on and same-OS assets group together; the build config is folded in only
+# when it is not Release (a local Debug dist stays distinguishable while shipping Release names stay clean).
+# The pdb sidecar takes a "zzz-ignore" prefix so it sorts to the bottom of the release assets and reads as
+# a dev-only crash-symbolication artifact, not something a normal user should download.
 #
 # Driven by the `dist` custom target (see src/CMakeLists.txt) after the app is built. The git tag and
 # short commit hash are read here, at build time rather than configure time, so the archive name tracks
@@ -110,12 +111,10 @@ if (_compat)
 endif ()
 set(_stage "${DIST_DIR}/${_name}")
 set(_zip "${DIST_DIR}/${_name}.zip")
-# Symbols travel in a separate sibling zip. It is a dev-only crash-symbolication sidecar, so it gets a
-# deliberately short name — platform, the compat marker, and the commit hash — rather than repeating the
-# app+version of the main archive. Platform+compat keep it unique across the two variants (each ships its
-# own .pdb set). This pdb naming is Windows-only in practice: no other toolchain we ship emits a separate
-# symbol file (see the symbol-staging block below), so the stage is created only on Windows.
-set(_sym_name "${_plat}")
+# Dev-only symbol sidecar. The "zzz-ignore" prefix warns users off and sinks it to the bottom of the
+# alphabetically-sorted release assets (`z` is the highest char GitHub reliably keeps). Platform+compat
+# keep it unique across the two variants. Windows-only: no other toolchain emits a separate symbol file.
+set(_sym_name "zzz-ignore-${_plat}")
 if (_compat)
     string(APPEND _sym_name "-compat")
 endif ()

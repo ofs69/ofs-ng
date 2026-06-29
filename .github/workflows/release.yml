@@ -141,7 +141,7 @@ jobs:
 
       - name: Package (dist)
         # Emits bin/dist/<plat>-<app>-<tag>+<hash>[-compat].zip and, where the toolchain produces
-        # separate symbols, a sibling <plat>[-compat]-<hash>-pdb.zip (Windows native .pdb + managed .pdb).
+        # separate symbols, a sibling zzz-ignore-<plat>[-compat]-<hash>-pdb.zip (Windows native + managed .pdb).
         run: cmake --build build --target dist
 
       - uses: actions/upload-artifact@v4
