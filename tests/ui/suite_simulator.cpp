@@ -3,6 +3,7 @@
 #include "Core/SceneView.h"
 #include "Core/SceneViewEvents.h"
 #include "Core/SimulatorSettings.h"
+#include "Video/DummyVideoPlayer.h"
 #include "helpers/TestState.h"
 #include <cmath>
 #include <imgui.h>
@@ -208,5 +209,72 @@ void RegisterSimulatorTests(ImGuiTestEngine *e) {
         const int idxB = proj.bookmarks.chapterIndexAt(35.0);
         IM_CHECK(idxB >= 0);
         IM_CHECK(!proj.bookmarks.chapters[idxB].sceneView.has_value());
+    };
+
+    // Regression: dragging the 2D bar's width grip must resize the bar, NOT pan the video underneath. The
+    // grip sits just outside the bar band, so before the overlay ran its Input pass ahead of the video's
+    // pan-grab (reporting pointer ownership the same frame), the resize cursor showed but the click fell
+    // through and panned the video. Needs a live video viewport, so the dummy player is given a fake frame.
+    IM_REGISTER_TEST(e, "simulator", "width_grip_drag_resizes_not_pans")->TestFunc = [](ImGuiTestContext *ctx) {
+        loadFixture(ctx);
+        auto &proj = *getTestState().project;
+        auto &eq = *getTestState().eventQueue;
+
+        // Make the video window render a real image rect (and thus the 2D overlay): activate the dummy
+        // player and hand it a fake decodable frame.
+        auto *dummy = static_cast<ofs::DummyVideoPlayer *>(getTestState().videoPlayer);
+        dummy->setFakeVideoForTesting(640, 480, 1);
+        eq.push(ofs::ChangeDummyDurationEvent{.durationSeconds = 60.0});
+
+        // 2D simulator, unlocked, with a vertical bar centered in the image so its (horizontal) width grip
+        // lands well inside the video content.
+        eq.push(ofs::ModifyEvent<ofs::SimulatorState>{[](ofs::SimulatorState &s) {
+            s.use3dSimulator = false;
+            s.lockedPosition = false;
+        }});
+        ofs::OverlayAnchor anchor;
+        anchor.p1Norm = {0.5f, 0.30f};
+        anchor.p2Norm = {0.5f, 0.70f};
+        anchor.widthNorm = 0.10f;
+        eq.push(ofs::CaptureOverlayAnchorEvent{anchor});
+        ctx->Yield(2);
+
+        // The Video Player shares its dock node with the Processing panel (both "###video_player"); bring
+        // the Video Player tab to the front so it renders the image + overlay.
+        ctx->WindowFocus("Video Player###video_player");
+        ctx->Yield(3);
+
+        // The overlay's Input pass registers the handles as addressable items each frame.
+        const ImGuiTestItemInfo grip = ctx->ItemInfo("Video Player###video_player/##sim_width");
+        const ImGuiTestItemInfo center = ctx->ItemInfo("Video Player###video_player/##sim_center");
+        IM_CHECK(grip.ID != 0);
+        IM_CHECK(center.ID != 0);
+
+        const ImVec2 gripPos = grip.RectFull.GetCenter();
+        const ImVec2 centerPos = center.RectFull.GetCenter();
+        // Outward = away from the bar axis; dragging the grip further out widens the bar.
+        ImVec2 outward = {gripPos.x - centerPos.x, gripPos.y - centerPos.y};
+        const float len = std::sqrt(outward.x * outward.x + outward.y * outward.y);
+        IM_CHECK(len > 1.0f); // grip must be offset from the center, else the drag direction is undefined
+        outward = {outward.x / len, outward.y / len};
+        const ImVec2 dragTo = {gripPos.x + outward.x * 40.f, gripPos.y + outward.y * 40.f};
+
+        const float widthBefore = proj.activeSceneView.anchor.widthNorm;
+        const ImVec2 panBefore = proj.activeSceneView.framing.translation;
+
+        ctx->MouseMoveToPos(gripPos);
+        ctx->MouseDown(ImGuiMouseButton_Left);
+        ctx->MouseMoveToPos(dragTo);
+        ctx->MouseUp(ImGuiMouseButton_Left);
+        ctx->Yield(3);
+
+        // The bar widened (resize happened)...
+        IM_CHECK(proj.activeSceneView.anchor.widthNorm > widthBefore + 0.01f);
+        // ...and the video did NOT pan: a stolen pan would persist a changed framing translation on release.
+        IM_CHECK(approxVec(proj.activeSceneView.framing.translation, panBefore));
+
+        // Restore the normal "no media" dummy so later tests see the placeholder again.
+        dummy->setFakeVideoForTesting(0, 0, 0);
+        ctx->Yield(2);
     };
 }
