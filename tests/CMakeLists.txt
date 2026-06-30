@@ -221,6 +221,7 @@ add_executable(ofs-unit-tests
         format/test_app_settings.cpp
         format/test_layout_store.cpp
         ui/test_theme.cpp
+        app/test_style_scale.cpp
 
         # Round 2 - ProjectManager mutation handlers, format, util, localization
         services/test_project_bookmarks.cpp

@@ -112,6 +112,11 @@ class Application {
     void beginFrame();
 
     ImGuiStyle defaultStyle;
+    // The app's ImGui style at 1× DPI, captured once in initImGui() before any ScaleAllSizes() or theme
+    // apply. theme::apply() rewrites only Colors[] + the ImGuiStyleVar_* fields, so onThemeApplied() reads
+    // the remaining (non-theme) 1× fields — notably ImGuiStyle::_MainScale — from here when rebuilding the
+    // DPI base, instead of from the already-scaled live style (which would compound the scale per apply).
+    ImGuiStyle pristineStyle;
     ImNodesStyle themedNodesUnscaled; // the themed imnodes style at 1× DPI; base for DPI re-scaling
     bool hasThemedNodes = false;      // set once onThemeApplied runs with an imnodes context
     // The content scale currently baked into the ImGui style (FontScaleDpi/ScaleAllSizes). This is the

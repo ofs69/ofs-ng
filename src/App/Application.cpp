@@ -1,4 +1,5 @@
 ﻿#include "Application.h"
+#include "App/StyleScale.h"
 #include "Platform/Headless.h"
 #include "Platform/imgui_impl_null.h"
 #include "Platform/imgui_impl_opengl3.h"
@@ -84,6 +85,14 @@ static void routeAssertsToStderr() {
 // app must supply only 1×. Both fall out of displayScale / framebufferScale. The framebuffer scale is
 // derived exactly as imgui_impl_sdl3.cpp does, so this tracks the backend on every platform.
 static float appContentScale(SDL_Window *window) {
+#ifdef OFS_TEST_ENGINE
+    // imgui_test_engine suites are authored against a fixed 1× content scale (the layouts, window sizes
+    // and "fits without a scrollbar" assertions are all tuned to it, and CI's headless run reports 1×).
+    // Pin the real-GL test binary to 1× too so it stays deterministic on a high-DPI dev desktop instead
+    // of inheriting the monitor's scaling and clipping authored items out of view.
+    (void)window;
+    return 1.f;
+#else
     float displayScale = SDL_GetWindowDisplayScale(window);
     if (displayScale <= 0.f)
         displayScale = 1.f;
@@ -98,6 +107,7 @@ static float appContentScale(SDL_Window *window) {
     if (framebufferScale <= 0.f)
         framebufferScale = 1.f;
     return displayScale / framebufferScale;
+#endif
 }
 
 Application::Application() = default;
@@ -151,6 +161,7 @@ void Application::initImGui() {
     float contentScale = appContentScale(window->getNativeWindow());
 
     defaultStyle = ImGui::GetStyle();
+    pristineStyle = ImGui::GetStyle(); // 1× baseline for onThemeApplied; captured before ScaleAllSizes
     ImGuiStyle &style = ImGui::GetStyle();
     style.FontScaleDpi = contentScale;
     style.ScaleAllSizes(contentScale);
@@ -177,7 +188,11 @@ void Application::initImGui() {
 
 void Application::onThemeApplied() {
     ImGuiStyle &style = ImGui::GetStyle();
-    defaultStyle = style; // themed, unscaled — the base future DPI changes scale from
+    // Rebuild the unscaled (1×) DPI base from the pristine baseline rather than the live style:
+    // theme::apply() leaves the non-style-var size fields (notably _MainScale) carrying the prior
+    // scale, so capturing `style` verbatim would re-scale and compound them every apply. See StyleScale.h.
+    defaultStyle = ofs::style::unscaledThemeBase(style, pristineStyle);
+    style = defaultStyle;
     style.ScaleAllSizes(currentContentScale);
     style.FontScaleDpi = currentContentScale;
 
