@@ -26,12 +26,22 @@ so the C++ test always expects success. A MAJOR bump naturally yields no match (
 tags carry the previous major) and this no-ops until the first release of the new
 major is tagged, exactly mirroring the no-git-tags gotcha in the update checker.
 
-Non-fatal by design
---------------------
-This runs as part of every build. A failure to reproduce (no matching tag, archive
-miss, or the old source not building under the current SDK) prints a warning, clears
-the stage, and exits 0 — it MUST NOT block a developer build. The test then skips with
-a message. Only a successfully reproduced binary turns the back-compat check on.
+Non-fatal to the build, but loud in the test
+--------------------------------------------
+This runs as part of every build and always exits 0 — it MUST NOT block a developer
+build. But "exit 0" is not "stay silent": there are two very different reasons the
+fixture can end up unbuilt, and they MUST NOT look alike to the test.
+
+  - No same-major release tag exists yet (e.g. the first release of a new MAJOR before
+    it is tagged). Nothing is producible; the test legitimately skips. → marker "none".
+  - A same-major tag WAS selected, so a baseline IS producible from our own history, but
+    reproducing it failed (archive miss, plugin csproj absent at the tag, or the old
+    source not building under the current SDK). The witness we are contractually able to
+    produce went missing. → an error marker (FAIL_MARKER) recording the tag + reason.
+
+The test treats the first as a skip and the SECOND AS A HARD FAILURE. Without that split,
+a broken reproduction silently degrades the back-compat guarantee to a green no-op — the
+exact regression-masking this fixture exists to prevent.
 """
 
 import argparse
@@ -68,6 +78,11 @@ COMPAT_NAME = "Ofs.CompatPlugin"
 # Records which tag the current stage was built from, so a rerun with the same selected tag skips the
 # (slow) dotnet build, and a newly-cut tag triggers a rebuild.
 MARKER = ".compat-baseline"
+
+# Written ONLY when a same-major tag was selected (a baseline is producible) but reproducing it failed.
+# Its presence tells the C++ test to fail loudly instead of skipping — distinguishing a broken
+# reproduction from the legitimate "no same-major tag yet" skip, which leaves no such file.
+FAIL_MARKER = ".compat-error"
 
 # NB: AssemblyName is injected into the extracted plugin csproj (patch_assembly_name), NOT passed as a
 # global -p: property — a global property propagates to the referenced Ofs.Api too, renaming both projects
@@ -140,12 +155,23 @@ def patch_assembly_name(csproj: Path) -> None:
 
 
 def clear_stage(stage: Path, tag_note: str) -> None:
-    """Empty the stage and drop a marker so the C++ test skips and reruns know nothing is built."""
+    """Empty the stage and drop a marker so the C++ test skips and reruns know nothing is built.
+    Clearing also removes any prior FAIL_MARKER, so a stale failure never outlives the run that fixes it."""
     if stage.exists():
         for child in stage.iterdir():
             shutil.rmtree(child) if child.is_dir() else child.unlink()
     stage.mkdir(parents=True, exist_ok=True)
     (stage / MARKER).write_text(tag_note, encoding="utf-8")
+
+
+def record_failure(stage: Path, reason: str) -> int:
+    """A same-major baseline WAS producible but its reproduction failed. Clear the stage and drop
+    FAIL_MARKER so the test fails loudly rather than mistaking this for the legitimate no-baseline skip.
+    Still returns 0: the build itself must not be blocked — the loud signal is the test, not the build."""
+    warn(reason)
+    clear_stage(stage, "none")
+    (stage / FAIL_MARKER).write_text(reason, encoding="utf-8")
+    return 0
 
 
 def main() -> int:
@@ -184,14 +210,15 @@ def main() -> int:
 
     clear_stage(stage, "none")  # marker stays "none" until the build below actually succeeds
 
+    # Past this point a same-major tag was selected, so the witness IS producible from our own history.
+    # Any failure here is a broken reproduction, NOT a legitimate skip — record it so the test fails loudly.
     src = stage / "src"
     if not extract_tag(repo, a.git, tag, src):
-        return 0  # non-fatal: warned already, test will skip
+        return record_failure(stage, f"git archive of {tag} failed — back-compat witness not reproduced")
 
     csproj = src / PLUGIN_CSPROJ
     if not csproj.exists():
-        warn(f"{PLUGIN_CSPROJ} absent at {tag} — back-compat fixture skipped")
-        return 0
+        return record_failure(stage, f"{PLUGIN_CSPROJ} absent at {tag} — back-compat witness not reproduced")
     patch_assembly_name(csproj)
 
     out_dir = stage / COMPAT_NAME
@@ -199,11 +226,8 @@ def main() -> int:
            *DOTNET_BUILD_PROPS, "--nologo", "-v", "q"]
     proc = subprocess.run(cmd, check=False)
     if proc.returncode != 0 or not built_dll.exists():
-        warn(f"reproducing {COMPAT_NAME} from {tag} failed (dotnet build) — back-compat fixture skipped")
-        # Leave the stage cleared (marker 'none') so the test skips rather than loading a partial build.
-        if out_dir.exists():
-            shutil.rmtree(out_dir)
-        return 0
+        return record_failure(stage, f"reproducing {COMPAT_NAME} from {tag} failed (dotnet build) — "
+                                     f"back-compat witness not reproduced")
 
     shutil.rmtree(src, ignore_errors=True)  # keep only the built plugin in the stage
     marker.write_text(tag, encoding="utf-8")

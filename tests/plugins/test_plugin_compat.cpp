@@ -9,8 +9,11 @@
 // / TypeLoadException) deep in the bridge and the round-trip assertions below go red — exactly the
 // regression the recompile otherwise masks.
 //
-// Skips cleanly (never fails) when no baseline is staged: no release tag for the current Ofs.Api MAJOR
-// (e.g. the first release of a new major before it is tagged). See build_compat_plugin.py for the no-op contract.
+// Skips cleanly (never fails) when no baseline is staged because none is producible: no release tag for
+// the current Ofs.Api MAJOR (e.g. the first release of a new major before it is tagged). But if a
+// same-major tag DID exist and the reproduction nonetheless failed, build_compat_plugin.py leaves a
+// FAIL_MARKER and this test fails LOUDLY — a broken reproduction must not masquerade as that clean skip,
+// or the back-compat guarantee silently degrades to a green no-op. See build_compat_plugin.py.
 
 #include <doctest/doctest.h>
 
@@ -28,6 +31,8 @@
 
 #include <algorithm>
 #include <filesystem>
+#include <fstream>
+#include <iterator>
 #include <memory>
 #include <string>
 #include <system_error>
@@ -45,6 +50,18 @@ LoadedPlugin *findPlugin(std::vector<LoadedPlugin> &plugins, std::string_view na
 }
 
 #ifdef OFS_COMPAT_PLUGIN_DIR
+// build_compat_plugin.py writes this only when a same-major baseline WAS producible but reproducing it
+// failed. Its presence means "skip" would hide a broken witness — return the recorded reason so the case
+// fails loudly. Kept in sync with FAIL_MARKER in build_compat_plugin.py.
+std::string reproductionFailureReason() {
+    const fs::path marker = fs::path(OFS_COMPAT_PLUGIN_DIR) / ".compat-error";
+    std::error_code ec;
+    if (!fs::exists(marker, ec))
+        return {};
+    std::ifstream in(marker);
+    return std::string(std::istreambuf_iterator<char>(in), std::istreambuf_iterator<char>());
+}
+
 // Copy the reproduced compat plugin from the build-staged plugins-compat/ into the test pref dir (the only
 // root loadPlugins() scans for user plugins). Returns the staged entry DLL, or empty when no baseline was
 // produced (so the case skips rather than fails).
@@ -74,6 +91,13 @@ TEST_SUITE("plugin-compat") {
         MESSAGE("back-compat fixture not configured (no Python/git at build) — skipping");
         return;
 #else
+        // A recorded reproduction failure is NOT the clean "no baseline" skip — a same-major tag existed,
+        // so the witness should have built. Fail loudly rather than let a broken fixture pass green.
+        if (const std::string reason = reproductionFailureReason(); !reason.empty()) {
+            FAIL("back-compat witness reproduction failed (build_compat_plugin.py): " << reason);
+            return;
+        }
+
         const fs::path dll = stageCompatPlugin();
         if (dll.empty()) {
             MESSAGE("no same-major release tag baseline staged — skipping API back-compat check");
