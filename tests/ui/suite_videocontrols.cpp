@@ -11,9 +11,10 @@
 #include <imgui_te_engine.h>
 #include <string>
 
-// Map a bookmark-bar time to a screen pixel. Anchors to the addressable "##bookmarkbar"
-// item (registered in VideoPlayerControls.cpp), so no bar geometry is hardcoded. The X
-// mapping mirrors drawBookmarkBar's toX (linear over duration across the bar width).
+// Map a bookmark-bar time to a screen pixel. Anchors to the addressable "##bookmarkbar" item (registered
+// in VideoPlayerControls.cpp), so no bar geometry is hardcoded. The X mapping mirrors drawBookmarkBar's toX
+// (linear over duration across the bar width). Used for a continuous *time* on the bar (e.g. a drag
+// destination); an existing bookmark is a real item, addressed by its ##bookmark_<i> id instead.
 static ImVec2 bookmarkPixel(ImGuiTestContext *ctx, double time) {
     const ImRect r = ctx->ItemInfo("Video Controls###video_controls/##controls/##bookmarkbar").RectFull;
     const double dur = getTestState().project->state.dummyDuration;
@@ -64,8 +65,8 @@ void RegisterVideoControlsTests(ImGuiTestEngine *e) {
         ctx->Yield(2);
         IM_CHECK_EQ(proj.bookmarks.bookmarks.size(), static_cast<size_t>(1));
 
-        ctx->MouseMoveToPos(bookmarkPixel(ctx, bmTime));
-        ctx->MouseClick(ImGuiMouseButton_Left);
+        // The bookmark is a real item — click it by id (no pixel mapping).
+        ctx->ItemClick("Video Controls###video_controls/##controls/##bookmark_0");
         ctx->Yield(2);
 
         IM_CHECK_LT(std::abs(proj.playback.cursorPos - bmTime), dur * 0.05);
@@ -82,8 +83,10 @@ void RegisterVideoControlsTests(ImGuiTestEngine *e) {
             .apply = [bmTime](ofs::BookmarkChapterState &s) { s.bookmarks.push_back({.time = bmTime, .name = "b"}); }});
         ctx->Yield(2);
 
+        // Grab the bookmark by its id, drag to the destination time (a continuous spot on the bar, so the
+        // destination is the one place a time→pixel map is intrinsic).
         const double targetTime = dur * 0.6;
-        ctx->MouseMoveToPos(bookmarkPixel(ctx, bmTime));
+        ctx->MouseMove("Video Controls###video_controls/##controls/##bookmark_0");
         ctx->MouseDown(ImGuiMouseButton_Left);
         ctx->MouseMoveToPos(bookmarkPixel(ctx, targetTime));
         ctx->MouseUp(ImGuiMouseButton_Left);

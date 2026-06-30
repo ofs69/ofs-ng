@@ -174,23 +174,6 @@ static LaneRect laneRectForAxis(const ScriptProject &project, const LaneLayout &
     return laneRectAt(l, laneIndexOf(project, role));
 }
 
-// Which axis's lane the cursor's Y falls in (Count if outside the band or past every lane) — the inverse
-// of laneRectAt, used to resolve which axis a Lanes-mode gesture targets. Honors the scroll offset.
-static StandardAxis laneAxisAt(const ScriptProject &project, const LaneLayout &l, float mouseY) {
-    if (!l.lanes || l.count <= 0)
-        return StandardAxis::Count;
-    if (mouseY < l.scriptLinePos.y || mouseY >= l.scriptLinePos.y + l.scriptLineSize.y) // outside the visible band
-        return StandardAxis::Count;
-    int idx = static_cast<int>((mouseY - l.scriptLinePos.y + l.scroll) / l.laneH);
-    if (idx < 0 || idx >= l.count)
-        return StandardAxis::Count;
-    int n = 0;
-    for (const auto &ax : project.axes)
-        if (ax.showInStrip && n++ == idx)
-            return ax.role;
-    return StandardAxis::Count;
-}
-
 // Time width of one dot-decimation bucket: dots closer than ~2*dotRadius() px are collapsed to one.
 // The bucket grid is anchored to absolute time 0 (`it->at / bucket`), so panning never re-shuffles
 // which dot in a cluster wins — that is what keeps decimation steady during playback. To also stay
@@ -821,7 +804,7 @@ void ScriptTimelineWindow::renderScriptLines(const ScriptProject &project, ImDra
 }
 
 bool ScriptTimelineWindow::renderLaneScrollbar(ImDrawList *drawList, const ImVec2 &scriptLinePos,
-                                               const ImVec2 &scriptLineSize, float mouseY, bool windowHovered) {
+                                               const ImVec2 &scriptLineSize, float mouseY) {
     if (laneLayout_.maxScroll <= 0.f)
         return false;
 
@@ -835,28 +818,29 @@ bool ScriptTimelineWindow::renderLaneScrollbar(ImDrawList *drawList, const ImVec
     const float thumbH = std::max(scriptLineSize.y * scriptLineSize.y / contentH, ImGui::GetFontSize());
     const float travel = scriptLineSize.y - thumbH;
     const float thumbY = trackMin.y + (laneLayout_.scroll / laneLayout_.maxScroll) * std::max(travel, 0.f);
-    const bool overTrack = windowHovered && ImGui::IsMouseHoveringRect(trackMin, trackMax);
 
-    if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && overTrack) {
-        laneScrollDragging_ = true;
-        if ((mouseY < thumbY || mouseY > thumbY + thumbH) && travel > 0.f) // off the thumb: jump to cursor
-            laneScroll_ = std::clamp((mouseY - trackMin.y - thumbH * 0.5f) / travel, 0.f, 1.f) * laneLayout_.maxScroll;
-    }
-    if (laneScrollDragging_) {
-        if (!ImGui::IsMouseDown(ImGuiMouseButton_Left))
-            laneScrollDragging_ = false;
-        else if (travel > 0.f)
-            laneScroll_ = std::clamp(laneScroll_ + ImGui::GetIO().MouseDelta.y * laneLayout_.maxScroll / travel, 0.f,
-                                     laneLayout_.maxScroll);
-    }
+    // A real ImGui item owns the track, so its hover/active state is id-tracked (ui-tests drag it by
+    // ##lane_scrollbar rather than synthesizing track coordinates). It is submitted after the lane buttons,
+    // which set AllowOverlap for this overflow case, so the track wins hover where they overlap.
+    ImGui::SetCursorScreenPos(trackMin);
+    ImGui::InvisibleButton("##lane_scrollbar", {sbW, scriptLineSize.y});
+    const bool hovered = ImGui::IsItemHovered();
+    const bool active = ImGui::IsItemActive();
 
-    const ImGuiCol grabCol = laneScrollDragging_ ? ImGuiCol_ScrollbarGrabActive
-                             : overTrack         ? ImGuiCol_ScrollbarGrabHovered
-                                                 : ImGuiCol_ScrollbarGrab;
+    // On press off the thumb, jump so the thumb centers under the cursor; while held, track the mouse.
+    if (ImGui::IsItemActivated() && (mouseY < thumbY || mouseY > thumbY + thumbH) && travel > 0.f)
+        laneScroll_ = std::clamp((mouseY - trackMin.y - thumbH * 0.5f) / travel, 0.f, 1.f) * laneLayout_.maxScroll;
+    if (active && travel > 0.f)
+        laneScroll_ = std::clamp(laneScroll_ + ImGui::GetIO().MouseDelta.y * laneLayout_.maxScroll / travel, 0.f,
+                                 laneLayout_.maxScroll);
+
+    const ImGuiCol grabCol = active    ? ImGuiCol_ScrollbarGrabActive
+                             : hovered ? ImGuiCol_ScrollbarGrabHovered
+                                       : ImGuiCol_ScrollbarGrab;
     drawList->AddRectFilled(trackMin, trackMax, ofs::theme::GetColorU32(ImGuiCol_ScrollbarBg));
     drawList->AddRectFilled({trackMin.x, thumbY}, {trackMax.x, thumbY + thumbH}, ofs::theme::GetColorU32(grabCol),
                             ImGui::GetStyle().ScrollbarRounding);
-    return overTrack;
+    return hovered || active;
 }
 
 void ScriptTimelineWindow::stepAxisEmphasis(const ScriptProject &project) {
@@ -948,9 +932,37 @@ void ScriptTimelineWindow::renderTimeline(const ScriptProject &project, EventQue
                       scriptLineListCount, lanes, windowHovered);
 
     // ── Script-line area interaction ───────────────────────────────────────────────
-    ImGui::SetCursorScreenPos(scriptLinePos);
-    ImGui::InvisibleButton("##timeline", scriptLineSize,
-                           ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);
+    // Each lane is its own InvisibleButton, so ImGui reports which lane the cursor is over (no manual
+    // Y→lane hit-test) and the lanes are real, queryable widgets. Overlay is the degenerate single lane:
+    // one ##timeline button spanning the band. The lane under the cursor is the focus-click target; the
+    // active axis stays the edit target (its pos is read against its own lane band below).
+    // anyLaneHovered: the cursor is over the interactable band. laneAxis: which axis's lane it is over (Count
+    // in Overlay, where the single ##timeline button spans the band) — the target of a strip-mirroring focus
+    // click; the gesture target stays the active axis.
+    bool anyLaneHovered = false;
+    StandardAxis laneAxis = StandardAxis::Count;
+    if (lanes) {
+        int ord = 0;
+        for (size_t i = 0; i < kStandardAxisCount; ++i) {
+            if (!project.axes[i].showInStrip)
+                continue;
+            const LaneRect lr = laneRectAt(laneLayout_, ord++);
+            if (laneLayout_.maxScroll > 0.f) // the scrollbar (submitted below) overlaps the lane's right edge
+                ImGui::SetNextItemAllowOverlap();
+            ImGui::SetCursorScreenPos(lr.pos);
+            ImGui::InvisibleButton(fmtScratch("##lane_{}", i), lr.size,
+                                   ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);
+            if (ImGui::IsItemHovered()) {
+                anyLaneHovered = true;
+                laneAxis = static_cast<StandardAxis>(i);
+            }
+        }
+    } else {
+        ImGui::SetCursorScreenPos(scriptLinePos);
+        ImGui::InvisibleButton("##timeline", scriptLineSize,
+                               ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);
+        anyLaneHovered = ImGui::IsItemHovered();
+    }
 
     float mouseX = ImGui::GetMousePos().x;
     float mouseY = ImGui::GetMousePos().y;
@@ -959,7 +971,7 @@ void ScriptTimelineWindow::renderTimeline(const ScriptProject &project, EventQue
 
     // Lane scrollbar (Lanes overflow only): drawn on top of the script lines; sets overLaneScrollbar so the
     // script-line gestures below ignore a press that lands on it.
-    const bool overLaneScrollbar = renderLaneScrollbar(drawList, scriptLinePos, scriptLineSize, mouseY, windowHovered);
+    const bool overLaneScrollbar = renderLaneScrollbar(drawList, scriptLinePos, scriptLineSize, mouseY);
 
     // Script-line gestures (seek, edit, box-select) always target the active axis and fan across the edit group,
     // exactly like Overlay — that is what keeps grouping working and selection group-aware in Lanes. The
@@ -970,8 +982,6 @@ void ScriptTimelineWindow::renderTimeline(const ScriptProject &project, EventQue
                                        : LaneRect{.pos = scriptLinePos, .size = scriptLineSize};
     const bool gestureLocked =
         gestureAxis < StandardAxis::Count && project.axes[static_cast<size_t>(gestureAxis)].isLocked;
-    // Lanes only: the axis whose lane the cursor is over — the target of a strip-mirroring focus click.
-    const StandardAxis laneAxis = lanes ? laneAxisAt(project, laneLayout_, mouseY) : StandardAxis::Count;
 
     struct NearHit {
         StandardAxis axis = StandardAxis::Count;
@@ -993,7 +1003,7 @@ void ScriptTimelineWindow::renderTimeline(const ScriptProject &project, EventQue
         return best;
     };
 
-    if (ImGui::IsItemHovered() && !overLaneScrollbar && !laneScrollDragging_) {
+    if (anyLaneHovered && !overLaneScrollbar) {
         NearHit hit = findNearest();
 
         if (hit.action != nullptr) {

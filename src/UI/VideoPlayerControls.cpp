@@ -251,10 +251,10 @@ void VideoControlsWindow::drawBookmarkBar(const ScriptProject &project, EventQue
         return std::clamp(static_cast<double>((x - barMin.x) / effectiveW) * duration, 0.0, duration);
     };
 
-    // Reserve screen space, then register the bar rect as an addressable, non-interactive
-    // item so UI tests can anchor to the bookmark strip via ItemInfo. ItemAdd consumes no
-    // input, so the manual bookmark hit-testing below is unaffected. (The chapter band
-    // registers its own "##chapterbar" item inside drawBandBar over the same rect.)
+    // Reserve screen space, then register the bar rect as an addressable, non-interactive item so UI tests
+    // can anchor the bar's time axis via ItemInfo. ItemAdd consumes no input, so it does not shadow the
+    // per-bookmark / per-band items registered over it. (The chapter band registers its own "##chapterbar"
+    // item inside drawBandBar over the same rect.)
     ImGui::Dummy({barW, kBarH});
     ImGui::ItemAdd(ImRect(barMin, barMax), ImGui::GetID("##bookmarkbar"), nullptr, ImGuiItemFlags_NoNav);
     ImDrawList *dl = ImGui::GetWindowDrawList();
@@ -283,28 +283,55 @@ void VideoControlsWindow::drawBookmarkBar(const ScriptProject &project, EventQue
     std::span<const ofs::ui::BandItem> bands(bandData, bandCount);
 
     const double playheadTime = project.playback.cursorPos;
-    // Occlusion-aware: IsItemHovered() on the bar item registered above consults g.HoveredWindow
-    // (Z-order), so the bookmark hover/tooltip stays suppressed when another window covers the
-    // strip — a raw IsMouseHoveringRect is geometric only and fires through an overlapping window.
-    const bool barHovered = ImGui::IsItemHovered();
     const bool bandDragging = bandDragState.mode != ofs::ui::BandBarDragState::Mode::None;
     auto &bmDrag = barState.bmDrag;
 
-    // ── Determine if mouse is over a bookmark (for chapter interaction priority) ──
-    // Bookmarks take priority over chapters: if the cursor is on a bookmark,
-    // suppress the chapter band's Phase 3 so only the bookmark gets the click.
-    bool overBookmark = false;
-    if (!bandDragging && !bmDrag.isDragging && !bmDrag.hasDragCandidate && barHovered) {
-        for (const auto &bm : bcState.bookmarks) {
+    // ── Bookmarks: hit test + interaction (real ImGui items) ─────────────────
+    // Each bookmark is a real item (ItemAdd + ButtonBehavior, like the chapter bands), carrying a stable
+    // ##bookmark_<i> id so it is individually test-addressable and ImGui owns the hover/active arbitration
+    // and occlusion. Registered *before* the chapter band and given interaction priority: when the cursor
+    // is on a bookmark, overBookmark suppresses the chapter band's hit test (the band is drawn under the
+    // dot) so the click goes to the bookmark. Drawing happens later, on top of the bands; the drag itself
+    // is driven by the bmDrag state machine below. Skipped mid-drag (the machine owns the gesture then).
+    int hoveredBmIdx = -1;
+    if (!bandDragging && !bmDrag.isDragging && !bmDrag.hasDragCandidate) {
+        for (int i = 0; i < static_cast<int>(bcState.bookmarks.size()); ++i) {
+            const auto &bm = bcState.bookmarks[i];
             const float bx = toX(bm.time);
-            const ImVec2 hitMin = {bx - kBmRadius - kBmHitPad, barMin.y};
-            const ImVec2 hitMax = {bx + kBmRadius + kBmHitPad, barMin.y + kBmRadius * 2.0f + kBmChPad * 2.0f};
-            if (ImGui::IsMouseHoveringRect(hitMin, hitMax)) {
-                overBookmark = true;
-                break;
+            if (bx < barMin.x || bx > barMax.x)
+                continue;
+            const ImRect bb({bx - kBmRadius - kBmHitPad, barMin.y},
+                            {bx + kBmRadius + kBmHitPad, barMin.y + kBmRadius * 2.0f + kBmChPad * 2.0f});
+            const ImGuiID bmId = ImGui::GetID(fmtScratch("##bookmark_{}", i));
+            ImGui::ItemAdd(bb, bmId);
+            bool hovered = false, held = false;
+            ImGui::ButtonBehavior(bb, bmId, &hovered, &held,
+                                  ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);
+            if (!hovered)
+                continue;
+            hoveredBmIdx = i;
+            ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+            if (ImGui::BeginTooltip()) {
+                const char *bmName = bm.name.empty() ? Str::VpcUnnamed.c_str() : bm.name.c_str();
+                ImGui::TextUnformatted(Str::VpcBookmarkTip.fmt(bmName));
+                ImGui::Text("%s", TimeUtil::formatTime(bm.time, true));
+                ImGui::EndTooltip();
+            }
+            if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
+                bmDrag.hasDragCandidate = true;
+                bmDrag.idx = i;
+                bmDrag.originalTime = bm.time;
+                bmDrag.previewTime = bm.time;
+            } else if (ImGui::IsMouseReleased(ImGuiMouseButton_Right)) {
+                barState.activeCtx = BookmarkBarState::CtxTarget::Bookmark;
+                barState.ctxIdx = i;
+                barState.editName = bm.name;
+                barState.activeEdit = BookmarkBarState::ActiveEdit::None;
+                ImGui::OpenPopup("##bar_ctx");
             }
         }
     }
+    const bool overBookmark = hoveredBmIdx >= 0;
 
     // ── Chapters (BandBar) ───────────────────────────────────────────────────
     ofs::ui::BandBarCallbacks callbacks;
@@ -389,7 +416,7 @@ void VideoControlsWindow::drawBookmarkBar(const ScriptProject &project, EventQue
         }
     }
 
-    // ── Draw bookmarks ───────────────────────────────────────────────────────
+    // ── Draw bookmarks (over the chapter bands) ──────────────────────────────
     for (int i = 0; i < static_cast<int>(bcState.bookmarks.size()); ++i) {
         const auto &bm = bcState.bookmarks[i];
         bool isDragTarget = (bmDrag.isDragging && bmDrag.idx == i) || (bmDrag.hasDragCandidate && bmDrag.idx == i);
@@ -399,61 +426,10 @@ void VideoControlsWindow::drawBookmarkBar(const ScriptProject &project, EventQue
             continue;
 
         const ImVec2 center = {bx, barMin.y + kBmRadius + kBmChPad};
-        const ImVec2 hitMin = {bx - kBmRadius - kBmHitPad, barMin.y};
-        const ImVec2 hitMax = {bx + kBmRadius + kBmHitPad, barMin.y + kBmRadius * 2.0f + kBmChPad * 2.0f};
-        const bool hov = !bandDragging && !bmDrag.isDragging && !bmDrag.hasDragCandidate && barHovered &&
-                         ImGui::IsMouseHoveringRect(hitMin, hitMax);
-
         dl->AddCircleFilled(center, kBmRadius,
-                            (hov || isDragTarget) ? ofs::theme::GetColorU32(AppCol_BookmarkDotHovered)
-                                                  : ofs::theme::GetColorU32(AppCol_BookmarkDot));
+                            (hoveredBmIdx == i || isDragTarget) ? ofs::theme::GetColorU32(AppCol_BookmarkDotHovered)
+                                                                : ofs::theme::GetColorU32(AppCol_BookmarkDot));
         dl->AddCircle(center, kBmRadius, ofs::theme::GetColorU32(AppCol_BookmarkOutline), 0, 1.5f);
-    }
-
-    // ── Bookmark interaction (highest priority) ──────────────────────────────
-    if (!bandDragging && !bmDrag.isDragging && !bmDrag.hasDragCandidate) {
-        bool interacted = false;
-        bool tooltipShown = false;
-
-        for (int i = 0; i < static_cast<int>(bcState.bookmarks.size()); ++i) {
-            const auto &bm = bcState.bookmarks[i];
-            const float bx = toX(bm.time);
-            if (bx < barMin.x || bx > barMax.x)
-                continue;
-
-            const ImVec2 hitMin = {bx - kBmRadius - kBmHitPad, barMin.y};
-            const ImVec2 hitMax = {bx + kBmRadius + kBmHitPad, barMin.y + kBmRadius * 2.0f + kBmChPad * 2.0f};
-            if (!barHovered || !ImGui::IsMouseHoveringRect(hitMin, hitMax))
-                continue;
-
-            ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-
-            if (!tooltipShown) {
-                const char *bmName = bm.name.empty() ? Str::VpcUnnamed.c_str() : bm.name.c_str();
-                ImGui::BeginTooltip();
-                ImGui::TextUnformatted(Str::VpcBookmarkTip.fmt(bmName));
-                ImGui::Text("%s", TimeUtil::formatTime(bm.time, true));
-                ImGui::EndTooltip();
-                tooltipShown = true;
-            }
-
-            if (!interacted) {
-                if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-                    bmDrag.hasDragCandidate = true;
-                    bmDrag.idx = i;
-                    bmDrag.originalTime = bm.time;
-                    bmDrag.previewTime = bm.time;
-                    interacted = true;
-                } else if (ImGui::IsMouseReleased(ImGuiMouseButton_Right)) {
-                    barState.activeCtx = BookmarkBarState::CtxTarget::Bookmark;
-                    barState.ctxIdx = i;
-                    barState.editName = bm.name;
-                    barState.activeEdit = BookmarkBarState::ActiveEdit::None;
-                    ImGui::OpenPopup("##bar_ctx");
-                    interacted = true;
-                }
-            }
-        }
     }
 
     // --- Context popup ---

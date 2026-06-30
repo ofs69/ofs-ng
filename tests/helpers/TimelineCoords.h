@@ -14,12 +14,16 @@
 //   x = line.x + ((time - offsetTime) / visibleTime) * line.width
 //   y = line.y + margin + (1 - pos/100) * (line.height - 2*margin)   (margin = 8)
 //
-// The script-line area is the "##timeline" InvisibleButton; its RectFull is exactly
-// {scriptLinePos, scriptLinePos + scriptLineSize}. The view (visibleTime / offsetTime) is read
-// from project.timelineView, which ProjectManager updates every frame from the
-// timeline's UpdateTimelineViewEvent.
+// The script-line interaction surface is the "##timeline" InvisibleButton in Overlay layout; in Lanes
+// layout it is split into one "##lane_<role>" button per axis, so there is no "##timeline" — query L0's
+// lane (##lane_0, always present as the top lane), which spans the same full band width. Both rects share
+// the band's X/width, and with a single visible lane ##lane_0 also matches the full band vertically. The
+// view (visibleTime / offsetTime) is read from project.timelineView, which ProjectManager updates every
+// frame from the timeline's UpdateTimelineViewEvent.
 inline ImVec2 timelinePixel(ImGuiTestContext *ctx, double time, int pos) {
-    const ImGuiTestItemInfo info = ctx->ItemInfo("Timeline###timeline/##timeline");
+    const bool lanes = getTestState().project->timelineView.layout == ofs::TimelineLayout::Lanes;
+    const ImGuiTestItemInfo info =
+        ctx->ItemInfo(lanes ? "Timeline###timeline/##lane_0" : "Timeline###timeline/##timeline");
     const ImRect r = info.RectFull;
 
     const auto &tv = getTestState().project->timelineView;

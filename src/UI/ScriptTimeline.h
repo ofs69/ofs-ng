@@ -106,12 +106,13 @@ class ScriptTimelineWindow {
                            const ImVec2 &pos, const ImVec2 &size, const ImVec2 &scriptLinePos,
                            const ImVec2 &scriptLineSize, double offsetTime, const AxisEntry *scriptLineEntries,
                            int scriptLineCount, bool lanes, bool windowHovered);
-    // Draw + drive the Lanes vertical scrollbar (a thumb on the script line's right edge). Hit-tested manually,
-    // not as an ImGui item, so it never displaces the ##timeline item the script-line interaction reads via
-    // IsItemHovered. Returns true while the cursor is over the track so the caller suppresses script line
-    // gestures there; a no-op returning false unless the lanes overflow (laneLayout_.maxScroll > 0).
+    // Draw + drive the Lanes vertical scrollbar (a thumb on the script line's right edge). Backed by a real
+    // ##lane_scrollbar InvisibleButton submitted after the lane buttons (which set AllowOverlap in the
+    // overflow case), so its hover/active state is id-tracked and ui-tests can drag it by id. Returns true
+    // while the cursor is over the track so the caller suppresses script-line gestures there; a no-op
+    // returning false unless the lanes overflow (laneLayout_.maxScroll > 0).
     bool renderLaneScrollbar(ImDrawList *drawList, const ImVec2 &scriptLinePos, const ImVec2 &scriptLineSize,
-                             float mouseY, bool windowHovered);
+                             float mouseY);
     // The ##timeline_ctx popup body (axis lock/visibility/delete/add-region, view toggles, overlay
     // submenu). Begun and ended here; the matching OpenPopup calls live in the strip/script-line interaction.
     void renderContextMenu(const ScriptProject &project, EventQueue &eq, VideoPlayer &videoPlayer);
@@ -142,9 +143,9 @@ class ScriptTimelineWindow {
     ofs::ui::BandBarDragState regionDragState;
     // Lanes-layout vertical scroll: persisted scroll offset and the resolved geometry for the current
     // frame. laneScroll_ survives between frames (clamped to the live overflow each frame); laneLayout_
-    // is rebuilt at the top of renderTimeline. laneScrollDragging_ latches a scrollbar-thumb drag.
+    // is rebuilt at the top of renderTimeline. A scrollbar-thumb drag is tracked by the ##lane_scrollbar
+    // item's own active state, so no separate latch is kept here.
     float laneScroll_ = 0.f;
-    bool laneScrollDragging_ = false;
     LaneLayout laneLayout_;
     // Axis the timeline context menu (##timeline_ctx) acts on, latched when the menu opens from a
     // right-click on a strip row/script line. Count == no axis section.
