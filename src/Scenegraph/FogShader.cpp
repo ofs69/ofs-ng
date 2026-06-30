@@ -117,9 +117,17 @@ static const char *fogFragmentSource = R"(#version 330 core
             vec3 outRgb = outA > 0.0001 ? (uColor.rgb * fogA + uCenter.rgb * centerA * (1.0 - fogA)) / outA
                                         : vec3(0.0);
 
-            // Dither by ±1/255 to break up banding in these very smooth, low-alpha gradients on an 8-bit
-            // framebuffer. A static (gl_FragCoord-locked) hash, so it reads as faint grain, not noise.
-            float dith = (fract(sin(dot(gl_FragCoord.xy, vec2(12.9898, 78.233))) * 43758.5453) - 0.5) / 255.0;
+            // Dither to break up banding in these very smooth, low-alpha gradients on an 8-bit
+            // framebuffer. Two points matter: (1) a *triangular* PDF (sum of two independent uniforms,
+            // remapped to ±1 LSB) rather than a single uniform sample — TPDF fully decorrelates the
+            // quantization error, so it erases bands a rectangular ±0.5 LSB dither only thins; (2) the
+            // source is Jimenez interleaved-gradient noise, which is pattern-free at fragment scale,
+            // unlike the classic sin-dot hash that visibly clumps on some GPUs. Static (locked to
+            // gl_FragCoord), so it reads as faint fixed grain rather than animated noise.
+            vec2 fc = gl_FragCoord.xy;
+            float r1 = fract(52.9829189 * fract(dot(fc, vec2(0.06711056, 0.00583715))));
+            float r2 = fract(52.9829189 * fract(dot(fc + 17.0, vec2(0.06711056, 0.00583715))));
+            float dith = (r1 + r2 - 1.0) / 255.0; // triangular, peak-to-peak 2 LSB
             Out_Color = vec4(outRgb + dith, outA + dith);
         }
     )";

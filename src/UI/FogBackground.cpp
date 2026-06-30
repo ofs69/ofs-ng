@@ -41,7 +41,7 @@ void FogBackground::draw(ImDrawList *drawList, const ImVec2 &pos, const ImVec2 &
     // rate (identical at 9 fps and 60+). DeltaTime is clamped so a hitch or a paused first frame can't
     // jump the field.
     const float dt = std::min(ImGui::GetIO().DeltaTime, 0.1f);
-    phase_ += dt * 0.3f; // ~0.3 phase units/sec — a gentle, unhurried drift
+    phase_ += dt * 0.6f; // ~0.6 phase units/sec — a gentle, unhurried drift
 
     cb_.shader = shader_.get();
     cb_.phase = phase_;
