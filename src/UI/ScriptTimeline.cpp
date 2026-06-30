@@ -14,6 +14,7 @@
 #include "UI/Icons.h"
 #include "UI/ImGuiHelpers.h"
 #include "UI/Modals.h"
+#include "UI/OverlayControls.h"
 #include "UI/Theme.h"
 #include "UI/TimelineLayout.h"
 #include "UI/WaveformRenderer.h"
@@ -616,11 +617,6 @@ void ScriptTimelineWindow::renderScriptLines(const ScriptProject &project, ImDra
         const auto &displayActions = ax.resolved ? ax.resolved->actions : ax.actions;
         bool isActive = entry.isActive;
 
-        // Separated view always shows every axis (its visibility toggle is hidden), so every lane draws its
-        // script line, confined to its own sub-rect and clipped so a steep script line can't bleed into a neighbor.
-        // Overlay still hides a non-active, non-grouped axis whose eye is off, and draws every passed entry
-        // in the shared full-height rect.
-        const bool drawScriptLine = lanes || entry.isActive || ax.isVisible || entry.inEditSet;
         if (lanes) {
             LaneRect lr = laneRectAt(laneLayout_, ci);
             lanePos = lr.pos;
@@ -655,7 +651,7 @@ void ScriptTimelineWindow::renderScriptLines(const ScriptProject &project, ImDra
 
         constexpr double skipAt = -1.0;
 
-        if (drawScriptLine && !displayActions.empty()) {
+        if (!displayActions.empty()) {
             auto itStart = displayActions.lowerBound(ScriptAxisAction{offsetTime, 0});
             if (itStart != displayActions.begin())
                 --itStart;
@@ -1148,77 +1144,22 @@ void ScriptTimelineWindow::renderContextMenu(const ScriptProject &project, Event
     }
 }
 
-// Common frame-rate presets for the scripting-overlay Frame mode (the script-FPS picker), shared by the
-// timeline settings modal and the right-click overlay submenu. The names are numeric, not translatable.
-static constexpr float kCommonFpss[] = {23.976f, 24.0f, 25.0f, 29.97f, 30.0f, 48.0f, 50.0f, 59.94f, 60.0f};
-static constexpr const char *kCommonFpsNames[] = {"23.976", "24", "25", "29.97", "30", "48", "50", "59.94", "60"};
-
-// Index of the preset matching `fps` (within 0.001), or -1 for a custom value (combo shows blank).
-static int fpsPresetIndex(float fps) {
-    for (int i = 0; i < IM_ARRAYSIZE(kCommonFpss); ++i)
-        if (std::abs(fps - kCommonFpss[i]) < 0.001f)
-            return i;
-    return -1;
-}
-
-// kTempoSubdivisionNames with index 0 ("1/1 (measure)") localized into the frame arena — the only entry
-// carrying a translatable word; the rest are numeric fractions, left as-is. Main-thread render only.
-static const char **localizedTempoSnapNames() {
-    auto **names = ofs::FrameAllocator::instance().allocArray<const char *>(kTempoSubdivisionCount);
-    for (int i = 0; i < kTempoSubdivisionCount; ++i)
-        names[i] = kTempoSubdivisionNames[i];
-    names[0] = fmtScratch("1/1 ({})", Str::TlMeasure.sv());
-    return names;
-}
-
 void ScriptTimelineWindow::renderOverlayMenu(const ScriptProject &project, EventQueue &eq,
                                              VideoPlayer &videoPlayer) const {
     if (ImGui::BeginMenu(Str::TlOverlay.id("tl_overlay_menu"))) {
         auto ov = project.overlay;
-        bool changed = false;
 
         // Font-relative field width (was a fixed 160 px) so a longer translated combo entry fits
         // and the column scales with font/DPI inside the auto-sizing popup.
         const float fieldW = ImGui::GetFontSize() * 10.f;
-
-        const char *overlayNames[] = {Str::TlOverlayFrame, Str::TlOverlayTempo};
-        int currentOverlay = static_cast<int>(ov.overlay);
-        ImGui::TextUnformatted(Str::TlOverlay);
-        ImGui::SetNextItemWidth(fieldW);
-        if (ImGui::Combo("##overlay", &currentOverlay, overlayNames, IM_ARRAYSIZE(overlayNames))) {
-            ov.overlay = static_cast<ScriptingOverlay>(currentOverlay);
-            changed = true;
-        }
+        bool changed = ofs::ui::renderOverlayControls(ov, Str::TlOverlay, [&](TrKey label) {
+            ImGui::TextUnformatted(label);
+            ImGui::SetNextItemWidth(fieldW);
+        });
 
         if (ov.overlay == ScriptingOverlay::Frame) {
             const char *fpsStr = fmtScratch("{:.3f}", videoPlayer.getFps());
             ImGui::TextUnformatted(Str::TlVideoFps.fmt(fpsStr));
-
-            int currentFpsIdx = fpsPresetIndex(ov.frameFps);
-            ImGui::TextUnformatted(Str::TlScriptFps);
-            ImGui::SetNextItemWidth(fieldW);
-            if (ImGui::Combo("##fps_preset", &currentFpsIdx, kCommonFpsNames, IM_ARRAYSIZE(kCommonFpsNames))) {
-                ov.frameFps = kCommonFpss[currentFpsIdx];
-                changed = true;
-            }
-
-            ImGui::TextUnformatted(Str::TlCustomFps);
-            ImGui::SetNextItemWidth(fieldW);
-            changed |= ImGui::DragFloat("##custom_fps", &ov.frameFps, 0.1f, 1.0f, 240.0f);
-        } else if (ov.overlay == ScriptingOverlay::Tempo) {
-            ImGui::TextUnformatted(Str::TlBpm);
-            ImGui::SetNextItemWidth(fieldW);
-            changed |= ImGui::DragFloat("##bpm", &ov.tempoBpm, 0.1f, 10.0f, 500.0f);
-
-            ImGui::TextUnformatted(Str::TlOffsetSeconds);
-            ImGui::SetNextItemWidth(fieldW);
-            changed |= ImGui::DragFloat("##tempo_offset", &ov.tempoOffsetSeconds, 0.001f, -10.0f, 10.0f, "%.3f",
-                                        ImGuiSliderFlags_AlwaysClamp);
-
-            ImGui::TextUnformatted(Str::TlSnap);
-            ImGui::SetNextItemWidth(fieldW);
-            changed |=
-                ImGui::Combo("##tempo_snap", &ov.tempoMeasureIndex, localizedTempoSnapNames(), kTempoSubdivisionCount);
         }
 
         if (changed)
@@ -1268,14 +1209,23 @@ bool ScriptTimelineWindow::renderSettingsBody(const ScriptProject &project, Even
         ImGui::TableSetupColumn("##axis_panel", ImGuiTableColumnFlags_WidthFixed, toggleW);
 
         // Icon header row (eye = shown in timeline, panel = shown in the left strip), with the menu's own
-        // labels as tooltips so the two columns read unambiguously.
+        // labels as tooltips so the two columns read unambiguously. Each glyph is centered over its
+        // fixed toggle column so it sits above the checkbox beneath it.
+        // Center over the checkbox square (GetFrameHeight() wide, left-aligned in the cell), not over the
+        // whole content region — the cell is wider than the square, so centering on the region would drift right.
+        auto centeredIcon = [](const char *icon) {
+            const float off = (ImGui::GetFrameHeight() - ImGui::CalcTextSize(icon).x) * 0.5f;
+            if (off > 0.f)
+                ImGui::SetCursorPosX(ImGui::GetCursorPosX() + off);
+            ImGui::TextUnformatted(icon);
+        };
         ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
         ImGui::TableNextColumn();
         ImGui::TableNextColumn();
-        ImGui::TextUnformatted(ICON_EYE);
+        centeredIcon(ICON_EYE);
         ImGui::SetItemTooltip("%s", Str::AppAxesShowTimeline.c_str());
         ImGui::TableNextColumn();
-        ImGui::TextUnformatted(ICON_PANEL_LEFT);
+        centeredIcon(ICON_PANEL_LEFT);
         ImGui::SetItemTooltip("%s", Str::AppAxesShowPanel.c_str());
 
         for (size_t i = 0; i < kStandardAxisCount; ++i) {
@@ -1310,42 +1260,10 @@ bool ScriptTimelineWindow::renderSettingsBody(const ScriptProject &project, Even
 
     ImGui::SeparatorText(Str::TlOverlay);
     if (ofs::ui::beginForm("##tl_overlay_form")) {
-        ofs::ui::formRow(Str::PcfType);
-        const char *overlayNames[] = {Str::TlOverlayFrame.id("ov_frame"), Str::TlOverlayTempo.id("ov_tempo")};
-        int currentOverlay = static_cast<int>(ov.overlay);
-        ImGui::SetNextItemWidth(-FLT_MIN);
-        if (ImGui::Combo("###tlset_overlay", &currentOverlay, overlayNames, IM_ARRAYSIZE(overlayNames))) {
-            ov.overlay = static_cast<ScriptingOverlay>(currentOverlay);
-            changed = true;
-        }
-
-        if (ov.overlay == ScriptingOverlay::Frame) {
-            int currentFpsIdx = fpsPresetIndex(ov.frameFps);
-            ofs::ui::formRow(Str::TlScriptFps);
+        changed = ofs::ui::renderOverlayControls(ov, Str::PcfType, [](TrKey label) {
+            ofs::ui::formRow(label);
             ImGui::SetNextItemWidth(-FLT_MIN);
-            if (ImGui::Combo("###tlset_fps_preset", &currentFpsIdx, kCommonFpsNames, IM_ARRAYSIZE(kCommonFpsNames))) {
-                ov.frameFps = kCommonFpss[currentFpsIdx];
-                changed = true;
-            }
-
-            ofs::ui::formRow(Str::TlCustomFps);
-            ImGui::SetNextItemWidth(-FLT_MIN);
-            changed |= ImGui::DragFloat("###tlset_custom_fps", &ov.frameFps, 0.1f, 1.0f, 240.0f);
-        } else if (ov.overlay == ScriptingOverlay::Tempo) {
-            ofs::ui::formRow(Str::TlBpm);
-            ImGui::SetNextItemWidth(-FLT_MIN);
-            changed |= ImGui::DragFloat("###tlset_bpm", &ov.tempoBpm, 0.1f, 10.0f, 500.0f);
-
-            ofs::ui::formRow(Str::TlOffsetSeconds);
-            ImGui::SetNextItemWidth(-FLT_MIN);
-            changed |= ImGui::DragFloat("###tlset_tempo_offset", &ov.tempoOffsetSeconds, 0.001f, -10.0f, 10.0f, "%.3f",
-                                        ImGuiSliderFlags_AlwaysClamp);
-
-            ofs::ui::formRow(Str::TlSnap);
-            ImGui::SetNextItemWidth(-FLT_MIN);
-            changed |= ImGui::Combo("###tlset_tempo_snap", &ov.tempoMeasureIndex, localizedTempoSnapNames(),
-                                    kTempoSubdivisionCount);
-        }
+        });
         ofs::ui::endForm();
     }
 

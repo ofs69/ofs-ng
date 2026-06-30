@@ -1122,30 +1122,6 @@ translation = "Incrustation"
 english     = "Type"
 translation = "Type"
 
-[PcfOverlayFrame]
-english     = "Frame"
-translation = "Image"
-
-[PcfOverlayTempo]
-english     = "Tempo"
-translation = "Tempo"
-
-[PcfFps]
-english     = "FPS"
-translation = "FPS"
-
-[PcfBpm]
-english     = "BPM"
-translation = "BPM"
-
-[PcfOffset]
-english     = "Offset"
-translation = "Décalage"
-
-[PcfSnap]
-english     = "Snap"
-translation = "Magnétisme"
-
 # ─────────────────────────────────────────────────────────────────────────────────────────────
 # Shortcut Bindings window (src/UI/ShortcutWindow.cpp)
 #

@@ -1122,30 +1122,6 @@ translation = "オーバーレイ"
 english     = "Type"
 translation = "種類"
 
-[PcfOverlayFrame]
-english     = "Frame"
-translation = "フレーム"
-
-[PcfOverlayTempo]
-english     = "Tempo"
-translation = "テンポ"
-
-[PcfFps]
-english     = "FPS"
-translation = "FPS"
-
-[PcfBpm]
-english     = "BPM"
-translation = "BPM"
-
-[PcfOffset]
-english     = "Offset"
-translation = "オフセット"
-
-[PcfSnap]
-english     = "Snap"
-translation = "スナップ"
-
 # ─────────────────────────────────────────────────────────────────────────────────────────────
 # Shortcut Bindings window (src/UI/ShortcutWindow.cpp)
 #

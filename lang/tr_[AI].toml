@@ -1122,30 +1122,6 @@ translation = "Kaplama"
 english     = "Type"
 translation = "Tür"
 
-[PcfOverlayFrame]
-english     = "Frame"
-translation = "Kare"
-
-[PcfOverlayTempo]
-english     = "Tempo"
-translation = "Tempo"
-
-[PcfFps]
-english     = "FPS"
-translation = "FPS"
-
-[PcfBpm]
-english     = "BPM"
-translation = "BPM"
-
-[PcfOffset]
-english     = "Offset"
-translation = "Kaydırma"
-
-[PcfSnap]
-english     = "Snap"
-translation = "Yakalama"
-
 # ─────────────────────────────────────────────────────────────────────────────────────────────
 # Shortcut Bindings window (src/UI/ShortcutWindow.cpp)
 #

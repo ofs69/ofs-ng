@@ -1122,30 +1122,6 @@ translation = "疊加層"
 english     = "Type"
 translation = "類型"
 
-[PcfOverlayFrame]
-english     = "Frame"
-translation = "幀"
-
-[PcfOverlayTempo]
-english     = "Tempo"
-translation = "節拍"
-
-[PcfFps]
-english     = "FPS"
-translation = "FPS"
-
-[PcfBpm]
-english     = "BPM"
-translation = "BPM"
-
-[PcfOffset]
-english     = "Offset"
-translation = "偏移"
-
-[PcfSnap]
-english     = "Snap"
-translation = "對齊"
-
 # ─────────────────────────────────────────────────────────────────────────────────────────────
 # Shortcut Bindings window (src/UI/ShortcutWindow.cpp)
 #

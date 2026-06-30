@@ -13,6 +13,7 @@
 #include "UI/Icons.h"
 #include "UI/ImGuiHelpers.h"
 #include "UI/Modals.h"
+#include "UI/OverlayControls.h"
 #include "UI/Theme.h"
 #include "Util/FrameAllocator.h"
 #include "Util/PathUtil.h"
@@ -963,42 +964,10 @@ void ProjectConfigWindow::renderSettingsTab(const ScriptProject &project, EventQ
     bool overlayChanged = false;
 
     if (beginForm("##overlay_form")) {
-        formRow(Str::PcfType);
-        const char *overlayNames[] = {Str::PcfOverlayFrame.id("overlay_frame"),
-                                      Str::PcfOverlayTempo.id("overlay_tempo")};
-        int currentOverlay = static_cast<int>(overlayState.overlay);
-        ImGui::SetNextItemWidth(-FLT_MIN);
-        if (ImGui::Combo("##overlay_type", &currentOverlay, overlayNames, IM_ARRAYSIZE(overlayNames))) {
-            overlayState.overlay = static_cast<ScriptingOverlay>(currentOverlay);
-            overlayChanged = true;
-        }
-
-        if (overlayState.overlay == ScriptingOverlay::Frame) {
-            formRow(Str::PcfFps);
+        overlayChanged = ofs::ui::renderOverlayControls(overlayState, Str::PcfType, [](TrKey label) {
+            formRow(label);
             ImGui::SetNextItemWidth(-FLT_MIN);
-            overlayChanged |= ImGui::DragFloat("##fps", &overlayState.frameFps, 0.1f, 1.f, 240.f);
-        } else {
-            formRow(Str::PcfBpm);
-            ImGui::SetNextItemWidth(-FLT_MIN);
-            overlayChanged |= ImGui::DragFloat("##bpm", &overlayState.tempoBpm, 0.1f, 10.f, 500.f);
-
-            formRow(Str::PcfOffset);
-            ImGui::SetNextItemWidth(-FLT_MIN);
-            overlayChanged |=
-                ImGui::DragFloat("##tempo_offset", &overlayState.tempoOffsetSeconds, 0.001f, -10.f, 10.f, "%.3f");
-
-            // Localize only the "measure" word in kTempoSubdivisionNames index 0 ("1/1 (measure)");
-            // the rest are numeric fractions. Mirrors the identical Snap combo in ScriptTimeline.
-            auto **snapNames = ofs::FrameAllocator::instance().allocArray<const char *>(kTempoSubdivisionCount);
-            for (int i = 0; i < kTempoSubdivisionCount; ++i)
-                snapNames[i] = kTempoSubdivisionNames[i];
-            snapNames[0] = fmtScratch("1/1 ({})", Str::TlMeasure.sv());
-
-            formRow(Str::PcfSnap);
-            ImGui::SetNextItemWidth(-FLT_MIN);
-            overlayChanged |=
-                ImGui::Combo("##tempo_snap", &overlayState.tempoMeasureIndex, snapNames, kTempoSubdivisionCount);
-        }
+        });
         endForm();
     }
 

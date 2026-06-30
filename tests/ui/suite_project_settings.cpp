@@ -81,10 +81,10 @@ void RegisterProjectSettingsTests(ImGuiTestEngine *e) {
         auto &proj = *getTestState().project;
         IM_CHECK(proj.overlay.overlay == ofs::ScriptingOverlay::Frame); // fixture default
 
-        comboPick(ctx, "##overlay_form/##overlay_type", "**/overlay_tempo");
+        comboPick(ctx, "##overlay_form/###ov_type", "**/ov_tempo");
         IM_CHECK(proj.overlay.overlay == ofs::ScriptingOverlay::Tempo);
 
-        comboPick(ctx, "##overlay_form/##overlay_type", "**/overlay_frame"); // restore
+        comboPick(ctx, "##overlay_form/###ov_type", "**/ov_frame"); // restore
         IM_CHECK(proj.overlay.overlay == ofs::ScriptingOverlay::Frame);
         closeWindow(ctx);
     };
@@ -95,7 +95,7 @@ void RegisterProjectSettingsTests(ImGuiTestEngine *e) {
         auto &proj = *getTestState().project;
         IM_CHECK_LT(std::abs(proj.overlay.frameFps - 30.f), 0.01f); // fixture default
 
-        ctx->ItemInputValue("**/##fps", 60.f);
+        ctx->ItemInputValue("**/###ov_custom_fps", 60.f);
         ctx->Yield(2);
         IM_CHECK_LT(std::abs(proj.overlay.frameFps - 60.f), 0.5f);
         closeWindow(ctx);
@@ -107,14 +107,14 @@ void RegisterProjectSettingsTests(ImGuiTestEngine *e) {
         openSettingsTab(ctx);
         auto &proj = *getTestState().project;
 
-        comboPick(ctx, "##overlay_form/##overlay_type", "**/overlay_tempo");
+        comboPick(ctx, "##overlay_form/###ov_type", "**/ov_tempo");
         IM_CHECK(proj.overlay.overlay == ofs::ScriptingOverlay::Tempo);
 
-        ctx->ItemInputValue("**/##bpm", 90.f);
+        ctx->ItemInputValue("**/###ov_bpm", 90.f);
         ctx->Yield(2);
         IM_CHECK_LT(std::abs(proj.overlay.tempoBpm - 90.f), 0.5f);
 
-        comboPick(ctx, "##overlay_form/##overlay_type", "**/overlay_frame"); // restore
+        comboPick(ctx, "##overlay_form/###ov_type", "**/ov_frame"); // restore
         closeWindow(ctx);
     };
 

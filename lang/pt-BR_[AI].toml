@@ -1122,30 +1122,6 @@ translation = "Sobreposição"
 english     = "Type"
 translation = "Tipo"
 
-[PcfOverlayFrame]
-english     = "Frame"
-translation = "Quadro"
-
-[PcfOverlayTempo]
-english     = "Tempo"
-translation = "Tempo"
-
-[PcfFps]
-english     = "FPS"
-translation = "FPS"
-
-[PcfBpm]
-english     = "BPM"
-translation = "BPM"
-
-[PcfOffset]
-english     = "Offset"
-translation = "Deslocamento"
-
-[PcfSnap]
-english     = "Snap"
-translation = "Snap"
-
 # ─────────────────────────────────────────────────────────────────────────────────────────────
 # Shortcut Bindings window (src/UI/ShortcutWindow.cpp)
 #

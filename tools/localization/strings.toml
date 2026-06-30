@@ -1191,30 +1191,6 @@ description = "Project > Settings: section header for the scripting overlay."
 english     = "Type"
 description = "Project > Settings > Overlay: label for the overlay-type picker."
 
-[PcfOverlayFrame]
-english     = "Frame"
-description = "Project > Settings > Overlay: overlay type — per-frame grid."
-
-[PcfOverlayTempo]
-english     = "Tempo"
-description = "Project > Settings > Overlay: overlay type — tempo/beat grid."
-
-[PcfFps]
-english     = "FPS"
-description = "Project > Settings > Overlay: label for the frames-per-second drag (Frame mode)."
-
-[PcfBpm]
-english     = "BPM"
-description = "Project > Settings > Overlay: label for the beats-per-minute drag (Tempo mode)."
-
-[PcfOffset]
-english     = "Offset"
-description = "Project > Settings > Overlay: label for the tempo time-offset drag (Tempo mode)."
-
-[PcfSnap]
-english     = "Snap"
-description = "Project > Settings > Overlay: label for the tempo subdivision/snap picker (Tempo mode)."
-
 # ─────────────────────────────────────────────────────────────────────────────────────────────
 # Shortcut Bindings window (src/UI/ShortcutWindow.cpp)
 #
