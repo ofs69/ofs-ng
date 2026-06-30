@@ -257,8 +257,8 @@ english     = "MJPEG (experimental)"
 translation = "MJPEG (実験的)"
 
 [TranscodeMjpegNote]
-english     = "MJPEG re-encodes every frame as a full JPEG: the fastest possible seeking, but files run several times larger and demand fast local storage (SSD/NVMe). This is an expert option — if you're not sure, use H.264 instead. It's the right choice for almost everyone."
-translation = "MJPEG は各フレームを完全な JPEG として再エンコードします。シークは最速ですが、ファイルは数倍の大きさになり、高速なローカルストレージ (SSD/NVMe) が必要です。これは上級者向けの選択肢です — よくわからない場合は H.264 を使用してください。ほとんどの場合はそれが適切な選択です。"
+english     = "MJPEG re-encodes every frame as a full JPEG: the fastest possible seeking, but files run several times larger, demand fast local storage (SSD/NVMe), and can't be hardware-decoded — playback falls back to the CPU. This is an expert option — if you're not sure, use H.264 instead. It's the right choice for almost everyone."
+translation = "MJPEG は各フレームを完全な JPEG として再エンコードします。シークは最速ですが、ファイルは数倍の大きさになり、高速なローカルストレージ (SSD/NVMe) が必要で、ハードウェアデコードができません — 再生は CPU に依存します。これは上級者向けの選択肢です — よくわからない場合は H.264 を使用してください。ほとんどの場合はそれが適切な選択です。"
 
 [TranscodeFastDecode]
 english     = "Optimize for decode speed"

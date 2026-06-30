@@ -270,8 +270,8 @@ english     = "MJPEG (experimental)"
 description = "Intra-frame optimize options modal: codec option — Motion JPEG, fastest possible seeking but very large files."
 
 [TranscodeMjpegNote]
-english     = "MJPEG re-encodes every frame as a full JPEG: the fastest possible seeking, but files run several times larger and demand fast local storage (SSD/NVMe). This is an expert option — if you're not sure, use H.264 instead. It's the right choice for almost everyone."
-description = "Intra-frame optimize options modal: warning shown when the experimental MJPEG codec is selected; steers unsure users back to H.264."
+english     = "MJPEG re-encodes every frame as a full JPEG: the fastest possible seeking, but files run several times larger, demand fast local storage (SSD/NVMe), and can't be hardware-decoded — playback falls back to the CPU. This is an expert option — if you're not sure, use H.264 instead. It's the right choice for almost everyone."
+description = "Intra-frame optimize options modal: warning shown when the experimental MJPEG codec is selected; covers the larger files, fast-storage need, and loss of hardware decoding, then steers unsure users back to H.264."
 
 [TranscodeFastDecode]
 english     = "Optimize for decode speed"

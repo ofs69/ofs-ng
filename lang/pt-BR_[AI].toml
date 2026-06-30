@@ -257,8 +257,8 @@ english     = "MJPEG (experimental)"
 translation = "MJPEG (experimental)"
 
 [TranscodeMjpegNote]
-english     = "MJPEG re-encodes every frame as a full JPEG: the fastest possible seeking, but files run several times larger and demand fast local storage (SSD/NVMe). This is an expert option — if you're not sure, use H.264 instead. It's the right choice for almost everyone."
-translation = "O MJPEG recodifica cada quadro como um JPEG completo: a busca mais rápida possível, mas os arquivos ficam várias vezes maiores e exigem armazenamento local rápido (SSD/NVMe). Esta é uma opção avançada — se tiver dúvidas, use H.264. É a escolha certa para quase todos."
+english     = "MJPEG re-encodes every frame as a full JPEG: the fastest possible seeking, but files run several times larger, demand fast local storage (SSD/NVMe), and can't be hardware-decoded — playback falls back to the CPU. This is an expert option — if you're not sure, use H.264 instead. It's the right choice for almost everyone."
+translation = "O MJPEG recodifica cada quadro como um JPEG completo: a busca mais rápida possível, mas os arquivos ficam várias vezes maiores, exigem armazenamento local rápido (SSD/NVMe) e não podem ser decodificados por hardware — a reprodução recorre à CPU. Esta é uma opção avançada — se tiver dúvidas, use H.264. É a escolha certa para quase todos."
 
 [TranscodeFastDecode]
 english     = "Optimize for decode speed"
