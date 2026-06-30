@@ -1790,10 +1790,8 @@ void ScriptTimelineWindow::renderRegionBar(VideoPlayer &videoPlayer, const Scrip
     };
 
     callbacks.onClick = [&](int idx) {
-        if (idx >= 0 && idx < bandCount) {
+        if (idx >= 0 && idx < bandCount)
             eq.push(SelectRegionEvent{.regionId = regionIds[idx]});
-            m_regionClickedThisFrame = true;
-        }
     };
 
     callbacks.onRightClick = [&](int idx, double t) {
@@ -1813,6 +1811,13 @@ void ScriptTimelineWindow::renderRegionBar(VideoPlayer &videoPlayer, const Scrip
 
     ofs::ui::drawBandBar(dl, barMin, barMax, bands, regionDragState, playheadTime, 0.0, duration, 0.5, toX, toTime,
                          callbacks, "##regionbar");
+
+    // A press anywhere on a region bar must not read as a click in empty space, or OfsApp's
+    // click-outside check would clear the selection. The press is recorded as a drag candidate (and
+    // promoted to an active drag if the cursor moves), both on the mouse-down frame the outside check
+    // runs — so flag it here, not in onClick, which only fires on release after the check has passed.
+    if (regionDragState.hasDragCandidate || regionDragState.mode != ofs::ui::BandBarDragState::Mode::None)
+        m_regionClickedThisFrame = true;
 
     if (ImGui::BeginPopup("##region_ctx")) {
         // Tooltip for a BeginDisabled()'d menu item explaining why it's unavailable. Disabled items

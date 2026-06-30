@@ -97,6 +97,50 @@ void RegisterBandBarTests(ImGuiTestEngine *e) {
         IM_CHECK_LT(std::abs(onlyRegion().startTime - kRegStart), 0.05); // left edge unchanged
     };
 
+    // Pressing a region bar — to click it or to start a drag — must not clear its selection. The press
+    // is the same mouse-down frame OfsApp's click-outside check runs; before the fix the check ran
+    // before onClick (release-fired) flagged the bar, so the down read as a click in empty space and
+    // deselected. Here we drag and assert the selection holds across the whole gesture, mid-drag and
+    // after. (CreateRegionEvent auto-selects, so the region is selected at setup.)
+    IM_REGISTER_TEST(e, "bandbar", "drag_keeps_region_selected")->TestFunc = [](ImGuiTestContext *ctx) {
+        setupRegion(ctx);
+        auto &proj = *getTestState().project;
+        const int regId = proj.procSelRegionId;
+        IM_CHECK(regId != -1);
+
+        const double mid = (kRegStart + kRegEnd) * 0.5;
+        ctx->MouseMoveToPos(regionBarPixel(ctx, mid));
+        ctx->MouseDown(ImGuiMouseButton_Left);
+        ctx->Yield(2);                            // OfsApp's click-outside check runs on this mouse-down frame
+        IM_CHECK_EQ(proj.procSelRegionId, regId); // press alone must not deselect
+        ctx->MouseMoveToPos(regionBarPixel(ctx, mid + 1.0));
+        ctx->Yield(2);
+        IM_CHECK_EQ(proj.procSelRegionId, regId); // still selected mid-drag
+        ctx->MouseUp(ImGuiMouseButton_Left);
+        ctx->Yield(2);
+        IM_CHECK_EQ(proj.procSelRegionId, regId); // and after
+    };
+
+    // The plain-click variant: clicking an already-selected bar must keep it selected with no flicker.
+    // Before the fix the mouse-down deselected and the mouse-up (onClick) reselected, so the final
+    // state looked correct but the panel flickered to the video player for a frame — hence the
+    // assertion sits between the down and the up, where the transient deselect was observable.
+    IM_REGISTER_TEST(e, "bandbar", "click_selected_region_no_flicker")->TestFunc = [](ImGuiTestContext *ctx) {
+        setupRegion(ctx);
+        auto &proj = *getTestState().project;
+        const int regId = proj.procSelRegionId;
+        IM_CHECK(regId != -1);
+
+        const double mid = (kRegStart + kRegEnd) * 0.5;
+        ctx->MouseMoveToPos(regionBarPixel(ctx, mid));
+        ctx->MouseDown(ImGuiMouseButton_Left);
+        ctx->Yield(2);
+        IM_CHECK_EQ(proj.procSelRegionId, regId); // no transient deselect on press
+        ctx->MouseUp(ImGuiMouseButton_Left);
+        ctx->Yield(2);
+        IM_CHECK_EQ(proj.procSelRegionId, regId);
+    };
+
     // Holding Alt during a body drag snaps the region back to its original position.
     IM_REGISTER_TEST(e, "bandbar", "alt_drag_snaps_back")->TestFunc = [](ImGuiTestContext *ctx) {
         setupRegion(ctx);
