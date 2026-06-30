@@ -40,7 +40,7 @@ void RegisterTimelineTests(ImGuiTestEngine *e) {
         IM_CHECK(ctx->WindowInfo("Timeline###timeline").Window != nullptr);
     };
 
-    // Click on empty curve area seeks the playhead to that time.
+    // Click on empty script-line area seeks the playhead to that time.
     IM_REGISTER_TEST(e, "timeline", "click_empty_seeks")->TestFunc = [](ImGuiTestContext *ctx) {
         loadFixture(ctx);
         auto &proj = *getTestState().project;
@@ -55,7 +55,7 @@ void RegisterTimelineTests(ImGuiTestEngine *e) {
         IM_CHECK_LT(std::abs(proj.playback.cursorPos - 2.0), 0.25); // within a quarter second
     };
 
-    // Shift+click on empty curve area adds an action at the cursor.
+    // Shift+click on empty script-line area adds an action at the cursor.
     IM_REGISTER_TEST(e, "timeline", "shift_click_adds_action")->TestFunc = [](ImGuiTestContext *ctx) {
         loadFixture(ctx);
         auto &proj = *getTestState().project;
@@ -236,7 +236,7 @@ void RegisterTimelineTests(ImGuiTestEngine *e) {
     };
 
     // The context menu carries the layout toggle, and choosing "Separate lanes" switches the project's
-    // curve layout to Lanes.
+    // script-line layout to Lanes.
     IM_REGISTER_TEST(e, "timeline", "context_menu_switches_layout")->TestFunc = [](ImGuiTestContext *ctx) {
         loadFixture(ctx);
         auto &proj = *getTestState().project;
@@ -279,7 +279,7 @@ void RegisterTimelineTests(ImGuiTestEngine *e) {
         ctx->Yield(2);
         IM_CHECK_EQ(proj.timelineView.showAudioWaveform, !wfBefore);
 
-        // Per-axis toggles: flip R0's strip presence and curve visibility from the Axes table. (R0 is
+        // Per-axis toggles: flip R0's strip presence and script-line visibility from the Axes table. (R0 is
         // index 3.)
         constexpr int r0 = static_cast<int>(ofs::StandardAxis::R0);
         char ref[48];
@@ -363,7 +363,7 @@ void RegisterTimelineTests(ImGuiTestEngine *e) {
             IM_CHECK_GE(r0Lane, 0);
             const ImRect r = ctx->ItemInfo("Timeline###timeline/##timeline").RectFull;
             const float laneH = r.GetHeight() / static_cast<float>(total);
-            // Kept clear of the curve's left/right edge-scroll zones.
+            // Kept clear of the script line's left/right edge-scroll zones.
             const ImVec2 r0Empty = {r.Min.x + r.GetWidth() * 0.6f,
                                     r.Min.y + laneH * (static_cast<float>(r0Lane) + 0.5f)};
 
@@ -453,11 +453,11 @@ void RegisterTimelineTests(ImGuiTestEngine *e) {
                 ++shown;
         IM_CHECK_EQ(shown, 6);
 
-        // No scrollbar ⇔ the curve band is tall enough to give all six lanes the minimum height.
-        const float curveH = ctx->ItemInfo("Timeline###timeline/##timeline").RectFull.GetHeight();
+        // No scrollbar ⇔ the script-line band is tall enough to give all six lanes the minimum height.
+        const float bandH = ctx->ItemInfo("Timeline###timeline/##timeline").RectFull.GetHeight();
         const float minLaneH = ImGui::GetFontSize() * 1.8f; // mirror minLaneHeight() in ScriptTimeline.cpp
-        ctx->LogInfo("curveH=%.1f  6*minLaneH=%.1f", curveH, 6.0f * minLaneH);
-        IM_CHECK_GE(curveH, 6.0f * minLaneH);
+        ctx->LogInfo("bandH=%.1f  6*minLaneH=%.1f", bandH, 6.0f * minLaneH);
+        IM_CHECK_GE(bandH, 6.0f * minLaneH);
 
         eq.push(ofs::SetTimelineLayoutEvent{.layout = ofs::TimelineLayout::Overlay});
         ctx->Yield();

@@ -80,9 +80,9 @@ constexpr const char *kCustomColorNames[static_cast<int>(AppCol_COUNT) - static_
     "StripSeparator",
     "StripDivider",
     "LockIndicator",
-    "CurveBgTop",
-    "CurveBgBottom",
-    "CurveHoverBg",
+    "ScriptLineBgTop",
+    "ScriptLineBgBottom",
+    "ScriptLineHoverBg",
     "Waveform",
     "GridLine",
     "GridLineMid",
@@ -398,6 +398,19 @@ void parseTheme(const nlohmann::json &j, Theme *dst) {
             if (const auto c = it->find(name); c != it->end())
                 dst->colors[i] = c->get<ImColor>();
         }
+        // COMPAT(2026-06-30): the script-line background keys shipped as "Curve*" before the timeline's
+        // script line stopped being called a "curve". Fall back to the old key when the new one is absent
+        // so themes saved by an older build keep their colors. Retire once pre-rename theme files are gone.
+        constexpr struct {
+            int idx;
+            const char *oldName;
+        } kRenamedColors[] = {{.idx = AppCol_ScriptLineBgTop, .oldName = "CurveBgTop"},
+                              {.idx = AppCol_ScriptLineBgBottom, .oldName = "CurveBgBottom"},
+                              {.idx = AppCol_ScriptLineHoverBg, .oldName = "CurveHoverBg"}};
+        for (const auto &[idx, oldName] : kRenamedColors)
+            if (!it->contains(kCustomColorNames[idx - ImGuiCol_COUNT]))
+                if (const auto c = it->find(oldName); c != it->end())
+                    dst->colors[idx] = c->get<ImColor>();
     }
     if (const auto *it = jsonObjectIf(j, "imguiVars")) {
         for (int i = 0; i < ImGuiStyleVar_COUNT; ++i) {
@@ -533,11 +546,11 @@ void fillBaseAppColors(Theme *dst) {
     dst->colors[AppCol_StripDivider] = t(0.30f);
     dst->colors[AppCol_LockIndicator] = ImColor(accent);
 
-    dst->colors[AppCol_CurveBgTop] = mix(win, text, 0.03f);
-    dst->colors[AppCol_CurveBgBottom] = ImColor(win);
-    dst->colors[AppCol_CurveHoverBg] = t(0.02f);
-    // Opaque but muted: a blend toward the text color reads clearly on the recessed curve track
-    // without overpowering the curves drawn on top.
+    dst->colors[AppCol_ScriptLineBgTop] = mix(win, text, 0.03f);
+    dst->colors[AppCol_ScriptLineBgBottom] = ImColor(win);
+    dst->colors[AppCol_ScriptLineHoverBg] = t(0.02f);
+    // Opaque but muted: a blend toward the text color reads clearly on the recessed script-line track
+    // without overpowering the script lines drawn on top.
     dst->colors[AppCol_Waveform] = mix(win, text, 0.62f);
     dst->colors[AppCol_GridLine] = t(0.18f);
     dst->colors[AppCol_GridLineMid] = t(0.30f);

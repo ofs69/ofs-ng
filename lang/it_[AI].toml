@@ -2446,7 +2446,7 @@ english     = "(depth)"
 translation = "(profondità)"
 
 # ── Timeline window (UI/ScriptTimeline.cpp) ──────────────────────────────────
-# Chrome only: window title, the curve right-click menu, and the region-bar right-click menu. The
+# Chrome only: window title, the script-line right-click menu, and the region-bar right-click menu. The
 # axis short-name strip labels (L0/R1/…) are non-translatable symbols and stay literal; the snap
 # fractions (1/2, 1/4, …) likewise — only the "measure" word in the "1/1 (measure)" entry is keyed
 # (TlMeasure, shared with ProjectConfigWindow's identical Snap combo).
@@ -2496,8 +2496,8 @@ english     = "Show audio waveform"
 translation = "Mostra forma d'onda audio"
 
 [TlLayoutOverlay]
-english     = "Stacked curves"
-translation = "Curve sovrapposte"
+english     = "Stacked lines"
+translation = "Linee sovrapposte"
 
 [TlLayoutLanes]
 english     = "Separate lanes"

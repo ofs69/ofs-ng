@@ -5,7 +5,7 @@
 
 namespace ofs::ui {
 
-// Vertical padding (px) inside the timeline curve area, above and below the 0–100 band.
-inline constexpr float kCurveVMargin = 8.0f;
+// Vertical padding (px) inside the timeline script-line area, above and below the 0–100 band.
+inline constexpr float kScriptLineVMargin = 8.0f;
 
 } // namespace ofs::ui

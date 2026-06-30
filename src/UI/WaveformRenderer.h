@@ -9,7 +9,7 @@ namespace ofs {
 class WaveformShader;
 class WaveformService;
 
-// Draws the audio waveform behind the timeline curves with a custom GLSL shader. Pure renderer: owns
+// Draws the audio waveform behind the timeline script lines with a custom GLSL shader. Pure renderer: owns
 // the shader program and the per-frame callback payload, reads the service's GpuView (a passive data
 // accessor), and injects a raw-GL draw into the ImGui draw stream via ImDrawList::AddCallback — the same
 // pattern as Heatmap::draw / ScriptSimulator::glCallbackFunc.
@@ -22,7 +22,7 @@ class WaveformRenderer {
     WaveformRenderer &operator=(const WaveformRenderer &) = delete;
 
     // Fills `[pos, pos+size]` with the waveform for the visible window. No-op until the service has a
-    // waveform ready. Call inside the timeline's curve-area rendering, before the curves are drawn.
+    // waveform ready. Call inside the timeline's script-line area rendering, before the script lines are drawn.
     void drawBackground(ImDrawList *drawList, const ImVec2 &pos, const ImVec2 &size, double offsetTime,
                         double visibleTime);
 

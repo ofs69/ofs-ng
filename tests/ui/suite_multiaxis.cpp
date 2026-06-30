@@ -16,7 +16,7 @@
 // UI tests for multi-axis editing (axis grouping). The strip mouse interaction state machine lives
 // entirely in ScriptTimeline.cpp and has no service-level coverage, so it is driven here through real
 // clicks/drags. The fan-out edits (move/add/box-select/region) are checked end-to-end through the
-// curve and region-bar UI to confirm the windows wire activeAxis-targeted events to the lead.
+// script-line and region-bar UI to confirm the windows wire activeAxis-targeted events to the lead.
 //
 // Like suite_timeline, the live EventQueue is frozen after init, so tests assert on ScriptProject
 // state rather than attaching new handlers. The fixture loads L0..A1 present and in the strip.
@@ -200,9 +200,9 @@ void RegisterMultiAxisTests(ImGuiTestEngine *e) {
         IM_CHECK_NE(proj.axes[ix(StandardAxis::L1)].isVisible, visBefore); // visibility toggled
     };
 
-    // A curve drag of the lead's point fans out to a grouped member: absolute on the lead,
+    // A script-line drag of the lead's point fans out to a grouped member: absolute on the lead,
     // delta-mirrored on the member.
-    IM_REGISTER_TEST(e, "multiaxis", "group_curve_drag_mirrors_to_member")->TestFunc = [](ImGuiTestContext *ctx) {
+    IM_REGISTER_TEST(e, "multiaxis", "group_line_drag_mirrors_to_member")->TestFunc = [](ImGuiTestContext *ctx) {
         loadFixture(ctx);
         auto &proj = *getTestState().project;
         seedAxis(ctx, StandardAxis::L0, {{2.0, 50}});
@@ -224,7 +224,7 @@ void RegisterMultiAxisTests(ImGuiTestEngine *e) {
         IM_CHECK_LT(std::abs(member.at - lead.at), 0.05); // same Δt
     };
 
-    // Box-select on the curve fans the selection out to every member of the group.
+    // Box-select on the script line fans the selection out to every member of the group.
     IM_REGISTER_TEST(e, "multiaxis", "group_box_select_fans_out")->TestFunc = [](ImGuiTestContext *ctx) {
         loadFixture(ctx);
         auto &proj = *getTestState().project;
@@ -242,7 +242,7 @@ void RegisterMultiAxisTests(ImGuiTestEngine *e) {
         IM_CHECK_GT(proj.axes[ix(StandardAxis::L1)].selection.size(), static_cast<size_t>(0)); // fanned out
     };
 
-    // Shift-click on empty curve adds the same action on every member of the group.
+    // Shift-click on the empty script line adds the same action on every member of the group.
     IM_REGISTER_TEST(e, "multiaxis", "group_shift_click_add_fans_out")->TestFunc = [](ImGuiTestContext *ctx) {
         loadFixture(ctx);
         auto &proj = *getTestState().project;

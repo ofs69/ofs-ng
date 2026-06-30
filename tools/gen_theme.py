@@ -340,7 +340,7 @@ _SIM2D = {"Sim2DFront": _b(0x01, 0xBA, 0xEF), "Sim2DBack": _b(0x10, 0x10, 0x10, 
 # Tempo overlay measure (downbeat) line color; seed-independent like the axis set.
 _TEMPO_MEASURE_COLOR = _b(0xE7, 0x97, 0x5C)
 
-# Action-point identity on the timeline curve: a black contrast outline behind every action, a red
+# Action-point identity on the timeline script line: a black contrast outline behind every action, a red
 # point, switching to green when selected. The classic funscript-editor convention — seed- AND
 # scheme-independent (the black outline reads on either canvas), so kept fixed like the axis set.
 _TIMELINE_POINT = {"TimelineOutline": _b(0, 0, 0), "TimelinePoint": _b(255, 0, 0),
@@ -522,11 +522,11 @@ MAP_APP = {
     # Keep the top near surfaceContainerLowest (the bottom): a larger blend toward ...Low flips
     # direction between schemes (dark: lightens the top; light: darkens it), wrong in both. A small
     # blend + faint primary tint leaves just a subtle warm top-glow over the flat canvas.
-    "CurveBgTop": _mix(_mix("surfaceContainerLowest", "surfaceContainerLow", 0.25), "primary", 0.05),
-    "CurveBgBottom": "surfaceContainerLowest",
-    "CurveHoverBg": _ra("onSurface", 0.015),
-    # Opaque, muted foreground: visible against the recessed curve track without overpowering the
-    # heat-colored curves that draw on top. onSurfaceVariant reads softer than full onSurface.
+    "ScriptLineBgTop": _mix(_mix("surfaceContainerLowest", "surfaceContainerLow", 0.25), "primary", 0.05),
+    "ScriptLineBgBottom": "surfaceContainerLowest",
+    "ScriptLineHoverBg": _ra("onSurface", 0.015),
+    # Opaque, muted foreground: visible against the recessed script-line track without overpowering the
+    # heat-colored script lines that draw on top. onSurfaceVariant reads softer than full onSurface.
     "Waveform": "onSurfaceVariant",
     "GridLine": _ra("onSurfaceVariant", 0.30),
     "GridLineMid": _ra("onSurfaceVariant", 0.55),

@@ -748,7 +748,7 @@ namespace Ofs.Core
 
         // Shape the approach to the value you pressed. Instead of a straight ramp from the previous
         // point to the target, inject ApproachSteps points along an eased position curve over linear
-        // time, so the timeline curve actually bends toward the target.
+        // time, so the timeline script line actually bends toward the target.
         private EditIntent[] ShapedApproachPoints(StandardAxis role, double time, int requestedPos)
         {
             // No anchor to approach from, or a flat move: nothing to shape — just place the point.

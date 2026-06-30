@@ -38,7 +38,7 @@ in the key-binding editor; this page covers the pointer.
 > |-----------------|---------|---------|
 > | **Edit mode** | What a point edit does (add / move / remove) | *Native* |
 > | **Select** | Which points a gesture selects | *Native* |
-> | **Overlay** | The grid drawn over the curve (frames / tempo beats) | — |
+> | **Overlay** | The grid drawn over the script line (frames / tempo beats) | — |
 > | **Step** | Where the playhead lands when stepped | *Follow overlay* |
 >
 > The gestures in **Script Timeline** below describe the *Native* edit/select defaults. A
@@ -73,7 +73,7 @@ in the key-binding editor; this page covers the pointer.
 | Scroll | Zoom |
 | Right-click | Context menu |
 
-The curve layout (right-click → *Stacked curves* / *Separate lanes*) sets whether every axis shares one
+The script-line layout (right-click → *Stacked lines* / *Separate lanes*) sets whether every axis shares one
 band (Overlay) or each gets its own row (Lanes). In **Lanes**, edit gestures still target the active axis
 and fan across its edit group — only the geometry differs (a gesture maps to the active axis's lane):
 

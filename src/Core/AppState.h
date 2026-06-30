@@ -22,7 +22,7 @@ struct ProcessingSelectionState {
     int regionId = -1; // -1 = nothing selected; otherwise matches ProcessingRegion::id
 };
 
-// How the multi-axis curves share the timeline's vertical space. Overlay (default) z-stacks every
+// How the multi-axis script lines share the timeline's vertical space. Overlay (default) z-stacks every
 // visible axis into one shared 0-100 band — best for comparing axes; Lanes gives each drawn axis its
 // own horizontal row with its own 0-100 band — best for reading/editing one axis cleanly.
 enum class TimelineLayout {
@@ -34,9 +34,9 @@ struct TimelineViewState {
     double visibleTime = 10.0;
     double offsetTime = 0.0;
     // Hide source points in the timeline: disables both their rendering and all point
-    // hit-testing so the curve can be scrubbed without grabbing points. Not serialized.
+    // hit-testing so the script line can be scrubbed without grabbing points. Not serialized.
     bool showPoints = true;
-    // Show the audio waveform behind the timeline curves. Opt-in (extraction is comparatively costly),
+    // Show the audio waveform behind the timeline script lines. Opt-in (extraction is comparatively costly),
     // so it defaults off and is persisted with the project (see Format/Project showAudioWaveform).
     bool showAudioWaveform = false;
     // Overlay (z-stacked) vs Lanes (one row per axis). Persisted with the project

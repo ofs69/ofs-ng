@@ -2048,7 +2048,7 @@ TEST_CASE("UpdateTimelineView and SetTimelineShowPoints update timeline view sta
     CHECK_FALSE(f.proj().timelineView.showPoints);
 }
 
-TEST_CASE("SetTimelineLayout switches the curve layout and dirties only on a real change") {
+TEST_CASE("SetTimelineLayout switches the script-line layout and dirties only on a real change") {
     PMFixture f;
     f.showAxis(StandardAxis::L0);                                     // hasActiveProject() so setDirty takes effect
     REQUIRE(f.proj().timelineView.layout == TimelineLayout::Overlay); // default

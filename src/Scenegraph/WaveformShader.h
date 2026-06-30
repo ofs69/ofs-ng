@@ -11,7 +11,7 @@ namespace ofs {
 // keeping CPU and GLSL in agreement.
 inline constexpr int kWaveformMaxScan = 32;
 
-// Fills the audio waveform behind the timeline curves. The min/max peak summary is uploaded as an
+// Fills the audio waveform behind the timeline script lines. The min/max peak summary is uploaded as an
 // RG32F texture (R=min, G=max per bucket). Because a long video needs more buckets than a 1-D texture's
 // max width, the buckets are laid out row-major in a 2-D texture (`uTexW` wide, `uTexH` tall).
 //

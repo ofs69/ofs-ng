@@ -10,7 +10,7 @@
 #include <imgui_te_context.h>
 #include <imgui_te_engine.h>
 
-// Drag interactions on the region BandBar (the strip below the timeline curve).
+// Drag interactions on the region BandBar (the strip below the timeline script line).
 // Same approach as suite_timeline / suite_processing: seed state via events, drive
 // the mouse over computed pixels, and assert on ScriptProject (the event queue is
 // frozen after init, so we read project.regions rather than attaching handlers).

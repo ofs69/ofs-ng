@@ -565,9 +565,9 @@ constexpr ColorItem kAxisColors[] = {
 constexpr ColorItem kHeatmapBase[] = {{AppCol_HeatmapBase, "Base Color"}};
 
 constexpr ColorItem kTimelineColors[] = {
-    {AppCol_CurveBgTop, "Curve BG Top"},
-    {AppCol_CurveBgBottom, "Curve BG Bottom"},
-    {AppCol_CurveHoverBg, "Curve Hover"},
+    {AppCol_ScriptLineBgTop, "Script Line BG Top"},
+    {AppCol_ScriptLineBgBottom, "Script Line BG Bottom"},
+    {AppCol_ScriptLineHoverBg, "Script Line Hover"},
     {AppCol_Waveform, "Waveform"},
     {AppCol_GridLine, "Grid Line"},
     {AppCol_GridLineMid, "Grid Line Mid"},
@@ -1237,13 +1237,13 @@ void ConfigurationWindow::renderThemeTab(const ScriptProject &project, EventQueu
                 applyAndSave();
             if (wWave && ImGui::SliderFloat("Waveform Height", &t.vars[AppVar_WaveformScale].x, 0.1f, 1.f, "%.2f"))
                 applyAndSave();
-            // Curve BG gradient preview (vertical, top → bottom). Decorative — hidden while searching.
+            // Script-line BG gradient preview (vertical, top → bottom). Decorative — hidden while searching.
             if (themeFilter_.empty()) {
                 constexpr float kBarH = 18.f;
                 ImVec2 barMin = ImGui::GetCursorScreenPos();
                 ImVec2 barMax{barMin.x + avail, barMin.y + kBarH};
-                ImU32 ct = ImGui::ColorConvertFloat4ToU32(t.colors[AppCol_CurveBgTop].Value);
-                ImU32 cb = ImGui::ColorConvertFloat4ToU32(t.colors[AppCol_CurveBgBottom].Value);
+                ImU32 ct = ImGui::ColorConvertFloat4ToU32(t.colors[AppCol_ScriptLineBgTop].Value);
+                ImU32 cb = ImGui::ColorConvertFloat4ToU32(t.colors[AppCol_ScriptLineBgBottom].Value);
                 ImGui::GetWindowDrawList()->AddRectFilledMultiColor(barMin, barMax, ct, ct, cb, cb);
                 ImGui::GetWindowDrawList()->AddRect(barMin, barMax, ofs::theme::GetColorU32(ImGuiCol_Border));
                 ImGui::Dummy({avail, kBarH});

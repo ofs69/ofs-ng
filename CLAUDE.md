@@ -348,7 +348,7 @@ Plugin callbacks run on the main thread and must return within the frame budget.
 
 ## Mouse interactions
 
-The full pointer-gesture reference (timeline curve, band bar, bookmarks, simulator overlay, and the
+The full pointer-gesture reference (timeline script line, band bar, bookmarks, simulator overlay, and the
 swappable edit/select/step modes) lives in **[CHEATSHEET.md](CHEATSHEET.md)** — the canonical source.
 When you add or change a mouse gesture, update that file.
 

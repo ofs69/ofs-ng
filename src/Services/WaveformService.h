@@ -26,7 +26,7 @@ struct CancelTaskEvent;
 
 // Extracts the loaded media's audio waveform (via bundled ffmpeg on a JobSystem worker), caches the
 // peak summary to disk by content fingerprint, and owns the GL texture the timeline renders behind its
-// curves. Behavior unit; holds no document state. The texture upload happens on the main thread inside
+// script lines. Behavior unit; holds no document state. The texture upload happens on the main thread inside
 // the WaveformReadyEvent handler (GL is main-thread-only).
 class WaveformService {
   public:

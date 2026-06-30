@@ -737,7 +737,7 @@ description = "Preferences › Theme: placeholder text in the color/variable sea
 
 [PrefSecAxisColors]
 english     = "Axis Colors"
-description = "Preferences › Theme: collapsing-header for per-axis curve colors."
+description = "Preferences › Theme: collapsing-header for per-axis script-line colors."
 
 [PrefSecHeatmap]
 english     = "Heatmap"
@@ -2592,7 +2592,7 @@ english     = "(depth)"
 description = "Simulator: appended to the Surge gizmo label — Surge runs along the view axis, so it reads as a depth value rather than an on-screen line."
 
 # ── Timeline window (UI/ScriptTimeline.cpp) ──────────────────────────────────
-# Chrome only: window title, the curve right-click menu, and the region-bar right-click menu. The
+# Chrome only: window title, the script-line right-click menu, and the region-bar right-click menu. The
 # axis short-name strip labels (L0/R1/…) are non-translatable symbols and stay literal; the snap
 # fractions (1/2, 1/4, …) likewise — only the "measure" word in the "1/1 (measure)" entry is keyed
 # (TlMeasure, shared with ProjectConfigWindow's identical Snap combo).
@@ -2607,19 +2607,19 @@ description = "Faint centered prompt drawn on the empty region bar (no regions p
 
 [TlPointGestures]
 english     = "Shift+click: add point\nAlt+drag: value only\nCtrl+click: select"
-description = "Muted multi-line hint in the timeline point hover tooltip — the curve's modifier gestures, one per line. 'Shift'/'Alt'/'Ctrl' are key names; keep each gesture on its own line (\\n)."
+description = "Muted multi-line hint in the timeline point hover tooltip — the script line's modifier gestures, one per line. 'Shift'/'Alt'/'Ctrl' are key names; keep each gesture on its own line (\\n)."
 
 [TlHideFromPanel]
 english     = "Hide from panel"
-description = "Timeline curve right-click menu — remove this axis from the timeline strip."
+description = "Timeline script-line right-click menu — remove this axis from the timeline strip."
 
 [TlLock]
 english     = "Lock"
-description = "Timeline curve right-click menu — lock the axis so its points can't be edited."
+description = "Timeline script-line right-click menu — lock the axis so its points can't be edited."
 
 [TlUnlock]
 english     = "Unlock"
-description = "Timeline curve right-click menu — unlock a locked axis."
+description = "Timeline script-line right-click menu — unlock a locked axis."
 
 [TlAxisLocked]
 english     = "Axis locked — unlock to edit points"
@@ -2627,31 +2627,31 @@ description = "Muted hint at the bottom of the timeline point tooltip when the a
 
 [TlDelete]
 english     = "Delete"
-description = "Timeline right-click menus — delete the scratch axis (curve menu) or the region (region-bar menu)."
+description = "Timeline right-click menus — delete the scratch axis (script-line menu) or the region (region-bar menu)."
 
 [TlAddProcessingRegion]
 english     = "Add Processing Region"
-description = "Timeline curve right-click menu — create a processing region spanning the current selection."
+description = "Timeline script-line right-click menu — create a processing region spanning the current selection."
 
 [TlShowPoints]
 english     = "Show points"
-description = "Timeline curve right-click menu — toggle rendering and editing of the source action points."
+description = "Timeline script-line right-click menu — toggle rendering and editing of the source action points."
 
 [TlShowWaveform]
 english     = "Show audio waveform"
-description = "Timeline curve right-click menu — toggle the audio waveform drawn behind the curves."
+description = "Timeline script-line right-click menu — toggle the audio waveform drawn behind the script lines."
 
 [TlLayoutOverlay]
-english     = "Stacked curves"
-description = "Timeline curve right-click menu — layout option: stack every axis into one shared band (overlay)."
+english     = "Stacked lines"
+description = "Timeline script-line right-click menu — layout option: stack every axis into one shared band (overlay)."
 
 [TlLayoutLanes]
 english     = "Separate lanes"
-description = "Timeline curve right-click menu — layout option: give each axis its own horizontal row (lane)."
+description = "Timeline script-line right-click menu — layout option: give each axis its own horizontal row (lane)."
 
 [TlOverlay]
 english     = "Overlay"
-description = "Timeline curve right-click menu — submenu (and inner selector label) for the scripting overlay grid."
+description = "Timeline script-line right-click menu — submenu (and inner selector label) for the scripting overlay grid."
 
 [TlOverlayFrame]
 english     = "Frame"
@@ -2698,7 +2698,7 @@ description = "Title of the timeline settings modal opened from the corner gear 
 
 [TlLayout]
 english     = "Layout"
-description = "Timeline settings modal — label for the curve-layout picker (stacked curves vs separate lanes)."
+description = "Timeline settings modal — label for the script-line layout picker (stacked lines vs separate lanes)."
 
 [TlBake]
 english     = "Bake"

@@ -86,11 +86,11 @@ enum AppCol : int {
     AppCol_StripSeparator,
     AppCol_StripDivider,
     AppCol_LockIndicator,
-    // Timeline curve
-    AppCol_CurveBgTop,
-    AppCol_CurveBgBottom,
-    AppCol_CurveHoverBg,
-    AppCol_Waveform, // audio waveform envelope drawn behind the curves; opaque, high-contrast vs the track
+    // Timeline script line
+    AppCol_ScriptLineBgTop,
+    AppCol_ScriptLineBgBottom,
+    AppCol_ScriptLineHoverBg,
+    AppCol_Waveform, // audio waveform envelope drawn behind the script lines; opaque, high-contrast vs the track
     AppCol_GridLine,
     AppCol_GridLineMid,
     // Timeline actions
@@ -99,7 +99,7 @@ enum AppCol : int {
     AppCol_DragPreviewOutline,
     AppCol_SelectionBox,
     AppCol_SelectionBoxFill,
-    // Action curve/point colors (black contrast outline + red point, green when selected)
+    // Action script-line/point colors (black contrast outline + red point, green when selected)
     AppCol_TimelineOutline,
     AppCol_TimelinePoint,
     AppCol_TimelinePointSelected,
@@ -166,7 +166,7 @@ enum AppVar : int {
     // Timeline grid/overlay coarse-line widths (fine lines are fixed at 1px)
     AppVar_GridLineMidWidth,
     AppVar_OverlayLineMajorWidth,
-    // Timeline action-curve stroke width; the contrast outline behind it derives from this
+    // Timeline action script-line stroke width; the contrast outline behind it derives from this
     AppVar_TimelineLineWidth,
     // Audio waveform envelope height as a fraction of the lane half-height (<1 leaves an edge margin)
     AppVar_WaveformScale,
@@ -255,7 +255,7 @@ struct Theme {
     ImNodesStyle nodes = {};            // full imnodes Col[] + geometry, owned verbatim
     ImGradient heatmapColors;           // speed → color (slow=0 … fast=1); line segments + heatmap shader
     float heatmapMaxSpeed = 400.0f;     // speed (pos-units/s) that maps to gradient t=1
-    float backgroundAxisOpacity = 0.5f; // opacity of non-active axes drawn behind the timeline curve
+    float backgroundAxisOpacity = 0.5f; // opacity of non-active axes drawn behind the timeline script line
 };
 
 // Applies a theme: writes ImGui colors+vars, App colors+vars, and the global

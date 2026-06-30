@@ -239,7 +239,7 @@ void RegisterProcessingTests(ImGuiTestEngine *e) {
     };
 
     // Click-away deselect: with a region selected the Processing panel occupies the center node. A
-    // left-click outside it — here the (empty) timeline curve, which is neither the panel nor a region
+    // left-click outside it — here the (empty) timeline script line, which is neither the panel nor a region
     // bar — clears the region selection, reverting the center window to the Video Player. This exercises
     // ProcessingPanel::cursorInsideThisFrame() reporting "outside" so OfsApp pushes ClearRegionSelection.
     IM_REGISTER_TEST(e, "processing", "click_outside_panel_deselects_region")->TestFunc = [](ImGuiTestContext *ctx) {
@@ -248,10 +248,10 @@ void RegisterProcessingTests(ImGuiTestEngine *e) {
         IM_CHECK(proj.procSelRegionId != -1); // CreateRegionEvent auto-selected it
         ctx->Yield();
 
-        // Curve-area center: empty (loadFixture leaves L0 actionless), in the Timeline window, not
+        // Script-line area center: empty (loadFixture leaves L0 actionless), in the Timeline window, not
         // the region bar — so wasRegionClickedThisFrame stays false and the click reads as away.
-        const ImRect curve = ctx->ItemInfo("Timeline###timeline/##timeline").RectFull;
-        ctx->MouseMoveToPos(curve.GetCenter());
+        const ImRect line = ctx->ItemInfo("Timeline###timeline/##timeline").RectFull;
+        ctx->MouseMoveToPos(line.GetCenter());
         ctx->Yield();
         IM_CHECK(!panelUnderCursor()); // guard: genuinely outside the panel
         ctx->MouseClick(ImGuiMouseButton_Left);
