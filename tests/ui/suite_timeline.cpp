@@ -336,6 +336,37 @@ void RegisterTimelineTests(ImGuiTestEngine *e) {
         ctx->Yield();
     };
 
+    // Regression: with the lanes overflowing and scrolled to the top, the corner gear stays clickable.
+    // The bottom strip rows' hit rects extend past the band, but the rows are clip-bounded for hit-testing
+    // (not just pixels), so an overflowing row no longer swallows the gear sitting directly below the strip.
+    // Before the fix the gear's click landed on a strip row and the settings modal never opened.
+    IM_REGISTER_TEST(e, "timeline", "gear_clickable_under_lane_overflow")->TestFunc = [](ImGuiTestContext *ctx) {
+        loadFixture(ctx);
+        ofs::ui::applyDefaultLayout();
+        ctx->Yield(3);
+        auto &eq = *getTestState().eventQueue;
+        auto &proj = *getTestState().project;
+
+        // Ten strip axes in Lanes layout overflow the band (scroll defaults to the top, where the bottom
+        // rows hang furthest past the band — the worst case for the gear sitting just below the strip).
+        for (ofs::StandardAxis ax : {ofs::StandardAxis::L1, ofs::StandardAxis::L2, ofs::StandardAxis::R0,
+                                     ofs::StandardAxis::R1, ofs::StandardAxis::R2, ofs::StandardAxis::V0,
+                                     ofs::StandardAxis::V1, ofs::StandardAxis::A0, ofs::StandardAxis::A1})
+            eq.push(ofs::ToggleAxisPanelVisibilityEvent{.axisRole = ax, .inPanel = true});
+        eq.push(ofs::SetTimelineLayoutEvent{.layout = ofs::TimelineLayout::Lanes});
+        ctx->Yield(3);
+        IM_CHECK(ctx->ItemExists("Timeline###timeline/##lane_scrollbar")); // overflow ⇒ scrolled band
+
+        ctx->ItemClick("**/###tl_settings_gear");
+        ctx->Yield(3);                                          // event drain + ModalManager open latch
+        IM_CHECK(ctx->ItemExists("**/###tlset_show_waveform")); // gear opened the settings modal
+
+        ctx->KeyPress(ImGuiKey_Escape);
+        ctx->Yield(2);
+        eq.push(ofs::SetTimelineLayoutEvent{.layout = ofs::TimelineLayout::Overlay});
+        ctx->Yield();
+    };
+
     // In Lanes layout a drag in an axis's lane still moves the point (the single visible lane spans the
     // full height, so the lane-aware pos mapping reduces to the overlay mapping) and the lane becomes
     // the active axis. Exercises the lane render + interaction path end-to-end.

@@ -289,8 +289,12 @@ void ScriptTimelineWindow::renderStrip(const ScriptProject &project, EventQueue 
     const bool clipRows = lanes && laneLayout_.maxScroll > 0.f;
     float fontH = ImGui::GetFontSize();
 
+    // ImGui::PushClipRect (not the draw-list overload) so the clip bounds the per-row InvisibleButtons'
+    // hit-testing, not just their pixels: an overflowing row's button would otherwise keep its full rect
+    // and, when scrolled toward the top, reach below the band into the corner gear/layout buttons that sit
+    // in the same strip column — stealing their clicks (the rows are submitted first and don't allow overlap).
     if (clipRows)
-        drawList->PushClipRect(stripPos, stripPos + stripSize, true);
+        ImGui::PushClipRect(stripPos, stripPos + stripSize, true);
 
     // The row the mouse is over this frame, resolved through the per-row buttons below (-1 = none).
     int hoveredRow = -1;
@@ -365,7 +369,7 @@ void ScriptTimelineWindow::renderStrip(const ScriptProject &project, EventQueue 
     }
 
     if (clipRows)
-        drawList->PopClipRect();
+        ImGui::PopClipRect();
 
     drawList->AddLine({scriptLinePos.x, pos.y}, {scriptLinePos.x, pos.y + size.y},
                       ofs::theme::GetColorU32(AppCol_StripDivider), 1.f);
