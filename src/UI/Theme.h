@@ -124,6 +124,7 @@ enum AppCol : int {
     AppCol_SimCrosshair,
     AppCol_SimArcRef,
     AppCol_SimArc,
+    AppCol_SimScrim,
     // Simulator 2D bar
     AppCol_Sim2DFront,
     AppCol_Sim2DBack,

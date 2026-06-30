@@ -8,37 +8,37 @@ namespace {
 
 // clang-format off
 constexpr float kCubeVertices[] = {
-    // position              normal
+    // position              normal               color (vertex AO, white = unoccluded)
     // +X face
-     0.5f,  0.5f,  0.5f,   1.0f, 0.0f, 0.0f,
-     0.5f,  0.5f, -0.5f,   1.0f, 0.0f, 0.0f,
-     0.5f, -0.5f, -0.5f,   1.0f, 0.0f, 0.0f,
-     0.5f, -0.5f,  0.5f,   1.0f, 0.0f, 0.0f,
+     0.5f,  0.5f,  0.5f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, 1.0f,
+     0.5f,  0.5f, -0.5f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, 1.0f,
+     0.5f, -0.5f, -0.5f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, 1.0f,
+     0.5f, -0.5f,  0.5f,   1.0f, 0.0f, 0.0f,   1.0f, 1.0f, 1.0f,
     // -X face
-    -0.5f,  0.5f, -0.5f,  -1.0f, 0.0f, 0.0f,
-    -0.5f,  0.5f,  0.5f,  -1.0f, 0.0f, 0.0f,
-    -0.5f, -0.5f,  0.5f,  -1.0f, 0.0f, 0.0f,
-    -0.5f, -0.5f, -0.5f,  -1.0f, 0.0f, 0.0f,
+    -0.5f,  0.5f, -0.5f,  -1.0f, 0.0f, 0.0f,   1.0f, 1.0f, 1.0f,
+    -0.5f,  0.5f,  0.5f,  -1.0f, 0.0f, 0.0f,   1.0f, 1.0f, 1.0f,
+    -0.5f, -0.5f,  0.5f,  -1.0f, 0.0f, 0.0f,   1.0f, 1.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f,  -1.0f, 0.0f, 0.0f,   1.0f, 1.0f, 1.0f,
     // +Y face
-    -0.5f,  0.5f,  0.5f,   0.0f, 1.0f, 0.0f,
-     0.5f,  0.5f,  0.5f,   0.0f, 1.0f, 0.0f,
-     0.5f,  0.5f, -0.5f,   0.0f, 1.0f, 0.0f,
-    -0.5f,  0.5f, -0.5f,   0.0f, 1.0f, 0.0f,
+    -0.5f,  0.5f,  0.5f,   0.0f, 1.0f, 0.0f,   1.0f, 1.0f, 1.0f,
+     0.5f,  0.5f,  0.5f,   0.0f, 1.0f, 0.0f,   1.0f, 1.0f, 1.0f,
+     0.5f,  0.5f, -0.5f,   0.0f, 1.0f, 0.0f,   1.0f, 1.0f, 1.0f,
+    -0.5f,  0.5f, -0.5f,   0.0f, 1.0f, 0.0f,   1.0f, 1.0f, 1.0f,
     // -Y face
-    -0.5f, -0.5f, -0.5f,   0.0f,-1.0f, 0.0f,
-     0.5f, -0.5f, -0.5f,   0.0f,-1.0f, 0.0f,
-     0.5f, -0.5f,  0.5f,   0.0f,-1.0f, 0.0f,
-    -0.5f, -0.5f,  0.5f,   0.0f,-1.0f, 0.0f,
+    -0.5f, -0.5f, -0.5f,   0.0f,-1.0f, 0.0f,   1.0f, 1.0f, 1.0f,
+     0.5f, -0.5f, -0.5f,   0.0f,-1.0f, 0.0f,   1.0f, 1.0f, 1.0f,
+     0.5f, -0.5f,  0.5f,   0.0f,-1.0f, 0.0f,   1.0f, 1.0f, 1.0f,
+    -0.5f, -0.5f,  0.5f,   0.0f,-1.0f, 0.0f,   1.0f, 1.0f, 1.0f,
     // +Z face
-    -0.5f, -0.5f,  0.5f,   0.0f, 0.0f, 1.0f,
-     0.5f, -0.5f,  0.5f,   0.0f, 0.0f, 1.0f,
-     0.5f,  0.5f,  0.5f,   0.0f, 0.0f, 1.0f,
-    -0.5f,  0.5f,  0.5f,   0.0f, 0.0f, 1.0f,
+    -0.5f, -0.5f,  0.5f,   0.0f, 0.0f, 1.0f,   1.0f, 1.0f, 1.0f,
+     0.5f, -0.5f,  0.5f,   0.0f, 0.0f, 1.0f,   1.0f, 1.0f, 1.0f,
+     0.5f,  0.5f,  0.5f,   0.0f, 0.0f, 1.0f,   1.0f, 1.0f, 1.0f,
+    -0.5f,  0.5f,  0.5f,   0.0f, 0.0f, 1.0f,   1.0f, 1.0f, 1.0f,
     // -Z face
-     0.5f, -0.5f, -0.5f,   0.0f, 0.0f,-1.0f,
-    -0.5f, -0.5f, -0.5f,   0.0f, 0.0f,-1.0f,
-    -0.5f,  0.5f, -0.5f,   0.0f, 0.0f,-1.0f,
-     0.5f,  0.5f, -0.5f,   0.0f, 0.0f,-1.0f,
+     0.5f, -0.5f, -0.5f,   0.0f, 0.0f,-1.0f,   1.0f, 1.0f, 1.0f,
+    -0.5f, -0.5f, -0.5f,   0.0f, 0.0f,-1.0f,   1.0f, 1.0f, 1.0f,
+    -0.5f,  0.5f, -0.5f,   0.0f, 0.0f,-1.0f,   1.0f, 1.0f, 1.0f,
+     0.5f,  0.5f, -0.5f,   0.0f, 0.0f,-1.0f,   1.0f, 1.0f, 1.0f,
 };
 
 constexpr uint32_t kCubeIndices[] = {
@@ -95,11 +95,13 @@ Mesh Mesh::uploadToGPU(std::span<const float> vertices, std::span<const uint32_t
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, static_cast<GLsizeiptr>(indices.size_bytes()), indices.data(),
                  GL_STATIC_DRAW);
 
-    constexpr int kStride = 6 * static_cast<int>(sizeof(float));
+    constexpr int kStride = 9 * static_cast<int>(sizeof(float)); // position(3) + normal(3) + color(3)
     glEnableVertexAttribArray(0);
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, kStride, nullptr);
     glEnableVertexAttribArray(1);
     glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, kStride, reinterpret_cast<const void *>(3 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 3, GL_FLOAT, GL_FALSE, kStride, reinterpret_cast<const void *>(6 * sizeof(float)));
 
     glBindVertexArray(0);
 

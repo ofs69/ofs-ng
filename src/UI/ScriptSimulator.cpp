@@ -61,6 +61,52 @@ uint32_t applyOpacity(const ImColor &col, float opacity) {
     return c;
 }
 
+// A soft elliptical darkening behind the 3D model. Over bright or busy video a light model blends in;
+// a translucent veil that fades to fully transparent at its edge (no hard box) restores contrast
+// without occluding the footage. The alpha falls off as a smoothstep from the centre to the rim, so
+// it has zero slope at both ends (a flat-ish plateau, no central hotspot, and a gentle edge) rather
+// than the harder linear cone a single fan produces. Built as concentric rings with per-vertex alpha.
+void addRadialScrim(ImDrawList *dl, ImVec2 center, float rx, float ry, ImU32 color, float peakAlpha) {
+    // A faint, soft veil needs almost no tessellation: the rim alpha is 0 so the polygonal edge is
+    // invisible, and at this low opacity the angular shape of a coarse ring doesn't read either.
+    constexpr int kSeg = 12;
+    constexpr int kRings = 3;
+    const ImVec2 uv = dl->_Data->TexUvWhitePixel;
+    dl->PrimReserve((kSeg + (kRings - 1) * kSeg * 2) * 3, 1 + kRings * kSeg);
+    const auto base = static_cast<ImDrawIdx>(dl->_VtxCurrentIdx);
+
+    const auto colAt = [&](float t) -> ImU32 {
+        const float s = t * t * (3.f - 2.f * t); // smoothstep(0,1,t)
+        ImColor c = color;
+        c.Value.w = peakAlpha * (1.f - s);
+        return c;
+    };
+    dl->PrimWriteVtx(center, uv, colAt(0.f));
+    for (int r = 1; r <= kRings; ++r) {
+        const float t = static_cast<float>(r) / kRings;
+        for (int i = 0; i < kSeg; ++i) {
+            const float a = (static_cast<float>(i) / kSeg) * 2.f * std::numbers::pi_v<float>;
+            dl->PrimWriteVtx({center.x + std::cos(a) * rx * t, center.y + std::sin(a) * ry * t}, uv, colAt(t));
+        }
+    }
+    const auto ring = [&](int r, int i) { return static_cast<ImDrawIdx>(base + 1 + (r - 1) * kSeg + (i % kSeg)); };
+    for (int i = 0; i < kSeg; ++i) { // centre fan to the innermost ring
+        dl->PrimWriteIdx(base);
+        dl->PrimWriteIdx(ring(1, i));
+        dl->PrimWriteIdx(ring(1, i + 1));
+    }
+    for (int r = 1; r < kRings; ++r) { // strips between rings
+        for (int i = 0; i < kSeg; ++i) {
+            dl->PrimWriteIdx(ring(r, i));
+            dl->PrimWriteIdx(ring(r + 1, i));
+            dl->PrimWriteIdx(ring(r + 1, i + 1));
+            dl->PrimWriteIdx(ring(r, i));
+            dl->PrimWriteIdx(ring(r + 1, i + 1));
+            dl->PrimWriteIdx(ring(r, i + 1));
+        }
+    }
+}
+
 // Clamp a dragged bar endpoint so it can't cross the opposite end and flip the bar (which would
 // invert the 0↔100 mapping). Keeps the component along the *original* bar axis at >= minLen, so the
 // endpoint can still move perpendicular (tilt the bar) but never reverse past the fixed end.
@@ -850,6 +896,14 @@ bool ScriptSimulator::renderOverlay(ImDrawList *dl, const ScriptProject &project
         // Clip the model + outline to the video content region so they don't spill over window chrome
         // and slide off smoothly at the edge instead of popping.
         dl->PushClipRect(vp.contentMin, vp.contentMin + vp.contentSize, true);
+
+        // Contrast veil behind the model (under the GL callback so the model draws over it).
+        const float scrimOpacity = ofs::theme::GetStyleVar(AppVar_SimGlobalOpacity);
+        const ImColor scrimCol = ofs::theme::GetColorU32(AppCol_SimScrim);
+        const float scrimPeak = scrimCol.Value.w * scrimOpacity;
+        const ImVec2 perspCenter = {(perspMin.x + perspMax.x) * 0.5f, (perspMin.y + perspMax.y) * 0.5f};
+        addRadialScrim(dl, perspCenter, r.size.x * 0.46f, r.size.y * 0.56f, scrimCol, scrimPeak);
+
         dl->AddCallback(&ScriptSimulator::glCallbackFunc, &callbackDataPerspective);
         dl->AddCallback(ImGui::GetPlatformIO().DrawCallback_ResetRenderState, nullptr);
         dl->AddRect(perspMin, perspMax, ofs::theme::GetColorU32(AppCol_SimCrosshair), 0.f, 1.5f, ImDrawFlags_None);

@@ -1,4 +1,5 @@
 #include "SceneGraph.h"
+#include <glad/gl.h>
 
 namespace ofs::sg {
 
@@ -42,7 +43,20 @@ void SceneGraph::updateTransforms() {
 }
 
 void SceneGraph::render(const glm::mat4 &view, const glm::mat4 &proj) {
+    // ImGui's GL3 backend leaves face culling disabled; enable it for the solid model so back faces
+    // don't bleed through and muddy the shading. Save/restore because the host callback that wraps this
+    // render only restores viewport/scissor/depth state, not cull state.
+    const GLboolean prevCull = glIsEnabled(GL_CULL_FACE);
+    GLint prevFrontFace = GL_CCW;
+    glGetIntegerv(GL_FRONT_FACE, &prevFrontFace);
+    glEnable(GL_CULL_FACE);
+    glCullFace(GL_BACK);
+    glFrontFace(GL_CCW); // glTF winding
+
     shader.use();
+    const glm::vec3 eye = glm::vec3(glm::inverse(view)[3]);
+    shader.setEye(eye);
+    shader.setRefDist(glm::length(eye)); // all simulator cameras target the origin, so |eye| is eye->focus
     for (const auto &node : nodes_) {
         if (node->mesh == nullptr)
             continue;
@@ -52,6 +66,10 @@ void SceneGraph::render(const glm::mat4 &view, const glm::mat4 &proj) {
         shader.setColor(node->color);
         node->mesh->draw();
     }
+
+    glFrontFace(static_cast<GLenum>(prevFrontFace));
+    if (prevCull == GL_FALSE)
+        glDisable(GL_CULL_FACE);
 }
 
 } // namespace ofs::sg

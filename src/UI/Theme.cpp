@@ -111,6 +111,7 @@ constexpr const char *kCustomColorNames[static_cast<int>(AppCol_COUNT) - static_
     "SimCrosshair",
     "SimArcRef",
     "SimArc",
+    "SimScrim",
     "Sim2DFront",
     "Sim2DBack",
     "Sim2DBorder",
@@ -587,6 +588,9 @@ void fillBaseAppColors(Theme *dst) {
     dst->colors[AppCol_SimCrosshair] = t(0.40f);
     dst->colors[AppCol_SimArcRef] = t(0.60f);
     dst->colors[AppCol_SimArc] = ImColor(accent);
+    // Translucent dark veil drawn behind the 3D model so a light model stays legible over bright video;
+    // seed-independent (the backdrop is the video, not theme chrome).
+    dst->colors[AppCol_SimScrim] = ImColor(0.f, 0.f, 0.f, 0.40f);
     // 2D simulator bar — the fixed cyan/navy/red identity, shared by every theme. Seed-independent
     // on purpose: the M3 Dark/Light themes carry the same literals (gen_theme.py _SIM2D), so the
     // bar looks identical across all themes regardless of seed.

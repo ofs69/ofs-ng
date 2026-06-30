@@ -542,6 +542,8 @@ MAP_APP = {
     "SimCrosshair": _ra("onSurfaceVariant", 0.40),
     "SimArcRef": "onSurfaceVariant",
     "SimArc": "tertiary",
+    # Translucent dark veil behind the 3D model; seed-independent (the backdrop is video, not chrome).
+    "SimScrim": _lit(0.0, 0.0, 0.0, 0.40),
     "TimelineCursorOuter": "onSurface",
     "TimelineCursorInner": "surface",
     # Fixed amber, identical in both schemes (not _dim("primary"), which diverges per scheme).
@@ -626,7 +628,7 @@ _APP_VARS = {
 # Number of entries the "colors" JSON object must contain.
 # = AppCol_COUNT - ImGuiCol_COUNT minus the 20 AxisDim* slots,
 #   which are always derived in C++ (fillAxisDimColors) and never serialised.
-_APP_COL_JSON_COUNT = 85
+_APP_COL_JSON_COUNT = 86
 
 
 def _c(rgba):

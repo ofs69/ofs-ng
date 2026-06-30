@@ -243,7 +243,7 @@ bool Window::init() {
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
 
     SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);
-    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 2);
+    SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 4);
 
     int targetWidth = config.width;
     int targetHeight = config.height;

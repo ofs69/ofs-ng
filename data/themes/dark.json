@@ -101,6 +101,7 @@
     "SimCrosshair": "#C4CDD766",
     "SimArcRef": "#C4CDD7",
     "SimArc": "#099EEA",
+    "SimScrim": "#00000066",
     "TimelineCursorOuter": "#EEF4FB",
     "TimelineCursorInner": "#111111",
     "VideoTimelineFill": "#EEA853",

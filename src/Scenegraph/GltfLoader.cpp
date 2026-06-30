@@ -21,12 +21,15 @@ std::optional<Mesh> buildMesh(const cgltf_primitive *prim) {
 
     const cgltf_accessor *posAcc = nullptr;
     const cgltf_accessor *normAcc = nullptr;
+    const cgltf_accessor *colorAcc = nullptr;
     for (cgltf_size i = 0; i < prim->attributes_count; i++) {
         const auto &attr = prim->attributes[i];
         if (attr.type == cgltf_attribute_type_position)
             posAcc = attr.data;
         else if (attr.type == cgltf_attribute_type_normal)
             normAcc = attr.data;
+        else if (attr.type == cgltf_attribute_type_color && colorAcc == nullptr)
+            colorAcc = attr.data; // COLOR_0; the scene shader multiplies it in (used for baked AO)
     }
     if (posAcc == nullptr)
         return std::nullopt;
@@ -40,14 +43,28 @@ std::optional<Mesh> buildMesh(const cgltf_primitive *prim) {
     if (normAcc != nullptr)
         cgltf_accessor_unpack_floats(normAcc, normals.data(), vertexCount * 3);
 
-    std::vector<float> vertices(vertexCount * 6);
+    // COLOR_0 may be VEC3 or VEC4; unpack the native width and keep RGB. Absent -> white (no tint).
+    std::vector<float> colors(vertexCount * 3, 1.0f);
+    if (colorAcc != nullptr) {
+        const cgltf_size comps = cgltf_num_components(colorAcc->type);
+        std::vector<float> raw(vertexCount * comps);
+        cgltf_accessor_unpack_floats(colorAcc, raw.data(), raw.size());
+        for (cgltf_size v = 0; v < vertexCount; v++)
+            for (cgltf_size c = 0; c < 3 && c < comps; c++)
+                colors[v * 3 + c] = raw[v * comps + c];
+    }
+
+    std::vector<float> vertices(vertexCount * 9);
     for (cgltf_size v = 0; v < vertexCount; v++) {
-        vertices[v * 6 + 0] = positions[v * 3 + 0];
-        vertices[v * 6 + 1] = positions[v * 3 + 1];
-        vertices[v * 6 + 2] = positions[v * 3 + 2];
-        vertices[v * 6 + 3] = normals[v * 3 + 0];
-        vertices[v * 6 + 4] = normals[v * 3 + 1];
-        vertices[v * 6 + 5] = normals[v * 3 + 2];
+        vertices[v * 9 + 0] = positions[v * 3 + 0];
+        vertices[v * 9 + 1] = positions[v * 3 + 1];
+        vertices[v * 9 + 2] = positions[v * 3 + 2];
+        vertices[v * 9 + 3] = normals[v * 3 + 0];
+        vertices[v * 9 + 4] = normals[v * 3 + 1];
+        vertices[v * 9 + 5] = normals[v * 3 + 2];
+        vertices[v * 9 + 6] = colors[v * 3 + 0];
+        vertices[v * 9 + 7] = colors[v * 3 + 1];
+        vertices[v * 9 + 8] = colors[v * 3 + 2];
     }
 
     std::vector<uint32_t> indices;
