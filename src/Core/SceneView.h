@@ -1,8 +1,14 @@
 #pragma once
 
 #include "imgui.h"
+#include <numbers>
 
 namespace ofs {
+
+// The default VR camera (VideoFraming::vrRotation {0.5,0.5}) looks straight down +Z. sphereDir's yaw is
+// atan2(z,x), so that forward direction is yaw = π/2 — the VR anchor defaults below pin to it so a fresh
+// project's overlay is centered in view, not 90° off to the side at yaw 0 (+X).
+inline constexpr float kVrForwardYaw = std::numbers::pi_v<float> * 0.5f;
 
 // A SceneView remembers, for one scene, how the video is framed, where the simulator overlay
 // is anchored, and whether the simulator is inverted. It is stored as an optional override per Chapter and as
@@ -37,17 +43,17 @@ struct OverlayAnchor {
 
     // ---- 2D bar, VR mode: two independent sphere directions {yaw,pitch} (radians) so the bar
     // tilts freely, plus an angular thickness. Projected through the live VR camera each frame. ----
-    ImVec2 vrBarP1 = {0.0f, 0.15f};  // {yaw, pitch}
-    ImVec2 vrBarP2 = {0.0f, -0.15f}; // {yaw, pitch}
-    float vrBarWidthAngle = 0.06f;   // angular thickness (radians)
+    ImVec2 vrBarP1 = {kVrForwardYaw, 0.15f};  // {yaw, pitch}
+    ImVec2 vrBarP2 = {kVrForwardYaw, -0.15f}; // {yaw, pitch}
+    float vrBarWidthAngle = 0.06f;            // angular thickness (radians)
 
     // ---- 3D overlay rect: a single pinned direction + size. ----
     ImVec2 center3dNorm = {0.5f, 0.5f};
     float size3dNorm = 0.3f;
     // VR sphere direction the 3D model is pinned to.
-    float vrYaw = 0.0f;         // radians
-    float vrPitch = 0.0f;       // radians
-    float vrAngularSize = 0.5f; // radians; drives the on-screen scale of the 3D overlay in VR
+    float vrYaw = kVrForwardYaw; // radians
+    float vrPitch = 0.0f;        // radians
+    float vrAngularSize = 0.5f;  // radians; drives the on-screen scale of the 3D overlay in VR
 };
 
 struct SceneView {

@@ -172,12 +172,12 @@ void from_json(const nlohmann::json &j, OverlayAnchor &a) {
     a.p1Norm = j.value("p1Norm", ImVec2{0.5f, 0.4f});
     a.p2Norm = j.value("p2Norm", ImVec2{0.5f, 0.6f});
     a.widthNorm = j.value("widthNorm", 0.12f);
-    a.vrBarP1 = j.value("vrBarP1", ImVec2{0.0f, 0.15f});
-    a.vrBarP2 = j.value("vrBarP2", ImVec2{0.0f, -0.15f});
+    a.vrBarP1 = j.value("vrBarP1", ImVec2{kVrForwardYaw, 0.15f});
+    a.vrBarP2 = j.value("vrBarP2", ImVec2{kVrForwardYaw, -0.15f});
     a.vrBarWidthAngle = j.value("vrBarWidthAngle", 0.06f);
     a.center3dNorm = j.value("center3dNorm", ImVec2{0.5f, 0.5f});
     a.size3dNorm = j.value("size3dNorm", 0.3f);
-    a.vrYaw = j.value("vrYaw", 0.0f);
+    a.vrYaw = j.value("vrYaw", kVrForwardYaw);
     a.vrPitch = j.value("vrPitch", 0.0f);
     a.vrAngularSize = j.value("vrAngularSize", 0.5f);
 }
