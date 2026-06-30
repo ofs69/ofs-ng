@@ -2551,6 +2551,10 @@ translation = "タイムライン設定"
 english     = "Layout"
 translation = "レイアウト"
 
+[TlLayoutToggleTip]
+english     = "Toggle stacked / separate lanes"
+translation = "重ね表示／レーン分割を切り替え"
+
 [TlBake]
 english     = "Bake"
 translation = "ベイク"

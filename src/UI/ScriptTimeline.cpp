@@ -1448,24 +1448,48 @@ void ScriptTimelineWindow::render(const ScriptProject &project, EventQueue &eq, 
     const ImVec2 regionBarMax = {scriptLinePos.x + scriptLineSize.x, outerPos.y + outerSize.y};
     renderRegionBar(videoPlayer, project, eq, regionBarMin, regionBarMax, scriptLinePos, scriptLineSize, offsetTime);
 
-    // Settings gear in the dead corner below the left strip, beside the region bar. It opens the
-    // timeline settings modal, giving the overlay/view settings a discoverable entry point that doesn't
-    // depend on knowing the right-click gesture. Width runs to one item-spacing short of the region
-    // bar's left edge so the button keeps a margin from it.
-    const ImVec2 gearMin = {outerPos.x, regionBarMin.y};
-    const float gearMargin = ImGui::GetStyle().ItemSpacing.x;
-    const float gearW = regionBarMin.x - gearMargin - gearMin.x;
-    ImGui::SetCursorScreenPos(gearMin);
+    // Two corner buttons in the dead space below the left strip, beside the region bar: the settings gear
+    // and a layout toggle. The gear opens the timeline settings modal (a discoverable entry point that
+    // doesn't depend on knowing the right-click gesture); the toggle flips stacked↔lanes in one click,
+    // the most-reached-for view setting. The pair splits the corner width with one item-spacing between
+    // them, and the whole run stops one spacing short of the region bar's left edge so it keeps a margin.
+    const ImVec2 cornerMin = {outerPos.x, regionBarMin.y};
+    const float cornerMargin = ImGui::GetStyle().ItemSpacing.x;
+    const float cornerW = regionBarMin.x - cornerMargin - cornerMin.x;
+    const float btnW = (cornerW - cornerMargin) * 0.5f;
+
+    // Empty-label button for the frame, with the icon drawn centered on top. ImGui::Button centers by the
+    // glyph's advance width, but an icon glyph's visible ink isn't centered within its advance, so it reads
+    // off-center; measuring and placing it ourselves centers the ink. This also sidesteps the half-width
+    // clipping that the default frame padding caused.
+    const auto iconButton = [](const char *id, const char *icon, ImVec2 pos, ImVec2 size) {
+        ImGui::SetCursorScreenPos(pos);
+        const bool clicked = ImGui::Button(id, size);
+        const ImVec2 textSize = ImGui::CalcTextSize(icon);
+        ImGui::GetWindowDrawList()->AddText(
+            {pos.x + (size.x - textSize.x) * 0.5f, pos.y + (size.y - textSize.y) * 0.5f},
+            ImGui::GetColorU32(ImGuiCol_Text), icon);
+        return clicked;
+    };
+
     // Raise the settings modal through the shared ModalManager (chrome, centering, FIFO serialization,
     // shutdown teardown). Built here inside the live frame so the width is font-relative, like every
     // other showCustomModal call. The body captures the app-lifetime project/eq/videoPlayer (the
     // ModalManager is torn down before them), reads them fresh each frame, and returns true to close.
-    if (ImGui::Button(ICON_SETTINGS "###tl_settings_gear", {gearW, regionBarH}))
+    if (iconButton("###tl_settings_gear", ICON_SETTINGS, cornerMin, {btnW, regionBarH}))
         showCustomModal(eq, {.title = Str::TlSettingsTitle.c_str(),
                              .width = ImGui::GetMainViewport()->Size.x * 0.45f, // match the Preferences window scale
                              .body = [this, p = &project, eqp = &eq,
                                       vp = &videoPlayer]() { return renderSettingsBody(*p, *eqp, *vp); },
                              .dismissOnClickAway = true}); // click-away / Escape closes it (no Close button)
+
+    // Layout toggle: the icon shows the current layout (layers = stacked, rows = lanes); clicking switches
+    // to the other. Mirrors the right-click menu / settings-combo writes — both push SetTimelineLayoutEvent.
+    const bool lanesLayout = project.timelineView.layout == TimelineLayout::Lanes;
+    if (iconButton("###tl_layout_toggle", lanesLayout ? ICON_ROWS_2 : ICON_LAYERS_2,
+                   {cornerMin.x + btnW + cornerMargin, cornerMin.y}, {btnW, regionBarH}))
+        eq.push(SetTimelineLayoutEvent{lanesLayout ? TimelineLayout::Overlay : TimelineLayout::Lanes});
+    ImGui::SetItemTooltip("%s", Str::TlLayoutToggleTip.c_str());
 
     // ── Edge scroll during box selection or region resize/move ──────────────
     {

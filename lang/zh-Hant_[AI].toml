@@ -2551,6 +2551,10 @@ translation = "時間軸設定"
 english     = "Layout"
 translation = "版面配置"
 
+[TlLayoutToggleTip]
+english     = "Toggle stacked / separate lanes"
+translation = "切換堆疊／分離軌道"
+
 [TlBake]
 english     = "Bake"
 translation = "烘焙"

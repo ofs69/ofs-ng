@@ -2551,6 +2551,10 @@ translation = "Ustawienia osi czasu"
 english     = "Layout"
 translation = "Układ"
 
+[TlLayoutToggleTip]
+english     = "Toggle stacked / separate lanes"
+translation = "Przełącz nakładanie / osobne ścieżki"
+
 [TlBake]
 english     = "Bake"
 translation = "Bake"

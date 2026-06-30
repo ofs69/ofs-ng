@@ -2700,6 +2700,10 @@ description = "Title of the timeline settings modal opened from the corner gear 
 english     = "Layout"
 description = "Timeline settings modal — label for the script-line layout picker (stacked lines vs separate lanes)."
 
+[TlLayoutToggleTip]
+english     = "Toggle stacked / separate lanes"
+description = "Tooltip for the timeline corner button that switches the script-line layout between stacked lines and separate lanes."
+
 [TlBake]
 english     = "Bake"
 description = "Timeline region-bar right-click menu — bake the region's processed result into the axis actions."

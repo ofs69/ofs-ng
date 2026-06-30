@@ -2551,6 +2551,10 @@ translation = "Paramètres de la timeline"
 english     = "Layout"
 translation = "Disposition"
 
+[TlLayoutToggleTip]
+english     = "Toggle stacked / separate lanes"
+translation = "Basculer empilé / pistes séparées"
+
 [TlBake]
 english     = "Bake"
 translation = "Consolider"

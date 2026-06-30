@@ -2551,6 +2551,10 @@ translation = "Configurações da linha do tempo"
 english     = "Layout"
 translation = "Layout"
 
+[TlLayoutToggleTip]
+english     = "Toggle stacked / separate lanes"
+translation = "Alternar empilhado / faixas separadas"
+
 [TlBake]
 english     = "Bake"
 translation = "Aplicar"

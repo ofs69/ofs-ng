@@ -2551,6 +2551,10 @@ translation = "Impostazioni timeline"
 english     = "Layout"
 translation = "Layout"
 
+[TlLayoutToggleTip]
+english     = "Toggle stacked / separate lanes"
+translation = "Alterna sovrapposto / corsie separate"
+
 [TlBake]
 english     = "Bake"
 translation = "Consolida"
