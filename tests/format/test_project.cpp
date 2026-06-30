@@ -160,10 +160,11 @@ Project fullyPopulated() {
     p.createdAtUnix = 1750000000; // provenance timestamps round-trip
     p.modifiedAtUnix = 1750050000;
     p.editSessionCount = 7;
-    p.playbackPosition = 12.5;                  // resume point round-trips
-    p.activeNavigator = "ofs.core.next-action"; // a non-default (plugin) id to prove it round-trips
-    p.activeEditMode = "ofs.core.alt";          // a non-default (plugin) id to prove it round-trips
-    p.activeSelectionMode = "ofs.core.peaks";   // a non-default (plugin) id to prove it round-trips
+    p.playbackPosition = 12.5;                     // resume point round-trips
+    p.activeNavigator = "ofs.core.next-action";    // a non-default (plugin) id to prove it round-trips
+    p.activeEditMode = "ofs.core.alt";             // a non-default (plugin) id to prove it round-trips
+    p.activeSelectionMode = "ofs.core.peaks";      // a non-default (plugin) id to prove it round-trips
+    p.timelineLayout = ofs::TimelineLayout::Lanes; // non-default layout round-trips
 
     ofs::ExportConfig ec;
     ec.format = 2;
@@ -220,6 +221,7 @@ TEST_CASE("Project save/load round-trips every serialized field") {
     CHECK(loaded->activeNavigator == "ofs.core.next-action");
     CHECK(loaded->activeEditMode == "ofs.core.alt");
     CHECK(loaded->activeSelectionMode == "ofs.core.peaks");
+    CHECK(loaded->timelineLayout == ofs::TimelineLayout::Lanes);
     CHECK(loaded->playbackPosition == doctest::Approx(12.5));
     CHECK(loaded->createdAtUnix == 1750000000);
     CHECK(loaded->modifiedAtUnix == 1750050000);
@@ -246,10 +248,11 @@ TEST_CASE("Project::load fills defaults for a sparse document") {
     CHECK(loaded->bookmarkChapters.bookmarks.empty());
     CHECK_FALSE(loaded->lastExport.has_value());
     CHECK(loaded->pluginData.is_object());
-    CHECK(loaded->pluginData.empty());                  // absent key → empty object, never null
-    CHECK(loaded->activeNavigator == "follow-overlay"); // absent → native navigator default
-    CHECK(loaded->activeEditMode == "native");          // absent → native edit mode default
-    CHECK(loaded->activeSelectionMode == "native");     // absent → native selection mode default
+    CHECK(loaded->pluginData.empty());                             // absent key → empty object, never null
+    CHECK(loaded->activeNavigator == "follow-overlay");            // absent → native navigator default
+    CHECK(loaded->activeEditMode == "native");                     // absent → native edit mode default
+    CHECK(loaded->activeSelectionMode == "native");                // absent → native selection mode default
+    CHECK(loaded->timelineLayout == ofs::TimelineLayout::Overlay); // absent → stacked-overlay default
 
     std::filesystem::remove(path);
 }

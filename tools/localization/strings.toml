@@ -2641,6 +2641,14 @@ description = "Timeline curve right-click menu — toggle rendering and editing 
 english     = "Show audio waveform"
 description = "Timeline curve right-click menu — toggle the audio waveform drawn behind the curves."
 
+[TlLayoutOverlay]
+english     = "Stacked curves"
+description = "Timeline curve right-click menu — layout option: stack every axis into one shared band (overlay)."
+
+[TlLayoutLanes]
+english     = "Separate lanes"
+description = "Timeline curve right-click menu — layout option: give each axis its own horizontal row (lane)."
+
 [TlOverlay]
 english     = "Overlay"
 description = "Timeline curve right-click menu — submenu (and inner selector label) for the scripting overlay grid."

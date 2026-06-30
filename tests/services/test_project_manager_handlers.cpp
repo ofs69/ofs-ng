@@ -2048,6 +2048,47 @@ TEST_CASE("UpdateTimelineView and SetTimelineShowPoints update timeline view sta
     CHECK_FALSE(f.proj().timelineView.showPoints);
 }
 
+TEST_CASE("SetTimelineLayout switches the curve layout and dirties only on a real change") {
+    PMFixture f;
+    f.showAxis(StandardAxis::L0);                                     // hasActiveProject() so setDirty takes effect
+    REQUIRE(f.proj().timelineView.layout == TimelineLayout::Overlay); // default
+    f.proj().clearDirtyFlags();
+
+    f.push(SetTimelineLayoutEvent{.layout = TimelineLayout::Lanes});
+    f.drain();
+    CHECK(f.proj().timelineView.layout == TimelineLayout::Lanes);
+    CHECK(f.pm.isDirty()); // layout is persisted, so changing it marks the project unsaved
+
+    f.proj().clearDirtyFlags();
+    f.push(SetTimelineLayoutEvent{.layout = TimelineLayout::Lanes}); // re-select the active layout
+    f.drain();
+    CHECK(f.proj().timelineView.layout == TimelineLayout::Lanes);
+    CHECK_FALSE(f.pm.isDirty()); // no-op doesn't dirty a clean project
+
+    f.push(SetTimelineLayoutEvent{.layout = TimelineLayout::Overlay});
+    f.drain();
+    CHECK(f.proj().timelineView.layout == TimelineLayout::Overlay);
+    CHECK(f.pm.isDirty());
+}
+
+TEST_CASE("SetTimelineShowWaveform toggles the waveform and dirties only on a real change") {
+    PMFixture f;
+    f.showAxis(StandardAxis::L0);                           // hasActiveProject() so setDirty takes effect
+    REQUIRE_FALSE(f.proj().timelineView.showAudioWaveform); // default off
+    f.proj().clearDirtyFlags();
+
+    f.push(SetTimelineShowWaveformEvent{.show = true});
+    f.drain();
+    CHECK(f.proj().timelineView.showAudioWaveform);
+    CHECK(f.pm.isDirty()); // persisted, so the toggle marks the project unsaved
+
+    f.proj().clearDirtyFlags();
+    f.push(SetTimelineShowWaveformEvent{.show = true}); // re-select the active state
+    f.drain();
+    CHECK(f.proj().timelineView.showAudioWaveform);
+    CHECK_FALSE(f.pm.isDirty()); // no-op doesn't dirty a clean project
+}
+
 // ── Scene capture ──────────────────────────────────────────────────────────────
 
 TEST_CASE("Capture events write the project-level scene view when outside any chapter") {

@@ -73,6 +73,16 @@ in the key-binding editor; this page covers the pointer.
 | Scroll | Zoom |
 | Right-click | Context menu |
 
+The curve layout (right-click → *Stacked curves* / *Separate lanes*) sets whether every axis shares one
+band (Overlay) or each gets its own row (Lanes). In **Lanes**, edit gestures still target the active axis
+and fan across its edit group — only the geometry differs (a gesture maps to the active axis's lane):
+
+| Gesture (Lanes only) | Action |
+|---------|--------|
+| Click an inactive lane | Focus that axis (select / group-lead / Ctrl-toggle, like its strip row) — no seek |
+| Shift+scroll | Scroll the lanes vertically (when more axes than fit; a scrollbar appears) |
+| Drag scrollbar (right edge) | Scroll the lanes vertically |
+
 ### Processing Region bar
 
 | Gesture | Action |

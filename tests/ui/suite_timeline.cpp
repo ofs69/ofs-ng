@@ -2,6 +2,7 @@
 #include "Core/ScriptAxisAction.h"
 #include "Core/StandardAxis.h"
 #include "Core/VectorSet.h"
+#include "UI/DockLayout.h" // ofs::ui::applyDefaultLayout
 #include "helpers/TestState.h"
 #include "helpers/TimelineCoords.h"
 #include <cmath>
@@ -230,6 +231,226 @@ void RegisterTimelineTests(ImGuiTestEngine *e) {
 
         IM_CHECK(ctx->ItemExists("**/###tl_show_points"));
         ctx->PopupCloseAll(); // dismiss the context menu so it doesn't intercept later tests' clicks
+        ctx->Yield();
+    };
+
+    // The context menu carries the layout toggle, and choosing "Separate lanes" switches the project's
+    // curve layout to Lanes.
+    IM_REGISTER_TEST(e, "timeline", "context_menu_switches_layout")->TestFunc = [](ImGuiTestContext *ctx) {
+        loadFixture(ctx);
+        auto &proj = *getTestState().project;
+        selectL0(ctx);
+        ctx->Yield();
+        IM_CHECK(proj.timelineView.layout == ofs::TimelineLayout::Overlay); // default
+
+        ctx->MouseMoveToPos(timelinePixel(ctx, 2.0, 50));
+        ctx->MouseClick(ImGuiMouseButton_Right);
+        ctx->Yield(2);
+        IM_CHECK(ctx->ItemExists("**/###tl_layout_overlay"));
+        IM_CHECK(ctx->ItemExists("**/###tl_layout_lanes"));
+        ctx->ItemClick("**/###tl_layout_lanes");
+        ctx->Yield(2);
+
+        IM_CHECK(proj.timelineView.layout == ofs::TimelineLayout::Lanes);
+        ctx->PopupCloseAll();
+        ctx->Yield();
+    };
+
+    // In Lanes layout a drag in an axis's lane still moves the point (the single visible lane spans the
+    // full height, so the lane-aware pos mapping reduces to the overlay mapping) and the lane becomes
+    // the active axis. Exercises the lane render + interaction path end-to-end.
+    IM_REGISTER_TEST(e, "timeline", "lanes_drag_moves_point")->TestFunc = [](ImGuiTestContext *ctx) {
+        loadFixture(ctx);
+        auto &proj = *getTestState().project;
+        selectL0(ctx);
+        seedL0(ctx, {{2.0, 50}});
+        getTestState().eventQueue->push(ofs::SetTimelineLayoutEvent{.layout = ofs::TimelineLayout::Lanes});
+        ctx->Yield(2);
+        const int posBefore = proj.axes[0].actions[0].pos;
+
+        ctx->MouseMoveToPos(timelinePixel(ctx, 2.0, 50));
+        ctx->MouseDown(ImGuiMouseButton_Left);
+        ctx->MouseMoveToPos(timelinePixel(ctx, 2.0, 90)); // drag straight up within the lane
+        ctx->MouseUp(ImGuiMouseButton_Left);
+        ctx->Yield(2);
+
+        IM_CHECK_NE(proj.axes[0].actions[0].pos, posBefore);
+        IM_CHECK(proj.state.activeAxis == ofs::StandardAxis::L0);
+
+        getTestState().eventQueue->push(ofs::SetTimelineLayoutEvent{.layout = ofs::TimelineLayout::Overlay});
+        ctx->Yield();
+    };
+
+    // Clicking an inactive lane focuses that axis without seeking; only a click in the already-active lane
+    // scrubs the playhead. Guards the "seek only on the active lane" rule.
+    IM_REGISTER_TEST(e, "timeline", "lanes_inactive_lane_click_focuses_not_seek")->TestFunc =
+        [](ImGuiTestContext *ctx) {
+            loadFixture(ctx);
+            auto &proj = *getTestState().project;
+            // Two lanes: L0 (active) plus R0, so there is an inactive lane to click into.
+            getTestState().eventQueue->push(
+                ofs::ToggleAxisPanelVisibilityEvent{.axisRole = ofs::StandardAxis::R0, .inPanel = true});
+            getTestState().eventQueue->push(ofs::SetTimelineLayoutEvent{.layout = ofs::TimelineLayout::Lanes});
+            selectL0(ctx);
+            ctx->Yield(2);
+            IM_CHECK(proj.axes[static_cast<size_t>(ofs::StandardAxis::R0)].showInStrip);
+            IM_CHECK(proj.state.activeAxis == ofs::StandardAxis::L0);
+
+            // Resolve R0's lane center from the showInStrip ordering (robust to how many axes the strip shows).
+            int total = 0, r0Lane = -1;
+            for (size_t i = 0; i < ofs::kStandardAxisCount; ++i)
+                if (proj.axes[i].showInStrip) {
+                    if (static_cast<ofs::StandardAxis>(i) == ofs::StandardAxis::R0)
+                        r0Lane = total;
+                    ++total;
+                }
+            IM_CHECK_GT(total, 1);
+            IM_CHECK_GE(r0Lane, 0);
+            const ImRect r = ctx->ItemInfo("Timeline###timeline/##timeline").RectFull;
+            const float laneH = r.GetHeight() / static_cast<float>(total);
+            // Kept clear of the curve's left/right edge-scroll zones.
+            const ImVec2 r0Empty = {r.Min.x + r.GetWidth() * 0.6f,
+                                    r.Min.y + laneH * (static_cast<float>(r0Lane) + 0.5f)};
+
+            const double cursorBefore = proj.playback.cursorPos;
+            ctx->MouseMoveToPos(r0Empty);
+            ctx->MouseClick(ImGuiMouseButton_Left);
+            ctx->Yield(2);
+            IM_CHECK(proj.state.activeAxis == ofs::StandardAxis::R0);            // focused
+            IM_CHECK_LT(std::abs(proj.playback.cursorPos - cursorBefore), 0.01); // did NOT seek
+
+            // A second click — R0 is now the active lane — does seek.
+            ctx->MouseClick(ImGuiMouseButton_Left);
+            ctx->Yield(2);
+            IM_CHECK_GT(std::abs(proj.playback.cursorPos - cursorBefore), 0.1); // seeked this time
+
+            getTestState().eventQueue->push(ofs::SetTimelineLayoutEvent{.layout = ofs::TimelineLayout::Overlay});
+            ctx->Yield();
+        };
+
+    // Axis grouping functions in the separated view: a box-select on the active lane fans across the edit
+    // group exactly as in the stacked view, selecting in every grouped axis (not just one lane).
+    IM_REGISTER_TEST(e, "timeline", "lanes_box_select_fans_across_group")->TestFunc = [](ImGuiTestContext *ctx) {
+        loadFixture(ctx);
+        auto &proj = *getTestState().project;
+        auto &eq = *getTestState().eventQueue;
+        eq.push(ofs::ToggleAxisPanelVisibilityEvent{.axisRole = ofs::StandardAxis::R0, .inPanel = true});
+        auto seed = [&](ofs::StandardAxis ax, std::initializer_list<ofs::ScriptAxisAction> pts) {
+            ofs::VectorSet<ofs::ScriptAxisAction> a;
+            for (const auto &p : pts)
+                a.insert(p);
+            eq.push(ofs::CommitAxisActionsEvent{.axis = ax, .actions = a});
+        };
+        seed(ofs::StandardAxis::L0, {{2.0, 50}, {3.0, 50}});
+        seed(ofs::StandardAxis::R0, {{2.0, 50}, {3.0, 50}});
+        ofs::AxisRoles roles;
+        roles.set(static_cast<size_t>(ofs::StandardAxis::L0));
+        roles.set(static_cast<size_t>(ofs::StandardAxis::R0));
+        eq.push(ofs::SetAxisGroupingEvent{.roles = roles, .lead = ofs::StandardAxis::L0});
+        eq.push(ofs::SetTimelineLayoutEvent{.layout = ofs::TimelineLayout::Lanes});
+        ctx->Yield(3);
+        IM_CHECK(proj.state.activeAxis == ofs::StandardAxis::L0);
+
+        // Box-select across [1.5, 3.5] on L0's lane (lane 0). The vertical position is irrelevant — a box
+        // selects a time range — so any Y inside the active lane works.
+        int total = 0;
+        for (size_t i = 0; i < ofs::kStandardAxisCount; ++i)
+            if (proj.axes[i].showInStrip)
+                ++total;
+        IM_CHECK_GT(total, 1);
+        const ImRect r = ctx->ItemInfo("Timeline###timeline/##timeline").RectFull;
+        const float y = r.Min.y + (r.GetHeight() / static_cast<float>(total)) * 0.5f; // lane 0 (L0) center
+        ctx->MouseMoveToPos({timelinePixel(ctx, 1.5, 50).x, y});
+        ctx->MouseDown(ImGuiMouseButton_Left);
+        ctx->MouseMoveToPos({timelinePixel(ctx, 3.5, 50).x, y});
+        ctx->MouseUp(ImGuiMouseButton_Left);
+        ctx->Yield(2);
+
+        IM_CHECK_GT(proj.axes[static_cast<size_t>(ofs::StandardAxis::L0)].selection.size(), static_cast<size_t>(0));
+        IM_CHECK_GT(proj.axes[static_cast<size_t>(ofs::StandardAxis::R0)].selection.size(),
+                    static_cast<size_t>(0)); // grouping fanned the selection to R0
+
+        eq.push(ofs::SetTimelineLayoutEvent{.layout = ofs::TimelineLayout::Overlay});
+        ctx->Yield();
+    };
+
+    // Acceptance: the default six-axis strip in Lanes layout fits the timeline's default docked height
+    // without a scrollbar — every lane stays >= minLaneHeight (font * 1.8), so the band shares evenly and
+    // makeLaneLayout reports no overflow. Guards the "6 axes, no scrollbar" requirement against future
+    // dock-ratio or min-lane-height drift.
+    IM_REGISTER_TEST(e, "timeline", "lanes_six_axes_fit_without_scrollbar")->TestFunc = [](ImGuiTestContext *ctx) {
+        loadFixture(ctx);
+        ofs::ui::applyDefaultLayout(); // the real default dock; the harness window is the authored 1920x1080
+        ctx->Yield(3);
+        auto &eq = *getTestState().eventQueue;
+        auto &proj = *getTestState().project;
+
+        // Six strip axes — L0 is always shown; add five more for the canonical multi-axis set.
+        for (ofs::StandardAxis ax : {ofs::StandardAxis::L1, ofs::StandardAxis::L2, ofs::StandardAxis::R0,
+                                     ofs::StandardAxis::R1, ofs::StandardAxis::R2})
+            eq.push(ofs::ToggleAxisPanelVisibilityEvent{.axisRole = ax, .inPanel = true});
+        eq.push(ofs::SetTimelineLayoutEvent{.layout = ofs::TimelineLayout::Lanes});
+        ctx->Yield(3);
+
+        int shown = 0;
+        for (size_t i = 0; i < ofs::kStandardAxisCount; ++i)
+            if (proj.axes[i].showInStrip)
+                ++shown;
+        IM_CHECK_EQ(shown, 6);
+
+        // No scrollbar ⇔ the curve band is tall enough to give all six lanes the minimum height.
+        const float curveH = ctx->ItemInfo("Timeline###timeline/##timeline").RectFull.GetHeight();
+        const float minLaneH = ImGui::GetFontSize() * 1.8f; // mirror minLaneHeight() in ScriptTimeline.cpp
+        ctx->LogInfo("curveH=%.1f  6*minLaneH=%.1f", curveH, 6.0f * minLaneH);
+        IM_CHECK_GE(curveH, 6.0f * minLaneH);
+
+        eq.push(ofs::SetTimelineLayoutEvent{.layout = ofs::TimelineLayout::Overlay});
+        ctx->Yield();
+    };
+
+    // Past the fitting count the lanes overflow and the band scrolls: Shift+wheel moves the lanes, and the
+    // focus-click hit-test honors the scroll offset, so the lane at the top of the band after scrolling is
+    // a later axis than before. Exercises makeLaneLayout overflow + scrolled laneAxisAt end-to-end.
+    IM_REGISTER_TEST(e, "timeline", "lanes_overflow_scrolls")->TestFunc = [](ImGuiTestContext *ctx) {
+        loadFixture(ctx);
+        ofs::ui::applyDefaultLayout();
+        ctx->Yield(3);
+        auto &eq = *getTestState().eventQueue;
+        auto &proj = *getTestState().project;
+
+        // Ten strip axes — comfortably past the ~6 that fit, so the band must scroll.
+        for (ofs::StandardAxis ax : {ofs::StandardAxis::L1, ofs::StandardAxis::L2, ofs::StandardAxis::R0,
+                                     ofs::StandardAxis::R1, ofs::StandardAxis::R2, ofs::StandardAxis::V0,
+                                     ofs::StandardAxis::V1, ofs::StandardAxis::A0, ofs::StandardAxis::A1})
+            eq.push(ofs::ToggleAxisPanelVisibilityEvent{.axisRole = ax, .inPanel = true});
+        eq.push(ofs::SetTimelineLayoutEvent{.layout = ofs::TimelineLayout::Lanes});
+        selectL0(ctx);
+        ctx->Yield(3);
+        IM_CHECK(proj.state.activeAxis == ofs::StandardAxis::L0);
+
+        const ImRect r = ctx->ItemInfo("Timeline###timeline/##timeline").RectFull;
+        const float laneH = ImGui::GetFontSize() * 1.8f;       // == minLaneHeight() once scrolling
+        const ImVec2 topLane = {r.Min.x + r.GetWidth() * 0.5f, // mid-X: clear of edge-scroll + scrollbar
+                                r.Min.y + laneH * 0.5f};       // center of the top visible lane
+
+        // Before scrolling the top lane is L0 (lane 0). Clicking it would only seek (already active), so to
+        // prove scrolling we scroll first, then click. The wheel step is exactly minLaneHeight, so 2 notches
+        // == 2 lanes, bringing L2 (the 3rd axis) to the top. Shift+wheel only scrolls over the timeline.
+        ctx->MouseMoveToPos(topLane);
+        ctx->KeyDown(ImGuiMod_Shift);
+        ctx->MouseWheelY(-2.0f); // scroll down 2 lanes
+        ctx->KeyUp(ImGuiMod_Shift);
+        ctx->Yield(3);
+
+        ctx->MouseMoveToPos(topLane);
+        ctx->MouseClick(ImGuiMouseButton_Left);
+        ctx->Yield(2);
+        // The top lane is no longer L0 — scrolling moved a later axis under the cursor and the focus-click
+        // selected it. (L2 is the 3rd showInStrip axis: L0, L1, L2, …)
+        IM_CHECK(proj.state.activeAxis != ofs::StandardAxis::L0);
+        IM_CHECK(proj.state.activeAxis == ofs::StandardAxis::L2);
+
+        eq.push(ofs::SetTimelineLayoutEvent{.layout = ofs::TimelineLayout::Overlay});
         ctx->Yield();
     };
 }

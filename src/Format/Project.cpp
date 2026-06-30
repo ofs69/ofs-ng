@@ -231,6 +231,11 @@ NLOHMANN_JSON_SERIALIZE_ENUM(ScriptingOverlay, {
                                                    {ScriptingOverlay::Tempo, "Tempo"},
                                                })
 
+NLOHMANN_JSON_SERIALIZE_ENUM(TimelineLayout, {
+                                                 {TimelineLayout::Overlay, "Overlay"},
+                                                 {TimelineLayout::Lanes, "Lanes"},
+                                             })
+
 void to_json(nlohmann::json &j, const OverlayState &s) {
     j = nlohmann::json{{"overlay", s.overlay},
                        {"frameFps", s.frameFps},
@@ -440,7 +445,8 @@ void to_json(nlohmann::json &j, const Project &p) {
                                 {"activeNavigator", p.activeNavigator},
                                 {"activeEditMode", p.activeEditMode},
                                 {"activeSelectionMode", p.activeSelectionMode},
-                                {"showAudioWaveform", p.showAudioWaveform}});
+                                {"showAudioWaveform", p.showAudioWaveform},
+                                {"timelineLayout", p.timelineLayout}});
     if (p.lastExport)
         j["lastExport"] = *p.lastExport;
     // Only persist plugin data when something is stored, so an untouched project doesn't carry a "{}".
@@ -476,6 +482,8 @@ void from_json(const nlohmann::json &j, Project &p) {
     p.activeEditMode = j.value("activeEditMode", std::string("native"));
     p.activeSelectionMode = j.value("activeSelectionMode", std::string("native"));
     p.showAudioWaveform = j.value("showAudioWaveform", false);
+    // COMPAT(2026-06-30): timeline layout absent in pre-lanes projects; default Overlay (the prior look).
+    p.timelineLayout = j.value("timelineLayout", TimelineLayout::Overlay);
     if (j.contains("lastExport"))
         p.lastExport = j["lastExport"].get<ExportConfig>();
     // Absent or a non-object (corrupt) → empty object, never null.

@@ -2495,6 +2495,14 @@ translation = "Mostra punti"
 english     = "Show audio waveform"
 translation = "Mostra forma d'onda audio"
 
+[TlLayoutOverlay]
+english     = "Stacked curves"
+translation = "Curve sovrapposte"
+
+[TlLayoutLanes]
+english     = "Separate lanes"
+translation = "Corsie separate"
+
 [TlOverlay]
 english     = "Overlay"
 translation = "Overlay"

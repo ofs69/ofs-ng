@@ -2495,6 +2495,14 @@ translation = "Показать точки"
 english     = "Show audio waveform"
 translation = "Показать аудиоволну"
 
+[TlLayoutOverlay]
+english     = "Stacked curves"
+translation = "Наложение кривых"
+
+[TlLayoutLanes]
+english     = "Separate lanes"
+translation = "Отдельные дорожки"
+
 [TlOverlay]
 english     = "Overlay"
 translation = "Сетка"

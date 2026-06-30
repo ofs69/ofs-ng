@@ -44,7 +44,11 @@ void buildDefault(ImGuiID dockspaceId, ImGuiViewport *viewport) {
     const float uiScale = layoutUiScale();
 
     ImGuiID dockMainId = dockspaceId;
-    ImGuiID dockIdBottom = ImGui::DockBuilderSplitNode(dockMainId, ImGuiDir_Down, 0.30f, nullptr, &dockMainId);
+    // The bottom strip holds the script timeline (plus the slim video-controls row below it). Its height
+    // is set so the timeline's default 6-axis strip fits the Lanes layout without scrolling — each lane
+    // stays above minLaneHeight() (see ScriptTimeline.cpp); the ui-test lanes_six_axes_fit_without_scrollbar
+    // pins the two together.
+    ImGuiID dockIdBottom = ImGui::DockBuilderSplitNode(dockMainId, ImGuiDir_Down, 0.34f, nullptr, &dockMainId);
     // The right column holds text-heavy panels (Statistics label/value rows, Tool Options); its width
     // must grow with the content scale or those rows clip. Cap at half the viewport so the video keeps
     // the larger share even at very high DPI / font size.

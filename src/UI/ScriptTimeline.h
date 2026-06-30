@@ -17,6 +17,20 @@ struct ScriptProject;
 class EventQueue;
 class WaveformRenderer;
 
+// Resolved per-frame lane geometry for the curve/strip band (Lanes layout). Built once at the top of
+// renderTimeline and read by renderStrip, renderCurves, and the curve interaction so every surface
+// agrees on lane height/scroll. Overlay leaves it at its band-filling default (laneH == curveSize.y,
+// no scroll). See the lane-geometry helpers in ScriptTimeline.cpp.
+struct LaneLayout {
+    bool lanes = false;    // Lanes mode active
+    int count = 0;         // visible lane count (= showInStrip axes)
+    ImVec2 curvePos{};     // full curve band top-left
+    ImVec2 curveSize{};    // full curve band size
+    float laneH = 0.f;     // per-lane height (>= minLaneHeight() once scrolling)
+    float scroll = 0.f;    // applied vertical scroll offset, clamped to [0, maxScroll]
+    float maxScroll = 0.f; // content overflow; > 0 means the lane scrollbar is shown
+};
+
 class ScriptTimelineWindow {
   public:
     ScriptTimelineWindow();
@@ -86,9 +100,17 @@ class ScriptTimelineWindow {
                      const AxisEntry *stripEntries, int numRows, bool hasGroup);
     // Curve area: background gradient, waveform, grid, the per-axis polylines + active-axis dots, the
     // in-progress selection box, and the outer border. Read-only; all interaction stays in renderTimeline.
+    // `lanes` splits each axis into its own horizontal row (grid + curve + dots per lane); Overlay (false)
+    // z-stacks every axis into the shared full-height 0-100 band.
     void renderCurves(const ScriptProject &project, ImDrawList *drawList, WaveformRenderer &waveform, const ImVec2 &pos,
                       const ImVec2 &size, const ImVec2 &curvePos, const ImVec2 &curveSize, double offsetTime,
-                      const AxisEntry *curveEntries, int curveCount, bool windowHovered);
+                      const AxisEntry *curveEntries, int curveCount, bool lanes, bool windowHovered);
+    // Draw + drive the Lanes vertical scrollbar (a thumb on the curve's right edge). Hit-tested manually,
+    // not as an ImGui item, so it never displaces the ##timeline item the curve interaction reads via
+    // IsItemHovered. Returns true while the cursor is over the track so the caller suppresses curve
+    // gestures there; a no-op returning false unless the lanes overflow (laneLayout_.maxScroll > 0).
+    bool renderLaneScrollbar(ImDrawList *drawList, const ImVec2 &curvePos, const ImVec2 &curveSize, float mouseY,
+                             bool windowHovered);
     // The ##timeline_ctx popup body (axis lock/visibility/delete/add-region, view toggles, overlay
     // submenu). Begun and ended here; the matching OpenPopup calls live in the strip/curve interaction.
     void renderContextMenu(const ScriptProject &project, EventQueue &eq, VideoPlayer &videoPlayer);
@@ -110,6 +132,12 @@ class ScriptTimelineWindow {
     SelectionState selectionState;
     StripDragState stripDrag;
     ofs::ui::BandBarDragState regionDragState;
+    // Lanes-layout vertical scroll: persisted scroll offset and the resolved geometry for the current
+    // frame. laneScroll_ survives between frames (clamped to the live overflow each frame); laneLayout_
+    // is rebuilt at the top of renderTimeline. laneScrollDragging_ latches a scrollbar-thumb drag.
+    float laneScroll_ = 0.f;
+    bool laneScrollDragging_ = false;
+    LaneLayout laneLayout_;
     // Axis the timeline context menu (##timeline_ctx) acts on, latched when the menu opens — from a
     // right-click on a strip row/curve or from the corner settings gear. Count == no axis section.
     StandardAxis ctxAxis = StandardAxis::Count;

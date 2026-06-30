@@ -2495,6 +2495,14 @@ translation = "ポイントを表示"
 english     = "Show audio waveform"
 translation = "音声波形を表示"
 
+[TlLayoutOverlay]
+english     = "Stacked curves"
+translation = "曲線を重ねる"
+
+[TlLayoutLanes]
+english     = "Separate lanes"
+translation = "軸ごとのレーン"
+
 [TlOverlay]
 english     = "Overlay"
 translation = "オーバーレイ"

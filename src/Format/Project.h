@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "Core/AppState.h" // TimelineLayout
 #include "Core/BookmarkChapterState.h"
 #include "Core/ExportConfig.h"
 #include "Core/FunscriptMetadata.h"
@@ -75,6 +76,9 @@ struct Project {
     // Whether the timeline audio waveform is enabled for this project. Opt-in and persisted; mirrors
     // ScriptProject::timelineView.showAudioWaveform. Default off.
     bool showAudioWaveform = false;
+    // Timeline curve layout (Overlay z-stack vs per-axis Lanes). Persisted; mirrors
+    // ScriptProject::timelineView.layout. Default Overlay.
+    TimelineLayout timelineLayout = TimelineLayout::Overlay;
     // Per-plugin custom data: a JSON object shaped pluginName → { key → value }. Opaque to the host;
     // round-trips losslessly. Mirrors ScriptProject::pluginData. Object (never null) so it writes as {}.
     nlohmann::json pluginData = nlohmann::json::object();

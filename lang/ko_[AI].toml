@@ -2495,6 +2495,14 @@ translation = "포인트 표시"
 english     = "Show audio waveform"
 translation = "오디오 파형 표시"
 
+[TlLayoutOverlay]
+english     = "Stacked curves"
+translation = "곡선 겹치기"
+
+[TlLayoutLanes]
+english     = "Separate lanes"
+translation = "개별 레인"
+
 [TlOverlay]
 english     = "Overlay"
 translation = "오버레이"

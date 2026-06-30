@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/AppState.h"         // TimelineLayout
 #include "Core/ProcessingRegion.h" // ProcessingRegion, AxisRoles
 #include "Core/StandardAxis.h"
 
@@ -83,6 +84,10 @@ struct SetTimelineShowPointsEvent {
 
 struct SetTimelineShowWaveformEvent {
     bool show;
+};
+
+struct SetTimelineLayoutEvent {
+    TimelineLayout layout;
 };
 
 } // namespace ofs

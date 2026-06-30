@@ -2495,6 +2495,14 @@ translation = "显示节点"
 english     = "Show audio waveform"
 translation = "显示音频波形"
 
+[TlLayoutOverlay]
+english     = "Stacked curves"
+translation = "曲线叠加"
+
+[TlLayoutLanes]
+english     = "Separate lanes"
+translation = "独立轨道"
+
 [TlOverlay]
 english     = "Overlay"
 translation = "叠加层"

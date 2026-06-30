@@ -2495,6 +2495,14 @@ translation = "Noktaları göster"
 english     = "Show audio waveform"
 translation = "Ses dalgasını göster"
 
+[TlLayoutOverlay]
+english     = "Stacked curves"
+translation = "Üst üste eğriler"
+
+[TlLayoutLanes]
+english     = "Separate lanes"
+translation = "Ayrı şeritler"
+
 [TlOverlay]
 english     = "Overlay"
 translation = "Kaplama"

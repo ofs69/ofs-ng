@@ -62,13 +62,21 @@ static float easeOutExpo(float x) noexcept {
     return x >= 1.f ? 1.f : 1.f - powf(2, -10 * x);
 }
 
+// Breathing room kept above pos=100 and below pos=0 so the end-point dots aren't clipped at the band
+// edge. kCurveVMargin for a normal full-height band, but capped at a quarter of the band so a thin
+// Lanes row (many visible axes) still leaves the curve at least half the lane — without this cap a
+// fixed 8px-per-side margin exceeds a <16px lane, inverting posToScreenY and pinning screenYToPos to 0.
+static float curveVMargin(float bandHeight) {
+    return std::min(ofs::ui::kCurveVMargin, bandHeight * 0.25f);
+}
+
 static float posToScreenY(int posVal, const ImVec2 &pos, const ImVec2 &size) {
-    constexpr float margin = ofs::ui::kCurveVMargin;
+    const float margin = curveVMargin(size.y);
     return pos.y + margin + (1.0f - (float)posVal / 100.0f) * (size.y - 2.0f * margin);
 }
 
 static int screenYToPos(float y, const ImVec2 &pos, const ImVec2 &size) {
-    constexpr float margin = ofs::ui::kCurveVMargin;
+    const float margin = curveVMargin(size.y);
     float effectiveHeight = size.y - 2.0f * margin;
     if (effectiveHeight <= 0)
         return 0;
@@ -82,6 +90,103 @@ static float timeToScreenX(double time, double visibleTime, double offsetTime, c
 
 static double screenXToTime(float x, double visibleTime, double offsetTime, const ImVec2 &pos, const ImVec2 &size) {
     return offsetTime + (double)((x - pos.x) / size.x) * visibleTime;
+}
+
+// ── Lane geometry (Lanes layout) ─────────────────────────────────────────────────────────────────
+// In Lanes layout the curve area is split into one row per strip axis, so each axis gets its own
+// 0-100 band. Lane index = the axis's ordinal among showInStrip axes (StandardAxis order), matching
+// renderStrip's row order so a lane lines up with its strip label. posToScreenY/screenYToPos already
+// take a (pos,size) rect, so a lane is just the right sub-rect fed to those same two functions.
+//
+// Lanes share the band evenly until that would push a lane below kMinLaneH; past that the lane height
+// is pinned to the minimum and the band scrolls (LaneLayout::scroll/maxScroll), so a dense many-axis
+// view stays editable instead of collapsing into unusable slivers.
+struct LaneRect {
+    ImVec2 pos;
+    ImVec2 size;
+};
+
+// Usability floor for one lane, font-relative so it scales with DPI/font. At the default font this is
+// ~32 px, which keeps the 0-100 band plus its label comfortably legible. The default script-timeline
+// dock height (DockLayout.cpp) is sized so the default 6-axis strip still shares it evenly without
+// scrolling at this floor; the seventh axis is the first that overflows. The relationship is pinned by
+// the ui-test `lanes_six_axes_fit_without_scrollbar`, so a change to either side that breaks it fails the build.
+static float minLaneHeight() {
+    return ImGui::GetFontSize() * 1.8f;
+}
+
+static int laneRowCount(const ScriptProject &project) {
+    int n = 0;
+    for (const auto &ax : project.axes)
+        if (ax.showInStrip)
+            ++n;
+    return n;
+}
+
+static int laneIndexOf(const ScriptProject &project, StandardAxis role) {
+    int n = 0;
+    for (const auto &ax : project.axes) {
+        if (ax.role == role)
+            return ax.showInStrip ? n : -1;
+        if (ax.showInStrip)
+            ++n;
+    }
+    return -1;
+}
+
+// Resolve lane height + scroll bounds for the band. `scrollIn` is the persisted scroll, returned
+// clamped into `.scroll`. Lanes fill the band evenly while each stays >= minLaneHeight(); below that the
+// height pins to the minimum and the remainder becomes scrollable overflow.
+static LaneLayout makeLaneLayout(const ScriptProject &project, bool lanes, const ImVec2 &curvePos,
+                                 const ImVec2 &curveSize, float scrollIn) {
+    LaneLayout l;
+    l.lanes = lanes;
+    l.curvePos = curvePos;
+    l.curveSize = curveSize;
+    l.count = laneRowCount(project);
+    l.laneH = curveSize.y;
+    if (!lanes || l.count <= 0)
+        return l;
+    float evenH = curveSize.y / static_cast<float>(l.count);
+    float minH = minLaneHeight();
+    if (evenH >= minH) {
+        l.laneH = evenH; // fits — share the band evenly, no scroll
+    } else {
+        l.laneH = minH;
+        l.maxScroll = static_cast<float>(l.count) * minH - curveSize.y;
+        l.scroll = std::clamp(scrollIn, 0.f, l.maxScroll);
+    }
+    return l;
+}
+
+// Sub-rect of the `index`-th lane within the band. Overlay, an out-of-range index, or a single lane all
+// collapse to the full band — so a non-lanes caller and the degenerate one-axis case reuse the shared rect.
+static LaneRect laneRectAt(const LaneLayout &l, int index) {
+    if (!l.lanes || l.count <= 1 || index < 0 || index >= l.count)
+        return {.pos = l.curvePos, .size = l.curveSize};
+    float y = l.curvePos.y - l.scroll + l.laneH * static_cast<float>(index);
+    return {.pos = {l.curvePos.x, y}, .size = {l.curveSize.x, l.laneH}};
+}
+
+static LaneRect laneRectForAxis(const ScriptProject &project, const LaneLayout &l, StandardAxis role) {
+    return laneRectAt(l, laneIndexOf(project, role));
+}
+
+// Which axis's lane the cursor's Y falls in (Count if outside the band or past every lane) — the inverse
+// of laneRectAt, used to resolve which axis a Lanes-mode gesture targets. Honors the scroll offset.
+static StandardAxis laneAxisAt(const ScriptProject &project, const LaneLayout &l, float mouseY) {
+    if (!l.lanes || l.count <= 0)
+        return StandardAxis::Count;
+    if (mouseY < l.curvePos.y || mouseY >= l.curvePos.y + l.curveSize.y) // outside the visible band
+        return StandardAxis::Count;
+    int idx = static_cast<int>((mouseY - l.curvePos.y + l.scroll) / l.laneH);
+    if (idx < 0 || idx >= l.count)
+        return StandardAxis::Count;
+    int n = 0;
+    for (const auto &ax : project.axes)
+        if (ax.showInStrip && n++ == idx)
+            return ax.role;
+    return StandardAxis::Count;
 }
 
 // Time width of one dot-decimation bucket: dots closer than ~2*dotRadius() px are collapsed to one.
@@ -185,8 +290,21 @@ void ScriptTimelineWindow::renderStrip(const ScriptProject &project, EventQueue 
                                        int numRows, bool hasGroup) {
     drawList->AddRectFilled(stripPos, stripPos + stripSize, ofs::theme::GetColorU32(AppCol_StripBg));
 
-    float rowH = numRows > 0 ? size.y / static_cast<float>(numRows) : size.y;
+    // The separated view shows every axis in its own lane at all times, so the per-axis visibility toggle
+    // is meaningless there: hide the eye icon and disable its hit-area (a click anywhere on the row then
+    // selects/groups instead).
+    const bool lanes = project.timelineView.layout == TimelineLayout::Lanes;
+
+    // In Lanes the rows mirror the curve lanes exactly (height + scroll), so a label always sits beside
+    // its lane; Overlay shares the band evenly. When the lanes overflow (scrollbar shown) the rows are
+    // clipped to the band and offset by the scroll, just like the curve side.
+    const float rowH = lanes ? laneLayout_.laneH : (numRows > 0 ? size.y / static_cast<float>(numRows) : size.y);
+    const float scroll = lanes ? laneLayout_.scroll : 0.f;
+    const bool clipRows = lanes && laneLayout_.maxScroll > 0.f;
     float fontH = ImGui::GetFontSize();
+
+    if (clipRows)
+        drawList->PushClipRect(stripPos, stripPos + stripSize, true);
 
     // The row the mouse is over this frame, resolved through the per-row buttons below (-1 = none).
     int hoveredRow = -1;
@@ -194,7 +312,7 @@ void ScriptTimelineWindow::renderStrip(const ScriptProject &project, EventQueue 
     for (int i = 0; i < numRows; ++i) {
         const auto &entry = stripEntries[i];
         const auto &ax = project.axes[static_cast<size_t>(entry.role)];
-        ImVec2 rowMin = {stripPos.x, stripPos.y + rowH * static_cast<float>(i)};
+        ImVec2 rowMin = {stripPos.x, stripPos.y - scroll + rowH * static_cast<float>(i)};
         ImVec2 rowMax = {stripPos.x + stripSize.x, rowMin.y + rowH};
 
         // Each row is a real interactive item: the strip hit-tests and reacts through these per-row
@@ -241,20 +359,27 @@ void ScriptTimelineWindow::renderStrip(const ScriptProject &project, EventQueue 
                                     {rowMin.x + kLockPad + kLockSz, rowCy + kLockSz * 0.5f}, lockCol);
         }
 
-        // Resolve the eye-icon slot first so the label can be elided to stop short of it: in a narrow
-        // strip (small window / large font) the name would otherwise run under the icon.
-        const char *eyeIcon = ax.isVisible ? ICON_EYE : ICON_EYE_OFF;
-        ImVec2 iconSz = ImGui::CalcTextSize(eyeIcon);
-        float iconX = rowMax.x - 6.f - iconSz.x;
-        float iconY = rowMin.y + (rowH - iconSz.y) * 0.5f;
-
         const float nameX = rowMin.x + kNameX0;
-        ofs::ui::addTextShadow(drawList, {nameX, textY}, textColor, ofs::ui::elide(labelStr, iconX - nameX - 2.f));
-
-        // Hidden axes keep their hue but read muted; visible ones use the row's full text color.
-        ImU32 eyeCol = ax.isVisible ? textColor : ((textColor & 0x00FFFFFFu) | (0x66u << 24));
-        drawList->AddText({iconX, iconY}, eyeCol, eyeIcon);
+        if (lanes) {
+            // No eye icon in the separated view — the label runs to the row's right edge.
+            ofs::ui::addTextShadow(drawList, {nameX, textY}, textColor,
+                                   ofs::ui::elide(labelStr, rowMax.x - 6.f - nameX));
+        } else {
+            // Resolve the eye-icon slot first so the label can be elided to stop short of it: in a narrow
+            // strip (small window / large font) the name would otherwise run under the icon.
+            const char *eyeIcon = ax.isVisible ? ICON_EYE : ICON_EYE_OFF;
+            ImVec2 iconSz = ImGui::CalcTextSize(eyeIcon);
+            float iconX = rowMax.x - 6.f - iconSz.x;
+            float iconY = rowMin.y + (rowH - iconSz.y) * 0.5f;
+            ofs::ui::addTextShadow(drawList, {nameX, textY}, textColor, ofs::ui::elide(labelStr, iconX - nameX - 2.f));
+            // Hidden axes keep their hue but read muted; visible ones use the row's full text color.
+            ImU32 eyeCol = ax.isVisible ? textColor : ((textColor & 0x00FFFFFFu) | (0x66u << 24));
+            drawList->AddText({iconX, iconY}, eyeCol, eyeIcon);
+        }
     }
+
+    if (clipRows)
+        drawList->PopClipRect();
 
     drawList->AddLine({curvePos.x, pos.y}, {curvePos.x, pos.y + size.y}, ofs::theme::GetColorU32(AppCol_StripDivider),
                       1.f);
@@ -269,9 +394,10 @@ void ScriptTimelineWindow::renderStrip(const ScriptProject &project, EventQueue 
         const StandardAxis clickedRole = stripEntries[row].role;
         const auto &rowAx = project.axes[static_cast<size_t>(clickedRole)];
         // Match the eye-icon slot drawn above (rowMax.x - 6 - iconWidth) so the click target tracks the
-        // icon at any font size, instead of a fixed pixel band that drifts off it.
+        // icon at any font size, instead of a fixed pixel band that drifts off it. The separated view has
+        // no eye icon, so its hit-area is disabled and the whole row selects/groups.
         const char *eyeIcon = rowAx.isVisible ? ICON_EYE : ICON_EYE_OFF;
-        const bool eyeArea = mX >= stripPos.x + stripSize.x - 6.f - ImGui::CalcTextSize(eyeIcon).x;
+        const bool eyeArea = !lanes && mX >= stripPos.x + stripSize.x - 6.f - ImGui::CalcTextSize(eyeIcon).x;
         const bool ctrl = ImGui::GetIO().KeyCtrl;
 
         if (ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Left) && !eyeArea) {
@@ -315,7 +441,7 @@ void ScriptTimelineWindow::renderStrip(const ScriptProject &project, EventQueue 
     if (stripDrag.anchorRow >= 0 && stripDrag.anchorRow < numRows) {
         if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
             float mY = ImGui::GetMousePos().y;
-            int row = std::clamp(static_cast<int>((mY - stripPos.y) / rowH), 0, numRows - 1);
+            int row = std::clamp(static_cast<int>((mY - stripPos.y + scroll) / rowH), 0, numRows - 1);
             int lo = std::min(stripDrag.anchorRow, row);
             int hi = std::max(stripDrag.anchorRow, row);
             // IsMouseDragging is true every frame, so only push when the spanned run actually changes —
@@ -339,12 +465,28 @@ void ScriptTimelineWindow::renderStrip(const ScriptProject &project, EventQueue 
 void ScriptTimelineWindow::renderCurves(const ScriptProject &project, ImDrawList *drawList, WaveformRenderer &waveform,
                                         const ImVec2 &pos, const ImVec2 &size, const ImVec2 &curvePos,
                                         const ImVec2 &curveSize, double offsetTime, const AxisEntry *curveEntries,
-                                        int curveCount, bool windowHovered) {
+                                        int curveCount, bool lanes, bool windowHovered) {
     {
         ImU32 bgTop = ofs::theme::GetColorU32(AppCol_CurveBgTop);
         ImU32 bgBottom = ofs::theme::GetColorU32(AppCol_CurveBgBottom);
         drawList->AddRectFilledMultiColor(curvePos, curvePos + curveSize, bgTop, bgTop, bgBottom, bgBottom);
     }
+
+    // Clip everything that follows to the curve band. In Lanes the wash/separators/grid below are placed
+    // per-lane, and a scrolled lane's rect runs past the band edge — without this clip those fills/lines
+    // bleed over the strip rows above and the region bar below. (Overlay lanes tile the band exactly, so
+    // it is a harmless no-op there.) The per-axis loop nests its own per-lane clips inside this one.
+    drawList->PushClipRect(curvePos, curvePos + curveSize, true);
+
+    // Active-lane wash (Lanes only): the active lane carries the same highlight as its active strip row so
+    // the two read as one continuous band. Part of the background — drawn before the waveform so it tints
+    // behind it, not over it (same layer as the background gradient).
+    if (lanes)
+        for (int li = 0; li < curveCount; ++li)
+            if (curveEntries[li].isActive) {
+                LaneRect lr = laneRectAt(laneLayout_, li);
+                drawList->AddRectFilled(lr.pos, lr.pos + lr.size, ofs::theme::GetColorU32(AppCol_StripActiveBg));
+            }
 
     // Audio waveform: drawn on top of the background gradient but before the grid lines and curves, so it
     // sits behind everything the user edits while staying legible.
@@ -354,15 +496,39 @@ void ScriptTimelineWindow::renderCurves(const ScriptProject &project, ImDrawList
     if (windowHovered && ImGui::IsMouseHoveringRect(curvePos, curvePos + curveSize))
         drawList->AddRectFilled(curvePos, curvePos + curveSize, ofs::theme::GetColorU32(AppCol_CurveHoverBg));
 
-    for (int i = 0; i < 9; i++) {
-        float y = posToScreenY((i + 1) * 10, curvePos, curveSize);
-        ImU32 gridCol =
-            (i == 4) ? ofs::theme::GetColorU32(AppCol_GridLineMid) : ofs::theme::GetColorU32(AppCol_GridLine);
-        float lineW = (i == 4) ? ofs::theme::GetStyleVar(AppVar_GridLineMidWidth) : 1.0f;
-        drawList->AddLine({curvePos.x, y}, {curvePos.x + curveSize.x, y}, gridCol, lineW);
+    // Lane separators (Lanes only): a line between adjacent lanes makes each lane's bounds legible. Drawn
+    // with the grid layer (above the waveform) so the boundary stays crisp over a loud waveform.
+    if (lanes) {
+        const ImU32 sepCol = ofs::theme::GetColorU32(AppCol_StripSeparator);
+        for (int li = 1; li < curveCount; ++li) {
+            LaneRect lr = laneRectAt(laneLayout_, li);
+            drawList->AddLine({lr.pos.x, lr.pos.y}, {lr.pos.x + lr.size.x, lr.pos.y}, sepCol, 1.0f);
+        }
     }
 
-    drawList->PushClipRect(curvePos, curvePos + curveSize, true);
+    // Grid: the nine 0-100 reference lines (mid/50 emphasized). One band in Overlay; in Lanes each row
+    // gets its own band so every lane reads against its own 0/50/100.
+    auto drawGrid = [&](const ImVec2 &gp, const ImVec2 &gs) {
+        for (int i = 0; i < 9; i++) {
+            float y = posToScreenY((i + 1) * 10, gp, gs);
+            ImU32 gridCol =
+                (i == 4) ? ofs::theme::GetColorU32(AppCol_GridLineMid) : ofs::theme::GetColorU32(AppCol_GridLine);
+            float lineW = (i == 4) ? ofs::theme::GetStyleVar(AppVar_GridLineMidWidth) : 1.0f;
+            drawList->AddLine({gp.x, y}, {gp.x + gs.x, y}, gridCol, lineW);
+        }
+    };
+    if (lanes)
+        for (int li = 0; li < curveCount; ++li) {
+            LaneRect lr = laneRectAt(laneLayout_, li);
+            drawGrid(lr.pos, lr.size);
+        }
+    else
+        drawGrid(curvePos, curveSize);
+
+    // The active lane's sub-rect, set per iteration in Lanes mode; the shared full rect in Overlay. Every
+    // per-axis curve/dot/selection mapping below routes through these instead of curvePos/curveSize.
+    ImVec2 lanePos = curvePos;
+    ImVec2 laneSize = curveSize;
 
     const auto &lineColors = ofs::theme::getActive().heatmapColors;
 
@@ -426,8 +592,8 @@ void ScriptTimelineWindow::renderCurves(const ScriptProject &project, ImDrawList
                 prev = nullptr;
                 continue;
             }
-            ImVec2 p(timeToScreenX(it->at, viewState.visibleTime, offsetTime, curvePos, curveSize),
-                     posToScreenY(it->pos, curvePos, curveSize));
+            ImVec2 p(timeToScreenX(it->at, viewState.visibleTime, offsetTime, lanePos, laneSize),
+                     posToScreenY(it->pos, lanePos, laneSize));
             if (have) {
                 float dx = p.x - lastPt.x;
                 float dy = p.y - lastPt.y;
@@ -462,6 +628,18 @@ void ScriptTimelineWindow::renderCurves(const ScriptProject &project, ImDrawList
         const auto &ax = project.axes[static_cast<size_t>(entry.role)];
         const auto &displayActions = ax.resolved ? ax.resolved->actions : ax.actions;
         bool isActive = entry.isActive;
+
+        // Separated view always shows every axis (its visibility toggle is hidden), so every lane draws its
+        // curve, confined to its own sub-rect and clipped so a steep curve can't bleed into a neighbor.
+        // Overlay still hides a non-active, non-grouped axis whose eye is off, and draws every passed entry
+        // in the shared full-height rect.
+        const bool drawCurve = lanes || entry.isActive || ax.isVisible || entry.inEditSet;
+        if (lanes) {
+            LaneRect lr = laneRectAt(laneLayout_, ci);
+            lanePos = lr.pos;
+            laneSize = lr.size;
+            drawList->PushClipRect(lr.pos, lr.pos + lr.size, true);
+        }
         // Eased emphasis weight (0 = background, 1 = active/grouped), stepped per frame in
         // stepAxisEmphasis. It fades the line's opacity/width/outline when the active axis or edit
         // group changes; the heat-gradient and dot passes below still switch discretely on isActive,
@@ -476,8 +654,10 @@ void ScriptTimelineWindow::renderCurves(const ScriptProject &project, ImDrawList
         // transient width pulse on top, so the line visibly swells then relaxes back to base — the
         // motion is in the transition, the resting width is unchanged. Floored at 1px so an undershoot
         // on the way out can't invert the stroke.
+        // Lanes: every axis owns its row, so none is a faded background reference — full opacity, no
+        // background-opacity dip. Overlay keeps the dip so stacked background axes recede behind the lead.
         const float bgAxisOpacity = ofs::theme::getActive().backgroundAxisOpacity;
-        float lineOpacity = std::clamp(bgAxisOpacity + (1.0f - bgAxisOpacity) * e, 0.0f, 1.0f);
+        float lineOpacity = lanes ? 1.0f : std::clamp(bgAxisOpacity + (1.0f - bgAxisOpacity) * e, 0.0f, 1.0f);
         const float baseLineW = ofs::theme::GetStyleVar(AppVar_TimelineLineWidth);
         const float bgLineW = std::max(1.0f, baseLineW - 1.0f);
         const float settleW = bgLineW + (baseLineW - bgLineW) * std::clamp(e, 0.0f, 1.0f);
@@ -488,7 +668,7 @@ void ScriptTimelineWindow::renderCurves(const ScriptProject &project, ImDrawList
 
         constexpr double skipAt = -1.0;
 
-        if (!displayActions.empty()) {
+        if (drawCurve && !displayActions.empty()) {
             auto itStart = displayActions.lowerBound(ScriptAxisAction{offsetTime, 0});
             if (itStart != displayActions.begin())
                 --itStart;
@@ -502,10 +682,11 @@ void ScriptTimelineWindow::renderCurves(const ScriptProject &project, ImDrawList
             strokePolyline(itStart, itEnd, skipAt, outlineW,
                            [outlineCol](const ScriptAxisAction *, const ScriptAxisAction *) { return outlineCol; });
 
-            // Pass 2: colored lines. The active axis uses the per-segment heat
-            // gradient (bucketed so same-speed runs still join flush); background
-            // axes are a single color.
-            if (isActive) {
+            // Pass 2: colored lines. The active axis uses the per-segment heat gradient (bucketed so
+            // same-speed runs still join flush). In Lanes every axis is a first-class row, so all lanes get
+            // the heat gradient too; in Overlay the stacked background axes stay a single flat axis color so
+            // they read as references behind the lead.
+            if (isActive || lanes) {
                 strokePolyline(itStart, itEnd, skipAt, lineW, segmentHeatColor);
             } else {
                 ImU32 axColor = (entry.color & 0x00FFFFFF) | (static_cast<ImU32>(255.0f * lineOpacity) << 24);
@@ -541,10 +722,10 @@ void ScriptTimelineWindow::renderCurves(const ScriptProject &project, ImDrawList
                     const float rOuter = dotRadius() * dotScale;
                     const float rInner = dotRadius() * 0.7f * dotScale;
                     forEachVisibleDot(
-                        project, ax.role, ax.actions, viewState.visibleTime, offsetTime, curveSize.x,
+                        project, ax.role, ax.actions, viewState.visibleTime, offsetTime, laneSize.x,
                         [&](const ScriptAxisAction &a) {
-                            ImVec2 p(timeToScreenX(a.at, viewState.visibleTime, offsetTime, curvePos, curveSize),
-                                     posToScreenY(a.pos, curvePos, curveSize));
+                            ImVec2 p(timeToScreenX(a.at, viewState.visibleTime, offsetTime, lanePos, laneSize),
+                                     posToScreenY(a.pos, lanePos, laneSize));
                             bool selected = ax.selection.contains(a);
                             const ImU32 outlineCol =
                                 (ofs::theme::GetColorU32(AppCol_TimelineOutline) & 0x00FFFFFFU) | (alpha << 24);
@@ -557,21 +738,69 @@ void ScriptTimelineWindow::renderCurves(const ScriptProject &project, ImDrawList
                         });
                 }
             }
+
+            // Pass 5: selected-point dots on non-active axes. Pass 4 draws every dot for the active axis
+            // (selected ones highlighted), but a grouped or background axis otherwise shows only its line —
+            // so a multi-axis selection would be invisible on those axes. Draw just the selected points
+            // there, so the selection reads on every axis it covers. Routed through the same
+            // forEachVisibleDot as Pass 4, so it inherits identical culling — the zoom-fade gate,
+            // zoom/pan-stable decimation, and hidden-region suppression — and only differs in the
+            // selected-point filter and that its alpha isn't gated by the active-axis weight.
+            if (project.timelineView.showPoints && !isActive && !ax.selection.empty()) {
+                auto fadeT = static_cast<float>(
+                    std::clamp((viewState.visibleTime - kDotFadeStart) / (kDotFadeEnd - kDotFadeStart), 0.0, 1.0));
+                auto alpha = static_cast<ImU32>(255.0f * (1.0f - fadeT * fadeT));
+                const float rOuter = dotRadius();
+                const float rInner = dotRadius() * 0.7f;
+                const ImU32 outlineCol =
+                    (ofs::theme::GetColorU32(AppCol_TimelineOutline) & 0x00FFFFFFU) | (alpha << 24);
+                const ImU32 innerCol =
+                    (ofs::theme::GetColorU32(AppCol_TimelinePointSelected) & 0x00FFFFFFU) | (alpha << 24);
+                forEachVisibleDot(project, ax.role, ax.actions, viewState.visibleTime, offsetTime, laneSize.x,
+                                  [&](const ScriptAxisAction &a) {
+                                      if (!ax.selection.contains(a))
+                                          return;
+                                      ImVec2 p(
+                                          timeToScreenX(a.at, viewState.visibleTime, offsetTime, lanePos, laneSize),
+                                          posToScreenY(a.pos, lanePos, laneSize));
+                                      drawList->AddCircleFilled(p, rOuter, outlineCol, 4);
+                                      drawList->AddCircleFilled(p, rInner, innerCol, 4);
+                                  });
+            }
         }
 
-        // Selection box (active only)
-        if (isActive && selectionState.isSelecting) {
-            auto relSel1 = (float)((selectionState.absSelStart - offsetTime) / viewState.visibleTime);
-            auto rSel2 = (float)selectionState.relSelEnd;
-            float minRel = std::min(relSel1, rSel2);
-            float maxRel = std::max(relSel1, rSel2);
-            const ImU32 selectColor = ofs::theme::GetColorU32(AppCol_SelectionBox);
-            const ImU32 selectBg = ofs::theme::GetColorU32(AppCol_SelectionBoxFill);
-            ImVec2 selMin(curvePos.x + curveSize.x * minRel, curvePos.y);
-            ImVec2 selMax(curvePos.x + curveSize.x * maxRel, curvePos.y + curveSize.y);
+        if (lanes)
+            drawList->PopClipRect();
+    }
+
+    // Selection box (a time range, drawn after the per-axis loop). The selection fans across the edit
+    // group, so the marquee shows where it lands: in Overlay the stacked axes share one band, so it spans
+    // the full height; in Lanes it is drawn over each active/grouped lane only — never the background lanes
+    // it won't touch.
+    if (selectionState.isSelecting) {
+        auto relSel1 = (float)((selectionState.absSelStart - offsetTime) / viewState.visibleTime);
+        auto rSel2 = (float)selectionState.relSelEnd;
+        float minRel = std::min(relSel1, rSel2);
+        float maxRel = std::max(relSel1, rSel2);
+        const ImU32 selectColor = ofs::theme::GetColorU32(AppCol_SelectionBox);
+        const ImU32 selectBg = ofs::theme::GetColorU32(AppCol_SelectionBoxFill);
+        const float x0 = curvePos.x + curveSize.x * minRel;
+        const float x1 = curvePos.x + curveSize.x * maxRel;
+        auto drawBox = [&](const ImVec2 &bp, const ImVec2 &bs) {
+            ImVec2 selMin(x0, bp.y);
+            ImVec2 selMax(x1, bp.y + bs.y);
             drawList->AddRectFilled(selMin, selMax, selectBg);
             drawList->AddLine(selMin, {selMin.x, selMax.y}, selectColor, 3.0f);
             drawList->AddLine({selMax.x, selMin.y}, selMax, selectColor, 3.0f);
+        };
+        if (lanes) {
+            for (int li = 0; li < curveCount; ++li)
+                if (curveEntries[li].inEditSet) {
+                    LaneRect lr = laneRectAt(laneLayout_, li);
+                    drawBox(lr.pos, lr.size);
+                }
+        } else {
+            drawBox(curvePos, curveSize);
         }
     }
 
@@ -585,6 +814,45 @@ void ScriptTimelineWindow::renderCurves(const ScriptProject &project, ImDrawList
             borderColor = ofs::theme::GetColorU32(ImGuiCol_SliderGrabActive);
     }
     drawList->AddRect(pos, pos + size, borderColor, 0.0f, 1.0f, 0);
+}
+
+bool ScriptTimelineWindow::renderLaneScrollbar(ImDrawList *drawList, const ImVec2 &curvePos, const ImVec2 &curveSize,
+                                               float mouseY, bool windowHovered) {
+    if (laneLayout_.maxScroll <= 0.f)
+        return false;
+
+    // Standard proportional scrollbar: thumb height is the visible fraction of the content, and it
+    // travels the leftover track. The thumb is positioned from the scroll the lanes were drawn with
+    // (laneLayout_.scroll); drag/jump input feeds laneScroll_, which makeLaneLayout consumes next frame.
+    const float sbW = ImGui::GetStyle().ScrollbarSize;
+    const ImVec2 trackMin = {curvePos.x + curveSize.x - sbW, curvePos.y};
+    const ImVec2 trackMax = {curvePos.x + curveSize.x, curvePos.y + curveSize.y};
+    const float contentH = static_cast<float>(laneLayout_.count) * laneLayout_.laneH;
+    const float thumbH = std::max(curveSize.y * curveSize.y / contentH, ImGui::GetFontSize());
+    const float travel = curveSize.y - thumbH;
+    const float thumbY = trackMin.y + (laneLayout_.scroll / laneLayout_.maxScroll) * std::max(travel, 0.f);
+    const bool overTrack = windowHovered && ImGui::IsMouseHoveringRect(trackMin, trackMax);
+
+    if (ImGui::IsMouseClicked(ImGuiMouseButton_Left) && overTrack) {
+        laneScrollDragging_ = true;
+        if ((mouseY < thumbY || mouseY > thumbY + thumbH) && travel > 0.f) // off the thumb: jump to cursor
+            laneScroll_ = std::clamp((mouseY - trackMin.y - thumbH * 0.5f) / travel, 0.f, 1.f) * laneLayout_.maxScroll;
+    }
+    if (laneScrollDragging_) {
+        if (!ImGui::IsMouseDown(ImGuiMouseButton_Left))
+            laneScrollDragging_ = false;
+        else if (travel > 0.f)
+            laneScroll_ = std::clamp(laneScroll_ + ImGui::GetIO().MouseDelta.y * laneLayout_.maxScroll / travel, 0.f,
+                                     laneLayout_.maxScroll);
+    }
+
+    const ImGuiCol grabCol = laneScrollDragging_ ? ImGuiCol_ScrollbarGrabActive
+                             : overTrack         ? ImGuiCol_ScrollbarGrabHovered
+                                                 : ImGuiCol_ScrollbarGrab;
+    drawList->AddRectFilled(trackMin, trackMax, ofs::theme::GetColorU32(ImGuiCol_ScrollbarBg));
+    drawList->AddRectFilled({trackMin.x, thumbY}, {trackMax.x, thumbY + thumbH}, ofs::theme::GetColorU32(grabCol),
+                            ImGui::GetStyle().ScrollbarRounding);
+    return overTrack;
 }
 
 void ScriptTimelineWindow::stepAxisEmphasis(const ScriptProject &project) {
@@ -631,6 +899,12 @@ void ScriptTimelineWindow::renderTimeline(const ScriptProject &project, EventQue
     // visible while it happens. hasGroup gates the strip's group bracket/fill.
     const AxisRoles editSet = project.effectiveEditSet();
     const bool hasGroup = project.state.axesGrouping.count() > 1;
+    const bool lanes = project.timelineView.layout == TimelineLayout::Lanes;
+
+    // Resolve lane height + scroll for this frame, then write the clamped scroll back so it stays bounded
+    // as the axis count or band height changes. Every lane-aware surface below reads this one struct.
+    laneLayout_ = makeLaneLayout(project, lanes, curvePos, curveSize, laneScroll_);
+    laneScroll_ = laneLayout_.scroll;
 
     stepAxisEmphasis(project); // advance the curve-emphasis ease once per frame, before any curve reads it
 
@@ -662,8 +936,12 @@ void ScriptTimelineWindow::renderTimeline(const ScriptProject &project, EventQue
                 hasGroup);
 
     // ── Curve area ──────────────────────────────────────────────────────────
-    renderCurves(project, drawList, waveform, pos, size, curvePos, curveSize, offsetTime, curveEntries.data(),
-                 curveCount, windowHovered);
+    // Lanes mode draws one lane per strip row (so curves line up with their labels and hidden rows keep an
+    // empty lane), in stable strip order; Overlay draws the filtered, active-last-sorted z-stack.
+    const AxisEntry *curveList = lanes ? stripEntries.data() : curveEntries.data();
+    const int curveListCount = lanes ? stripCount : curveCount;
+    renderCurves(project, drawList, waveform, pos, size, curvePos, curveSize, offsetTime, curveList, curveListCount,
+                 lanes, windowHovered);
 
     // ── Curve area interaction ───────────────────────────────────────────────
     ImGui::SetCursorScreenPos(curvePos);
@@ -675,6 +953,22 @@ void ScriptTimelineWindow::renderTimeline(const ScriptProject &project, EventQue
     bool shiftHeld = ImGui::IsKeyDown(ImGuiKey_LeftShift) || ImGui::IsKeyDown(ImGuiKey_RightShift);
     bool ctrlHeld = ImGui::IsKeyDown(ImGuiKey_LeftCtrl) || ImGui::IsKeyDown(ImGuiKey_RightCtrl);
 
+    // Lane scrollbar (Lanes overflow only): drawn on top of the curves; sets overLaneScrollbar so the
+    // curve gestures below ignore a press that lands on it.
+    const bool overLaneScrollbar = renderLaneScrollbar(drawList, curvePos, curveSize, mouseY, windowHovered);
+
+    // Curve gestures (seek, edit, box-select) always target the active axis and fan across the edit group,
+    // exactly like Overlay — that is what keeps grouping working and selection group-aware in Lanes. The
+    // only Lanes difference is geometry: pos is read against the active axis's own lane band. Choosing the
+    // active axis / group is the strip's job; clicking a lane mirrors a strip-row click (handled below).
+    const StandardAxis gestureAxis = project.state.activeAxis;
+    const LaneRect gestureLane =
+        lanes ? laneRectForAxis(project, laneLayout_, gestureAxis) : LaneRect{.pos = curvePos, .size = curveSize};
+    const bool gestureLocked =
+        gestureAxis < StandardAxis::Count && project.axes[static_cast<size_t>(gestureAxis)].isLocked;
+    // Lanes only: the axis whose lane the cursor is over — the target of a strip-mirroring focus click.
+    const StandardAxis laneAxis = lanes ? laneAxisAt(project, laneLayout_, mouseY) : StandardAxis::Count;
+
     struct NearHit {
         StandardAxis axis = StandardAxis::Count;
         const ScriptAxisAction *action = nullptr;
@@ -683,27 +977,25 @@ void ScriptTimelineWindow::renderTimeline(const ScriptProject &project, EventQue
         NearHit best;
         if (!project.timelineView.showPoints) // points hidden: no hit-testing, clicks fall through to seek
             return best;
-        if (project.state.activeAxis >= StandardAxis::Count)
+        if (gestureAxis >= StandardAxis::Count)
             return best;
-        const auto &activeAx = project.axes[static_cast<size_t>(project.state.activeAxis)];
-        const auto *near = findNearestAction(project, project.state.activeAxis, activeAx.actions, mouseX, mouseY,
-                                             viewState.visibleTime, offsetTime, curvePos, curveSize);
+        const auto &gestureAx = project.axes[static_cast<size_t>(gestureAxis)];
+        const auto *near = findNearestAction(project, gestureAxis, gestureAx.actions, mouseX, mouseY,
+                                             viewState.visibleTime, offsetTime, gestureLane.pos, gestureLane.size);
         if (near) {
-            best.axis = project.state.activeAxis;
+            best.axis = gestureAxis;
             best.action = near;
         }
         return best;
     };
 
-    if (ImGui::IsItemHovered()) {
+    if (ImGui::IsItemHovered() && !overLaneScrollbar && !laneScrollDragging_) {
         NearHit hit = findNearest();
-        bool activeLocked = project.state.activeAxis < StandardAxis::Count &&
-                            project.axes[static_cast<size_t>(project.state.activeAxis)].isLocked;
 
         if (hit.action != nullptr) {
             // A locked axis no-ops every point gesture; signal that with the not-allowed cursor so the
             // dead click isn't mistaken for an unresponsive UI.
-            ImGui::SetMouseCursor(activeLocked ? ImGuiMouseCursor_NotAllowed : ImGuiMouseCursor_Hand);
+            ImGui::SetMouseCursor(gestureLocked ? ImGuiMouseCursor_NotAllowed : ImGuiMouseCursor_Hand);
             if (ImGui::BeginTooltip()) {
                 ImGui::Text(ICON_CLOCK_3 " %s", TimeUtil::formatTimeShort(hit.action->at));
                 ImGui::Text(ICON_MOVE_VERTICAL " %d", hit.action->pos);
@@ -711,13 +1003,39 @@ void ScriptTimelineWindow::renderTimeline(const ScriptProject &project, EventQue
                 // user can discover add/value-move/select. On a locked axis they no-op, so name the lock
                 // instead so the dead clicks read as intentional.
                 ImGui::Separator();
-                ImGui::TextDisabled("%s", activeLocked ? Str::TlAxisLocked.c_str() : Str::TlPointGestures.c_str());
+                ImGui::TextDisabled("%s", gestureLocked ? Str::TlAxisLocked.c_str() : Str::TlPointGestures.c_str());
                 ImGui::EndTooltip();
             }
         }
 
         if (ImGui::IsMouseClicked(ImGuiMouseButton_Left)) {
-            if (hit.action != nullptr && !activeLocked) {
+            // Lanes: a click in a lane that isn't the active one is a focus click — it changes the active
+            // axis / group exactly as a click on that strip row would, then consumes the click (no seek or
+            // edit). This keeps grouping working from the curve: Ctrl-click toggles the lane in/out of the
+            // group, clicking a current group member re-leads to it (keeping the group), and a plain click
+            // on a non-member selects it and dissolves the group. The next click, now on the active lane,
+            // interacts normally.
+            const bool focusLane = lanes && laneAxis < StandardAxis::Count && laneAxis != project.state.activeAxis;
+            if (focusLane) {
+                if (ctrlHeld) {
+                    AxisRoles roles = project.effectiveEditSet();
+                    roles.flip(static_cast<size_t>(laneAxis));
+                    StandardAxis lead = project.state.activeAxis;
+                    if (lead >= StandardAxis::Count || !roles.test(static_cast<size_t>(lead))) {
+                        lead = laneAxis;
+                        for (size_t k = 0; k < kStandardAxisCount; ++k)
+                            if (roles.test(k)) {
+                                lead = static_cast<StandardAxis>(k);
+                                break;
+                            }
+                    }
+                    eq.push(SetAxisGroupingEvent{.roles = roles, .lead = lead});
+                } else if (hasGroup && project.state.axesGrouping.test(static_cast<size_t>(laneAxis))) {
+                    eq.push(SetAxisGroupingEvent{.roles = project.state.axesGrouping, .lead = laneAxis}); // re-lead
+                } else {
+                    eq.push(AxisSelectedEvent{.role = laneAxis}); // select + dissolve
+                }
+            } else if (hit.action != nullptr && !gestureLocked) {
                 if (ctrlHeld) {
                     // Toggle selection, no seek, no drag — a Point gesture (degenerate single-time range)
                     // routed through the active selection mode.
@@ -734,25 +1052,25 @@ void ScriptTimelineWindow::renderTimeline(const ScriptProject &project, EventQue
                     editState.candidateAt = hit.action->at;
                     editState.candidatePos = hit.action->pos;
                 }
-            } else if (shiftHeld && project.timelineView.showPoints && !activeLocked &&
-                       project.state.activeAxis < StandardAxis::Count) {
-                // Add point at cursor position
+            } else if (shiftHeld && project.timelineView.showPoints && !gestureLocked &&
+                       gestureAxis < StandardAxis::Count) {
+                // Add point at cursor position (pos read against the target lane's band).
                 double at = screenXToTime(mouseX, viewState.visibleTime, offsetTime, curvePos, curveSize);
-                int pVal = screenYToPos(mouseY, curvePos, curveSize);
-                eq.push(ofs::EditRequestEvent{.intent = {.kind = ofs::EditIntentKind::AddPoint,
-                                                         .axis = project.state.activeAxis,
-                                                         .time = at,
-                                                         .pos = pVal}});
+                int pVal = screenYToPos(mouseY, gestureLane.pos, gestureLane.size);
+                eq.push(ofs::EditRequestEvent{
+                    .intent = {.kind = ofs::EditIntentKind::AddPoint, .axis = gestureAxis, .time = at, .pos = pVal}});
             } else {
-                // Empty area: will seek on release or start box-select on drag
+                // Empty area: will seek on release or start box-select on drag.
                 editState.emptyClickPending = true;
                 editState.emptyClickTime =
                     screenXToTime(mouseX, viewState.visibleTime, offsetTime, curvePos, curveSize);
             }
         } else if (ImGui::IsMouseReleased(ImGuiMouseButton_Right)) {
             // Open on release, matching the region band's context menu (BandBar) so right-click feels
-            // identical across adjacent timeline surfaces.
-            ctxAxis = (project.state.activeAxis < StandardAxis::Count) ? project.state.activeAxis : StandardAxis::Count;
+            // identical across adjacent timeline surfaces. Lanes targets the row right-clicked; Overlay the
+            // active axis.
+            StandardAxis ctxTarget = lanes ? laneAxis : project.state.activeAxis;
+            ctxAxis = (ctxTarget < StandardAxis::Count) ? ctxTarget : StandardAxis::Count;
             ctxFromGear = false;
             ImGui::OpenPopup("##timeline_ctx");
         }
@@ -806,6 +1124,14 @@ void ScriptTimelineWindow::renderContextMenu(const ScriptProject &project, Event
         bool showWaveform = project.timelineView.showAudioWaveform;
         if (ImGui::MenuItem(Str::TlShowWaveform.id("tl_show_waveform"), nullptr, &showWaveform))
             eq.push(SetTimelineShowWaveformEvent{showWaveform});
+
+        // Curve layout: z-stacked Overlay vs one row per axis (Lanes).
+        ImGui::Separator();
+        const TimelineLayout layout = project.timelineView.layout;
+        if (ImGui::MenuItem(Str::TlLayoutOverlay.id("tl_layout_overlay"), nullptr, layout == TimelineLayout::Overlay))
+            eq.push(SetTimelineLayoutEvent{TimelineLayout::Overlay});
+        if (ImGui::MenuItem(Str::TlLayoutLanes.id("tl_layout_lanes"), nullptr, layout == TimelineLayout::Lanes))
+            eq.push(SetTimelineLayoutEvent{TimelineLayout::Lanes});
 
         // Scripting overlay settings (Frame/Tempo), folded into the timeline's own context menu.
         ImGui::Separator();
@@ -911,6 +1237,7 @@ void ScriptTimelineWindow::render(const ScriptProject &project, EventQueue &eq, 
     const float stripMargin = ImGui::GetStyle().ItemSpacing.x;
     const ImVec2 curvePos = {outerPos.x + stripW - stripMargin, outerPos.y};
     const ImVec2 curveSize = {outerSize.x - stripW + stripMargin, outerSize.y - regionBarH - regionBarGap};
+    const bool lanes = project.timelineView.layout == TimelineLayout::Lanes;
 
     // Smooth zoom
     auto ticks = static_cast<uint32_t>(SDL_GetTicks());
@@ -927,9 +1254,14 @@ void ScriptTimelineWindow::render(const ScriptProject &project, EventQueue &eq, 
     // Plain IsWindowHovered (no ChildWindows): the default popup hierarchy counts a context menu
     // opened from this window as a child, so ChildWindows would let a scroll over that popup zoom
     // the timeline behind it. The window owns no real child windows, so the flag only causes that leak.
+    // The lanes overflow the band (laneLayout_.maxScroll, resolved last frame) when even the minimum lane
+    // height won't fit them all; then Shift+wheel scrolls the lanes vertically while plain wheel still
+    // zooms. makeLaneLayout reclamps laneScroll_ next frame, so this only needs to stay non-negative.
     if (ImGui::IsWindowHovered()) {
         float wheel = ImGui::GetIO().MouseWheel;
-        if (wheel != 0) {
+        if (wheel != 0 && laneLayout_.maxScroll > 0.f && ImGui::GetIO().KeyShift) {
+            laneScroll_ = std::max(0.f, laneScroll_ - wheel * laneLayout_.laneH); // ~one lane per notch
+        } else if (wheel != 0) {
             viewState.previousVisibleTime = viewState.visibleTime;
             viewState.targetVisibleTime *= (wheel > 0) ? 0.8 : 1.25;
             viewState.targetVisibleTime = std::clamp(viewState.targetVisibleTime, 0.1, 300.0);
@@ -1029,7 +1361,8 @@ void ScriptTimelineWindow::render(const ScriptProject &project, EventQueue &eq, 
     if (editState.emptyClickPending) {
         if (ImGui::IsMouseDragging(ImGuiMouseButton_Left)) {
             // Box-select stays available with points hidden — it is range
-            // selection, not per-point interaction.
+            // selection, not per-point interaction. Targets the active axis and fans across the edit group
+            // (the same in Overlay and Lanes), so a marquee selects the group, never one lane.
             if (project.state.activeAxis < StandardAxis::Count) {
                 const auto &activeAx = project.axes[static_cast<size_t>(project.state.activeAxis)];
                 if (!activeAx.isLocked) {
@@ -1055,7 +1388,11 @@ void ScriptTimelineWindow::render(const ScriptProject &project, EventQueue &eq, 
             double newDragTime =
                 altHeld ? editState.originalDragAt
                         : std::max(0.0, screenXToTime(mouseX, viewState.visibleTime, offsetTime, curvePos, curveSize));
-            int newDragPos = screenYToPos(mouseY, curvePos, curveSize);
+            // Map the vertical drag through the dragged axis's lane band so pos tracks the cursor 1:1
+            // (a full-rect mapping would scale wrong once the lane is a fraction of the height).
+            LaneRect dragLane = lanes ? laneRectForAxis(project, laneLayout_, editState.draggingAxis)
+                                      : LaneRect{.pos = curvePos, .size = curveSize};
+            int newDragPos = screenYToPos(mouseY, dragLane.pos, dragLane.size);
 
             bool timeChanged = (newDragTime != editState.dragFromAt);
             if (timeChanged || newDragPos != editState.dragPos) {
