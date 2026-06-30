@@ -2,6 +2,7 @@
 #include "Core/EventQueue.h"
 #include "Core/Events.h"
 #include "Core/IntentEvents.h"
+#include "Core/SceneViewEvents.h"
 #include "Core/StandardAxis.h"
 #include "Core/TaskEvents.h"
 #include "Format/AppSettings.h"
@@ -1158,6 +1159,16 @@ void OfsApp::renderMainMenuBar() {
                         nullptr, simLocked))
                     eventQueue.push(ofs::ModifyEvent<ofs::SimulatorState>{
                         [](ofs::SimulatorState &s) { s.lockedPosition = !s.lockedPosition; }});
+                ImGui::Separator();
+                // 2D/3D toggle and invert — same toggles the simulator's right-click menus expose, surfaced
+                // here so they're reachable without the simulator focused. Both dispatch the same events.
+                if (ImGui::MenuItem(Str::Sim3D.id("menu_view_simulator_3d"), nullptr,
+                                    scriptProject.simulator.use3dSimulator))
+                    eventQueue.push(ofs::ModifyEvent<ofs::SimulatorState>{
+                        [](ofs::SimulatorState &s) { s.use3dSimulator = !s.use3dSimulator; }});
+                const bool simInverted = scriptProject.activeSceneView.inverted;
+                if (ImGui::MenuItem(Str::SimInvert.id("menu_view_simulator_invert"), nullptr, simInverted))
+                    eventQueue.push(ofs::CaptureSimInvertedEvent{!simInverted});
                 ImGui::EndMenu();
             }
             if (ImGui::MenuItem(Str::AppMenuStatistics.iconId(ICON_CHART_LINE, "menu_view_statistics"), nullptr,
