@@ -25,4 +25,10 @@ struct OverlayViewport {
     [[nodiscard]] float contentAspect() const { return (contentSize.y > 0.0f) ? contentSize.x / contentSize.y : 1.0f; }
 };
 
+// The simulator overlay runs in two passes per frame. The Input pass runs *before* the video player's
+// own pan/zoom grab, hit-tests the overlay handles, drives any drag, and reports whether it owns the
+// pointer — so the pan can yield in the same frame instead of racing a one-frame-stale latch. The Draw
+// pass runs after the image is drawn (so the overlay sits on top) and only renders. See ScriptSimulator.
+enum class OverlayPhase { Input, Draw };
+
 } // namespace ofs

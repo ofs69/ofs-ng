@@ -858,7 +858,7 @@ void ScriptSimulator::render(const ScriptProject &project, EventQueue &eq, bool 
 }
 
 bool ScriptSimulator::renderOverlay(ImDrawList *dl, const ScriptProject &project, EventQueue &eq,
-                                    const OverlayViewport &vp, bool vpHovered) {
+                                    const OverlayViewport &vp, bool vpHovered, OverlayPhase phase) {
     // Stash the viewport for render3D()'s perspective-overlay interaction, which runs earlier in the
     // frame (in the Simulator window) and has no other way to reach the live video geometry.
     overlayVp_ = vp;
@@ -876,10 +876,13 @@ bool ScriptSimulator::renderOverlay(ImDrawList *dl, const ScriptProject &project
     // gesture half of the "reset view" pairing (alongside the video player's own pan/zoom reset); the
     // command / context menu route the same recenter through overlayResetPending_. A locked overlay
     // stays put (same as drag), so a "reset both" doesn't drag the overlay out from under the video.
-    const bool resetGesture = vpHovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Middle);
-    if ((resetGesture || overlayResetPending_) && !state.lockedPosition)
-        eq.push(CaptureOverlayAnchorEvent{centeredAnchor(anchor, vp)});
-    overlayResetPending_ = false; // consumed (also dropped when locked, so it can't linger)
+    // Input pass only, so the once-per-frame recenter isn't double-pushed by the draw pass.
+    if (phase == OverlayPhase::Input) {
+        const bool resetGesture = vpHovered && ImGui::IsMouseDoubleClicked(ImGuiMouseButton_Middle);
+        if ((resetGesture || overlayResetPending_) && !state.lockedPosition)
+            eq.push(CaptureOverlayAnchorEvent{centeredAnchor(anchor, vp)});
+        overlayResetPending_ = false; // consumed (also dropped when locked, so it can't linger)
+    }
 
     if (state.use3dSimulator) {
         if (strokerNode == nullptr)
@@ -892,6 +895,11 @@ bool ScriptSimulator::renderOverlay(ImDrawList *dl, const ScriptProject &project
         callbackDataPerspective.contentSize = r.size;
         const ImVec2 perspMin = r.min;
         const ImVec2 perspMax = {perspMin.x + r.size.x, perspMin.y + r.size.y};
+
+        // The 3D model has no drag handles on the overlay (its move/resize lives in render()); the Input
+        // pass only reports hover so the Video Player suppresses its pan/menu over the model.
+        if (phase == OverlayPhase::Input)
+            return ImGui::IsMouseHoveringRect(perspMin, perspMax);
 
         // Clip the model + outline to the video content region so they don't spill over window chrome
         // and slide off smoothly at the edge instead of popping.
@@ -1065,8 +1073,8 @@ bool ScriptSimulator::renderOverlay(ImDrawList *dl, const ScriptProject &project
         }
 
         dl->PopClipRect();
-        // Report hover so the Video Player suppresses its context menu over the model.
-        return ImGui::IsMouseHoveringRect(perspMin, perspMax);
+        // Draw pass: hover was already reported by the Input pass above.
+        return false;
     }
 
     // ---- 2D bar ----
@@ -1075,12 +1083,12 @@ bool ScriptSimulator::renderOverlay(ImDrawList *dl, const ScriptProject &project
     if (!bar.visible) // bar anchored off-screen (VR) — hide it
         return false;
 
-    // ---- 2D bar interaction ----
+    // ---- 2D bar interaction (Input pass) ----
     // Runs here (inside the video player window) rather than in render(), so the bar stays draggable
-    // even though the Simulator window is hidden in 2D mode. Scoped so its hit-test geometry doesn't
-    // collide with the drawing geometry below. Drags update the anchor (content space) and push a
-    // capture; preview_ is set here and consumed by the drawing pass below in the same frame.
-    {
+    // even though the Simulator window is hidden in 2D mode. Runs *before* the video pan grab, so hit-
+    // testing and drag-begin own the pointer this frame; the pass returns ownership and the draw pass
+    // below (which renders the bar) is skipped. preview_ is set here and consumed by that draw pass.
+    if (phase == OverlayPhase::Input) {
         const double currentTime = project.playback.cursorPos;
         const ImGuiID simId = ImGui::GetID("ActualSimulator");
         ImGui::KeepAliveID(simId);
@@ -1348,6 +1356,15 @@ bool ScriptSimulator::renderOverlay(ImDrawList *dl, const ScriptProject &project
                 eq.push(CaptureSimInvertedEvent{!inverted});
             ImGui::EndPopup();
         }
+
+        // Report ownership so the Video Player suppresses its context menu — and its pan grab — over the
+        // bar. The branches above set HoveredID to this window for every handle they own (incl. the width
+        // grip, which sits just outside the bar band, and the shift-place band); reusing that signal keeps
+        // the report in lockstep with the hit-test. A live drag/resize counts too, and the segment test
+        // covers a plain hover over the bar itself.
+        return dragTarget != DragTarget::None || isMovingSimulator ||
+               ImGui::GetHoveredID() == ImGui::GetCurrentWindowRead()->ID ||
+               pointToSegmentDist(ImGui::GetMousePos(), barP1, barP2) <= std::max(8.f, barWidth / 2.f);
     }
 
     const ofs::theme::Theme &theme = ofs::theme::getActive();
@@ -1503,11 +1520,8 @@ bool ScriptSimulator::renderOverlay(ImDrawList *dl, const ScriptProject &project
     }
 
     dl->PopClipRect();
-    // Report hover so the Video Player suppresses its context menu — and its pan grab — over the bar.
-    // A live drag/resize counts too: the width grip sits just outside the bar band, so a grip drag
-    // would otherwise read as "not over the bar" and let the video start panning underneath it.
-    return dragTarget != DragTarget::None || isMovingSimulator ||
-           pointToSegmentDist(ImGui::GetMousePos(), barP1, barP2) <= std::max(8.f, barWidth / 2.f);
+    // Draw pass: ownership was already reported by the Input pass above.
+    return false;
 }
 
 } // namespace ofs

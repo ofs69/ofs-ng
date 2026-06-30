@@ -85,7 +85,7 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
     if (!player.hasMedia()) {
         drawCenteredPlaceholder(Str::VpwNoVideo);
         if (overlayCallback)
-            overlayCallback(ImGui::GetWindowDrawList(), OverlayViewport{}, windowHovered);
+            overlayCallback(ImGui::GetWindowDrawList(), OverlayViewport{}, windowHovered, OverlayPhase::Draw);
         ImGui::End();
         return;
     }
@@ -95,7 +95,7 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
     if (player.getWidth() <= 0 || player.getHeight() <= 0) {
         drawCenteredPlaceholder(Str::VpwAudioOnly);
         if (overlayCallback)
-            overlayCallback(ImGui::GetWindowDrawList(), OverlayViewport{}, windowHovered);
+            overlayCallback(ImGui::GetWindowDrawList(), OverlayViewport{}, windowHovered, OverlayPhase::Draw);
         ImGui::End();
         return;
     }
@@ -103,7 +103,7 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
     const uint32_t textureId = player.getFrameTexture();
     if (textureId == 0) {
         if (overlayCallback)
-            overlayCallback(ImGui::GetWindowDrawList(), OverlayViewport{}, windowHovered);
+            overlayCallback(ImGui::GetWindowDrawList(), OverlayViewport{}, windowHovered, OverlayPhase::Draw);
         ImGui::End();
         return;
     }
@@ -190,6 +190,29 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
         eq.push(SetRenderSizeEvent{.width = reqWidth, .height = reqHeight});
     }
 
+    // Overlay Input pass — runs *before* the pan/zoom grab below so the overlay can claim the pointer
+    // this frame (hit-test + drag-begin) and the pan yields without a stale one-frame latch. It hit-tests
+    // against the *resting* image rect (current translation/zoom): on the press frame the pan delta is
+    // still zero, so this matches what the Draw pass renders after the image with the post-pan geometry.
+    bool overlayOwns = false;
+    if (overlayCallback) {
+        ImVec2 ovImageMin = contentScreenMin;
+        ImVec2 ovImageSize = contentSize;
+        if (state.activeMode != VideoMode::VrMode) {
+            ovImageSize = baseSize * zoom_.value();
+            ovImageMin = contentScreenMin + (contentSize - ovImageSize) * 0.5f + translation;
+        }
+        OverlayViewport ivp{.mode = state.activeMode,
+                            .contentMin = contentScreenMin,
+                            .contentSize = contentSize,
+                            .imageMin = ovImageMin,
+                            .imageSize = ovImageSize,
+                            .vrRotation = vrRotation,
+                            .vrZoom = vrZoom_.value(),
+                            .valid = true};
+        overlayOwns = overlayCallback(ImGui::GetWindowDrawList(), ivp, windowHovered, OverlayPhase::Input);
+    }
+
     if (state.activeMode == VideoMode::VrMode) {
         bool framingChanged = false;
         if (!state.locked) {
@@ -214,8 +237,7 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
                 return ImVec2{(m.x - contentScreenMin.x) / contentSize.x - 0.5f,
                               (m.y - contentScreenMin.y) / contentSize.y - 0.5f};
             };
-            if (hovered && !overlayHoveredPrev && ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
-                ImGui::GetActiveID() == 0) {
+            if (hovered && !overlayOwns && ImGui::IsMouseClicked(ImGuiMouseButton_Left) && ImGui::GetActiveID() == 0) {
                 dragging = true;
                 vrGrabDir = ofs::vrcam::unproject(cursorNdc(), vrRotation, vrZoom_.value(), contentAspect);
             }
@@ -228,7 +250,7 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
                 framingChanged = true;
             }
             // Signal the drag-to-rotate gesture; nothing else hints the unlocked video is grabbable.
-            if (dragging || (hovered && !overlayHoveredPrev && ImGui::GetActiveID() == 0))
+            if (dragging || (hovered && !overlayOwns && ImGui::GetActiveID() == 0))
                 ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
         } else {
             dragging = false;
@@ -298,8 +320,7 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
             }
 
             // Handle 2D panning
-            if (hovered && !overlayHoveredPrev && ImGui::IsMouseClicked(ImGuiMouseButton_Left) &&
-                ImGui::GetActiveID() == 0) {
+            if (hovered && !overlayOwns && ImGui::IsMouseClicked(ImGuiMouseButton_Left) && ImGui::GetActiveID() == 0) {
                 dragging = true;
                 dragStartTranslation_ = translation;
             }
@@ -314,7 +335,7 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
                     framingChanged = true;
             }
             // Signal the drag-to-pan gesture; nothing else hints the unlocked video is draggable.
-            if (dragging || (hovered && !overlayHoveredPrev && ImGui::GetActiveID() == 0))
+            if (dragging || (hovered && !overlayOwns && ImGui::GetActiveID() == 0))
                 ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeAll);
         } else {
             dragging = false;
@@ -338,7 +359,8 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
 
     hovered = ImGui::IsItemHovered() && windowHovered;
 
-    bool overlayHovered = false;
+    // Overlay Draw pass — after the image, with the final (post-pan) geometry, so the bar/model render on
+    // top. Ownership was already decided by the Input pass above; this pass's return is ignored.
     if (overlayCallback) {
         OverlayViewport vp{.mode = state.activeMode,
                            .contentMin = contentScreenMin,
@@ -348,15 +370,14 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
                            .vrRotation = vrRotation,
                            .vrZoom = vrZoom_.value(),
                            .valid = true};
-        overlayHovered = overlayCallback(ImGui::GetWindowDrawList(), vp, windowHovered);
+        overlayCallback(ImGui::GetWindowDrawList(), vp, windowHovered, OverlayPhase::Draw);
     }
-    overlayHoveredPrev = overlayHovered;
 
     // Don't open the window's context menu over the simulator overlay — it shows its own menu there.
     // Gate only the *open* request; an already-open popup still renders via BeginPopup. Open on a
     // right-click anywhere in the pane (windowHovered), not just over the image, so the menu stays
     // reachable when the video has been panned out of view.
-    if (!overlayHovered && windowHovered && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
+    if (!overlayOwns && windowHovered && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
         ImGui::OpenPopup("VideoPlayerPopup");
     if (ImGui::BeginPopup("VideoPlayerPopup")) {
         if (ImGui::MenuItem(Str::VpwFullMode.id("vpw_full_mode"), nullptr, state.activeMode == VideoMode::Full))

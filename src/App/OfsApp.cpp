@@ -381,11 +381,12 @@ bool OfsApp::init() {
     modalManager = std::make_unique<ofs::ModalManager>(eventQueue);
 
     if (videoPlayerWindow && scriptSimulator) {
-        videoPlayerWindow->setOverlayCallback([this](ImDrawList *dl, const ofs::OverlayViewport &vp, bool vpHovered) {
-            if (!appSettings.showSimulator)
-                return false;
-            return scriptSimulator->renderOverlay(dl, scriptProject, eventQueue, vp, vpHovered);
-        });
+        videoPlayerWindow->setOverlayCallback(
+            [this](ImDrawList *dl, const ofs::OverlayViewport &vp, bool vpHovered, ofs::OverlayPhase phase) {
+                if (!appSettings.showSimulator)
+                    return false;
+                return scriptSimulator->renderOverlay(dl, scriptProject, eventQueue, vp, vpHovered, phase);
+            });
     }
 
     initCommands();
