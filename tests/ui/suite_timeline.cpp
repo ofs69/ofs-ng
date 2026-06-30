@@ -6,6 +6,7 @@
 #include "helpers/TestState.h"
 #include "helpers/TimelineCoords.h"
 #include <cmath>
+#include <cstdio>
 #include <imgui.h>
 #include <imgui_internal.h> // ImRect
 #include <imgui_te_context.h>
@@ -253,6 +254,60 @@ void RegisterTimelineTests(ImGuiTestEngine *e) {
 
         IM_CHECK(proj.timelineView.layout == ofs::TimelineLayout::Lanes);
         ctx->PopupCloseAll();
+        ctx->Yield();
+    };
+
+    // The corner gear opens the timeline settings modal (raised through the shared ModalManager, so it
+    // carries the legacy ###ofsmodal id). Its tabular form drives the same view settings as the
+    // right-click menu — here the audio waveform toggle and the stacked/separated layout picker.
+    IM_REGISTER_TEST(e, "timeline", "gear_opens_settings_modal")->TestFunc = [](ImGuiTestContext *ctx) {
+        loadFixture(ctx);
+        auto &proj = *getTestState().project;
+        selectL0(ctx);
+        ctx->Yield();
+        IM_CHECK(proj.timelineView.layout == ofs::TimelineLayout::Overlay); // default
+
+        ctx->ItemClick("**/###tl_settings_gear");
+        ctx->Yield(3); // event drain + ModalManager open latch
+        IM_CHECK(ctx->ItemExists("**/###tlset_show_waveform"));
+
+        // Toggle the audio waveform from the modal. (Checkboxes are wildcard-addressable by their
+        // ###id; the layout/overlay Combos are exercised elsewhere — context_menu_switches_layout —
+        // since a Combo isn't **/-resolvable and opening one fights the click-away flyout in a test.)
+        const bool wfBefore = proj.timelineView.showAudioWaveform;
+        ctx->ItemClick("**/###tlset_show_waveform");
+        ctx->Yield(2);
+        IM_CHECK_EQ(proj.timelineView.showAudioWaveform, !wfBefore);
+
+        // Per-axis toggles: flip R0's strip presence and curve visibility from the Axes table. (R0 is
+        // index 3.)
+        constexpr int r0 = static_cast<int>(ofs::StandardAxis::R0);
+        char ref[48];
+        const bool panelBefore = proj.axes[r0].showInStrip;
+        std::snprintf(ref, sizeof(ref), "**/###tlset_panel_%d", r0);
+        ctx->ItemClick(ref);
+        ctx->Yield(2);
+        IM_CHECK_EQ(proj.axes[r0].showInStrip, !panelBefore);
+
+        const bool visBefore = proj.axes[r0].isVisible;
+        std::snprintf(ref, sizeof(ref), "**/###tlset_vis_%d", r0);
+        ctx->ItemClick(ref);
+        ctx->Yield(2);
+        IM_CHECK_EQ(proj.axes[r0].isVisible, !visBefore);
+
+        // Escape (or a click outside) dismisses the click-away flyout — there is no Close button.
+        ctx->KeyPress(ImGuiKey_Escape);
+        ctx->Yield(2);
+        IM_CHECK(!ctx->ItemExists("**/###tlset_show_waveform"));
+
+        // Restore defaults so later tests start clean.
+        getTestState().eventQueue->push(ofs::SetTimelineLayoutEvent{.layout = ofs::TimelineLayout::Overlay});
+        if (proj.timelineView.showAudioWaveform != wfBefore)
+            getTestState().eventQueue->push(ofs::SetTimelineShowWaveformEvent{.show = wfBefore});
+        getTestState().eventQueue->push(
+            ofs::ToggleAxisPanelVisibilityEvent{.axisRole = ofs::StandardAxis::R0, .inPanel = panelBefore});
+        getTestState().eventQueue->push(
+            ofs::ToggleAxisVisibilityEvent{.axisRole = ofs::StandardAxis::R0, .visible = visBefore});
         ctx->Yield();
     };
 

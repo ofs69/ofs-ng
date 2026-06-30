@@ -116,6 +116,12 @@ class ScriptTimelineWindow {
     void renderContextMenu(const ScriptProject &project, EventQueue &eq, VideoPlayer &videoPlayer);
     // The Scripting-overlay (Frame/Tempo) settings submenu, nested inside renderContextMenu.
     void renderOverlayMenu(const ScriptProject &project, EventQueue &eq, VideoPlayer &videoPlayer) const;
+    // Body of the timeline-settings modal raised from the corner gear via showCustomModal (the
+    // ModalManager owns the chrome). A tabular form of the timeline's view settings (layout, source
+    // points, audio waveform, scripting overlay) — the same settings the right-click context menu
+    // exposes as quick toggles, gathered into one discoverable dialog. Returns true when the modal
+    // should close (Close button / Escape).
+    bool renderSettingsBody(const ScriptProject &project, EventQueue &eq, VideoPlayer &videoPlayer) const;
     void renderOverlay(const ScriptProject &project, const ImVec2 &pos, const ImVec2 &size, double offsetTime) const;
     void renderPlayhead(VideoPlayer &videoPlayer, const ImVec2 &pos, const ImVec2 &size, double offsetTime) const;
     void renderRegionBar(VideoPlayer &videoPlayer, const ScriptProject &project, EventQueue &eq, const ImVec2 &barMin,
@@ -138,14 +144,9 @@ class ScriptTimelineWindow {
     float laneScroll_ = 0.f;
     bool laneScrollDragging_ = false;
     LaneLayout laneLayout_;
-    // Axis the timeline context menu (##timeline_ctx) acts on, latched when the menu opens — from a
-    // right-click on a strip row/curve or from the corner settings gear. Count == no axis section.
+    // Axis the timeline context menu (##timeline_ctx) acts on, latched when the menu opens from a
+    // right-click on a strip row/curve. Count == no axis section.
     StandardAxis ctxAxis = StandardAxis::Count;
-    // Set when the context menu was opened from the corner gear (vs. a right-click). The gear sits at
-    // the window's bottom edge, so its menu is anchored to grow upward; gearMenuAnchor is the screen
-    // point the popup's bottom-left pins to (the gear's top-left).
-    bool ctxFromGear = false;
-    ImVec2 gearMenuAnchor{};
     int ctxRegionId = -1;
     double ctxRegionClickTime = 0.0;
     bool m_regionClickedThisFrame = false;

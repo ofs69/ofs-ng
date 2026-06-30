@@ -2543,6 +2543,14 @@ translation = "Przyciąganie"
 english     = "measure"
 translation = "takt"
 
+[TlSettingsTitle]
+english     = "Timeline Settings"
+translation = "Ustawienia osi czasu"
+
+[TlLayout]
+english     = "Layout"
+translation = "Układ"
+
 [TlBake]
 english     = "Bake"
 translation = "Bake"

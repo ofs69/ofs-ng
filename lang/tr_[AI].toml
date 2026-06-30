@@ -2543,6 +2543,14 @@ translation = "Yapış"
 english     = "measure"
 translation = "ölçü"
 
+[TlSettingsTitle]
+english     = "Timeline Settings"
+translation = "Zaman çizelgesi ayarları"
+
+[TlLayout]
+english     = "Layout"
+translation = "Düzen"
+
 [TlBake]
 english     = "Bake"
 translation = "Pişir"

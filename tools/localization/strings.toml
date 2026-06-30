@@ -2692,6 +2692,14 @@ description = "Timeline overlay (Tempo mode) — label for the beat-subdivision 
 english     = "measure"
 description = "Timeline overlay (Tempo mode) — the word inside the '1/1 (measure)' snap entry; the rest is numeric. Shared with ProjectConfigWindow's Snap combo."
 
+[TlSettingsTitle]
+english     = "Timeline Settings"
+description = "Title of the timeline settings modal opened from the corner gear button."
+
+[TlLayout]
+english     = "Layout"
+description = "Timeline settings modal — label for the curve-layout picker (stacked curves vs separate lanes)."
+
 [TlBake]
 english     = "Bake"
 description = "Timeline region-bar right-click menu — bake the region's processed result into the axis actions."

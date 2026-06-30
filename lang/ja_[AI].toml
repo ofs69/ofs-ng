@@ -2543,6 +2543,14 @@ translation = "スナップ"
 english     = "measure"
 translation = "小節"
 
+[TlSettingsTitle]
+english     = "Timeline Settings"
+translation = "タイムライン設定"
+
+[TlLayout]
+english     = "Layout"
+translation = "レイアウト"
+
 [TlBake]
 english     = "Bake"
 translation = "ベイク"

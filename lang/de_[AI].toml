@@ -2543,6 +2543,14 @@ translation = "Einrasten"
 english     = "measure"
 translation = "Takt"
 
+[TlSettingsTitle]
+english     = "Timeline Settings"
+translation = "Zeitleisten-Einstellungen"
+
+[TlLayout]
+english     = "Layout"
+translation = "Layout"
+
 [TlBake]
 english     = "Bake"
 translation = "Einbrennen"

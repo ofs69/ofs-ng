@@ -2543,6 +2543,14 @@ translation = "Привязка"
 english     = "measure"
 translation = "такт"
 
+[TlSettingsTitle]
+english     = "Timeline Settings"
+translation = "Настройки таймлайна"
+
+[TlLayout]
+english     = "Layout"
+translation = "Макет"
+
 [TlBake]
 english     = "Bake"
 translation = "Запечь"

@@ -2543,6 +2543,14 @@ translation = "Encaixe"
 english     = "measure"
 translation = "compasso"
 
+[TlSettingsTitle]
+english     = "Timeline Settings"
+translation = "Configurações da linha do tempo"
+
+[TlLayout]
+english     = "Layout"
+translation = "Layout"
+
 [TlBake]
 english     = "Bake"
 translation = "Aplicar"

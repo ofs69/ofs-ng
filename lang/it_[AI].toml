@@ -2543,6 +2543,14 @@ translation = "Aggancia"
 english     = "measure"
 translation = "battuta"
 
+[TlSettingsTitle]
+english     = "Timeline Settings"
+translation = "Impostazioni timeline"
+
+[TlLayout]
+english     = "Layout"
+translation = "Layout"
+
 [TlBake]
 english     = "Bake"
 translation = "Consolida"

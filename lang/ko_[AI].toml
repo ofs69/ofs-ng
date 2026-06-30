@@ -2543,6 +2543,14 @@ translation = "스냅"
 english     = "measure"
 translation = "마디"
 
+[TlSettingsTitle]
+english     = "Timeline Settings"
+translation = "타임라인 설정"
+
+[TlLayout]
+english     = "Layout"
+translation = "레이아웃"
+
 [TlBake]
 english     = "Bake"
 translation = "베이크"

@@ -2543,6 +2543,14 @@ translation = "吸附"
 english     = "measure"
 translation = "小节"
 
+[TlSettingsTitle]
+english     = "Timeline Settings"
+translation = "时间轴设置"
+
+[TlLayout]
+english     = "Layout"
+translation = "布局"
+
 [TlBake]
 english     = "Bake"
 translation = "烘焙"

@@ -7,11 +7,13 @@
 #include "Core/ScriptAxisAction.h"
 #include "Core/ScriptProject.h"
 #include "Core/StandardAxis.h"
+#include "Localization/AxisNames.h"
 #include "Localization/Translator.h"
 #include "UI/AxisColors.h"
 #include "UI/BandBar.h"
 #include "UI/Icons.h"
 #include "UI/ImGuiHelpers.h"
+#include "UI/Modals.h"
 #include "UI/Theme.h"
 #include "UI/TimelineLayout.h"
 #include "UI/WaveformRenderer.h"
@@ -432,7 +434,6 @@ void ScriptTimelineWindow::renderStrip(const ScriptProject &project, EventQueue 
             // Open on release, matching the region band's context menu (BandBar) so right-click feels
             // identical across adjacent timeline surfaces.
             ctxAxis = clickedRole;
-            ctxFromGear = false;
             ImGui::OpenPopup("##timeline_ctx");
         }
     }
@@ -1071,7 +1072,6 @@ void ScriptTimelineWindow::renderTimeline(const ScriptProject &project, EventQue
             // active axis.
             StandardAxis ctxTarget = lanes ? laneAxis : project.state.activeAxis;
             ctxAxis = (ctxTarget < StandardAxis::Count) ? ctxTarget : StandardAxis::Count;
-            ctxFromGear = false;
             ImGui::OpenPopup("##timeline_ctx");
         }
     }
@@ -1080,11 +1080,6 @@ void ScriptTimelineWindow::renderTimeline(const ScriptProject &project, EventQue
 }
 
 void ScriptTimelineWindow::renderContextMenu(const ScriptProject &project, EventQueue &eq, VideoPlayer &videoPlayer) {
-    // The gear sits on the window's bottom edge: pin the popup's bottom-left to the gear's top-left
-    // (pivot {0,1}) so it grows upward over the timeline instead of off the bottom. Right-click opens
-    // are left to ImGui's default cursor placement.
-    if (ctxFromGear)
-        ImGui::SetNextWindowPos(gearMenuAnchor, ImGuiCond_Always, {0.0f, 1.0f});
     if (ImGui::BeginPopup("##timeline_ctx")) {
         if (ctxAxis < StandardAxis::Count) {
             const auto &ctxAx = project.axes[static_cast<size_t>(ctxAxis)];
@@ -1140,6 +1135,29 @@ void ScriptTimelineWindow::renderContextMenu(const ScriptProject &project, Event
     }
 }
 
+// Common frame-rate presets for the scripting-overlay Frame mode (the script-FPS picker), shared by the
+// timeline settings modal and the right-click overlay submenu. The names are numeric, not translatable.
+static constexpr float kCommonFpss[] = {23.976f, 24.0f, 25.0f, 29.97f, 30.0f, 48.0f, 50.0f, 59.94f, 60.0f};
+static constexpr const char *kCommonFpsNames[] = {"23.976", "24", "25", "29.97", "30", "48", "50", "59.94", "60"};
+
+// Index of the preset matching `fps` (within 0.001), or -1 for a custom value (combo shows blank).
+static int fpsPresetIndex(float fps) {
+    for (int i = 0; i < IM_ARRAYSIZE(kCommonFpss); ++i)
+        if (std::abs(fps - kCommonFpss[i]) < 0.001f)
+            return i;
+    return -1;
+}
+
+// kTempoSubdivisionNames with index 0 ("1/1 (measure)") localized into the frame arena — the only entry
+// carrying a translatable word; the rest are numeric fractions, left as-is. Main-thread render only.
+static const char **localizedTempoSnapNames() {
+    auto **names = ofs::FrameAllocator::instance().allocArray<const char *>(kTempoSubdivisionCount);
+    for (int i = 0; i < kTempoSubdivisionCount; ++i)
+        names[i] = kTempoSubdivisionNames[i];
+    names[0] = fmtScratch("1/1 ({})", Str::TlMeasure.sv());
+    return names;
+}
+
 void ScriptTimelineWindow::renderOverlayMenu(const ScriptProject &project, EventQueue &eq,
                                              VideoPlayer &videoPlayer) const {
     if (ImGui::BeginMenu(Str::TlOverlay.id("tl_overlay_menu"))) {
@@ -1163,16 +1181,7 @@ void ScriptTimelineWindow::renderOverlayMenu(const ScriptProject &project, Event
             const char *fpsStr = fmtScratch("{:.3f}", videoPlayer.getFps());
             ImGui::TextUnformatted(Str::TlVideoFps.fmt(fpsStr));
 
-            constexpr float kCommonFpss[] = {23.976f, 24.0f, 25.0f, 29.97f, 30.0f, 48.0f, 50.0f, 59.94f, 60.0f};
-            const char *kCommonFpsNames[] = {"23.976", "24", "25", "29.97", "30", "48", "50", "59.94", "60"};
-            int currentFpsIdx = -1;
-            for (int i = 0; i < IM_ARRAYSIZE(kCommonFpss); ++i) {
-                if (std::abs(ov.frameFps - kCommonFpss[i]) < 0.001f) {
-                    currentFpsIdx = i;
-                    break;
-                }
-            }
-
+            int currentFpsIdx = fpsPresetIndex(ov.frameFps);
             ImGui::TextUnformatted(Str::TlScriptFps);
             ImGui::SetNextItemWidth(fieldW);
             if (ImGui::Combo("##fps_preset", &currentFpsIdx, kCommonFpsNames, IM_ARRAYSIZE(kCommonFpsNames))) {
@@ -1193,16 +1202,10 @@ void ScriptTimelineWindow::renderOverlayMenu(const ScriptProject &project, Event
             changed |= ImGui::DragFloat("##tempo_offset", &ov.tempoOffsetSeconds, 0.001f, -10.0f, 10.0f, "%.3f",
                                         ImGuiSliderFlags_AlwaysClamp);
 
-            // kTempoSubdivisionNames index 0 ("1/1 (measure)") carries the only translatable word;
-            // the rest are numeric fractions. Localize just that entry into the frame arena.
-            auto **snapNames = ofs::FrameAllocator::instance().allocArray<const char *>(kTempoSubdivisionCount);
-            for (int i = 0; i < kTempoSubdivisionCount; ++i)
-                snapNames[i] = kTempoSubdivisionNames[i];
-            snapNames[0] = fmtScratch("1/1 ({})", Str::TlMeasure.sv());
-
             ImGui::TextUnformatted(Str::TlSnap);
             ImGui::SetNextItemWidth(fieldW);
-            changed |= ImGui::Combo("##tempo_snap", &ov.tempoMeasureIndex, snapNames, kTempoSubdivisionCount);
+            changed |=
+                ImGui::Combo("##tempo_snap", &ov.tempoMeasureIndex, localizedTempoSnapNames(), kTempoSubdivisionCount);
         }
 
         if (changed)
@@ -1210,6 +1213,140 @@ void ScriptTimelineWindow::renderOverlayMenu(const ScriptProject &project, Event
 
         ImGui::EndMenu();
     }
+}
+
+bool ScriptTimelineWindow::renderSettingsBody(const ScriptProject &project, EventQueue &eq,
+                                              VideoPlayer &videoPlayer) const {
+    // ── View ──────────────────────────────────────────────────────────────────
+    if (ofs::ui::beginForm("##tl_view_form")) {
+        // Curve layout: z-stacked Overlay vs one row per axis (Lanes). Visible labels are localized but
+        // each carries a stable ###id; the stored value is the enum index, so translating never changes
+        // what's persisted.
+        ofs::ui::formRow(Str::TlLayout);
+        const char *layoutNames[] = {Str::TlLayoutOverlay.id("layout_overlay"), Str::TlLayoutLanes.id("layout_lanes")};
+        int currentLayout = static_cast<int>(project.timelineView.layout);
+        ImGui::SetNextItemWidth(-FLT_MIN);
+        if (ImGui::Combo("###tlset_layout", &currentLayout, layoutNames, IM_ARRAYSIZE(layoutNames)))
+            eq.push(SetTimelineLayoutEvent{static_cast<TimelineLayout>(currentLayout)});
+
+        ofs::ui::formRow(Str::TlShowPoints);
+        bool showPoints = project.timelineView.showPoints;
+        if (ImGui::Checkbox("###tlset_show_points", &showPoints))
+            eq.push(SetTimelineShowPointsEvent{showPoints});
+
+        ofs::ui::formRow(Str::TlShowWaveform);
+        bool showWaveform = project.timelineView.showAudioWaveform;
+        if (ImGui::Checkbox("###tlset_show_waveform", &showWaveform))
+            eq.push(SetTimelineShowWaveformEvent{showWaveform});
+        ofs::ui::endForm();
+    }
+
+    // ── Axes ──────────────────────────────────────────────────────────────────
+    // Per-axis quick toggles for curve visibility (isVisible) and strip presence (showInStrip) — the
+    // same two switches the Axes menu and the strip eye-icon expose, gathered here so they can be
+    // flipped without hunting through menus. Listing mirrors the Axes menu: standard axes always, a
+    // scratch axis only once it exists(). L0 is pinned in the panel, so its panel toggle is disabled.
+    ImGui::SeparatorText(Str::AppMenuAxes);
+    if (ImGui::BeginTable("##tl_axes", 3,
+                          ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingFixedFit)) {
+        const float toggleW = ImGui::GetFrameHeight() + ImGui::GetStyle().CellPadding.x * 2.f;
+        ImGui::TableSetupColumn("##axis_name", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("##axis_vis", ImGuiTableColumnFlags_WidthFixed, toggleW);
+        ImGui::TableSetupColumn("##axis_panel", ImGuiTableColumnFlags_WidthFixed, toggleW);
+
+        // Icon header row (eye = shown in timeline, panel = shown in the left strip), with the menu's own
+        // labels as tooltips so the two columns read unambiguously.
+        ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
+        ImGui::TableNextColumn();
+        ImGui::TableNextColumn();
+        ImGui::TextUnformatted(ICON_EYE);
+        ImGui::SetItemTooltip("%s", Str::AppAxesShowTimeline.c_str());
+        ImGui::TableNextColumn();
+        ImGui::TextUnformatted(ICON_PANEL_LEFT);
+        ImGui::SetItemTooltip("%s", Str::AppAxesShowPanel.c_str());
+
+        for (size_t i = 0; i < kStandardAxisCount; ++i) {
+            const auto role = static_cast<StandardAxis>(i);
+            const auto &axis = project.axes[i];
+            if (isScratchAxis(role) && !axis.exists())
+                continue;
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            ImGui::AlignTextToFramePadding();
+            ImGui::TextUnformatted(ofs::loc::localizedAxisName(role));
+
+            ImGui::TableNextColumn();
+            bool vis = axis.isVisible;
+            if (ImGui::Checkbox(fmtScratch("###tlset_vis_{}", i), &vis))
+                eq.push(ToggleAxisVisibilityEvent{.axisRole = role, .visible = vis});
+
+            ImGui::TableNextColumn();
+            bool inPanel = axis.showInStrip;
+            const bool isL0 = role == StandardAxis::L0;
+            ImGui::BeginDisabled(isL0);
+            if (ImGui::Checkbox(fmtScratch("###tlset_panel_{}", i), &inPanel) && !isL0)
+                eq.push(ToggleAxisPanelVisibilityEvent{.axisRole = role, .inPanel = inPanel});
+            ImGui::EndDisabled();
+        }
+        ImGui::EndTable();
+    }
+
+    // ── Scripting overlay (Frame/Tempo) ────────────────────────────────────────
+    auto ov = project.overlay;
+    bool changed = false;
+
+    ImGui::SeparatorText(Str::TlOverlay);
+    if (ofs::ui::beginForm("##tl_overlay_form")) {
+        ofs::ui::formRow(Str::PcfType);
+        const char *overlayNames[] = {Str::TlOverlayFrame.id("ov_frame"), Str::TlOverlayTempo.id("ov_tempo")};
+        int currentOverlay = static_cast<int>(ov.overlay);
+        ImGui::SetNextItemWidth(-FLT_MIN);
+        if (ImGui::Combo("###tlset_overlay", &currentOverlay, overlayNames, IM_ARRAYSIZE(overlayNames))) {
+            ov.overlay = static_cast<ScriptingOverlay>(currentOverlay);
+            changed = true;
+        }
+
+        if (ov.overlay == ScriptingOverlay::Frame) {
+            int currentFpsIdx = fpsPresetIndex(ov.frameFps);
+            ofs::ui::formRow(Str::TlScriptFps);
+            ImGui::SetNextItemWidth(-FLT_MIN);
+            if (ImGui::Combo("###tlset_fps_preset", &currentFpsIdx, kCommonFpsNames, IM_ARRAYSIZE(kCommonFpsNames))) {
+                ov.frameFps = kCommonFpss[currentFpsIdx];
+                changed = true;
+            }
+
+            ofs::ui::formRow(Str::TlCustomFps);
+            ImGui::SetNextItemWidth(-FLT_MIN);
+            changed |= ImGui::DragFloat("###tlset_custom_fps", &ov.frameFps, 0.1f, 1.0f, 240.0f);
+        } else if (ov.overlay == ScriptingOverlay::Tempo) {
+            ofs::ui::formRow(Str::TlBpm);
+            ImGui::SetNextItemWidth(-FLT_MIN);
+            changed |= ImGui::DragFloat("###tlset_bpm", &ov.tempoBpm, 0.1f, 10.0f, 500.0f);
+
+            ofs::ui::formRow(Str::TlOffsetSeconds);
+            ImGui::SetNextItemWidth(-FLT_MIN);
+            changed |= ImGui::DragFloat("###tlset_tempo_offset", &ov.tempoOffsetSeconds, 0.001f, -10.0f, 10.0f, "%.3f",
+                                        ImGuiSliderFlags_AlwaysClamp);
+
+            ofs::ui::formRow(Str::TlSnap);
+            ImGui::SetNextItemWidth(-FLT_MIN);
+            changed |= ImGui::Combo("###tlset_tempo_snap", &ov.tempoMeasureIndex, localizedTempoSnapNames(),
+                                    kTempoSubdivisionCount);
+        }
+        ofs::ui::endForm();
+    }
+
+    if (ov.overlay == ScriptingOverlay::Frame) {
+        const char *fpsStr = fmtScratch("{:.3f}", videoPlayer.getFps());
+        ImGui::TextDisabled("%s", Str::TlVideoFps.fmt(fpsStr));
+    }
+
+    if (changed)
+        eq.push(OverlaySettingsChangedEvent{ov});
+
+    // Rendered as a click-away flyout (dismissOnClickAway): ImGui closes it on a click outside or
+    // Escape, so the body never self-closes — return false.
+    return false;
 }
 
 void ScriptTimelineWindow::render(const ScriptProject &project, EventQueue &eq, VideoPlayer &videoPlayer,
@@ -1297,21 +1434,24 @@ void ScriptTimelineWindow::render(const ScriptProject &project, EventQueue &eq, 
     const ImVec2 regionBarMax = {curvePos.x + curveSize.x, outerPos.y + outerSize.y};
     renderRegionBar(videoPlayer, project, eq, regionBarMin, regionBarMax, curvePos, curveSize, offsetTime);
 
-    // Settings gear in the dead corner below the left strip, beside the region bar. It opens the same
-    // context menu as a right-click on the timeline, giving the overlay/view settings a discoverable
-    // entry point that doesn't depend on knowing the right-click gesture. Latch ctxAxis exactly as the
-    // right-click path does so the menu's axis section targets the active axis. Width runs to one
-    // item-spacing short of the region bar's left edge so the button keeps a margin from it.
+    // Settings gear in the dead corner below the left strip, beside the region bar. It opens the
+    // timeline settings modal, giving the overlay/view settings a discoverable entry point that doesn't
+    // depend on knowing the right-click gesture. Width runs to one item-spacing short of the region
+    // bar's left edge so the button keeps a margin from it.
     const ImVec2 gearMin = {outerPos.x, regionBarMin.y};
     const float gearMargin = ImGui::GetStyle().ItemSpacing.x;
     const float gearW = regionBarMin.x - gearMargin - gearMin.x;
     ImGui::SetCursorScreenPos(gearMin);
-    if (ImGui::Button(ICON_SETTINGS "###tl_settings", {gearW, regionBarH})) {
-        ctxAxis = (project.state.activeAxis < StandardAxis::Count) ? project.state.activeAxis : StandardAxis::Count;
-        ctxFromGear = true;
-        gearMenuAnchor = gearMin;
-        ImGui::OpenPopup("##timeline_ctx");
-    }
+    // Raise the settings modal through the shared ModalManager (chrome, centering, FIFO serialization,
+    // shutdown teardown). Built here inside the live frame so the width is font-relative, like every
+    // other showCustomModal call. The body captures the app-lifetime project/eq/videoPlayer (the
+    // ModalManager is torn down before them), reads them fresh each frame, and returns true to close.
+    if (ImGui::Button(ICON_SETTINGS "###tl_settings_gear", {gearW, regionBarH}))
+        showCustomModal(eq, {.title = Str::TlSettingsTitle.c_str(),
+                             .width = ImGui::GetMainViewport()->Size.x * 0.45f, // match the Preferences window scale
+                             .body = [this, p = &project, eqp = &eq,
+                                      vp = &videoPlayer]() { return renderSettingsBody(*p, *eqp, *vp); },
+                             .dismissOnClickAway = true}); // click-away / Escape closes it (no Close button)
 
     // ── Edge scroll during box selection or region resize/move ──────────────
     {

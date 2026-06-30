@@ -2543,6 +2543,14 @@ translation = "Aimantation"
 english     = "measure"
 translation = "mesure"
 
+[TlSettingsTitle]
+english     = "Timeline Settings"
+translation = "Paramètres de la timeline"
+
+[TlLayout]
+english     = "Layout"
+translation = "Disposition"
+
 [TlBake]
 english     = "Bake"
 translation = "Consolider"
