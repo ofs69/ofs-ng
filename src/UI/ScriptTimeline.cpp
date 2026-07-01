@@ -1295,13 +1295,19 @@ void ScriptTimelineWindow::render(const ScriptProject &project, EventQueue &eq, 
 
     ImVec2 outerPos = ImGui::GetCursorScreenPos();
     ImVec2 outerSize = ImGui::GetContentRegionAvail();
-    if (outerSize.y < kMinPanelH)
-        outerSize.y = kMinPanelH;
 
     // Region bar height tracks the font so its band labels are never clipped.
     const float regionBarH = ofs::ui::bandBarHeight();
     // Breathing room between the script-line area and the region bar (anchored at the bottom).
     const float regionBarGap = ImGui::GetStyle().ItemSpacing.y;
+
+    // Floor the panel so the script-line band keeps at least one usable lane's height in either layout:
+    // Separate-lanes already pins each lane to minLaneHeight() and scrolls, but the Stacked-lines overlay
+    // is a single band with no such floor, so without this it collapses well below a lane. The band is the
+    // area minus the region bar, so the panel minimum is that floor plus the region bar's reserved height.
+    const float minPanelH = regionBarH + regionBarGap + minLaneHeight();
+    if (outerSize.y < minPanelH)
+        outerSize.y = minPanelH;
 
     const float stripW = stripWidth();
     // Mirror renderTimeline: the strip is trimmed by one item-spacing and the script line (with its overlay

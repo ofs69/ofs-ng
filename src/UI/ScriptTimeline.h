@@ -134,8 +134,6 @@ class ScriptTimelineWindow {
     // reads the eased weight (axisEmphasis_).
     void stepAxisEmphasis(const ScriptProject &project);
 
-    static constexpr float kMinPanelH = 40.f;
-
     ViewState viewState;
     EditState editState;
     SelectionState selectionState;
