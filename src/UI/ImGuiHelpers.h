@@ -19,6 +19,16 @@ inline ImFont *gFontDefault = nullptr;
 // Gap between item right edge and the scrollbar track. Items must stop this
 // many pixels short of GetContentRegionAvail().x so they never abut the scrollbar.
 inline constexpr float kRightGap = 6.f;
+
+// kRightGap is only worth reserving when a vertical scrollbar is actually on screen. Without one,
+// subtracting it leaves width-sized content stopping short of the full-width section headers /
+// SeparatorTexts in the same window — a misaligned right edge. Returns kRightGap when the current
+// window shows a scrollbar this frame, else 0. Vertical overflow is independent of content width, so
+// gating a horizontal gap on it can't feed back into the layout. Prefer this over a bare kRightGap
+// wherever content is sized to fill the width.
+inline float scrollbarGap() {
+    return ImGui::GetScrollMaxY() > 0.f ? kRightGap : 0.f;
+}
 // Label-column width for ProcessingPanel's own node-param table (not the form helpers below,
 // which auto-fit). Kept here as the one shared layout constant those node widgets reference.
 inline constexpr float kLabelW = 120.f;
@@ -45,7 +55,7 @@ inline float buttonW(const char *label) {
 // label can never clip or overrun the widget column (no hardcoded width that survives only English).
 // Returns false (and must NOT call endForm) if the table could not be created.
 inline bool beginForm(const char *id) {
-    float w = ImGui::GetContentRegionAvail().x - kRightGap;
+    float w = ImGui::GetContentRegionAvail().x - scrollbarGap();
     if (!ImGui::BeginTable(id, 2, ImGuiTableFlags_None, {w, 0.f}))
         return false;
     ImGui::TableSetupColumn("##L", ImGuiTableColumnFlags_WidthFixed);
@@ -68,7 +78,7 @@ inline void formRow(const char *label) {
 // Like beginForm, but with a leading fixed-width icon column so glyphs line up in
 // their own column independent of label width: [icon | label | widget].
 inline bool beginIconForm(const char *id) {
-    float w = ImGui::GetContentRegionAvail().x - kRightGap;
+    float w = ImGui::GetContentRegionAvail().x - scrollbarGap();
     if (!ImGui::BeginTable(id, 3, ImGuiTableFlags_None, {w, 0.f}))
         return false;
     ImGui::TableSetupColumn("##I", ImGuiTableColumnFlags_WidthFixed,
@@ -110,6 +120,48 @@ inline void helpMarker(const char *desc) {
         ImGui::PopTextWrapPos();
         ImGui::EndTooltip();
     }
+}
+
+// Like formRow, but appends a help marker after the label (same column) — for a setting whose label
+// needs an explanatory tooltip. Saves hand-expanding formRow + SameLine + helpMarker at each call site.
+inline void formRowHelp(const char *label, const char *hint) {
+    ImGui::TableNextRow();
+    ImGui::TableNextColumn();
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextUnformatted(label);
+    ImGui::SameLine();
+    helpMarker(hint);
+    ImGui::TableNextColumn();
+}
+
+// A reset-to-default icon button plus its delayed tooltip — the pattern repeated across the theme
+// editor's per-color / per-var reset columns. The visible glyph is always ICON_RESET; `id` is the
+// widget's stable ###/## id suffix and `tip` the hover explanation. Returns true when clicked.
+inline bool resetButton(const char *id, const char *tip) {
+    bool clicked = ImGui::Button(fmtScratch("{}{}", ICON_RESET, id));
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
+        ImGui::SetTooltip("%s", tip);
+    return clicked;
+}
+
+// One combo option: a Selectable with the caller's (already-built, ###id-carrying) label that also
+// runs the selected-focus dance. Returns true only when the user newly picks a non-selected item —
+// centralizing the `Selectable(...) && !selected` + SetItemDefaultFocus boilerplate every combo repeats.
+inline bool comboItem(const char *label, bool selected) {
+    bool picked = ImGui::Selectable(label, selected) && !selected;
+    if (selected)
+        ImGui::SetItemDefaultFocus();
+    return picked;
+}
+
+// A labeled checkbox rendered label-left (matching the form-row convention the Simulator tab uses):
+// the visible label sits before the box, so the box carries no visible text and `id` is a plain
+// ##/### suffix. Standardizes the two idioms (label-left vs box-left `Checkbox(label)`) that had
+// drifted across the settings rows. Returns true when toggled.
+inline bool labeledCheckbox(const char *label, const char *id, bool *v) {
+    ImGui::TextUnformatted(label);
+    ImGui::SameLine();
+    return ImGui::Checkbox(id, v);
 }
 
 // Ctrl+F search activation. Returns true on the frame Ctrl+F is pressed while the current

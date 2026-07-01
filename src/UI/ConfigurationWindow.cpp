@@ -24,10 +24,14 @@ namespace ofs {
 
 using ofs::ui::beginForm;
 using ofs::ui::beginIconForm;
+using ofs::ui::comboItem;
 using ofs::ui::endForm;
 using ofs::ui::formRow;
+using ofs::ui::formRowHelp;
 using ofs::ui::formRowIcon;
-using ofs::ui::kRightGap;
+using ofs::ui::labeledCheckbox;
+using ofs::ui::resetButton;
+using ofs::ui::scrollbarGap;
 
 ConfigurationWindow::ConfigurationWindow(const AppSettings &appSettings) : appSettings(appSettings) {}
 
@@ -201,52 +205,29 @@ void ConfigurationWindow::renderApplicationTab(EventQueue &eq) {
         const char *preview = curMax <= 0 ? matchDisplayLabel() : Str::PrefMaxFpsValue.fmt(fmtScratch("{}", curMax));
 
         if (beginForm("##perf_form")) {
-            ImGui::TableNextRow();
-            ImGui::TableNextColumn();
-            ImGui::AlignTextToFramePadding();
-            ImGui::TextUnformatted(Str::PrefMaxFps);
-            ImGui::SameLine();
-            ofs::ui::helpMarker(Str::PrefMaxFpsHint.c_str());
-            ImGui::TableNextColumn();
+            formRowHelp(Str::PrefMaxFps, Str::PrefMaxFpsHint.c_str());
             ImGui::SetNextItemWidth(-FLT_MIN);
             if (ImGui::BeginCombo("##max_fps", preview)) {
-                bool selMatch = curMax <= 0;
-                if (ImGui::Selectable(fmtScratch("{}###maxfps_match", matchDisplayLabel()), selMatch) && !selMatch)
+                if (comboItem(fmtScratch("{}###maxfps_match", matchDisplayLabel()), curMax <= 0))
                     eq.push(ModifyEvent<AppSettings>{[](AppSettings &s) { s.maxFps = 0; }});
-                if (selMatch)
-                    ImGui::SetItemDefaultFocus();
                 for (int n = 2; refresh / static_cast<float>(n) >= kFpsFloor; ++n) {
                     const int fps = static_cast<int>(std::lround(refresh / static_cast<float>(n)));
-                    const bool selected = curMax == fps;
                     const char *visible = Str::PrefMaxFpsValue.fmt(fmtScratch("{}", fps));
-                    if (ImGui::Selectable(fmtScratch("{}###maxfps_{}", visible, n), selected) && !selected)
+                    if (comboItem(fmtScratch("{}###maxfps_{}", visible, n), curMax == fps))
                         eq.push(ModifyEvent<AppSettings>{[fps](AppSettings &s) { s.maxFps = fps; }});
-                    if (selected)
-                        ImGui::SetItemDefaultFocus();
                 }
                 ImGui::EndCombo();
             }
 
             // Undo history memory budget (MB). Presets only — exact byte tuning isn't useful here.
-            ImGui::TableNextRow();
-            ImGui::TableNextColumn();
-            ImGui::AlignTextToFramePadding();
-            ImGui::TextUnformatted(Str::PrefUndoMemory);
-            ImGui::SameLine();
-            ofs::ui::helpMarker(Str::PrefUndoMemoryHint.c_str());
-            ImGui::TableNextColumn();
+            formRowHelp(Str::PrefUndoMemory, Str::PrefUndoMemoryHint.c_str());
             const int curUndo = appSettings.undoMemoryLimitMb;
             ImGui::SetNextItemWidth(-FLT_MIN);
             if (ImGui::BeginCombo("##undo_mem", Str::PrefUndoMemoryValue.fmt(fmtScratch("{}", curUndo)))) {
                 for (const int mb : {64, 128, 256, 512, 1024, 2048}) {
-                    const bool selected = curUndo == mb;
-                    if (ImGui::Selectable(
-                            fmtScratch("{}###undomem_{}", Str::PrefUndoMemoryValue.fmt(fmtScratch("{}", mb)), mb),
-                            selected) &&
-                        !selected)
+                    if (comboItem(fmtScratch("{}###undomem_{}", Str::PrefUndoMemoryValue.fmt(fmtScratch("{}", mb)), mb),
+                                  curUndo == mb))
                         eq.push(ModifyEvent<AppSettings>{[mb](AppSettings &s) { s.undoMemoryLimitMb = mb; }});
-                    if (selected)
-                        ImGui::SetItemDefaultFocus();
                 }
                 ImGui::EndCombo();
             }
@@ -261,26 +242,20 @@ void ConfigurationWindow::renderApplicationTab(EventQueue &eq) {
     // "##…" (no visible label) so each toggle's label sits to its left like the form rows elsewhere.
     {
         bool hwdec = appSettings.hwdecEnabled;
-        ImGui::TextUnformatted(Str::PrefHwDecoding);
-        ImGui::SameLine();
-        if (ImGui::Checkbox("##hwdec", &hwdec))
+        if (labeledCheckbox(Str::PrefHwDecoding, "##hwdec", &hwdec))
             eq.push(ModifyEvent<AppSettings>{[hwdec](AppSettings &s) { s.hwdecEnabled = hwdec; }});
         ImGui::SameLine();
         ofs::ui::helpMarker(hwdec ? Str::PrefHardwareDecodingHint.c_str() : Str::PrefSoftwareDecodingHint.c_str());
         ImGui::SameLine(0.0f, ImGui::GetFontSize() * 1.5f);
         bool timelinePreview = appSettings.showTimelinePreview;
-        ImGui::TextUnformatted(Str::PrefTimelinePreview);
-        ImGui::SameLine();
-        if (ImGui::Checkbox("##timeline_preview", &timelinePreview))
+        if (labeledCheckbox(Str::PrefTimelinePreview, "##timeline_preview", &timelinePreview))
             eq.push(ModifyEvent<AppSettings>{
                 [timelinePreview](AppSettings &s) { s.showTimelinePreview = timelinePreview; }});
         ImGui::SameLine();
         ofs::ui::helpMarker(Str::PrefTimelinePreviewHint.c_str());
         ImGui::SameLine(0.0f, ImGui::GetFontSize() * 1.5f);
         bool pauseOnSeek = appSettings.pauseOnSeek;
-        ImGui::TextUnformatted(Str::PrefPauseOnSeek);
-        ImGui::SameLine();
-        if (ImGui::Checkbox("##pause_on_seek", &pauseOnSeek))
+        if (labeledCheckbox(Str::PrefPauseOnSeek, "##pause_on_seek", &pauseOnSeek))
             eq.push(ModifyEvent<AppSettings>{[pauseOnSeek](AppSettings &s) { s.pauseOnSeek = pauseOnSeek; }});
         ImGui::SameLine();
         ofs::ui::helpMarker(Str::PrefPauseOnSeekHint.c_str());
@@ -294,9 +269,7 @@ void ConfigurationWindow::renderApplicationTab(EventQueue &eq) {
     ImGui::SeparatorText(Str::PrefSound);
     {
         bool uiSounds = appSettings.uiSoundsEnabled;
-        ImGui::TextUnformatted(Str::PrefUiSounds);
-        ImGui::SameLine();
-        if (ImGui::Checkbox("##ui_sounds", &uiSounds))
+        if (labeledCheckbox(Str::PrefUiSounds, "##ui_sounds", &uiSounds))
             eq.push(ModifyEvent<AppSettings>{[uiSounds](AppSettings &s) { s.uiSoundsEnabled = uiSounds; }});
         ImGui::SameLine();
         ofs::ui::helpMarker(Str::PrefUiSoundsHint.c_str());
@@ -337,7 +310,7 @@ void ConfigurationWindow::renderApplicationTab(EventQueue &eq) {
 
         // Read-only input: shows the full (possibly non-ASCII) path and lets the user select/copy it,
         // and its hint placeholder covers the unset case. Fills the row minus the action buttons.
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - reserved - kRightGap);
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - reserved - scrollbarGap());
         ImGui::InputTextWithHint("###intra_dir", Str::PrefIntraOutputDirNotSet.c_str(), const_cast<std::string *>(&dir),
                                  ImGuiInputTextFlags_ReadOnly);
         ImGui::SameLine();
@@ -408,13 +381,7 @@ void ConfigurationWindow::renderApplicationTab(EventQueue &eq) {
             return std::strcmp(id, "en") == 0 ? "English (built-in)" : id;
         };
         if (beginForm("##loc_form")) {
-            ImGui::TableNextRow();
-            ImGui::TableNextColumn();
-            ImGui::AlignTextToFramePadding();
-            ImGui::TextUnformatted(Str::PrefLanguage);
-            ImGui::SameLine();
-            ofs::ui::helpMarker(Str::PrefLanguagePluginReloadHint.c_str());
-            ImGui::TableNextColumn();
+            formRowHelp(Str::PrefLanguage, Str::PrefLanguagePluginReloadHint.c_str());
             // Combo, Export and Live Reload share the widget column. Reserve room on the right for the
             // Export button (icon + label) and the checkbox (frame box + inner spacing + visible label),
             // then let the combo fill the rest. file-output reads as "export to file" — download (the
@@ -422,8 +389,9 @@ void ConfigurationWindow::renderApplicationTab(EventQueue &eq) {
             const ImGuiStyle &st = ImGui::GetStyle();
             const char *exportLabel = Str::PrefExportCatalog.iconId(ICON_FILE_OUTPUT, "export_catalog");
             const float btnW = ImGui::CalcTextSize(exportLabel, nullptr, true).x + st.FramePadding.x * 2.f;
+            // Label-left: label + SameLine gap + box (see labeledCheckbox), so reserve in that order.
             const float cbW =
-                ImGui::GetFrameHeight() + st.ItemInnerSpacing.x + ImGui::CalcTextSize(Str::PrefLiveReload.c_str()).x;
+                ImGui::CalcTextSize(Str::PrefLiveReload.c_str()).x + st.ItemSpacing.x + ImGui::GetFrameHeight();
             const float hmW = ImGui::CalcTextSize(ICON_CIRCLE_HELP).x;
             ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - btnW - cbW - hmW - st.ItemSpacing.x * 3.f);
             const bool comboOpen = ImGui::BeginCombo("##language", displayName(current));
@@ -434,11 +402,8 @@ void ConfigurationWindow::renderApplicationTab(EventQueue &eq) {
             langComboOpen_ = comboOpen;
             if (comboOpen) {
                 for (const auto &id : availableLanguages) {
-                    const bool selected = (id == current);
-                    if (ImGui::Selectable(displayName(id.c_str()), selected) && id != current)
+                    if (comboItem(displayName(id.c_str()), id == current))
                         eq.push(SetLanguageEvent{.languageId = id});
-                    if (selected)
-                        ImGui::SetItemDefaultFocus();
                 }
                 ImGui::EndCombo();
             }
@@ -461,7 +426,7 @@ void ConfigurationWindow::renderApplicationTab(EventQueue &eq) {
             }
             ImGui::SameLine();
             bool liveReload = appSettings.liveReloadTranslations;
-            if (ImGui::Checkbox(Str::PrefLiveReload.id("liveReload"), &liveReload))
+            if (labeledCheckbox(Str::PrefLiveReload, "###liveReload", &liveReload))
                 eq.push(
                     ModifyEvent<AppSettings>{[liveReload](AppSettings &s) { s.liveReloadTranslations = liveReload; }});
             ImGui::SameLine();
@@ -477,7 +442,7 @@ void ConfigurationWindow::renderApplicationTab(EventQueue &eq) {
         // Auto-backup toggle, the retention-count slider, and both folder shortcuts share one row: the
         // checkbox and slider auto-size, the two buttons split the remaining width.
         bool autoBackup = appSettings.autoBackupEnabled;
-        if (ImGui::Checkbox(Str::PrefAutoBackup.id("auto_backup"), &autoBackup))
+        if (labeledCheckbox(Str::PrefAutoBackup, "###auto_backup", &autoBackup))
             eq.push(ModifyEvent<AppSettings>{[autoBackup](AppSettings &s) { s.autoBackupEnabled = autoBackup; }});
 
         // How many timestamped backups to retain per project before the oldest is pruned. No visible
@@ -493,7 +458,7 @@ void ConfigurationWindow::renderApplicationTab(EventQueue &eq) {
         ImGui::EndDisabled();
 
         ImGui::SameLine();
-        const float btnW = (ImGui::GetContentRegionAvail().x - kRightGap - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
+        const float btnW = (ImGui::GetContentRegionAvail().x - scrollbarGap() - ImGui::GetStyle().ItemSpacing.x) * 0.5f;
         if (ImGui::Button(Str::PrefOpenAppDataFolder.icon(ICON_FOLDER_OPEN), {btnW, 0.f}))
             ofs::util::openInFileBrowser(ofs::util::getPrefPath());
         ImGui::SameLine();
@@ -507,7 +472,7 @@ void ConfigurationWindow::renderApplicationTab(EventQueue &eq) {
     ImGui::SeparatorText(Str::AboutUpdates);
     {
         bool checkUpdates = appSettings.checkForUpdatesOnStartup;
-        if (ImGui::Checkbox(Str::PrefCheckUpdates.id("check_updates"), &checkUpdates))
+        if (labeledCheckbox(Str::PrefCheckUpdates, "###check_updates", &checkUpdates))
             eq.push(ModifyEvent<AppSettings>{
                 [checkUpdates](AppSettings &s) { s.checkForUpdatesOnStartup = checkUpdates; }});
     }
@@ -539,14 +504,16 @@ struct ColorItem {
     const char *label;
     constexpr ColorItem(int s, const char *l) : slot(s), label(l) {}
 };
+// Which widget a theme-var row renders. All kinds read/write t.vars[slot] (scalar in .x; Vec2 uses .x/.y).
+enum class VarWidget { Drag, Vec2, DragInt, Slider };
 struct VarItem {
     int slot; // ImGuiStyleVar_* / AppVar_*
     const char *label;
-    bool vec2;           // DragFloat2 vs DragFloat
-    float speed, mn, mx; // DragFloat tunables
-    const char *fmt;     // scalar format ("%.1f"); nullptr for vec2 (uses "%.0f")
-    constexpr VarItem(int s, const char *l, bool v, float sp, float lo, float hi, const char *f)
-        : slot(s), label(l), vec2(v), speed(sp), mn(lo), mx(hi), fmt(f) {}
+    VarWidget kind;
+    float speed, mn, mx; // Drag/DragInt tunables (speed unused by Slider)
+    const char *fmt;     // value format ("%.1f" / "%d"); nullptr for Vec2 (uses "%.0f")
+    constexpr VarItem(int s, const char *l, VarWidget k, float sp, float lo, float hi, const char *f)
+        : slot(s), label(l), kind(k), speed(sp), mn(lo), mx(hi), fmt(f) {}
 };
 struct NodeColorItem {
     int slot; // ImNodesCol_*
@@ -638,28 +605,39 @@ constexpr ColorItem kProcessingColors[] = {
 };
 
 constexpr VarItem kGeometryVars[] = {
-    {ImGuiStyleVar_WindowRounding, "Window Rounding", false, 0.1f, 0.f, 16.f, "%.1f"},
-    {ImGuiStyleVar_ChildRounding, "Child Rounding", false, 0.1f, 0.f, 16.f, "%.1f"},
-    {ImGuiStyleVar_FrameRounding, "Frame Rounding", false, 0.1f, 0.f, 16.f, "%.1f"},
-    {ImGuiStyleVar_PopupRounding, "Popup Rounding", false, 0.1f, 0.f, 16.f, "%.1f"},
-    {ImGuiStyleVar_ScrollbarRounding, "Scrollbar Rounding", false, 0.1f, 0.f, 16.f, "%.1f"},
-    {ImGuiStyleVar_GrabRounding, "Grab Rounding", false, 0.1f, 0.f, 16.f, "%.1f"},
-    {ImGuiStyleVar_TabRounding, "Tab Rounding", false, 0.1f, 0.f, 16.f, "%.1f"},
-    {ImGuiStyleVar_WindowBorderSize, "Window Border", false, 0.05f, 0.f, 3.f, "%.2f"},
-    {ImGuiStyleVar_FrameBorderSize, "Frame Border", false, 0.05f, 0.f, 3.f, "%.2f"},
-    {ImGuiStyleVar_WindowPadding, "Window Padding", true, 0.2f, 0.f, 30.f, nullptr},
-    {ImGuiStyleVar_FramePadding, "Frame Padding", true, 0.2f, 0.f, 30.f, nullptr},
-    {ImGuiStyleVar_ItemSpacing, "Item Spacing", true, 0.2f, 0.f, 30.f, nullptr},
-    {ImGuiStyleVar_CellPadding, "Cell Padding", true, 0.2f, 0.f, 30.f, nullptr},
+    {ImGuiStyleVar_WindowRounding, "Window Rounding", VarWidget::Drag, 0.1f, 0.f, 16.f, "%.1f"},
+    {ImGuiStyleVar_ChildRounding, "Child Rounding", VarWidget::Drag, 0.1f, 0.f, 16.f, "%.1f"},
+    {ImGuiStyleVar_FrameRounding, "Frame Rounding", VarWidget::Drag, 0.1f, 0.f, 16.f, "%.1f"},
+    {ImGuiStyleVar_PopupRounding, "Popup Rounding", VarWidget::Drag, 0.1f, 0.f, 16.f, "%.1f"},
+    {ImGuiStyleVar_ScrollbarRounding, "Scrollbar Rounding", VarWidget::Drag, 0.1f, 0.f, 16.f, "%.1f"},
+    {ImGuiStyleVar_GrabRounding, "Grab Rounding", VarWidget::Drag, 0.1f, 0.f, 16.f, "%.1f"},
+    {ImGuiStyleVar_TabRounding, "Tab Rounding", VarWidget::Drag, 0.1f, 0.f, 16.f, "%.1f"},
+    {ImGuiStyleVar_WindowBorderSize, "Window Border", VarWidget::Drag, 0.05f, 0.f, 3.f, "%.2f"},
+    {ImGuiStyleVar_FrameBorderSize, "Frame Border", VarWidget::Drag, 0.05f, 0.f, 3.f, "%.2f"},
+    {ImGuiStyleVar_WindowPadding, "Window Padding", VarWidget::Vec2, 0.2f, 0.f, 30.f, nullptr},
+    {ImGuiStyleVar_FramePadding, "Frame Padding", VarWidget::Vec2, 0.2f, 0.f, 30.f, nullptr},
+    {ImGuiStyleVar_ItemSpacing, "Item Spacing", VarWidget::Vec2, 0.2f, 0.f, 30.f, nullptr},
+    {ImGuiStyleVar_CellPadding, "Cell Padding", VarWidget::Vec2, 0.2f, 0.f, 30.f, nullptr},
 };
 
 constexpr VarItem kNodeGeomVars[] = {
-    {AppVar_NodeGridSpacing, "Grid Spacing", false, 0.2f, 4.f, 64.f, "%.0f"},
-    {AppVar_NodeCornerRounding, "Corner Rounding", false, 0.1f, 0.f, 16.f, "%.1f"},
-    {AppVar_NodeBorderThickness, "Border Thickness", false, 0.05f, 0.f, 5.f, "%.2f"},
-    {AppVar_NodeLinkThickness, "Link Thickness", false, 0.05f, 0.5f, 8.f, "%.2f"},
-    {AppVar_NodePinRadius, "Pin Radius", false, 0.05f, 1.f, 12.f, "%.2f"},
-    {AppVar_NodePadding, "Node Padding", true, 0.2f, 0.f, 30.f, nullptr},
+    {AppVar_NodeGridSpacing, "Grid Spacing", VarWidget::Drag, 0.2f, 4.f, 64.f, "%.0f"},
+    {AppVar_NodeCornerRounding, "Corner Rounding", VarWidget::Drag, 0.1f, 0.f, 16.f, "%.1f"},
+    {AppVar_NodeBorderThickness, "Border Thickness", VarWidget::Drag, 0.05f, 0.f, 5.f, "%.2f"},
+    {AppVar_NodeLinkThickness, "Link Thickness", VarWidget::Drag, 0.05f, 0.5f, 8.f, "%.2f"},
+    {AppVar_NodePinRadius, "Pin Radius", VarWidget::Drag, 0.05f, 1.f, 12.f, "%.2f"},
+    {AppVar_NodePadding, "Node Padding", VarWidget::Vec2, 0.2f, 0.f, 30.f, nullptr},
+};
+
+// Timeline stroke/width metrics — same t.vars[] backing store as the geometry sections, rendered
+// through the same two-per-row var grid so they gain reset buttons and a consistent layout.
+constexpr VarItem kTimelineVars[] = {
+    {AppVar_ScriptSeekCursorWidth, "Seek Cursor Width", VarWidget::DragInt, 1.f, 1.f, 4.f, "%d"},
+    {AppVar_ScriptPlayCursorWidth, "Play Cursor Width", VarWidget::DragInt, 1.f, 1.f, 4.f, "%d"},
+    {AppVar_GridLineMidWidth, "Grid Mid Width", VarWidget::Drag, 0.1f, 0.5f, 4.f, "%.1f"},
+    {AppVar_OverlayLineMajorWidth, "Overlay Major Width", VarWidget::Drag, 0.1f, 0.5f, 4.f, "%.1f"},
+    {AppVar_TimelineLineWidth, "Line Width", VarWidget::Drag, 0.1f, 1.f, 6.f, "%.1f"},
+    {AppVar_WaveformScale, "Waveform Height", VarWidget::Slider, 0.f, 0.1f, 1.f, "%.2f"},
 };
 
 constexpr NodeColorItem kNodeColors[] = {
@@ -677,7 +655,7 @@ constexpr NodeColorItem kNodeColors[] = {
 
 void ConfigurationWindow::renderThemeTab(const ScriptProject &project, EventQueue &eq) {
     ofs::theme::Theme &t = ofs::theme::getActive();
-    const float avail = ImGui::GetContentRegionAvail().x - kRightGap;
+    const float avail = ImGui::GetContentRegionAvail().x - scrollbarGap();
 
     const ofs::theme::Theme &defaults = t.isDark ? ofs::theme::defaultDark() : ofs::theme::defaultLight();
 
@@ -724,12 +702,10 @@ void ConfigurationWindow::renderThemeTab(const ScriptProject &project, EventQueu
             }
         }
         ImGui::TableSetColumnIndex(side * 3 + 2);
-        if (ImGui::Button(fmtScratch("{}###colreset{}", ICON_RESET, slot))) {
+        if (resetButton(fmtScratch("###colreset{}", slot), Str::PrefResetToDefaultTip.c_str())) {
             t.colors[slot] = defaults.colors[slot];
             changed = true;
         }
-        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
-            ImGui::SetTooltip("%s", Str::PrefResetToDefaultTip.c_str());
         return changed;
     };
 
@@ -790,46 +766,104 @@ void ConfigurationWindow::renderThemeTab(const ScriptProject &project, EventQueu
             applyAndSave();
     };
 
-    // Shared variable-row helpers (DragFloat / DragFloat2 over a vars[] slot + reset).
-    auto scalarVarRow = [&](int slot, const char *label, float speed, float mn, float mx, const char *fmt) -> bool {
-        formRow(label);
-        ImGui::PushID(slot);
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - kResetW - 4.f);
-        bool ch = ImGui::DragFloat("##v", &t.vars[slot].x, speed, mn, mx, fmt);
-        ImGui::SameLine();
-        if (ImGui::Button(ICON_RESET)) {
-            t.vars[slot] = defaults.vars[slot];
-            ch = true;
-        }
-        ImGui::PopID();
-        return ch;
-    };
-    auto vec2VarRow = [&](int slot, const char *label, float speed, float mn, float mx) -> bool {
-        formRow(label);
-        ImGui::PushID(slot);
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - kResetW - 4.f);
-        bool ch = ImGui::DragFloat2("##v", &t.vars[slot].x, speed, mn, mx, "%.0f");
-        ImGui::SameLine();
-        if (ImGui::Button(ICON_RESET)) {
-            t.vars[slot] = defaults.vars[slot];
-            ch = true;
-        }
-        ImGui::PopID();
-        return ch;
+    // Begin the shared 6-column var pair table (label|value|reset | label|value|reset). Mirrors the
+    // color pair table, but here the *value* column stretches (drag/slider) and the label auto-fits.
+    auto beginVarPairTable = [&](const char *id) -> bool {
+        if (!ImGui::BeginTable(id, 6, ImGuiTableFlags_SizingFixedFit, {avail, 0}))
+            return false;
+        ImGui::TableSetupColumn("##l1", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn("##v1", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("##r1", ImGuiTableColumnFlags_WidthFixed, kResetW);
+        ImGui::TableSetupColumn("##l2", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn("##v2", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("##r2", ImGuiTableColumnFlags_WidthFixed, kResetW);
+        return true;
     };
 
-    // Filtered variable form (Geometry / Node geometry). Returns true if any row changed.
-    auto varGrid = [&](const char *formId, std::span<const VarItem> items) -> bool {
-        if (!beginForm(formId))
+    // One variable entry (half of a pair row). side=0 → left columns, side=1 → right columns. The value
+    // widget fills its column and the reset lives in its own fixed column (like colorEntry), so a
+    // SameLine-placed button can never overrun into the scrollbar. Stable ###var<slot> / ###varreset<slot>
+    // ids bake the vars[] slot in (unique across every var table), keeping rows test-addressable.
+    auto varEntry = [&](int side, const VarItem &it) -> bool {
+        const int slot = it.slot;
+        ImGui::TableSetColumnIndex(side * 3 + 0);
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted(it.label);
+        ImGui::TableSetColumnIndex(side * 3 + 1);
+        ImGui::SetNextItemWidth(-FLT_MIN);
+        bool changed = false;
+        const char *id = fmtScratch("###var{}", slot);
+        switch (it.kind) {
+        case VarWidget::Vec2:
+            changed = ImGui::DragFloat2(id, &t.vars[slot].x, it.speed, it.mn, it.mx, "%.0f");
+            break;
+        case VarWidget::DragInt: {
+            int iv = static_cast<int>(std::lround(t.vars[slot].x));
+            if (ImGui::DragInt(id, &iv, it.speed, static_cast<int>(it.mn), static_cast<int>(it.mx), it.fmt)) {
+                t.vars[slot].x = static_cast<float>(iv);
+                changed = true;
+            }
+            break;
+        }
+        case VarWidget::Slider:
+            changed = ImGui::SliderFloat(id, &t.vars[slot].x, it.mn, it.mx, it.fmt);
+            break;
+        case VarWidget::Drag:
+            changed = ImGui::DragFloat(id, &t.vars[slot].x, it.speed, it.mn, it.mx, it.fmt);
+            break;
+        }
+        ImGui::TableSetColumnIndex(side * 3 + 2);
+        if (resetButton(fmtScratch("###varreset{}", slot), Str::PrefResetToDefaultTip.c_str())) {
+            t.vars[slot] = defaults.vars[slot];
+            changed = true;
+        }
+        return changed;
+    };
+
+    // Render `items` (filtered) as a flowing two-per-row var grid, mirroring colorGrid: matches pack
+    // left-to-right so hidden rows leave no gaps. Returns true if any row changed.
+    auto varGrid = [&](const char *tableId, std::span<const VarItem> items) -> bool {
+        auto *m = ofs::FrameAllocator::instance().allocArray<VarItem>(items.size());
+        int n = 0;
+        for (const auto &it : items)
+            if (pass(it.label))
+                m[n++] = it;
+        if (n == 0 || !beginVarPairTable(tableId))
             return false;
         bool changed = false;
-        for (const auto &it : items) {
-            if (!pass(it.label))
-                continue;
-            changed |= it.vec2 ? vec2VarRow(it.slot, it.label, it.speed, it.mn, it.mx)
-                               : scalarVarRow(it.slot, it.label, it.speed, it.mn, it.mx, it.fmt);
+        for (int i = 0; i < n; i += 2) {
+            ImGui::TableNextRow();
+            changed |= varEntry(0, m[i]);
+            if (i + 1 < n)
+                changed |= varEntry(1, m[i + 1]);
         }
-        endForm();
+        ImGui::EndTable();
+        return changed;
+    };
+
+    // A lone full-width 0..1 slider + reset for a single metric that doesn't pair into the two-per-row
+    // grid (e.g. an opacity). Same label|value|reset column shape as varEntry, so the reset sits in its
+    // own fixed column and can't crowd the scrollbar. `valueId`/`resetId` carry the stable ### suffixes.
+    auto floatRow = [&](const char *tableId, const char *label, const char *valueId, const char *resetId, float *val,
+                        float defVal) -> bool {
+        if (!ImGui::BeginTable(tableId, 3, ImGuiTableFlags_SizingFixedFit, {avail, 0}))
+            return false;
+        ImGui::TableSetupColumn("##l", ImGuiTableColumnFlags_WidthFixed);
+        ImGui::TableSetupColumn("##v", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("##r", ImGuiTableColumnFlags_WidthFixed, kResetW);
+        ImGui::TableNextRow();
+        ImGui::TableSetColumnIndex(0);
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted(label);
+        ImGui::TableSetColumnIndex(1);
+        ImGui::SetNextItemWidth(-FLT_MIN);
+        bool changed = ImGui::SliderFloat(valueId, val, 0.f, 1.f, "%.2f");
+        ImGui::TableSetColumnIndex(2);
+        if (resetButton(resetId, Str::PrefResetToDefaultTip.c_str())) {
+            *val = defVal;
+            changed = true;
+        }
+        ImGui::EndTable();
         return changed;
     };
 
@@ -846,12 +880,10 @@ void ConfigurationWindow::renderThemeTab(const ScriptProject &project, EventQueu
             changed = true;
         }
         ImGui::TableSetColumnIndex(side * 3 + 2);
-        if (ImGui::Button(fmtScratch("{}###ncolreset{}", ICON_RESET, slot))) {
+        if (resetButton(fmtScratch("###ncolreset{}", slot), Str::PrefResetToDefaultTip.c_str())) {
             t.nodes.Colors[slot] = defaults.nodes.Colors[slot];
             changed = true;
         }
-        if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
-            ImGui::SetTooltip("%s", Str::PrefResetToDefaultTip.c_str());
         return changed;
     };
 
@@ -979,10 +1011,8 @@ void ConfigurationWindow::renderThemeTab(const ScriptProject &project, EventQueu
                 // Stable ###id keyed on the (untranslated) theme name: the "(shipped)" suffix is
                 // localized, so without this the item's ImGui id would shift per language.
                 const char *label = fmtScratch("{}###theme_opt_{}", visible, info.name);
-                if (ImGui::Selectable(label, selected) && !selected)
+                if (comboItem(label, selected))
                     switchTo(info.name);
-                if (selected)
-                    ImGui::SetItemDefaultFocus();
             }
             ImGui::EndCombo();
         }
@@ -1011,8 +1041,10 @@ void ConfigurationWindow::renderThemeTab(const ScriptProject &project, EventQueu
         }
 
         // New-theme name on its own full-width row, then two equal-width action rows that each fill the
-        // panel width and align as a 2×2 grid: [Save As | Delete] over [Export | Import].
-        ImGui::SetNextItemWidth(-FLT_MIN);
+        // panel width and align as a 2×2 grid: [Save As | Delete] over [Export | Import]. Width is `avail`
+        // (not -FLT_MIN) so the input's right edge lines up with the button rows, which stop at `avail`;
+        // -FLT_MIN would run it kRightGap past them.
+        ImGui::SetNextItemWidth(avail);
         ImGui::InputTextWithHint("###theme_name", Str::PrefNewThemeNameHint.c_str(), &themeName_);
 
         const float halfW = (avail - style.ItemSpacing.x) * 0.5f;
@@ -1126,13 +1158,9 @@ void ConfigurationWindow::renderThemeTab(const ScriptProject &project, EventQueu
                          true)) {
             if (colorGrid("##axis", kAxisColors))
                 applyAndSave();
-            if (bgAxes && beginForm("##bg_axes_form")) {
-                formRow(Str::PrefBgAxes);
-                ImGui::SetNextItemWidth(-FLT_MIN);
-                if (ImGui::SliderFloat("##bg_axes", &t.backgroundAxisOpacity, 0.0f, 1.0f, "%.2f"))
-                    applyAndSave();
-                endForm();
-            }
+            if (bgAxes && floatRow("##bg_axes_form", Str::PrefBgAxes, "##bg_axes", "###bgaxesreset",
+                                   &t.backgroundAxisOpacity, defaults.backgroundAxisOpacity))
+                applyAndSave();
         }
     }
 
@@ -1147,12 +1175,10 @@ void ConfigurationWindow::renderThemeTab(const ScriptProject &project, EventQueu
             if (grad) {
                 ImGui::TextDisabled("%s", Str::PrefHeatmapColorsCaption.c_str());
                 ImGui::SameLine();
-                if (ImGui::Button(ICON_RESET "##hmColors")) {
+                if (resetButton("##hmColors", Str::PrefResetGradientTip.c_str())) {
                     t.heatmapColors = defaults.heatmapColors;
                     applyAndSave();
                 }
-                if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
-                    ImGui::SetTooltip("%s", Str::PrefResetGradientTip.c_str());
                 if (gradientEditor("##hmColors", t.heatmapColors))
                     applyAndSave();
             }
@@ -1167,12 +1193,10 @@ void ConfigurationWindow::renderThemeTab(const ScriptProject &project, EventQueu
                 if (ImGui::DragFloat("##hmMaxSpeed", &t.heatmapMaxSpeed, 5.f, 50.f, 4000.f, "%.0f"))
                     applyAndSave();
                 ImGui::SameLine();
-                if (ImGui::Button(ICON_RESET "##hmMaxSpeed")) {
+                if (resetButton("##hmMaxSpeed", Str::PrefResetMaxSpeedTip.c_str())) {
                     t.heatmapMaxSpeed = defaults.heatmapMaxSpeed;
                     applyAndSave();
                 }
-                if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
-                    ImGui::SetTooltip("%s", Str::PrefResetMaxSpeedTip.c_str());
             }
             if (base) {
                 // Zero-speed base color (blends into the timeline background at low speed). Inline
@@ -1190,52 +1214,22 @@ void ConfigurationWindow::renderThemeTab(const ScriptProject &project, EventQueu
                     applyAndSave();
                 }
                 ImGui::SameLine();
-                if (ImGui::Button(fmtScratch("{}###colreset{}", ICON_RESET, slot))) {
+                if (resetButton(fmtScratch("###colreset{}", slot), Str::PrefResetToDefaultTip.c_str())) {
                     t.colors[slot] = defaults.colors[slot];
                     applyAndSave();
                 }
-                if (ImGui::IsItemHovered(ImGuiHoveredFlags_DelayShort))
-                    ImGui::SetTooltip("%s", Str::PrefResetToDefaultTip.c_str());
             }
         }
     }
 
     // --- Timeline ---
     {
-        const bool wSeek = pass("Seek Cursor Width");
-        const bool wPlay = pass("Play Cursor Width");
-        const bool wGrid = pass("Grid Mid Width");
-        const bool wOverlay = pass("Overlay Major Width");
-        const bool wLine = pass("Line Width");
-        const bool wWave = pass("Waveform Height");
-        const bool anyWidth = wSeek || wPlay || wGrid || wOverlay || wLine || wWave;
         if (beginSection(Str::PrefSecTimeline.id("sec_timeline"),
-                         countMatch(std::span(kTimelineColors)) > 0 || anyWidth, true)) {
+                         countMatch(std::span(kTimelineColors)) > 0 || countMatch(std::span(kTimelineVars)) > 0,
+                         true)) {
             if (colorGrid("##tl", kTimelineColors))
                 applyAndSave();
-            if (wSeek) {
-                int seekW = static_cast<int>(t.vars[AppVar_ScriptSeekCursorWidth].x);
-                if (ImGui::DragInt("Seek Cursor Width", &seekW, 1.f, 1, 4)) {
-                    t.vars[AppVar_ScriptSeekCursorWidth].x = static_cast<float>(seekW);
-                    applyAndSave();
-                }
-            }
-            if (wPlay) {
-                int playW = static_cast<int>(t.vars[AppVar_ScriptPlayCursorWidth].x);
-                if (ImGui::DragInt("Play Cursor Width", &playW, 1.f, 1, 4)) {
-                    t.vars[AppVar_ScriptPlayCursorWidth].x = static_cast<float>(playW);
-                    applyAndSave();
-                }
-            }
-            if (wGrid &&
-                ImGui::DragFloat("Grid Mid Width", &t.vars[AppVar_GridLineMidWidth].x, 0.1f, 0.5f, 4.f, "%.1f"))
-                applyAndSave();
-            if (wOverlay && ImGui::DragFloat("Overlay Major Width", &t.vars[AppVar_OverlayLineMajorWidth].x, 0.1f, 0.5f,
-                                             4.f, "%.1f"))
-                applyAndSave();
-            if (wLine && ImGui::DragFloat("Line Width", &t.vars[AppVar_TimelineLineWidth].x, 0.1f, 1.f, 6.f, "%.1f"))
-                applyAndSave();
-            if (wWave && ImGui::SliderFloat("Waveform Height", &t.vars[AppVar_WaveformScale].x, 0.1f, 1.f, "%.2f"))
+            if (varGrid("##tlwidths", kTimelineVars))
                 applyAndSave();
             // Script-line BG gradient preview (vertical, top → bottom). Decorative — hidden while searching.
             if (themeFilter_.empty()) {
@@ -1276,15 +1270,9 @@ void ConfigurationWindow::renderThemeTab(const ScriptProject &project, EventQueu
                 ImGui::TextDisabled("%s", Str::PrefSim2dMetrics.c_str());
                 // Bar/border/line widths are now content-space (OverlayAnchor::widthNorm, resized in the
                 // simulator via the width grip) so they scale with zoom; only opacity stays a theme var.
-                if (beginForm("##sim2d_metrics")) {
-                    bool changed = false;
-                    formRow("Opacity");
-                    ImGui::SetNextItemWidth(-FLT_MIN);
-                    changed |= ImGui::SliderFloat("##simopacity", &t.vars[AppVar_SimGlobalOpacity].x, 0.f, 1.f);
-                    endForm();
-                    if (changed)
-                        applyAndSave();
-                }
+                if (floatRow("##sim2d_metrics", "Opacity", "##simopacity", "###simopacityreset",
+                             &t.vars[AppVar_SimGlobalOpacity].x, defaults.vars[AppVar_SimGlobalOpacity].x))
+                    applyAndSave();
             }
         }
     }

@@ -9,10 +9,10 @@
 #include <string>
 
 // Drives the Preferences ▸ Theme tab (src/UI/ConfigurationWindow.cpp::renderThemeTab): loading a
-// theme via the selector, Save As, the global "Reset to Defaults" button, per-color reset buttons,
-// and editing a color through its ColorEdit swatch. Items are addressed by stable ### ids
-// (theme_tab / theme_select / theme_reset_all / theme_name / theme_saveas / col<slot> /
-// colreset<slot>), so icon glyphs and visible labels can change without breaking the tests.
+// theme via the selector, Save As, the global "Reset to Defaults" button, per-color and per-var reset
+// buttons, and editing a color through its ColorEdit swatch. Items are addressed by stable ### ids
+// (theme_tab / theme_select / theme_reset_all / theme_name / theme_saveas / col<slot> / colreset<slot> /
+// var<slot> / varreset<slot>), so icon glyphs and visible labels can change without breaking the tests.
 //
 // The UI-test pref dir is a temp directory wiped per run (tests/test_main_ui.cpp), so Save As /
 // save() write throwaway theme files that never touch the real app data dir.
@@ -211,6 +211,26 @@ void RegisterThemeTests(ImGuiTestEngine *e) {
         ctx->SetRef(kWin);
         selectTheme(ctx, "Dark"); // restore for later suites
         ctx->Yield(2);
+        ctx->WindowClose(kWin);
+    };
+
+    // A geometry var's reset button reverts that vars[] slot to the scheme default. Exercises the shared
+    // two-per-row var grid and its ###varreset<slot> ids (the same path Timeline widths / Node geometry
+    // use), and guards against the reset button being clipped/unclickable at the panel's right edge.
+    IM_REGISTER_TEST(e, "theme", "reset_geometry_var")->TestFunc = [](ImGuiTestContext *ctx) {
+        openThemeTab(ctx);
+        const ofs::theme::Theme &def = ofs::theme::defaultDark();
+        constexpr int slot = ImGuiStyleVar_FrameRounding;
+
+        ofs::theme::getActive().vars[slot].x = def.vars[slot].x + 5.f;
+        ctx->Yield();
+
+        setRefThemeChild(ctx);
+        ctx->ItemOpen("sec_geom"); // the Geometry header is collapsed by default
+        ctx->ItemClick(("##geom/varreset" + std::to_string(slot)).c_str());
+        ctx->Yield(2);
+        IM_CHECK_LT(std::abs(ofs::theme::getActive().vars[slot].x - def.vars[slot].x), 0.01f);
+
         ctx->WindowClose(kWin);
     };
 
