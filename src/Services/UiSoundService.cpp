@@ -157,9 +157,11 @@ UiSoundService::UiSoundService(EventQueue &eq, const AppSettings &settings) : se
             break;
         }
     });
-    // Any active-axis change chirps. This fires on programmatic selection too (project load, axis
-    // add/remove, undo restore, a plugin); the per-frame coalescing keeps a same-frame burst to one chirp.
-    eq.on<AxisSelectedEvent>([this](const AxisSelectedEvent &) { play(UiCue::AxisActivated); });
+    // A real active-axis change chirps — ProjectManager emits ActiveAxisChangedEvent when an accepted
+    // selection (including programmatic ones: project load, axis add/remove, a plugin) or a group
+    // lead-switch actually moves the active axis. Observing this outcome instead of the AxisSelectedEvent
+    // request keeps a rejected or no-op selection silent; per-frame coalescing collapses a same-frame burst.
+    eq.on<ActiveAxisChangedEvent>([this](const ActiveAxisChangedEvent &) { play(UiCue::AxisActivated); });
     // AxisGroupingChangedEvent fires only when a real multi-axis group forms/changes, not on the
     // SetAxisGroupingEvent request (which also fires to dissolve a group or re-issue the same one).
     eq.on<AxisGroupingChangedEvent>([this](const AxisGroupingChangedEvent &) { play(UiCue::AxisGrouped); });

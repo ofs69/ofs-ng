@@ -257,8 +257,11 @@ bool inPanel(const ScriptProject &p, StandardAxis role) {
 void ProjectManager::onAxisSelected(const AxisSelectedEvent &event) {
     if (!inPanel(project, event.role))
         return; // can't activate an axis that isn't shown in the panel
+    const bool activeChanged = project.state.activeAxis != event.role;
     project.state.activeAxis = event.role;
     project.state.axesGrouping.reset(); // activating an axis dissolves any multi-axis group
+    if (activeChanged)
+        eq.push(ActiveAxisChangedEvent{});
 }
 
 void ProjectManager::onSetAxisGrouping(const SetAxisGroupingEvent &event) {
@@ -282,6 +285,7 @@ void ProjectManager::onSetAxisGrouping(const SetAxisGroupingEvent &event) {
         return; // nothing valid to activate or group
 
     const AxisRoles prevGrouping = project.state.axesGrouping;
+    const StandardAxis prevActive = project.state.activeAxis;
     project.state.activeAxis = lead;
     if (g.count() > 1)
         g.set(static_cast<size_t>(lead)); // the lead is always part of its group
@@ -289,9 +293,12 @@ void ProjectManager::onSetAxisGrouping(const SetAxisGroupingEvent &event) {
         g.reset(); // a single-axis "group" is just normal single-axis editing
     project.state.axesGrouping = g;
     // Cue only a *real* multi-axis grouping that differs from before; dissolving back to single-axis
-    // editing or re-issuing the same group is silent (the request fires for both).
+    // editing or re-issuing the same group is silent (the request fires for both). Switching just the
+    // lead within an unchanged group is an active-axis change, so it reuses the activation cue.
     if (g.count() > 1 && g != prevGrouping)
         eq.push(AxisGroupingChangedEvent{});
+    else if (lead != prevActive)
+        eq.push(ActiveAxisChangedEvent{});
 }
 
 void ProjectManager::onSaveProjectEvent(const SaveProjectEvent &event) {

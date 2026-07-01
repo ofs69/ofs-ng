@@ -40,10 +40,16 @@ struct GFixture {
     SelectionModeRegistry selReg;
     SelectIntentRouter sel; // sole SelectRequestEvent subscriber: resolves a selection gesture per-axis
 
+    // Audio-cue outcome events, counted to assert what a grouping request drives.
+    int groupingChanged = 0;
+    int activeChanged = 0;
+
     GFixture()
         : undo(tp.project, tp.eq), pm(tp.project, tp.eq, appSettings, jobSystem, effectReg),
           sel(tp.project, tp.eq, selReg) {
         appSettings.autoBackupEnabled = false;
+        tp.eq.on<AxisGroupingChangedEvent>([this](const AxisGroupingChangedEvent &) { ++groupingChanged; });
+        tp.eq.on<ActiveAxisChangedEvent>([this](const ActiveAxisChangedEvent &) { ++activeChanged; });
         tp.eq.freeze();
         jobSystem.start();
     }
@@ -260,6 +266,29 @@ TEST_CASE("Group cut is lossless: capture all, delete all, paste-exact restores 
     f.send(PasteActionsEvent{.pasteTime = 0.0, .exact = true});
     CHECK(f.axis(L0).actions.contains(ScriptAxisAction{1.0, 0}));
     CHECK(f.axis(R0).actions.find(ScriptAxisAction{1.0, 0})->pos == 70);
+}
+
+TEST_CASE("Switching only the group lead cues activation, not a re-grouping") {
+    GFixture f;
+    f.showAxis(L0, {{1.0, 10}});
+    f.showAxis(R0, {{1.0, 10}});
+
+    f.group({L0, R0}, L0); // forms the group → grouping cue
+    CHECK(f.groupingChanged == 1);
+    CHECK(f.activeChanged == 0);
+
+    // Same group set, new lead: an active-axis change, so the activation cue fires and no second
+    // grouping cue does.
+    f.group({L0, R0}, R0);
+    CHECK(f.proj().state.activeAxis == R0);
+    CHECK(f.proj().state.axesGrouping.count() == 2);
+    CHECK(f.groupingChanged == 1);
+    CHECK(f.activeChanged == 1);
+
+    // Re-issuing the identical group with the identical lead changes nothing → silent on both cues.
+    f.group({L0, R0}, R0);
+    CHECK(f.groupingChanged == 1);
+    CHECK(f.activeChanged == 1);
 }
 
 TEST_CASE("CreateRegion spans every axis in axisRoles") {

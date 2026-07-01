@@ -71,6 +71,12 @@ struct AxisPresenceChangedEvent {
 // SetAxisGroupingEvent *request* (which also fires to dissolve a group). Transient view state, not undoable.
 struct AxisGroupingChangedEvent {};
 
+// Emitted by ProjectManager when the active (lead) axis *actually* changes — an AxisSelectedEvent that
+// moves it to a different panel-visible axis, or a grouping request that switches only the lead within
+// the current group. The audio-feedback cue observes this outcome rather than the AxisSelectedEvent
+// *request*, which also fires for a rejected hidden axis or a no-op re-selection. Not undoable.
+struct ActiveAxisChangedEvent {};
+
 struct RemoveSelectedActionsEvent {
     StandardAxis axis;
     bool fanToGroup = true; // see AddActionAtTimeEvent::fanToGroup
