@@ -23,16 +23,23 @@ using ofs::StandardAxis;
 using ofs::test::EventCapture;
 using ofs::test::TestProject;
 
-// Helper: spin-drain until axis.pendingEval becomes nullptr (eval job complete).
-static bool waitForEval(ofs::EventQueue &eq, const ofs::AxisState &axis, int timeoutMs = 5000) {
+// Helper: pump the frame loop until `axis` is fully evaluated. ProcessingSystem submits jobs from
+// update() (the one-frame debounce), and its throttle can defer an axis across frames while a prior eval
+// is in flight — so this must call update() every iteration, not once. After an update() a null
+// pendingEval means nothing is in flight and nothing is still pending (update() would have submitted it),
+// i.e. the axis has settled.
+static bool waitForEval(ofs::ProcessingSystem &ps, ofs::EventQueue &eq, const ofs::AxisState &axis,
+                        int timeoutMs = 5000) {
     auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMs);
-    while (axis.pendingEval != nullptr) {
-        eq.drain();
+    while (true) {
+        ps.update();
+        if (axis.pendingEval == nullptr)
+            return true;
         if (std::chrono::steady_clock::now() >= deadline)
             return false;
+        eq.drain();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
-    return true;
 }
 
 namespace {
@@ -88,6 +95,7 @@ TEST_CASE("ProcessingSystem: AxisModifiedEvent with no regions leaves resolved n
     tp.project.axes[0].showInStrip = true;
     tp.project.mutate(StandardAxis::L0, [](ofs::AxisState &a) { a.actions.insert({1.0, 50}); }, tp.eq);
     tp.eq.drain();
+    ps.update(); // flush the frame's coalesced eval
 
     // No regions — resolved should stay nullopt and no job should be submitted.
     CHECK(tp.project.axes[0].pendingEval == nullptr);
@@ -123,7 +131,7 @@ TEST_CASE("ProcessingSystem: pass-through graph resolves to source actions") {
         tp.eq);
     tp.eq.drain();
 
-    REQUIRE(waitForEval(tp.eq, tp.project.axes[0]));
+    REQUIRE(waitForEval(ps, tp.eq, tp.project.axes[0]));
 
     REQUIRE(tp.project.axes[0].resolved.has_value());
     const auto &resolved = tp.project.axes[0].resolved->actions;
@@ -177,7 +185,7 @@ TEST_CASE("ProcessingSystem: Constant-minus-input math graph flips action positi
     tp.project.mutate(StandardAxis::L0, [](ofs::AxisState &a) { a.actions.insert({1.0, 25}); }, tp.eq);
     tp.eq.drain();
 
-    REQUIRE(waitForEval(tp.eq, tp.project.axes[0]));
+    REQUIRE(waitForEval(ps, tp.eq, tp.project.axes[0]));
     REQUIRE(tp.project.axes[0].resolved.has_value());
 
     const auto &resolved = tp.project.axes[0].resolved->actions;
@@ -185,7 +193,7 @@ TEST_CASE("ProcessingSystem: Constant-minus-input math graph flips action positi
     CHECK(resolved[0].pos == 75);
 }
 
-TEST_CASE("ProcessingSystem: new AxisModifiedEvent cancels the in-flight job") {
+TEST_CASE("ProcessingSystem: an edit during an in-flight eval is coalesced and evaluated after it completes") {
     TestProject tp;
     ofs::EffectRegistryState effectReg;
     ofs::registerNativeEffects(effectReg);
@@ -205,22 +213,22 @@ TEST_CASE("ProcessingSystem: new AxisModifiedEvent cancels the in-flight job") {
     tp.project.axes[0].showInStrip = true;
     tp.project.mutate(StandardAxis::L0, [](ofs::AxisState &a) { a.actions.insert({1.0, 10}); }, tp.eq);
     tp.eq.drain();
+    ps.update(); // frame 1: submit the first eval job
 
-    // Immediately push a second mutation — should cancel the first job.
+    // A second edit lands while the first eval may still be in flight. The throttle does not cancel the
+    // running job; it re-marks the axis, so once that job completes the next update() evaluates the latest
+    // state (trailing edge). waitForEval pumps update()+drain until the axis has fully settled.
     tp.project.mutate(StandardAxis::L0, [](ofs::AxisState &a) { a.actions.insert({2.0, 20}); }, tp.eq);
     tp.eq.drain();
 
-    // Wait for the final eval to complete. The result must reflect the latest state.
-    REQUIRE(waitForEval(tp.eq, tp.project.axes[0]));
+    REQUIRE(waitForEval(ps, tp.eq, tp.project.axes[0]));
     REQUIRE(tp.project.axes[0].resolved.has_value());
 
+    // The settled result reflects the latest state — both actions — proving the coalesced trailing eval ran.
     const auto &resolved = tp.project.axes[0].resolved->actions;
-    // Both actions should be in resolved (latest snapshot has both).
-    bool hasBoth = false;
-    for (const auto &a : resolved)
-        if (a.at == doctest::Approx(1.0) || a.at == doctest::Approx(2.0))
-            hasBoth = true;
-    CHECK(hasBoth);
+    REQUIRE(resolved.size() == 2);
+    CHECK(resolved[0].at == doctest::Approx(1.0));
+    CHECK(resolved[1].at == doctest::Approx(2.0));
 }
 
 // Phase 7 — fixture-based regression: load a multi-axis funscript, evaluate a region that
@@ -281,8 +289,8 @@ TEST_CASE("ProcessingSystem: multi-axis invert region matches expected fixture")
     tp.project.mutate(StandardAxis::R0, [&](ofs::AxisState &a) { a.actions = allAxes["R0"]; }, tp.eq);
     tp.eq.drain();
 
-    REQUIRE(waitForEval(tp.eq, tp.project.axes[l0]));
-    REQUIRE(waitForEval(tp.eq, tp.project.axes[r0]));
+    REQUIRE(waitForEval(ps, tp.eq, tp.project.axes[l0]));
+    REQUIRE(waitForEval(ps, tp.eq, tp.project.axes[r0]));
     REQUIRE(tp.project.axes[l0].resolved.has_value());
     REQUIRE(tp.project.axes[r0].resolved.has_value());
 
@@ -331,7 +339,7 @@ TEST_CASE("ProcessingSystem: EvalCompleteEvent carries the resolved payload") {
         },
         tp.eq);
     tp.eq.drain();
-    REQUIRE(waitForEval(tp.eq, tp.project.axes[0]));
+    REQUIRE(waitForEval(ps, tp.eq, tp.project.axes[0]));
 
     REQUIRE(cap.received.size() == 1);
     const auto &e = cap.received.back();
@@ -441,7 +449,7 @@ TEST_CASE("ProcessingSystem: a plugin functional-modifier node is evaluated") {
     tp.project.axes[0].showInStrip = true;
     tp.project.mutate(StandardAxis::L0, [](ofs::AxisState &a) { a.actions.insert({1.0, 25}); }, tp.eq);
     tp.eq.drain();
-    REQUIRE(waitForEval(tp.eq, tp.project.axes[0]));
+    REQUIRE(waitForEval(ps, tp.eq, tp.project.axes[0]));
 
     REQUIRE(tp.project.axes[0].resolved.has_value());
     const auto &resolved = tp.project.axes[0].resolved->actions;
@@ -485,14 +493,15 @@ TEST_CASE("ProcessingSystem: plugin resolution is snapshot-owned — disabling a
 
     tp.project.axes[0].showInStrip = true;
     tp.project.mutate(StandardAxis::L0, [](ofs::AxisState &a) { a.actions.insert({1.0, 25}); }, tp.eq);
-    tp.eq.drain(); // builds the snapshot (resolving the plugin into nodeRefs) and dispatches the worker
+    tp.eq.drain();
+    ps.update(); // flush the frame's eval: builds the snapshot (resolving the plugin into nodeRefs) and dispatches
 
     // Disable the plugin AFTER dispatch. The in-flight worker reads its snapshot-owned ref, never the
     // registry, so the result must still be correct.
     effectReg.pluginNodes.clear();
     effectReg.pluginNodeKeys.clear();
 
-    REQUIRE(waitForEval(tp.eq, tp.project.axes[0]));
+    REQUIRE(waitForEval(ps, tp.eq, tp.project.axes[0]));
     REQUIRE(tp.project.axes[0].resolved.has_value());
     const auto &resolved = tp.project.axes[0].resolved->actions;
     REQUIRE(resolved.size() == 1);
@@ -536,7 +545,7 @@ TEST_CASE("ProcessingSystem: a plugin discrete-modifier node is evaluated") {
         },
         tp.eq);
     tp.eq.drain();
-    REQUIRE(waitForEval(tp.eq, tp.project.axes[0]));
+    REQUIRE(waitForEval(ps, tp.eq, tp.project.axes[0]));
 
     REQUIRE(tp.project.axes[0].resolved.has_value());
     const auto &resolved = tp.project.axes[0].resolved->actions;
@@ -680,7 +689,7 @@ TEST_CASE("ProcessingSystem: a plugin node's TState handle reaches the worker an
     tp.project.axes[0].showInStrip = true;
     tp.project.mutate(StandardAxis::L0, [](ofs::AxisState &a) { a.actions.insert({1.0, 25}); }, tp.eq);
     tp.eq.drain();
-    REQUIRE(waitForEval(tp.eq, tp.project.axes[0]));
+    REQUIRE(waitForEval(ps, tp.eq, tp.project.axes[0]));
 
     REQUIRE(tp.project.axes[0].resolved.has_value());
     const auto &resolved = tp.project.axes[0].resolved->actions;
@@ -720,7 +729,7 @@ TEST_CASE("ProcessingSystem: a hasState node with empty nodeState is still captu
     tp.project.axes[0].showInStrip = true;
     tp.project.mutate(StandardAxis::L0, [](ofs::AxisState &a) { a.actions.insert({1.0, 25}); }, tp.eq);
     tp.eq.drain();
-    REQUIRE(waitForEval(tp.eq, tp.project.axes[0]));
+    REQUIRE(waitForEval(ps, tp.eq, tp.project.axes[0]));
 
     CHECK(g_codec.totalCaptures == 1); // captured despite empty nodeState — the bug left this at 0
     CHECK(g_codec.liveHandles() == 0); // and released on completion
@@ -754,7 +763,7 @@ TEST_CASE("ProcessingSystem: TState captures do not leak across many evals") {
         // Each edit dirties the axis → one fresh eval that captures and (on completion) releases.
         tp.project.mutate(StandardAxis::L0, [i](ofs::AxisState &a) { a.actions.insert({1.0 + i, 25}); }, tp.eq);
         tp.eq.drain();
-        REQUIRE(waitForEval(tp.eq, tp.project.axes[0]));
+        REQUIRE(waitForEval(ps, tp.eq, tp.project.axes[0]));
     }
 
     CHECK(g_codec.totalCaptures == kEvals);
@@ -762,10 +771,11 @@ TEST_CASE("ProcessingSystem: TState captures do not leak across many evals") {
     CHECK(g_codec.liveHandles() == 0);
 }
 
-// A job superseded before it completes never pushes EvalCompleteEvent, so its captures must be dropped
-// on the abandon path. Two evals are queued and drained together: the first is superseded by the second
-// in the same drain, so its generation is released by abandonEval, not by completion.
-TEST_CASE("ProcessingSystem: superseding an eval releases its TState captures") {
+// A cross-frame re-eval must not leak either eval's TState captures. Frame 1's edit submits an eval that
+// captures gen1; frame 2's edit re-marks the axis, and the throttle lets the first job run to completion
+// (releasing gen1 via onEvalComplete) before the trailing eval captures gen2 and completes. Both
+// generations are captured and both released — nothing leaks.
+TEST_CASE("ProcessingSystem: a coalesced re-eval releases both evals' TState captures") {
     g_codec.reset();
     TestProject tp;
     ofs::EffectRegistryState effectReg;
@@ -788,15 +798,18 @@ TEST_CASE("ProcessingSystem: superseding an eval releases its TState captures") 
     tp.project.sortRegions();
     tp.project.axes[0].showInStrip = true;
 
-    // Queue two evals before draining: mutate enqueues AxisModifiedEvent (#1); the explicit request is
-    // (#2). Both are main-thread-enqueued before any worker result, so #2 supersedes #1 within one drain.
+    // Frame 1: the edit submits an eval that captures gen1.
     tp.project.mutate(StandardAxis::L0, [](ofs::AxisState &a) { a.actions.insert({1.0, 25}); }, tp.eq);
-    tp.eq.push(ofs::RequestAxisEvalEvent{.role = StandardAxis::L0});
     tp.eq.drain();
-    REQUIRE(waitForEval(tp.eq, tp.project.axes[0]));
+    ps.update();
 
-    // Two generations were captured (one per eval); both released — the superseded one via abandonEval,
-    // the surviving one via completion — so nothing leaks.
+    // Frame 2: a second edit re-marks the axis. waitForEval lets the first eval complete (releasing gen1),
+    // then flushes the trailing eval (capturing gen2) and blocks until the axis settles.
+    tp.project.mutate(StandardAxis::L0, [](ofs::AxisState &a) { a.actions.insert({2.0, 25}); }, tp.eq);
+    tp.eq.drain();
+    REQUIRE(waitForEval(ps, tp.eq, tp.project.axes[0]));
+
+    // Two generations were captured (one per eval); both released, so nothing leaks.
     CHECK(g_codec.totalCaptures == 2);
     CHECK(g_codec.totalReleasedHandles == 2);
     CHECK(g_codec.generationsReleased.size() == 2);
@@ -804,8 +817,9 @@ TEST_CASE("ProcessingSystem: superseding an eval releases its TState captures") 
 
     REQUIRE(tp.project.axes[0].resolved.has_value());
     const auto &resolved = tp.project.axes[0].resolved->actions;
-    REQUIRE(resolved.size() == 1);
+    REQUIRE(resolved.size() == 2);
     CHECK(resolved[0].pos == 30); // 25 + offset(5) from the surviving eval
+    CHECK(resolved[1].pos == 30);
 }
 
 // ── Graph-evaluation branch coverage (math ops, interpolation, effect kinds, guards) ──
@@ -852,7 +866,7 @@ struct PsFixture {
     const ofs::VectorSet<ScriptAxisAction> &eval(StandardAxis role) {
         tp.eq.drain();
         auto &axis = tp.project.axes[static_cast<size_t>(role)];
-        REQUIRE(waitForEval(tp.eq, axis));
+        REQUIRE(waitForEval(ps, tp.eq, axis));
         REQUIRE(axis.resolved.has_value());
         return axis.resolved->actions;
     }
@@ -974,7 +988,7 @@ TEST_CASE("ProcessingSystem: editing an axis re-evaluates sibling outputs routed
     CHECK(l0[1].pos == 75);
 
     auto &axisL1 = f.tp.project.axes[static_cast<size_t>(StandardAxis::L1)];
-    REQUIRE(waitForEval(f.tp.eq, axisL1));
+    REQUIRE(waitForEval(f.ps, f.tp.eq, axisL1));
     REQUIRE(axisL1.resolved.has_value()); // before the fan-out fix L1 is never re-evaluated → nullopt
     const auto &l1 = axisL1.resolved->actions;
     REQUIRE(l1.size() == 2);
@@ -1476,8 +1490,8 @@ TEST_CASE("ProcessingSystem: toggling auto-eval clears, halts, then resumes eval
 
     // Re-enable: the axis recomputes from the edits made while halted.
     f.tp.eq.push(ofs::SetAutoEvalEnabledEvent{.enabled = true});
-    f.tp.eq.drain(); // process the toggle so it submits the eval job (sets pendingEval)
-    REQUIRE(waitForEval(f.tp.eq, axis));
+    f.tp.eq.drain(); // process the toggle so it marks the axis for re-eval (waitForEval flushes + submits)
+    REQUIRE(waitForEval(f.ps, f.tp.eq, axis));
     REQUIRE(axis.resolved.has_value());
     const auto &r2 = axis.resolved->actions;
     REQUIRE(r2.size() == 2);

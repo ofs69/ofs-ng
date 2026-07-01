@@ -459,16 +459,20 @@ TEST_CASE("diffWatchedMtimes: a vanished file (zero mtime) that reappears counts
 
 namespace {
 
-// Spin-drain until the axis eval job completes.
-bool waitForEval(ofs::EventQueue &eq, const ofs::AxisState &axis, int timeoutMs = 5000) {
+// Pump the frame loop until the axis settles. ProcessingSystem submits from update() and can defer an
+// axis across frames while a prior eval is in flight (the throttle), so update() must run every
+// iteration; a null pendingEval after update() means nothing in flight and nothing still pending.
+bool waitForEval(ofs::ProcessingSystem &ps, ofs::EventQueue &eq, const ofs::AxisState &axis, int timeoutMs = 5000) {
     auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMs);
-    while (axis.pendingEval != nullptr) {
-        eq.drain();
+    while (true) {
+        ps.update();
+        if (axis.pendingEval == nullptr)
+            return true;
         if (std::chrono::steady_clock::now() >= deadline)
             return false;
+        eq.drain();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
-    return true;
 }
 
 // Native callbacks shaped exactly like the array-shaped trampolines a compiled script binds to.
@@ -577,7 +581,7 @@ ofs::ProcessingNodeGraph scriptCombGraph(const std::string &file) {
 
 // Drive one region [0,10] over axis L0 with a single input action and return resolved actions.
 void runSingleRegion(TestProject &tp, const ofs::ProcessingNodeGraph &graph, ofs::EffectRegistryState &effectReg,
-                     ofs::JobSystem &jobSystem, int hz = 30) {
+                     ofs::JobSystem &jobSystem, ofs::ProcessingSystem &ps, int hz = 30) {
     ofs::ProcessingRegion region;
     region.id = 1;
     region.startTime = 0.0;
@@ -591,7 +595,7 @@ void runSingleRegion(TestProject &tp, const ofs::ProcessingNodeGraph &graph, ofs
     tp.project.axes[0].showInStrip = true;
     tp.project.mutate(StandardAxis::L0, [](ofs::AxisState &a) { a.actions.insert({1.0, 25}); }, tp.eq);
     tp.eq.drain();
-    REQUIRE(waitForEval(tp.eq, tp.project.axes[0]));
+    REQUIRE(waitForEval(ps, tp.eq, tp.project.axes[0]));
 }
 
 } // namespace
@@ -611,7 +615,7 @@ TEST_CASE("ScriptNode: functional modifier is evaluated") {
     for (auto &n : graph.nodes)
         if (n.type == GraphNodeType::Script)
             n.effect.params = {10.0f};
-    runSingleRegion(tp, graph, effectReg, jobSystem);
+    runSingleRegion(tp, graph, effectReg, jobSystem, ps);
 
     REQUIRE(tp.project.axes[0].resolved.has_value());
     const auto &resolved = tp.project.axes[0].resolved->actions;
@@ -630,7 +634,7 @@ TEST_CASE("ScriptNode: discrete modifier is evaluated") {
     tp.eq.freeze();
     jobSystem.start();
 
-    runSingleRegion(tp, scriptModGraph("dmod.cs", ofs::OfsSignalDiscrete), effectReg, jobSystem);
+    runSingleRegion(tp, scriptModGraph("dmod.cs", ofs::OfsSignalDiscrete), effectReg, jobSystem, ps);
 
     REQUIRE(tp.project.axes[0].resolved.has_value());
     const auto &resolved = tp.project.axes[0].resolved->actions;
@@ -649,7 +653,7 @@ TEST_CASE("ScriptNode: discrete generator emits its own actions") {
     tp.eq.freeze();
     jobSystem.start();
 
-    runSingleRegion(tp, scriptGenGraph("gen.cs", ofs::OfsSignalDiscrete), effectReg, jobSystem);
+    runSingleRegion(tp, scriptGenGraph("gen.cs", ofs::OfsSignalDiscrete), effectReg, jobSystem, ps);
 
     REQUIRE(tp.project.axes[0].resolved.has_value());
     const auto &resolved = tp.project.axes[0].resolved->actions;
@@ -671,7 +675,7 @@ TEST_CASE("ScriptNode: functional generator is sampled at the region Hz") {
     jobSystem.start();
 
     // 5 Hz over the [0,10] region: ceil(10 / 0.2) = 50 uniform steps plus the endpoint sample = 51.
-    runSingleRegion(tp, scriptGenGraph("fgen.cs", ofs::OfsSignalFunctional), effectReg, jobSystem, 5);
+    runSingleRegion(tp, scriptGenGraph("fgen.cs", ofs::OfsSignalFunctional), effectReg, jobSystem, ps, 5);
 
     REQUIRE(tp.project.axes[0].resolved.has_value());
     const auto &resolved = tp.project.axes[0].resolved->actions;
@@ -690,7 +694,7 @@ TEST_CASE("ScriptNode: functional combiner averages its two inputs") {
     tp.eq.freeze();
     jobSystem.start();
 
-    runSingleRegion(tp, scriptCombGraph("comb.cs"), effectReg, jobSystem);
+    runSingleRegion(tp, scriptCombGraph("comb.cs"), effectReg, jobSystem, ps);
 
     REQUIRE(tp.project.axes[0].resolved.has_value());
     const auto &resolved = tp.project.axes[0].resolved->actions;
@@ -709,7 +713,7 @@ TEST_CASE("ScriptNode: an unresolved modifier passes its input through") {
     tp.eq.freeze();
     jobSystem.start();
 
-    runSingleRegion(tp, scriptModGraph("missing.cs", ofs::OfsSignalFunctional), effectReg, jobSystem);
+    runSingleRegion(tp, scriptModGraph("missing.cs", ofs::OfsSignalFunctional), effectReg, jobSystem, ps);
 
     REQUIRE(tp.project.axes[0].resolved.has_value());
     const auto &resolved = tp.project.axes[0].resolved->actions;
@@ -728,7 +732,7 @@ TEST_CASE("ScriptNode: an unresolved generator produces no output") {
     tp.eq.freeze();
     jobSystem.start();
 
-    runSingleRegion(tp, scriptGenGraph("missing-gen.cs", ofs::OfsSignalDiscrete), effectReg, jobSystem);
+    runSingleRegion(tp, scriptGenGraph("missing-gen.cs", ofs::OfsSignalDiscrete), effectReg, jobSystem, ps);
 
     REQUIRE(tp.project.axes[0].resolved.has_value());
     // The in-region input is consumed by the (empty) generator; nothing is emitted.
@@ -747,7 +751,7 @@ TEST_CASE("ScriptNode: an errored artifact is treated as unresolved") {
     tp.eq.freeze();
     jobSystem.start();
 
-    runSingleRegion(tp, scriptModGraph("bad.cs", ofs::OfsSignalFunctional), effectReg, jobSystem);
+    runSingleRegion(tp, scriptModGraph("bad.cs", ofs::OfsSignalFunctional), effectReg, jobSystem, ps);
 
     REQUIRE(tp.project.axes[0].resolved.has_value());
     const auto &resolved = tp.project.axes[0].resolved->actions;

@@ -599,6 +599,11 @@ void OfsApp::onUpdate(float dt) {
     if (scriptSystem)
         scriptSystem->update(dt);
 
+    // Flush the frame's coalesced axis evaluations: one snapshot + job per axis, however many
+    // AxisModifiedEvents the just-drained edits produced (see ProcessingSystem's one-frame debounce).
+    if (processingSystem)
+        processingSystem->update();
+
     // Opt-in translator aid: re-load the active language file when it changes on disk. Off the
     // normal path — only runs when the setting is enabled.
     if (appSettings.liveReloadTranslations)

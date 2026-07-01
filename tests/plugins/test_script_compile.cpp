@@ -31,15 +31,23 @@ using ofs::test::TestProject;
 
 namespace {
 
-bool drainUntil(EventQueue &eq, const std::function<bool()> &done, int timeoutMs = 20000) {
+// `ps`, when given, is flushed each iteration: ProcessingSystem's one-frame eval debounce submits jobs
+// from update(), not from the event handler, so a predicate that waits on axis.resolved never fires
+// unless update() runs to flush the coalesced eval. Compile-only waits pass nullptr.
+bool drainUntil(EventQueue &eq, const std::function<bool()> &done, ProcessingSystem *ps = nullptr,
+                int timeoutMs = 20000) {
     auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMs);
     while (!done()) {
         eq.drain();
+        if (ps)
+            ps->update();
         if (std::chrono::steady_clock::now() >= deadline)
             return false;
         std::this_thread::sleep_for(std::chrono::milliseconds(2));
     }
     eq.drain();
+    if (ps)
+        ps->update();
     return true;
 }
 
@@ -226,7 +234,8 @@ TEST_CASE("ScriptSystem compiles an inline C# script via Roslyn and evaluates it
     tp.project.mutate(StandardAxis::L0, [](AxisState &a) { a.actions.insert({1.0, 25}); }, tp.eq);
 
     bool evaluated = drainUntil(
-        tp.eq, [&] { return tp.project.axes[0].pendingEval == nullptr && tp.project.axes[0].resolved.has_value(); });
+        tp.eq, [&] { return tp.project.axes[0].pendingEval == nullptr && tp.project.axes[0].resolved.has_value(); },
+        &ps);
     REQUIRE(evaluated);
 
     const auto &resolved = tp.project.axes[0].resolved->actions;
@@ -287,7 +296,8 @@ TEST_CASE("ScriptSystem injects a // !ofs:param as a named local readable in the
     tp.project.mutate(StandardAxis::L0, [](AxisState &a) { a.actions.insert({1.0, 25}); }, tp.eq);
 
     bool evaluated = drainUntil(
-        tp.eq, [&] { return tp.project.axes[0].pendingEval == nullptr && tp.project.axes[0].resolved.has_value(); });
+        tp.eq, [&] { return tp.project.axes[0].pendingEval == nullptr && tp.project.axes[0].resolved.has_value(); },
+        &ps);
     REQUIRE(evaluated);
 
     const auto &resolved = tp.project.axes[0].resolved->actions;
@@ -352,7 +362,8 @@ TEST_CASE("ScriptSystem injects bool/enum // !ofs:param as typed locals (bool + 
     tp.project.mutate(StandardAxis::L0, [](AxisState &a) { a.actions.insert({1.0, 25}); }, tp.eq);
 
     bool evaluated = drainUntil(
-        tp.eq, [&] { return tp.project.axes[0].pendingEval == nullptr && tp.project.axes[0].resolved.has_value(); });
+        tp.eq, [&] { return tp.project.axes[0].pendingEval == nullptr && tp.project.axes[0].resolved.has_value(); },
+        &ps);
     REQUIRE(evaluated);
 
     const auto &resolved = tp.project.axes[0].resolved->actions;
@@ -400,7 +411,8 @@ TEST_CASE("Library script Scale.cs compiles from data/scripts/lib and applies ga
     tp.project.mutate(StandardAxis::L0, [](AxisState &a) { a.actions.insert({1.0, 20}); }, tp.eq);
 
     bool evaluated = drainUntil(
-        tp.eq, [&] { return tp.project.axes[0].pendingEval == nullptr && tp.project.axes[0].resolved.has_value(); });
+        tp.eq, [&] { return tp.project.axes[0].pendingEval == nullptr && tp.project.axes[0].resolved.has_value(); },
+        &ps);
     REQUIRE(evaluated);
 
     const auto &resolved = tp.project.axes[0].resolved->actions;
@@ -493,7 +505,8 @@ TEST_CASE("Library script Blend3.cs compiles and applies a weighted 3-input blen
     tp.project.mutate(StandardAxis::V0, [](AxisState &a) { a.actions.insert({1.0, 40}); }, tp.eq);
 
     bool evaluated = drainUntil(
-        tp.eq, [&] { return tp.project.axes[0].pendingEval == nullptr && tp.project.axes[0].resolved.has_value(); });
+        tp.eq, [&] { return tp.project.axes[0].pendingEval == nullptr && tp.project.axes[0].resolved.has_value(); },
+        &ps);
     REQUIRE(evaluated);
 
     const auto &resolved = tp.project.axes[0].resolved->actions;
@@ -549,15 +562,21 @@ TEST_CASE("Library script Mirror.cs compiles and splits one input across two out
     tp.project.mutate(StandardAxis::L0, [](AxisState &a) { a.actions.insert({1.0, 30}); }, tp.eq);
     tp.project.mutate(StandardAxis::R0, [](AxisState &a) {}, tp.eq); // trigger R0's eval
 
-    bool lDone = drainUntil(tp.eq, [&] {
-        auto &ax = tp.project.axes[static_cast<size_t>(StandardAxis::L0)];
-        return ax.pendingEval == nullptr && ax.resolved.has_value();
-    });
+    bool lDone = drainUntil(
+        tp.eq,
+        [&] {
+            auto &ax = tp.project.axes[static_cast<size_t>(StandardAxis::L0)];
+            return ax.pendingEval == nullptr && ax.resolved.has_value();
+        },
+        &ps);
     REQUIRE(lDone);
-    bool rDone = drainUntil(tp.eq, [&] {
-        auto &ax = tp.project.axes[static_cast<size_t>(StandardAxis::R0)];
-        return ax.pendingEval == nullptr && ax.resolved.has_value();
-    });
+    bool rDone = drainUntil(
+        tp.eq,
+        [&] {
+            auto &ax = tp.project.axes[static_cast<size_t>(StandardAxis::R0)];
+            return ax.pendingEval == nullptr && ax.resolved.has_value();
+        },
+        &ps);
     REQUIRE(rDone);
 
     const auto &l = tp.project.axes[static_cast<size_t>(StandardAxis::L0)].resolved->actions;
@@ -612,7 +631,7 @@ const CompiledScript *compileScript(RoslynFixture &f, const std::string &fileNam
 
 bool evalDone(RoslynFixture &f, StandardAxis role) {
     auto &axis = f.tp.project.axes[static_cast<size_t>(role)];
-    return drainUntil(f.tp.eq, [&] { return axis.pendingEval == nullptr && axis.resolved.has_value(); });
+    return drainUntil(f.tp.eq, [&] { return axis.pendingEval == nullptr && axis.resolved.has_value(); }, &f.ps);
 }
 
 } // namespace

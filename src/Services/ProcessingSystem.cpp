@@ -979,13 +979,32 @@ void ProcessingSystem::onAxisModified(const AxisModifiedEvent &event) {
         if (r.axisRoles.test(roleIdx))
             affected |= r.axisRoles;
 
-    for (size_t i = 0; i < kStandardAxisCount; ++i)
-        if (affected.test(i))
-            evaluateAxis(static_cast<StandardAxis>(i));
+    // Mark, don't evaluate: update() flushes one eval per axis after the frame's events are all drained,
+    // so a gesture that fires several AxisModifiedEvents builds a single snapshot per axis, not one each.
+    pendingEvalAxes_ |= affected;
 }
 
 void ProcessingSystem::onRequestEval(const RequestAxisEvalEvent &event) {
-    evaluateAxis(event.role);
+    pendingEvalAxes_.set(static_cast<size_t>(event.role));
+}
+
+void ProcessingSystem::update() {
+    if (pendingEvalAxes_.none())
+        return;
+    for (size_t i = 0; i < kStandardAxisCount; ++i) {
+        if (!pendingEvalAxes_.test(i))
+            continue;
+        // Throttle: never supersede an in-flight eval on the next frame. Letting the running job finish
+        // (and apply its result) lets periodic results through during a sustained edit stream — a drag, a
+        // slider scrub — instead of cancelling and resubmitting every frame, which for a heavy graph
+        // completes nothing and starves the timeline of feedback. The axis stays marked, so the first
+        // update() after the job lands submits the latest state; the last edit is thus guaranteed to
+        // evaluate once its in-flight predecessor completes (trailing edge).
+        if (project.axes[i].pendingEval != nullptr)
+            continue;
+        pendingEvalAxes_.reset(i);
+        evaluateAxis(static_cast<StandardAxis>(i));
+    }
 }
 
 void ProcessingSystem::onSetAutoEvalEnabled(const SetAutoEvalEnabledEvent &event) {
@@ -1005,10 +1024,12 @@ void ProcessingSystem::onSetAutoEvalEnabled(const SetAutoEvalEnabledEvent &event
             continue;
 
         if (event.enabled) {
-            // Re-enabling: recompute so the processed result reflects edits made while halted.
-            evaluateAxis(static_cast<StandardAxis>(i));
+            // Re-enabling: recompute so the processed result reflects edits made while halted (flushed by update()).
+            pendingEvalAxes_.set(i);
         } else {
             // Halting: drop the processed result; the timeline falls back to raw actions until recompute.
+            // Clear any eval this frame's edits queued so update() doesn't re-populate resolved after the halt.
+            pendingEvalAxes_.reset(i);
             abandonEval(axis);
             axis.resolved = std::nullopt;
         }

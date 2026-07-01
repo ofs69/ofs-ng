@@ -22,16 +22,20 @@ using ofs::test::TestProject;
 
 namespace {
 
-// Spin-drain until the axis's eval job finishes (mirrors test_processing_system.cpp).
-bool waitForEval(ofs::EventQueue &eq, const ofs::AxisState &axis, int timeoutMs = 5000) {
+// Pump the frame loop until the axis settles (mirrors test_processing_system.cpp). ProcessingSystem
+// submits from update() and can defer an axis across frames while a prior eval is in flight (the
+// throttle), so update() must run every iteration; a null pendingEval after update() means settled.
+bool waitForEval(ofs::ProcessingSystem &ps, ofs::EventQueue &eq, const ofs::AxisState &axis, int timeoutMs = 5000) {
     auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMs);
-    while (axis.pendingEval != nullptr) {
-        eq.drain();
+    while (true) {
+        ps.update();
+        if (axis.pendingEval == nullptr)
+            return true;
         if (std::chrono::steady_clock::now() >= deadline)
             return false;
+        eq.drain();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
-    return true;
 }
 
 // One-region eval harness with the native effects registered. run() evaluates `graph` over the
@@ -71,7 +75,7 @@ struct EvalHarness {
             },
             tp.eq);
         tp.eq.drain();
-        REQUIRE(waitForEval(tp.eq, axis));
+        REQUIRE(waitForEval(ps, tp.eq, axis));
         REQUIRE(axis.resolved.has_value());
         return axis.resolved->actions;
     }

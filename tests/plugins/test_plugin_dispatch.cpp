@@ -1103,6 +1103,7 @@ struct NodeStateFixture {
             },
             tp.eq);
         tp.eq.drain();
+        ps.update(); // flush the frame's coalesced eval → submits the job (sets pendingEval)
 
         auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
         while (axis.pendingEval != nullptr && std::chrono::steady_clock::now() < deadline) {
@@ -1157,6 +1158,7 @@ struct NodeStateFixture {
             },
             tp.eq);
         tp.eq.drain();
+        ps.update(); // flush the frame's coalesced eval → submits the job (sets pendingEval)
 
         auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
         while (axis.pendingEval != nullptr && std::chrono::steady_clock::now() < deadline) {
@@ -1224,6 +1226,7 @@ struct NodeStateFixture {
             },
             tp.eq);
         tp.eq.drain();
+        ps.update(); // flush the frame's coalesced eval → submits the job (sets pendingEval)
 
         auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
         while (axis.pendingEval != nullptr && std::chrono::steady_clock::now() < deadline) {
@@ -1446,6 +1449,7 @@ TEST_CASE("Plugin discrete eval observes cooperative cancellation via ctx.IsCanc
         },
         fx.tp.eq);
     fx.tp.eq.drain();
+    fx.ps.update(); // flush the frame's coalesced eval → submits the job the test then cancels
 
     // Wait until the eval entered its loop, so cancelling lands while it is genuinely running — past the
     // worker's own between-regions cancel guard, which would otherwise skip the callback entirely.
