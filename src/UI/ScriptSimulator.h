@@ -71,10 +71,12 @@ class ScriptSimulator {
     Sim3DCallbackData callbackDataPerspective{}; // perspective overlay (over video)
 
     // 3D perspective overlay drag/resize state (anchor + size at gesture start, plus the start mouse
-    // position in normalized content space for the move delta).
+    // position in normalized content space for the move delta). In VR the move rigid-rotates the model
+    // by the cursor's spherical displacement, so the start cursor dir is captured too (like the 2D bar).
     bool isMoving3d = false;
     OverlayAnchor dragStart3dAnchor_{};
     ImVec2 dragStart3dMouseNorm_{};
+    glm::vec3 dragStart3dMouseDir_{0.f, 0.f, 1.f}; // VR: cursor sphere dir at gesture start
     bool isResizing3d = false;
     float startResize3dSize = 0.f;
 

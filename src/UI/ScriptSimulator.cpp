@@ -738,7 +738,12 @@ void ScriptSimulator::render3D(const ScriptProject &project, EventQueue &eq, dou
                 if (ImGui::GetIO().KeyAlt) {
                     a = dragStart3dAnchor_; // Alt cancels the move (snap back to the drag-start anchor)
                 } else if (vr) {
-                    vrScreenToAnchor(mouse, overlayVp_, a.vrYaw, a.vrPitch);
+                    // Rigid-rotate the model by the cursor's spherical displacement so the grab offset is
+                    // preserved, matching the 2D bar's VR centre drag. Re-pinning the anchor straight to
+                    // the cursor dir (vrScreenToAnchor) snapped the model's centre under the pointer.
+                    const glm::quat q = rotationBetween(dragStart3dMouseDir_, vrScreenToDir(mouse, overlayVp_));
+                    const glm::vec3 n = q * vrcam::sphereDir(dragStart3dAnchor_.vrYaw, dragStart3dAnchor_.vrPitch);
+                    vrcam::dirToYawPitch(n, a.vrYaw, a.vrPitch);
                 } else {
                     const ImVec2 cur = screenToNorm(mouse, overlayVp_);
                     a.center3dNorm = dragStart3dAnchor_.center3dNorm + (cur - dragStart3dMouseNorm_);
@@ -766,6 +771,7 @@ void ScriptSimulator::render3D(const ScriptProject &project, EventQueue &eq, dou
                 ImGui::GetIO().MouseClicked[ImGuiMouseButton_Left] = false;
                 dragStart3dAnchor_ = anchor;
                 dragStart3dMouseNorm_ = screenToNorm(mouse, overlayVp_);
+                dragStart3dMouseDir_ = vrScreenToDir(mouse, overlayVp_);
                 isMoving3d = true;
             }
         }
