@@ -118,7 +118,8 @@ void MetadataWindow::render(const ScriptProject &project, EventQueue &eq, bool &
     const float em = ImGui::GetFontSize();
     ImGui::SetNextWindowSizeConstraints({em * 24.f, em * 18.f}, {em * 64.f, em * 72.f});
 
-    if (ImGui::Begin(Str::PcfTabMetadata.id("metadata_window"), &open, ImGuiWindowFlags_NoCollapse)) {
+    if (ImGui::Begin(Str::PcfTabMetadata.id("metadata_window"), &open,
+                     ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoCollapse)) {
         // Re-sync the editing mirror only on an actual document change (value compare, no heap alloc),
         // then bind the widgets to it. By render time this frame's events have already drained, so an
         // in-progress edit pushed last frame is now reflected in project.metadata and compares equal —
