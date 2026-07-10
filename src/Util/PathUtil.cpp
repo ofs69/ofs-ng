@@ -56,6 +56,11 @@ const std::filesystem::path &getBasePath() {
     return basePath;
 }
 
+const std::filesystem::path &getManagedPath() {
+    static const std::filesystem::path managedPath = getBasePath() / "managed";
+    return managedPath;
+}
+
 std::string fileUri(const std::filesystem::path &p) {
     std::string uri = "file:///";
     for (char c : toUtf8(p))

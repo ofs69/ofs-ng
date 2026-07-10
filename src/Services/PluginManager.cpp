@@ -1677,8 +1677,8 @@ bool PluginManager::init() {
     // The managed host runs every plugin with full privileges. Refuse to bring it up if the host or
     // the API assembly was tampered with (hash mismatch vs this build) — a hard stop, not a prompt.
     // Ofs.Api isn't loaded by us directly (the CLR resolves it), so it is checked on disk.
-    if (!managedAssemblyTrusted("managed/Ofs.Api.dll", "Ofs.Api") ||
-        !managedAssemblyTrusted("managed/Ofs.PluginHost.dll", "Ofs.PluginHost")) {
+    if (!managedAssemblyTrusted(ofs::util::getManagedPath() / "Ofs.Api.dll", "Ofs.Api") ||
+        !managedAssemblyTrusted(ofs::util::getManagedPath() / "Ofs.PluginHost.dll", "Ofs.PluginHost")) {
         OFS_CORE_ERROR("Managed host integrity check failed; plugin system disabled.");
         return false;
     }
@@ -1688,7 +1688,7 @@ bool PluginManager::init() {
         return false;
     }
 
-    std::filesystem::path hostPath = "managed/Ofs.PluginHost.dll";
+    std::filesystem::path hostPath = ofs::util::getManagedPath() / "Ofs.PluginHost.dll";
     if (!dotNetHost.loadAssembly(hostPath)) {
         OFS_CORE_ERROR("Failed to load Ofs.PluginHost.dll");
         return false;
@@ -1915,13 +1915,12 @@ void PluginManager::loadPlugins() {
     pendingUninstall_ = pendingUninstall; // remembered so discoverNewPlugins won't re-surface these
 
     // Base root: shipped first-party plugins ONLY, loaded by name from the baked-in allowlist — the
-    // directory is never scanned. It lives under the managed dir (getBasePath()/managed/plugins), not a
-    // top-level plugins/ next to the executable, so the only plugins/ folder a user sees is their own
-    // writable <pref>/plugins (a bundled folder next to the app reads as "drop plugins here", but this
-    // root never scans, so a dropped plugin would silently never load). A DLL someone drops here that is
-    // not on the allowlist is ignored. Name + baked-hash is the gate (see isPluginTrusted /
-    // firstPartyHashMatches).
-    const std::filesystem::path baseRoot = ofs::util::getBasePath() / "managed" / "plugins";
+    // directory is never scanned. It lives under the managed dir, not a top-level plugins/ next to the
+    // executable, so the only plugins/ folder a user sees is their own writable <pref>/plugins (a bundled
+    // folder next to the app reads as "drop plugins here", but this root never scans, so a dropped plugin
+    // would silently never load). A DLL someone drops here that is not on the allowlist is ignored.
+    // Name + baked-hash is the gate (see isPluginTrusted / firstPartyHashMatches).
+    const std::filesystem::path baseRoot = ofs::util::getManagedPath() / "plugins";
     for (const std::string_view name : firstPartyPluginNames()) {
         const std::filesystem::path dir = baseRoot / ofs::util::fromUtf8(name);
         if (std::filesystem::exists(dir))

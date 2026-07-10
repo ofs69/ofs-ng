@@ -1,0 +1,30 @@
+#!/bin/sh
+# AppRun — the AppImage entry point. Substituted from AppRun.in by tools/appimage/make-appimage.sh
+# (@OFS_APP_NAME@ is the variant's binary name: ofs-ng or ofs-ng-compat).
+#
+# The mount point is random per launch, so every path the app needs is resolved from $APPDIR here
+# rather than baked into the binary at build time.
+set -e
+
+APPDIR="$(dirname "$(readlink -f "$0")")"
+export APPDIR
+
+# The bundled CoreCLR. libnethost's get_hostfxr_path() checks DOTNET_ROOT before the registered global
+# install and the /usr/share/dotnet default, so this makes the AppImage self-contained on a host with no
+# .NET at all. It deliberately overrides any DOTNET_ROOT the user already exports: the plugin and script
+# hosts are built against the runtime we ship, and silently binding them to the host's SDK would make
+# plugin loading depend on whatever version happens to be installed.
+export DOTNET_ROOT="${APPDIR}/usr/share/dotnet"
+
+# libmpv is dlopen'd by soname (MpvLoader), not linked, so it resolves through the loader search path.
+# Only libmpv and its non-driver dependencies live here — libGL/libEGL/libvulkan/libva/libdrm and the
+# X11/Wayland client libraries are deliberately NOT bundled (the AppImage excludelist), because a
+# bundled copy would shadow the host's graphics stack and break the GL context the app renders into.
+export LD_LIBRARY_PATH="${APPDIR}/usr/lib${LD_LIBRARY_PATH:+:${LD_LIBRARY_PATH}}"
+
+# ffmpeg/ffprobe are located by spawning them off PATH (ofs::util::toolAvailable), not by absolute path.
+# Prepending means the bundled static builds win over a host install, so transcode behaves identically
+# everywhere. Appending $PATH still leaves the host's tools reachable for anything else.
+export PATH="${APPDIR}/usr/bin${PATH:+:${PATH}}"
+
+exec "${APPDIR}/usr/bin/@OFS_APP_NAME@" "$@"

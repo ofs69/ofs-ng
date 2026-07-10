@@ -48,6 +48,13 @@ const std::filesystem::path &getCrashDir();
 // Directory containing the running executable (where shipped assets like data/ and lang/ live).
 const std::filesystem::path &getBasePath();
 
+// Directory holding the shipped managed assemblies (getBasePath()/managed): the .NET host assemblies —
+// Ofs.Api, Ofs.PluginHost, Ofs.ScriptHost, Ofs.HostServices — and the first-party plugins under
+// managed/plugins. Anchored to the executable, never to the process working directory: the app is
+// launched from an arbitrary cwd by a .desktop entry, an AppImage's AppRun, or a shell, and a relative
+// "managed/…" resolves against that cwd, silently failing every assembly's trust check.
+const std::filesystem::path &getManagedPath();
+
 // Build a `file:///` URI from a path. Emits UTF-8 bytes verbatim (no percent-
 // encoding — SDL_OpenURL / the OS shell accept raw UTF-8) and normalizes Windows
 // '\\' separators to '/'. Exposed for testing; openInFileBrowser/openInDefaultApp

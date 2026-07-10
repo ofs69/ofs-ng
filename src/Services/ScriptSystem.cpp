@@ -62,7 +62,7 @@ bool ScriptSystem::init() {
         OFS_CORE_WARN("ScriptSystem: .NET runtime unavailable; script nodes disabled.");
         return false;
     }
-    std::filesystem::path hostPath = "managed/Ofs.ScriptHost.dll";
+    std::filesystem::path hostPath = ofs::util::getManagedPath() / "Ofs.ScriptHost.dll";
     // The script host compiles and runs arbitrary C# with full privileges. A hash mismatch vs this
     // build means tampering or a corrupt install — refuse to load rather than run it.
     if (!managedAssemblyTrusted(hostPath, "Ofs.ScriptHost")) {

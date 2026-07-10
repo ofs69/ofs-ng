@@ -27,6 +27,19 @@ SDL3, Dear ImGui, OpenGL, and libmpv.
 | **Linux** | Fully supported — build, run, and debug. |
 | **macOS** | Indirect only. The codebase is cross-platform and is expected to build and run, but it is **not directly supported** — we don't build, test, or debug on macOS. |
 
+Each release ships a `.zip` per platform, and on Linux additionally an **AppImage** — a single executable
+that needs no install and carries its own .NET runtime, libmpv and ffmpeg, so none of them have to be
+present on the system. Mark it executable and run it:
+
+```
+chmod +x linux-ofs-ng-*.AppImage
+./linux-ofs-ng-*.AppImage
+```
+
+It is built against glibc 2.35, so it runs on Ubuntu 22.04+, Debian 12+, Fedora 36+, RHEL 9+ and the
+rolling distros. Graphics drivers, X11/Wayland and audio come from the host, as they must. Take the
+`-compat` build if your CPU predates AVX2. See `tools/appimage/` for how the bundle is assembled.
+
 ## Getting the source
 
 The project uses git submodules for its third-party libraries, so clone recursively:

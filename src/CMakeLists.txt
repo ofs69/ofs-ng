@@ -47,6 +47,20 @@ if (WIN32)
     target_link_libraries(${PROJECT_NAME} PUBLIC dbghelp)
 endif ()
 
+# Linux: fold the C++ runtime into the binary so the only DT_NEEDED entries left are libm, libc and the
+# loader. Everything else this app touches is already dlopen'd rather than linked — SDL3 links statically
+# and dlopens each of its backends (X11/Wayland/GL/ALSA/Pulse/udev/dbus) by soname, libmpv comes from
+# MpvLoader's SDL_LoadObject, and hostfxr from libnethost — so libstdc++/libgcc_s were the last host
+# libraries we imposed. Dropping them also drops the binary's GLIBCXX_* symbol-version floor, which is
+# what lets one AppImage run against an older distro's C++ runtime (see tools/appimage/).
+#
+# Safe despite CoreCLR loading its own libstdc++.so.6 into the same process: nothing but the plugin C ABI
+# crosses that boundary, so the two runtimes never exchange C++ objects, exceptions or typeinfo. The
+# plugin/script suite (real CoreCLR + Roslyn) passes against a statically linked binary.
+if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    target_link_options(${PROJECT_NAME} PRIVATE -static-libstdc++ -static-libgcc)
+endif ()
+
 
 target_include_directories(${PROJECT_NAME} PRIVATE
         "${CMAKE_CURRENT_SOURCE_DIR}"
@@ -135,28 +149,6 @@ if (CLANG_TIDY_EXE)
     )
 endif ()
 
-
-# Stage data.pak (packed in the top-level CMakeLists) next to the binary. The copied zip is itself the
-# tracked OUTPUT — not a stamp in the build tree — so clearing bin/ re-triggers the copy. That is the fix
-# for the old "data not always copied" bug: the previous stamp lived in the build tree while the data
-# landed in bin/, so a wiped bin/ left the stamp looking up to date and the copy was skipped.
-#
-# Destination is computed from CMAKE_RUNTIME_OUTPUT_DIRECTORY rather than $<TARGET_FILE_DIR:ofs-ng> on
-# purpose: a TARGET_FILE_DIR genex would make CMake auto-add an ofs_stage_assets→ofs-ng edge, which
-# points the wrong way (building just ofs-ng would skip staging) and would clash with the correct
-# ofs-ng→ofs_stage_assets edge below. The CMAKE_CONFIGURATION_TYPES branch appends /$<CONFIG> only for
-# multi-config generators, matching where the binary actually lands in both layouts.
-set(OFS_RUNTIME_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}$<$<BOOL:${CMAKE_CONFIGURATION_TYPES}>:/$<CONFIG>>")
-add_custom_command(
-        OUTPUT "${OFS_RUNTIME_DIR}/data.pak"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${OFS_ASSETS_PAK}" "${OFS_RUNTIME_DIR}/data.pak"
-        DEPENDS "${OFS_ASSETS_PAK}"
-        COMMENT "Staging data.pak to the output directory"
-        VERBATIM)
-# ALL ⇒ runs on every default build, so ctest always sees a current data.pak. The add_dependencies
-# edge makes building/running just ofs-ng stage the archive first, so the app never launches without it.
-add_custom_target(ofs_stage_assets ALL DEPENDS "${OFS_RUNTIME_DIR}/data.pak")
-add_dependencies(${PROJECT_NAME} ofs_stage_assets)
 
 # Distribution archive: package this build's runtime artifacts (app, runtime DLLs, data.pak, plugins,
 # managed assemblies) into dist/<platform>-<app>-<tag>+<shorthash>[-compat].zip, with the .pdb symbols

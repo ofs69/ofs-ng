@@ -4,6 +4,7 @@
 #include "Services/ManagedAssemblyTrust.h"
 #include "Util/Http.h"
 #include "Util/Log.h"
+#include "Util/PathUtil.h"
 
 #include <coreclr_delegates.h>
 #include <cstdint>
@@ -54,7 +55,7 @@ std::optional<util::HttpResponse> managedHttpGet(const std::string &url, const s
 bool initManagedHttp() {
     // Ofs.HostServices runs in-process with full privileges; verify its bytes against the baked hash
     // before loading, exactly like the plugin/script hosts.
-    if (!managedAssemblyTrusted("managed/Ofs.HostServices.dll", "Ofs.HostServices")) {
+    if (!managedAssemblyTrusted(ofs::util::getManagedPath() / "Ofs.HostServices.dll", "Ofs.HostServices")) {
         OFS_CORE_WARN("Ofs.HostServices failed trust verification; update checks are disabled");
         return false;
     }
@@ -65,7 +66,7 @@ bool initManagedHttp() {
         return false;
     }
 
-    const std::filesystem::path hostPath = "managed/Ofs.HostServices.dll";
+    const std::filesystem::path hostPath = ofs::util::getManagedPath() / "Ofs.HostServices.dll";
     if (!host.loadAssembly(hostPath)) {
         OFS_CORE_WARN("Failed to load Ofs.HostServices.dll; update checks are disabled");
         return false;

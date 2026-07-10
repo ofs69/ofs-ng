@@ -49,10 +49,16 @@ jobs:
       fail-fast: false
       matrix:
         include:
+          # Linux pins 22.04 rather than ubuntu-latest: the binary's glibc symbol-version floor is set by
+          # whatever the build host provides, and 24.04 forces GLIBC_2.38 (the __isoc23_* scanf/strtol
+          # family, strlcpy, wcslcpy — all pulled in by SDL). Building on 22.04 lowers the floor to 2.35,
+          # which is what lets the AppImage run on Debian 12, RHEL 9 and Fedora 36+ as well. Nothing in
+          # the source depends on the newer symbols. The bundled .NET runtime's own floor is 2.27, so it
+          # is never the binding constraint.
           - { os: windows-latest, avx: 'ON',  label: 'avx' }
           - { os: windows-latest, avx: 'OFF', label: 'compat' }
-          - { os: ubuntu-latest,  avx: 'ON',  label: 'avx' }
-          - { os: ubuntu-latest,  avx: 'OFF', label: 'compat' }
+          - { os: ubuntu-22.04,   avx: 'ON',  label: 'avx' }
+          - { os: ubuntu-22.04,   avx: 'OFF', label: 'compat' }
     steps:
       - uses: actions/checkout@v5
         with:
@@ -75,6 +81,12 @@ jobs:
             libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev \
             libxi-dev libxss-dev libxtst-dev libxkbcommon-dev libwayland-dev wayland-protocols \
             libdecor-0-dev libgl1-mesa-dev libegl1-mesa-dev libudev-dev libdbus-1-dev
+          # AppImage packaging only. libmpv is never linked (MpvLoader dlopen's it), but the runtime
+          # library has to exist on the build host for make-appimage.sh to copy it and walk its
+          # dependencies. 22.04 ships soname .so.1, 24.04 ships .so.2 — MpvLoader tries both.
+          # desktop-file-utils gives appimagetool its desktop-file validator.
+          sudo apt-get install -y desktop-file-utils
+          sudo apt-get install -y libmpv2 || sudo apt-get install -y libmpv1
 
       # --- Windows: MSVC + Ninja. Release single-config makes the project static-link
       #     SDL3 and nethost (/MT), so the zip ships no SDL3.dll/nethost.dll; libmpv-2.dll
@@ -121,10 +133,22 @@ jobs:
         # separate symbols, a sibling zzz-ignore-<plat>[-compat]-<hash>-pdb.zip (Windows native + managed .pdb).
         run: cmake --build build --target dist
 
+      - name: Package (AppImage)
+        # Ships alongside the loose .zip, not instead of it: the zip suits a user who unpacks into their
+        # own tree, the AppImage is the single-file, no-install form. Both are cut from the same bin/release
+        # staging, so they carry identical app bits — the AppImage just adds the .NET runtime, libmpv and
+        # the ffmpeg CLIs, which the zip leaves to the system. Naming matches MakeDist.cmake.
+        if: runner.os == 'Linux'
+        run: tools/appimage/make-appimage.sh --bin-dir bin/release
+
       - uses: actions/upload-artifact@v4
         with:
           name: dist-${{ matrix.os }}-${{ matrix.label }}
-          path: bin/dist/*.zip
+          # if-no-files-found is evaluated over the whole path set, not per pattern, so the Windows legs
+          # (zip only, no AppImage) still satisfy it while a leg that produces nothing at all still fails.
+          path: |
+            bin/dist/*.zip
+            bin/dist/*.AppImage
           if-no-files-found: error
 
   publish:
@@ -156,7 +180,7 @@ jobs:
             exit 1
           fi
           shopt -s globstar nullglob
-          files=(dist/**/*.zip)
+          files=(dist/**/*.zip dist/**/*.AppImage)
           if [ ${#files[@]} -eq 0 ]; then echo "No artifacts to publish"; exit 1; fi
           echo "Uploading ${#files[@]} archives:"
           printf '  %s\n' "${files[@]}"

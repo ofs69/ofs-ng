@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=@OFS_APP_TITLE@
+Comment=Multi-axis funscript editor with video playback, a 3D simulator and a node-based processing graph
+# Resolved through the AppImage's PATH, not an absolute path: the mount point differs on every launch.
+Exec=@OFS_APP_NAME@ %f
+# Must match the icon file's basename at the AppDir root (appimagetool validates this).
+Icon=@OFS_APP_NAME@
+Terminal=false
+Categories=AudioVideo;Video;AudioVideoEditing;
+Keywords=funscript;script;video;
+MimeType=application/x-funscript;
+StartupWMClass=@OFS_APP_NAME@

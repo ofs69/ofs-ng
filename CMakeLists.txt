@@ -104,7 +104,7 @@ endif ()
 #
 # Single-config generators (Ninja, used here) get an explicit bin/<config> from CMAKE_BUILD_TYPE.
 # Multi-config generators leave CMAKE_BUILD_TYPE empty and append /$<CONFIG> themselves, so the base
-# bin/ is correct there (the OFS_RUNTIME_DIR genex in src/CMakeLists.txt mirrors this split).
+# bin/ is correct there (the OFS_RUNTIME_DIR genex below mirrors this split).
 if (CMAKE_CONFIGURATION_TYPES)
     set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_SOURCE_DIR}/bin")
 else ()
@@ -205,9 +205,8 @@ execute_process(COMMAND ${CMAKE_COMMAND}
 # translations and the shipped script library all now live in this one archive. User
 # themes/translations/scripts still live under <pref>/ and override the shipped ones. GLOB_RECURSE +
 # CONFIGURE_DEPENDS re-globs at build time, so the archive re-packs whenever any asset is added or edited;
-# the staging rule in src/CMakeLists.txt copies it next to the binary as a tracked build output (the fix
-# for the prior "data not always copied" bug). See src/CMakeLists.txt for the OFS_ASSETS_FALLBACK_DIR dev
-# fallback.
+# the staging rule below copies it next to the binary as a tracked build output (the fix for the prior
+# "data not always copied" bug). See src/CMakeLists.txt for the OFS_ASSETS_FALLBACK_DIR dev fallback.
 set(OFS_ASSETS_PAK "${OFS_GENERATED_DIR}/data.pak")
 file(GLOB_RECURSE OFS_ASSET_FILES CONFIGURE_DEPENDS
         "${CMAKE_SOURCE_DIR}/data/*" "${CMAKE_SOURCE_DIR}/lang/*")
@@ -220,6 +219,31 @@ add_custom_command(
         COMMENT "Packing data/ and lang/ into data.pak"
         VERBATIM)
 add_custom_target(ofs_pack_assets DEPENDS "${OFS_ASSETS_PAK}")
+
+# Stage data.pak next to the binary. The copied zip is itself the tracked OUTPUT — not a stamp in the
+# build tree — so clearing bin/ re-triggers the copy. That is the fix for the old "data not always
+# copied" bug: the previous stamp lived in the build tree while the data landed in bin/, so a wiped
+# bin/ left the stamp looking up to date and the copy was skipped.
+#
+# Both this rule and the add_custom_command that produces ${OFS_ASSETS_PAK} MUST stay in this file. A
+# custom command's OUTPUT is only visible to targets declared in the same directory, so consuming the
+# pak from src/CMakeLists.txt built only under Ninja (one global build graph) and failed under the
+# Makefiles generator ("No rule to make target 'generated/data.pak'"), which links per-directory.
+#
+# Destination is computed from CMAKE_RUNTIME_OUTPUT_DIRECTORY rather than $<TARGET_FILE_DIR:ofs-ng> on
+# purpose: a TARGET_FILE_DIR genex would make CMake auto-add an ofs_stage_assets→ofs-ng edge, which
+# points the wrong way (building just ofs-ng would skip staging) and would clash with the correct
+# ofs-ng→ofs_stage_assets edge added after add_subdirectory(src/). The CMAKE_CONFIGURATION_TYPES branch
+# appends /$<CONFIG> only for multi-config generators, matching where the binary actually lands.
+set(OFS_RUNTIME_DIR "${CMAKE_RUNTIME_OUTPUT_DIRECTORY}$<$<BOOL:${CMAKE_CONFIGURATION_TYPES}>:/$<CONFIG>>")
+add_custom_command(
+        OUTPUT "${OFS_RUNTIME_DIR}/data.pak"
+        COMMAND ${CMAKE_COMMAND} -E copy_if_different "${OFS_ASSETS_PAK}" "${OFS_RUNTIME_DIR}/data.pak"
+        DEPENDS "${OFS_ASSETS_PAK}"
+        COMMENT "Staging data.pak to the output directory"
+        VERBATIM)
+# ALL ⇒ runs on every default build, so ctest always sees a current data.pak.
+add_custom_target(ofs_stage_assets ALL DEPENDS "${OFS_RUNTIME_DIR}/data.pak")
 
 # Embedded build identity: the git commit hash (long + short) and nearest tag, compiled into the
 # binary (see cmake/GenBuildInfo.cmake + src/main.cpp). Baseline at configure time; refreshed on every
@@ -290,6 +314,11 @@ add_subdirectory("tools/localization/")
 add_subdirectory("managed/")
 add_subdirectory("src/")
 add_subdirectory("tests/")
+
+# Building (or running) just ofs-ng stages the archive first, so the app never launches without it.
+# Declared here rather than beside ofs_stage_assets because the ofs-ng target only exists once src/
+# has been added.
+add_dependencies(ofs-ng ofs_stage_assets)
 
 set(_build_done_deps ofs-ng)
 if (OFS_BUILD_TESTS)
