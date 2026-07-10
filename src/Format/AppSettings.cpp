@@ -160,6 +160,9 @@ void to_json(nlohmann::json &j, const AppSettings &s) {
                                 {"language", s.language},
                                 {"liveReloadTranslations", s.liveReloadTranslations},
                                 {"intraOutputDir", s.intraOutputDir},
+                                {"exportDirMode", static_cast<int>(s.exportDirMode)},
+                                {"exportDir", s.exportDir},
+                                {"openProjectConfigOnOpen", s.openProjectConfigOnOpen},
                                 {"windowGeometry", s.windowGeometry}});
 }
 
@@ -189,6 +192,9 @@ void from_json(const nlohmann::json &j, AppSettings &s) {
     s.language = j.value("language", std::string{});
     s.liveReloadTranslations = j.value("liveReloadTranslations", false);
     s.intraOutputDir = j.value("intraOutputDir", std::string{});
+    s.exportDirMode = static_cast<ExportDirMode>(std::clamp(j.value("exportDirMode", 0), 0, 2));
+    s.exportDir = j.value("exportDir", std::string{});
+    s.openProjectConfigOnOpen = j.value("openProjectConfigOnOpen", false);
     s.windowGeometry = j.value("windowGeometry", WindowGeometry{});
 }
 } // namespace ofs

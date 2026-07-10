@@ -75,6 +75,10 @@ class ProjectManager {
     co::Fire exportMultiAxisFunscript(std::vector<StandardAxis> axes, bool useChannels,
                                       std::optional<std::string> targetPath);
     co::Fire exportMultipleFunscript10(std::vector<StandardAxis> axes, std::optional<std::string> targetPath);
+    // Initial directory to force the export dialog to open in, per AppSettings::exportDirMode (UTF-8).
+    // Empty => let the dialog use its remembered last-used folder (the LastUsed mode, and the fallback
+    // when VideoFolder has no media / Custom has no folder set).
+    std::string exportDirOverride() const;
     // Persist the just-used export parameters so Quick Export can replay them dialog-free.
     void recordLastExport(int format, std::vector<StandardAxis> axes, std::string outputPath);
 

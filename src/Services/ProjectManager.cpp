@@ -901,6 +901,20 @@ void ProjectManager::onImportFunscriptData(const ImportFunscriptDataEvent &event
         eq.push(NotifyEvent{.level = NotifyLevel::Success, .message = Str::PmImported.fmt(placed)});
 }
 
+std::string ProjectManager::exportDirOverride() const {
+    switch (appSettings.exportDirMode) {
+    case ExportDirMode::VideoFolder:
+        if (!project.state.mediaPath.empty())
+            return ofs::util::toUtf8(ofs::util::fromUtf8(project.state.mediaPath).parent_path());
+        return {}; // media-less project → fall back to the remembered last-used folder
+    case ExportDirMode::Custom:
+        return appSettings.exportDir; // empty → same last-used fallback
+    case ExportDirMode::LastUsed:
+        break;
+    }
+    return {};
+}
+
 co::Fire ProjectManager::exportMultipleFunscript10(std::vector<StandardAxis> axes,
                                                    std::optional<std::string> targetPath) {
     if (axes.empty())
@@ -912,7 +926,8 @@ co::Fire ProjectManager::exportMultipleFunscript10(std::vector<StandardAxis> axe
         dir = co_await FileDialog{eq,
                                   {.kind = FileDialogKind::SelectFolder,
                                    .key = "funscript_export_folder",
-                                   .title = Str::PmDlgExportFolder.c_str()}};
+                                   .title = Str::PmDlgExportFolder.c_str(),
+                                   .forceDir = exportDirOverride()}};
     }
     if (dir.empty())
         co_return;
@@ -1001,7 +1016,7 @@ co::Fire ProjectManager::exportMultiAxisFunscript(std::vector<StandardAxis> axes
         std::string defaultName = "script";
         if (!project.state.mediaPath.empty())
             defaultName = ofs::util::toUtf8(ofs::util::fromUtf8(project.state.mediaPath).stem());
-        defaultName += useChannels ? ".max.funscript" : ".funscript";
+        defaultName += ".funscript";
 
         file = co_await FileDialog{eq,
                                    {.kind = FileDialogKind::Save,
@@ -1009,7 +1024,8 @@ co::Fire ProjectManager::exportMultiAxisFunscript(std::vector<StandardAxis> axes
                                     .title = useChannels ? Str::PmDlgExport20.c_str() : Str::PmDlgExport11.c_str(),
                                     .defaultName = std::move(defaultName),
                                     .filterPatterns = {"*.funscript"},
-                                    .filterDesc = Str::PmFilterFunscript.c_str()}};
+                                    .filterDesc = Str::PmFilterFunscript.c_str(),
+                                    .forceDir = exportDirOverride()}};
     }
     if (file.empty())
         co_return;

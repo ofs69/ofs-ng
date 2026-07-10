@@ -66,6 +66,11 @@ struct WindowGeometry {
 void to_json(nlohmann::json &j, const WindowGeometry &g);
 void from_json(const nlohmann::json &j, WindowGeometry &g);
 
+// Where the funscript export dialog opens by default. VideoFolder puts exports next to the source video
+// (falling back to LastUsed when the project has no media); LastUsed reopens wherever the user last
+// exported; Custom always opens `exportDir`. Persisted as its int value — the order is the on-disk contract.
+enum class ExportDirMode { VideoFolder = 0, LastUsed = 1, Custom = 2 };
+
 struct AppSettings {
     std::vector<std::string> lastProjectPaths;
     // Whether the next launch reopens lastProjectPaths.front(). Armed whenever a project is opened/saved
@@ -116,6 +121,13 @@ struct AppSettings {
     // intra-optimize command stays disabled until the user picks a directory in Preferences, and the
     // user owns cleanup of its contents — the app never prunes it.
     std::string intraOutputDir;
+    // Default directory for the funscript export dialog. See ExportDirMode; `exportDir` (UTF-8) is used
+    // only in Custom mode — empty there falls back to the last-used dir.
+    ExportDirMode exportDirMode = ExportDirMode::VideoFolder;
+    std::string exportDir;
+    // Pop the Project (metadata) window automatically whenever a project opens, like old OFS. Off by
+    // default so a normal open stays uncluttered.
+    bool openProjectConfigOnOpen = false;
     WindowGeometry windowGeometry;
 
     static AppSettings load();

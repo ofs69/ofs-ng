@@ -197,7 +197,14 @@ bool OfsApp::init() {
     // for the async video load to settle, then its canOffer gate (original source, no existing intra copy)
     // decides whether to actually show it — so arming on a switch *to* the intra copy is harmless. Without
     // the media-change arm, opening a second video after dismissing the prompt once never re-offered.
-    eventQueue.on<ofs::LoadProjectEvent>([this](const ofs::LoadProjectEvent &) { optimizePromptPending = true; });
+    eventQueue.on<ofs::LoadProjectEvent>([this](const ofs::LoadProjectEvent &) {
+        optimizePromptPending = true;
+        // Opt-in "old OFS" behavior: pop the Project (metadata) window on open. LoadProjectEvent also
+        // fires on close (to the welcome screen), so gate on an actually-loaded project — by drain time
+        // the load has populated it, while a close leaves no active project.
+        if (appSettings.openProjectConfigOnOpen && projectManager && projectManager->hasActiveProject())
+            appState.showProjectConfigWindow = true;
+    });
     eventQueue.on<ofs::ChangeMediaPathEvent>(
         [this](const ofs::ChangeMediaPathEvent &) { optimizePromptPending = true; });
 

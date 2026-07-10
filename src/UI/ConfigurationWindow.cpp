@@ -352,6 +352,69 @@ void ConfigurationWindow::renderApplicationTab(EventQueue &eq) {
     }
     ImGui::Spacing();
 
+    // --- Export ---
+    ImGui::SeparatorText(Str::PrefExportSection);
+    {
+        auto modeLabel = [](ExportDirMode m) -> TrKey {
+            switch (m) {
+            case ExportDirMode::VideoFolder:
+                return Str::PrefExportDirVideoFolder;
+            case ExportDirMode::Custom:
+                return Str::PrefExportDirCustom;
+            case ExportDirMode::LastUsed:
+                break;
+            }
+            return Str::PrefExportDirLastUsed;
+        };
+        const ExportDirMode mode = appSettings.exportDirMode;
+        if (beginForm("##export_form")) {
+            formRowHelp(Str::PrefExportDir, Str::PrefExportDirHint.c_str());
+            ImGui::SetNextItemWidth(-FLT_MIN);
+            if (ImGui::BeginCombo("##export_dir_mode", modeLabel(mode))) {
+                for (const ExportDirMode m :
+                     {ExportDirMode::VideoFolder, ExportDirMode::LastUsed, ExportDirMode::Custom})
+                    if (comboItem(fmtScratch("{}###exportmode_{}", modeLabel(m).sv(), static_cast<int>(m)), m == mode))
+                        eq.push(ModifyEvent<AppSettings>{[m](AppSettings &s) { s.exportDirMode = m; }});
+                ImGui::EndCombo();
+            }
+            // Custom mode: the fixed folder, with a picker. A read-only input shows the full (possibly
+            // non-ASCII) path; its hint covers the unset case (which falls back to the last-used folder).
+            if (mode == ExportDirMode::Custom) {
+                formRow(Str::PrefExportDirCustom);
+                const char *chooseLbl = Str::PrefIntraChooseFolder.iconId(ICON_FOLDER_OPEN, "export_dir_choose");
+                const float reserved = ofs::ui::buttonW(chooseLbl) + ImGui::GetStyle().ItemSpacing.x;
+                ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - reserved - scrollbarGap());
+                ImGui::InputTextWithHint("###export_dir_path", Str::PrefExportDirNotSet.c_str(),
+                                         const_cast<std::string *>(&appSettings.exportDir),
+                                         ImGuiInputTextFlags_ReadOnly);
+                ImGui::SameLine();
+                if (ImGui::Button(chooseLbl))
+                    pickFile(eq,
+                             {.kind = FileDialogKind::SelectFolder,
+                              .key = "export_dir",
+                              .title = Str::PrefExportDirChooseTitle.c_str()},
+                             [&eq](std::string path) {
+                                 if (!path.empty())
+                                     eq.push(ModifyEvent<AppSettings>{
+                                         [path = std::move(path)](AppSettings &s) { s.exportDir = path; }});
+                             });
+            }
+            endForm();
+        }
+    }
+    ImGui::Spacing();
+
+    // --- Project ---
+    ImGui::SeparatorText(Str::PrefProjectSection);
+    {
+        bool openOnLoad = appSettings.openProjectConfigOnOpen;
+        if (labeledCheckbox(Str::PrefOpenProjectConfig, "###open_project_config", &openOnLoad))
+            eq.push(ModifyEvent<AppSettings>{[openOnLoad](AppSettings &s) { s.openProjectConfigOnOpen = openOnLoad; }});
+        ImGui::SameLine();
+        ofs::ui::helpMarker(Str::PrefOpenProjectConfigHint.c_str());
+    }
+    ImGui::Spacing();
+
     // --- View ---
     ImGui::SeparatorText(Str::PrefView);
     if (beginForm("##view_form")) {

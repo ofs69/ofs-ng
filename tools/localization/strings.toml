@@ -188,6 +188,50 @@ description = "Preferences › Application › Optimized Video: help-marker tool
 english     = "Use fast local storage (an SSD) — not a network drive (NAS)."
 description = "Preferences › Application › Optimized Video: warning that all-intra copies need lots of fast local disk, not network storage."
 
+[PrefExportSection]
+english     = "Export"
+description = "Preferences › Application: section header for funscript export defaults."
+
+[PrefExportDir]
+english     = "Default location"
+description = "Preferences › Application › Export: label for the combo choosing where the funscript export dialog opens by default."
+
+[PrefExportDirHint]
+english     = "Where the export dialog opens by default. You can always pick another folder in the dialog."
+description = "Preferences › Application › Export: help-marker tooltip explaining the default export-location setting."
+
+[PrefExportDirVideoFolder]
+english     = "Next to the video"
+description = "Preferences › Application › Export: export-location option that opens the dialog in the source video's folder."
+
+[PrefExportDirLastUsed]
+english     = "Last used folder"
+description = "Preferences › Application › Export: export-location option that reopens wherever the user last exported."
+
+[PrefExportDirCustom]
+english     = "Custom folder"
+description = "Preferences › Application › Export: export-location option that always opens a fixed folder the user chooses."
+
+[PrefExportDirNotSet]
+english     = "No folder chosen — exports fall back to the last used folder."
+description = "Preferences › Application › Export: placeholder in the custom-folder field when no folder has been chosen yet."
+
+[PrefExportDirChooseTitle]
+english     = "Choose the default export folder"
+description = "Preferences › Application › Export: title of the folder-picker dialog for the custom default export folder."
+
+[PrefProjectSection]
+english     = "Project"
+description = "Preferences › Application: section header for project-related behavior settings."
+
+[PrefOpenProjectConfig]
+english     = "Open project settings when a project opens"
+description = "Preferences › Application › Project: toggle that automatically shows the Project (metadata) window whenever a project is opened."
+
+[PrefOpenProjectConfigHint]
+english     = "Automatically show the Project window (metadata, chapters, settings) each time you open a project."
+description = "Preferences › Application › Project: help-marker tooltip explaining the open-project-settings-on-open toggle."
+
 [TranscodeTitle]
 english     = "Optimize Video for Seeking"
 description = "Intra-frame optimize options modal: window title."

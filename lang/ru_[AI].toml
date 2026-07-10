@@ -184,6 +184,50 @@ translation = "Все оптимизированные видео записыв
 english     = "Use fast local storage (an SSD) — not a network drive (NAS)."
 translation = "Используйте быстрое локальное хранилище (SSD), а не сетевой диск (NAS)."
 
+[PrefExportSection]
+english     = "Export"
+translation = "Экспорт"
+
+[PrefExportDir]
+english     = "Default location"
+translation = "Расположение по умолчанию"
+
+[PrefExportDirHint]
+english     = "Where the export dialog opens by default. You can always pick another folder in the dialog."
+translation = "Где по умолчанию открывается диалог экспорта. В диалоге всегда можно выбрать другую папку."
+
+[PrefExportDirVideoFolder]
+english     = "Next to the video"
+translation = "Рядом с видео"
+
+[PrefExportDirLastUsed]
+english     = "Last used folder"
+translation = "Последняя использованная папка"
+
+[PrefExportDirCustom]
+english     = "Custom folder"
+translation = "Пользовательская папка"
+
+[PrefExportDirNotSet]
+english     = "No folder chosen — exports fall back to the last used folder."
+translation = "Папка не выбрана — экспорт вернётся к последней использованной папке."
+
+[PrefExportDirChooseTitle]
+english     = "Choose the default export folder"
+translation = "Выберите папку экспорта по умолчанию"
+
+[PrefProjectSection]
+english     = "Project"
+translation = "Проект"
+
+[PrefOpenProjectConfig]
+english     = "Open project settings when a project opens"
+translation = "Открывать настройки проекта при открытии проекта"
+
+[PrefOpenProjectConfigHint]
+english     = "Automatically show the Project window (metadata, chapters, settings) each time you open a project."
+translation = "Автоматически показывать окно проекта (метаданные, главы, настройки) при каждом открытии проекта."
+
 [TranscodeTitle]
 english     = "Optimize Video for Seeking"
 translation = "Оптимизировать видео для перемотки"

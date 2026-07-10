@@ -184,6 +184,50 @@ translation = "Todos los vídeos optimizados se escriben aquí. Usted administra
 english     = "Use fast local storage (an SSD) — not a network drive (NAS)."
 translation = "Use almacenamiento local rápido (SSD), no una unidad de red (NAS)."
 
+[PrefExportSection]
+english     = "Export"
+translation = "Exportar"
+
+[PrefExportDir]
+english     = "Default location"
+translation = "Ubicación predeterminada"
+
+[PrefExportDirHint]
+english     = "Where the export dialog opens by default. You can always pick another folder in the dialog."
+translation = "Dónde se abre el diálogo de exportación de forma predeterminada. Siempre puedes elegir otra carpeta en el diálogo."
+
+[PrefExportDirVideoFolder]
+english     = "Next to the video"
+translation = "Junto al vídeo"
+
+[PrefExportDirLastUsed]
+english     = "Last used folder"
+translation = "Última carpeta utilizada"
+
+[PrefExportDirCustom]
+english     = "Custom folder"
+translation = "Carpeta personalizada"
+
+[PrefExportDirNotSet]
+english     = "No folder chosen — exports fall back to the last used folder."
+translation = "No se eligió ninguna carpeta: las exportaciones usarán la última carpeta utilizada."
+
+[PrefExportDirChooseTitle]
+english     = "Choose the default export folder"
+translation = "Elegir la carpeta de exportación predeterminada"
+
+[PrefProjectSection]
+english     = "Project"
+translation = "Proyecto"
+
+[PrefOpenProjectConfig]
+english     = "Open project settings when a project opens"
+translation = "Abrir la configuración del proyecto al abrir un proyecto"
+
+[PrefOpenProjectConfigHint]
+english     = "Automatically show the Project window (metadata, chapters, settings) each time you open a project."
+translation = "Mostrar automáticamente la ventana de Proyecto (metadatos, capítulos, ajustes) cada vez que abras un proyecto."
+
 [TranscodeTitle]
 english     = "Optimize Video for Seeking"
 translation = "Optimizar vídeo para búsqueda"

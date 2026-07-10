@@ -3,6 +3,7 @@
 #include "Core/ProjectLifecycleEvents.h"
 #include "Core/ScriptProject.h"
 #include "Core/StandardAxis.h"
+#include "Format/AppSettings.h"
 #include "UI/ModalManager.h"
 #include "UI/Notifications.h"
 #include "Util/PathUtil.h"
@@ -450,6 +451,59 @@ void RegisterProjectDialogsTests(ImGuiTestEngine *e) {
 
         setNativeDialogOverrideForTesting(nullptr);
         std::filesystem::remove(out);
+    };
+
+    // AppSettings::exportDirMode == VideoFolder forces the export dialog to open in the source video's
+    // folder — captured here as the `dir` handed to the native-dialog override.
+    IM_REGISTER_TEST(e, "project_dialogs", "export_forces_video_folder")->TestFunc = [](ImGuiTestContext *ctx) {
+        loadFixture(ctx);
+        auto &eq = *getTestState().eventQueue;
+        auto &proj = *getTestState().project;
+
+        eq.push(AddActionAtTimeEvent{.axis = StandardAxis::L0, .time = 1.0, .pos = 50});
+        // A real temp folder standing in for the video's location; VideoFolder mode must force the dialog
+        // there (its parent, since mediaPath names the file).
+        const auto videoDir = tempPath("ofs_ui_export_vidfolder");
+        std::filesystem::create_directories(videoDir);
+        proj.state.mediaPath = ofs::util::toUtf8(videoDir / "clip.mp4");
+        eq.push(ModifyEvent<AppSettings>{[](AppSettings &s) { s.exportDirMode = ExportDirMode::VideoFolder; }});
+        ctx->Yield();
+
+        auto seenDir = std::make_shared<std::string>();
+        auto calls = std::make_shared<std::atomic<int>>(0);
+        setNativeDialogOverrideForTesting(
+            [seenDir, calls, chosen = ofs::util::toUtf8(videoDir)](const FileDialogSpec &, const std::string &dir) {
+                *seenDir = dir;
+                calls->fetch_add(1, std::memory_order_release);
+                return chosen; // format 0 picks a folder
+            });
+
+        eq.push(ExportFunscriptRequestEvent{.axes = {StandardAxis::L0}, .format = 0});
+        IM_CHECK(yieldUntil(ctx, [&] { return calls->load(std::memory_order_acquire) > 0; }));
+        IM_CHECK(*seenDir == ofs::util::toUtf8(videoDir));
+
+        setNativeDialogOverrideForTesting(nullptr);
+        eq.push(ModifyEvent<AppSettings>{[](AppSettings &s) { s.exportDirMode = ExportDirMode::VideoFolder; }});
+        std::filesystem::remove_all(videoDir);
+    };
+
+    // AppSettings::openProjectConfigOnOpen pops the Project window automatically when a project opens.
+    IM_REGISTER_TEST(e, "project_dialogs", "open_project_config_on_open")->TestFunc = [](ImGuiTestContext *ctx) {
+        constexpr const char *kWin = "//Project###project_config";
+        auto &eq = *getTestState().eventQueue;
+        eq.push(ModifyEvent<AppSettings>{[](AppSettings &s) { s.openProjectConfigOnOpen = true; }});
+        loadFixture(ctx); // opens basic.ofp → LoadProjectEvent
+        const bool appeared =
+            yieldUntil(ctx, [&] { return ctx->WindowInfo(kWin, ImGuiTestOpFlags_NoError).Window != nullptr; });
+
+        // Restore the default and close the window so neither bleeds into later tests, then assert.
+        eq.push(ModifyEvent<AppSettings>{[](AppSettings &s) { s.openProjectConfigOnOpen = false; }});
+        if (appeared) {
+            const std::string closeRef = std::string(kWin) + "/#CLOSE";
+            ctx->ItemClick(closeRef.c_str());
+        }
+        ctx->Yield();
+        IM_CHECK(appeared);
     };
 
     // guardUnsaved's Save branch when no file path exists: the unsaved prompt's "Save" leads into the
