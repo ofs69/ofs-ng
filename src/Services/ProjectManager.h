@@ -266,6 +266,10 @@ class ProjectManager {
     // A just-loaded project's resume position, awaiting the opened media's real duration before it can
     // seek (see onDurationChanged). Set on load, consumed by the first valid DurationChangedEvent.
     std::optional<double> pendingResumeSeek;
+    // Latest media/timeline length in seconds, tracked from DurationChangedEvent (both the real video and
+    // the media-less dummy player emit it). Stamped into exported funscripts' metadata.duration. Reset on
+    // project close so a stale length can't bleed into the next project's export.
+    double currentDuration = 0.0;
 };
 
 } // namespace ofs

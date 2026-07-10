@@ -941,14 +941,16 @@ co::Fire ProjectManager::exportMultipleFunscript10(std::vector<StandardAxis> axe
         writeJobs.push_back(
             {.outPath = outDir / ofs::util::fromUtf8(fmt::format("{}.{}.funscript", stem, tag)), .actions = actions});
     }
-    FunscriptMetadata exportMeta = project.metadata; // copy for the worker
+    FunscriptMetadata exportMeta = project.metadata;                  // copy for the worker
+    const int64_t exportDurationSecs = std::llround(currentDuration); // media length, whole seconds
 
     struct Counts {
         int written = 0;
         int failed = 0;
     };
     auto counts = co_await JobAwait<Counts>{
-        jobSystem, eq, [jobs = std::move(writeJobs), exportMeta = std::move(exportMeta), outDir]() -> Counts {
+        jobSystem, eq,
+        [jobs = std::move(writeJobs), exportMeta = std::move(exportMeta), outDir, exportDurationSecs]() -> Counts {
             // Re-export may target a folder the user has since removed; recreate it so the replay lands.
             std::error_code ec;
             std::filesystem::create_directories(outDir, ec);
@@ -956,6 +958,7 @@ co::Fire ProjectManager::exportMultipleFunscript10(std::vector<StandardAxis> axe
             for (const auto &j : jobs) {
                 Funscript fs = Funscript::fromActions(j.actions);
                 fs.metadata = exportMeta;
+                fs.duration = exportDurationSecs;
                 if (fs.save(j.outPath))
                     ++c.written;
                 else
@@ -1013,11 +1016,13 @@ co::Fire ProjectManager::exportMultiAxisFunscript(std::vector<StandardAxis> axes
 
     std::filesystem::path outPath = ofs::util::fromUtf8(file);
     const std::string name = ofs::util::toUtf8(outPath.filename());
-    FunscriptMetadata meta = project.metadata; // copy for the worker
+    FunscriptMetadata meta = project.metadata;                        // copy for the worker
+    const int64_t exportDurationSecs = std::llround(currentDuration); // media length, whole seconds
 
     // Build the combined funscript + write it on a worker.
     bool ok = co_await JobAwait<bool>{
-        jobSystem, eq, [axisData = std::move(axisData), useChannels, meta = std::move(meta), outPath]() -> bool {
+        jobSystem, eq,
+        [axisData = std::move(axisData), useChannels, meta = std::move(meta), outPath, exportDurationSecs]() -> bool {
             // Re-export may target a directory the user has since removed; recreate it so the replay lands.
             if (outPath.has_parent_path()) {
                 std::error_code ec;
@@ -1025,6 +1030,7 @@ co::Fire ProjectManager::exportMultiAxisFunscript(std::vector<StandardAxis> axes
             }
             Funscript fs = useChannels ? Funscript::fromAxes20(axisData) : Funscript::fromAxes11(axisData);
             fs.metadata = meta;
+            fs.duration = exportDurationSecs;
             return fs.save(outPath);
         }};
 
@@ -1338,11 +1344,12 @@ void ProjectManager::discoverExistingIntra() {
 }
 
 void ProjectManager::onDurationChanged(const DurationChangedEvent &event) {
-    if (!pendingResumeSeek)
-        return;
-    // openVideo() emits a duration of 0 to clear the previous file before the real length arrives;
-    // wait for that real (positive) duration so the seek target isn't clamped away to 0.
+    // openVideo() emits a duration of 0 to clear the previous file before the real length arrives; ignore
+    // it so we retain the last real length (both for the resume seek below and the exported duration).
     if (event.duration <= 0.0)
+        return;
+    currentDuration = event.duration;
+    if (!pendingResumeSeek)
         return;
     eq.push(SeekEvent{std::clamp(*pendingResumeSeek, 0.0, event.duration)});
     pendingResumeSeek.reset();
@@ -1373,6 +1380,7 @@ void ProjectManager::clearProject() {
     // Drop any resume seek still waiting on a duration from a prior load (e.g. one whose media the user
     // declined to relocate, so it never arrived) — it must not fire against the next project.
     pendingResumeSeek.reset();
+    currentDuration = 0.0;
     backupElapsed = 0.0;
     project.editRevision = 0;
     backupRevision = 0;

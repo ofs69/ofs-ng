@@ -2512,6 +2512,35 @@ TEST_CASE("Export format 1 and 2 with a target path write multi-axis files dialo
     std::filesystem::remove(out20);
 }
 
+TEST_CASE("Export stamps the media length (whole seconds) into the funscript duration") {
+    PMFixture f;
+    f.showAxis(StandardAxis::L0, {{1.0, 50}});
+    f.showAxis(StandardAxis::R0, {{1.0, 25}});
+    // The player reports its length via DurationChangedEvent; ProjectManager tracks it for export.
+    f.push(DurationChangedEvent{.duration = 123.4});
+    f.drain();
+
+    auto singleAxis = std::filesystem::temp_directory_path() / "ofs_export_dur_dir";
+    std::filesystem::remove_all(singleAxis);
+    f.push(ExportFunscriptRequestEvent{.axes = {StandardAxis::L0}, .format = 0, .targetPath = singleAxis.string()});
+    REQUIRE(f.drainUntil([&] { return f.proj().state.lastExport && f.proj().state.lastExport->format == 0; }));
+    auto perAxis = ofs::Funscript::load(singleAxis / "script.L0.funscript");
+    REQUIRE(perAxis.has_value());
+    CHECK(perAxis->duration == 123); // 123.4 rounded to whole seconds
+
+    auto combined = std::filesystem::temp_directory_path() / "ofs_export_dur.funscript";
+    std::filesystem::remove(combined);
+    f.push(ExportFunscriptRequestEvent{
+        .axes = {StandardAxis::L0, StandardAxis::R0}, .format = 2, .targetPath = combined.string()});
+    REQUIRE(f.drainUntil([&] { return f.proj().state.lastExport && f.proj().state.lastExport->format == 2; }));
+    auto multi = ofs::Funscript::load(combined);
+    REQUIRE(multi.has_value());
+    CHECK(multi->duration == 123);
+
+    std::filesystem::remove_all(singleAxis);
+    std::filesystem::remove(combined);
+}
+
 // ── Graph load / trust ──────────────────────────────────────────────────────────
 
 TEST_CASE("ApplyGraphRemap retargets a pending graph onto a present axis") {

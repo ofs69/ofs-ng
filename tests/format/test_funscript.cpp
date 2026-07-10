@@ -3,6 +3,8 @@
 #include "Format/Funscript.h"
 #include <doctest/doctest.h>
 #include <filesystem>
+#include <fstream>
+#include <sstream>
 
 TEST_CASE("toActions converts milliseconds to seconds") {
     ofs::Funscript fs;
@@ -88,6 +90,33 @@ TEST_CASE("Funscript metadata round-trips through save and load") {
     CHECK(loaded->metadata.license == "Free");
     REQUIRE(loaded->metadata.customFields.size() == 1);
     CHECK(loaded->metadata.customFields[0].key == "device");
+
+    std::filesystem::remove(path);
+}
+
+// The saved file must emit "metadata" ahead of "actions" so the small header block is readable at the top
+// of the file in a text editor rather than below the whole (potentially huge) actions array.
+TEST_CASE("save emits metadata before actions on disk") {
+    ofs::Funscript fs;
+    fs.actions = {{.at = 1000, .pos = 50}, {.at = 2000, .pos = 10}};
+    fs.metadata.title = "Top";
+
+    const auto path = std::filesystem::temp_directory_path() / "ofs_test_order.funscript";
+    REQUIRE(fs.save(path));
+
+    std::string text;
+    {
+        std::ifstream in(path);
+        std::stringstream buf;
+        buf << in.rdbuf();
+        text = buf.str();
+    }
+
+    const auto metaPos = text.find("\"metadata\"");
+    const auto actionsPos = text.find("\"actions\"");
+    REQUIRE(metaPos != std::string::npos);
+    REQUIRE(actionsPos != std::string::npos);
+    CHECK(metaPos < actionsPos);
 
     std::filesystem::remove(path);
 }

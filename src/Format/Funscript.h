@@ -26,14 +26,16 @@ struct Funscript {
 
     std::vector<Action> actions;
 
-    // Funscript-format header fields. These describe the on-disk encoding (version/inverted/range/type)
-    // or are file artifacts (duration), not part of the editable document model — the editor never shows
-    // or mutates them. They are read on load and written with these defaults on save, living inside the
-    // "metadata" json object on disk per the funscript spec.
+    // Funscript-format header fields describing the on-disk encoding (version/inverted/range/type); the
+    // editor never shows or mutates these — read on load, written with these defaults on save, living
+    // inside the "metadata" json object on disk per the funscript spec.
     std::string version = "1.0";
     bool inverted = false;
     int range = 100;
     std::string type = "basic";
+    // Media length in whole seconds, stamped from the loaded video (or the media-less timeline) at export
+    // time. Seconds — not the millisecond unit Action::at uses — to match the funscript metadata.duration
+    // convention other tools write. 0 when unknown.
     int64_t duration = 0;
 
     // The shared document metadata (same struct the editor and project files use). On disk the funscript

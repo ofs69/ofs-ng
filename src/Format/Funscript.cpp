@@ -111,7 +111,18 @@ std::optional<Funscript> Funscript::load(const std::filesystem::path &path) {
 
 bool Funscript::save(const std::filesystem::path &path) const {
     try {
-        nlohmann::json j = *this;
+        // Emit "metadata" first so the small header block sits at the top of the file — instantly
+        // readable/editable in a text editor instead of buried below the whole actions array. to_json
+        // builds a plain (alphabetically key-sorted) object; copy its members into an ordered_json in the
+        // desired on-disk order. (Reordering, not re-sorting: keys within metadata stay as to_json emits.)
+        nlohmann::json body = *this;
+        nlohmann::ordered_json j;
+        j["metadata"] = body["metadata"];
+        j["actions"] = body["actions"];
+        if (body.contains("axes"))
+            j["axes"] = body["axes"];
+        if (body.contains("channels"))
+            j["channels"] = body["channels"];
         if (!ofs::util::writeFileAtomic(path, j.dump())) {
             OFS_CORE_ERROR("Failed to open funscript file for writing: {}", ofs::util::toUtf8(path));
             return false;
