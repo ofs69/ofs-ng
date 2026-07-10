@@ -79,7 +79,13 @@ jobs:
             ninja-build clang python3 \
             libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev \
             libxi-dev libxss-dev libxtst-dev libxkbcommon-dev libwayland-dev wayland-protocols \
-            libdecor-0-dev libgl1-mesa-dev libegl1-mesa-dev libudev-dev libdbus-1-dev
+            libdecor-0-dev libgl1-mesa-dev libegl1-mesa-dev libudev-dev libdbus-1-dev \
+            libasound2-dev libpipewire-0.3-dev libpulse-dev
+          # SDL3 is built from source and compiles an audio backend ONLY if its dev headers are present
+          # at build time (SDL_ALSA / SDL_PIPEWIRE / SDL_PULSEAUDIO are auto-detected). The backends
+          # default to dlopen-at-runtime, so the AppImage still host-provides libasound/libpipewire/
+          # libpulse — but without these headers the runner built an SDL with pulseaudio-only, which has
+          # no device on a native-PipeWire/ALSA host ("SDL audio init failed: No available audio device").
           # AppImage packaging only. libmpv is never linked (MpvLoader dlopen's it), but the runtime
           # library has to exist on the build host for make-appimage.sh to copy it and walk its
           # dependencies. 22.04 ships soname .so.1, 24.04 ships .so.2 — MpvLoader tries both.
