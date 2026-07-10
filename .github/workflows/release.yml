@@ -49,16 +49,15 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # Linux pins 22.04 rather than ubuntu-latest: the binary's glibc symbol-version floor is set by
-          # whatever the build host provides, and 24.04 forces GLIBC_2.38 (the __isoc23_* scanf/strtol
-          # family, strlcpy, wcslcpy — all pulled in by SDL). Building on 22.04 lowers the floor to 2.35,
-          # which is what lets the AppImage run on Debian 12, RHEL 9 and Fedora 36+ as well. Nothing in
-          # the source depends on the newer symbols. The bundled .NET runtime's own floor is 2.27, so it
-          # is never the binding constraint.
+          # Explicit ubuntu-24.04 (not floating ubuntu-latest) for reproducible release builds. 22.04
+          # would lower the AppImage's glibc floor (2.35, reaching Debian 12 / RHEL 9 / Fedora 36+), but
+          # its clang + libstdc++-12 can't compile the codebase's C++20 ranges usage — so the floor is
+          # 24.04's GLIBC_2.38 and those older distros lose support. The bundled .NET runtime's own floor
+          # is 2.27, never the binding constraint.
           - { os: windows-latest, avx: 'ON',  label: 'avx' }
           - { os: windows-latest, avx: 'OFF', label: 'compat' }
-          - { os: ubuntu-22.04,   avx: 'ON',  label: 'avx' }
-          - { os: ubuntu-22.04,   avx: 'OFF', label: 'compat' }
+          - { os: ubuntu-24.04,   avx: 'ON',  label: 'avx' }
+          - { os: ubuntu-24.04,   avx: 'OFF', label: 'compat' }
     steps:
       - uses: actions/checkout@v5
         with:
@@ -158,7 +157,7 @@ jobs:
     # dispatch with publish off stops after the build job and you just download the dist-* artifacts —
     # no Release, nothing pushed.
     if: ${{ github.event_name == 'push' || inputs.publish }}
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/download-artifact@v4
         with:

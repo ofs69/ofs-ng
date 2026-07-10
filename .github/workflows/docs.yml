@@ -29,7 +29,7 @@ concurrency:
 jobs:
   build-deploy:
     name: Build + deploy API docs
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     environment:
       name: github-pages
       url: ${{ steps.deploy.outputs.page_url }}

@@ -24,7 +24,7 @@ jobs:
   # the same diff into one-click PR suggestions; this job is what actually blocks.
   format:
     name: clang-format
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v5
@@ -46,7 +46,7 @@ jobs:
   # non-blocking — the `format` job is the gate; this just makes fixing it a click. Same file set.
   format-suggest:
     name: clang-format suggestions
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     if: github.event_name == 'pull_request'
     permissions:
       contents: read
@@ -74,9 +74,7 @@ jobs:
   # -DOFS_CLANG_TIDY=OFF keeps this job's build to cached compilation only.
   build-test:
     name: Build + test (Linux)
-    # Match the release build (release.yml): same clang + libstdc++-12, so a toolchain-specific compile
-    # break can't pass this gate and surface only at release time. Keep in lockstep with the release OS.
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
         with:

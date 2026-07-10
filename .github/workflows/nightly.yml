@@ -20,9 +20,7 @@ jobs:
   # from the shared ci-linux cache; tidy analysis is what this job actually exercises.
   lint:
     name: clang-tidy (Linux)
-    # Match ci.yml and the release build: same clang + libstdc++-12, which also keeps the shared ci-linux
-    # ccache coherent (ccache keys on the compiler).
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v5
         with:
