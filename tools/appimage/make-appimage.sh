@@ -38,17 +38,54 @@
 #
 # Environment:
 #   DOTNET_ROOT          .NET root to bundle from (default: derived from `dotnet --list-runtimes`)
-#   OFS_FFMPEG_URL       static ffmpeg tarball (default: johnvansickle release build)
+#   OFS_FFMPEG_URL       static ffmpeg tarball, overriding the pinned one; requires OFS_FFMPEG_SHA256
+#   OFS_FFMPEG_SHA256    expected SHA-256 of OFS_FFMPEG_URL
 #   OFS_APPIMAGE_TOOLS   cache dir for linuxdeploy/appimagetool (default: bin/appimage-tools)
 #   APPIMAGE_EXTRACT_AND_RUN=1 is exported for us — the tools are themselves AppImages, and CI runners
 #   and containers usually have no FUSE.
 
 set -euo pipefail
 
+# --- Pinned downloads ------------------------------------------------------------------------------
+# Every byte this script pulls off the network is pinned to an exact version and checked against a
+# SHA-256 recorded here. These tools run on the release runner, and their output is what users execute,
+# so an upstream force-push or a compromised mirror would land straight in a signed release.
+#
+# The `continuous` tag both projects publish is expressly NOT used: its asset bytes change underneath a
+# fixed URL, which is exactly the property a pin has to exclude.
+#
+# To bump one: change the version, re-run, and copy the hash from the mismatch error it prints.
+linuxdeploy_version="1-alpha-20251107-1"
+linuxdeploy_sha256="c20cd71e3a4e3b80c3483cef793cda3f4e990aca14014d23c544ca3ce1270b4d"
+appimagetool_version="1.9.1"
+appimagetool_sha256="ed4ce84f0d9caff66f50bcca6ff6f35aae54ce8135408b3fa33abfc3cb384eb0"
+# johnvansickle publishes only an .md5 beside the tarball. MD5 is not collision-resistant, so it is worth
+# nothing as a supply-chain check; this hash was taken once from a download whose md5 did match upstream.
+ffmpeg_version="7.0.2"
+ffmpeg_sha256="abda8d77ce8309141f83ab8edf0596834087c52467f6badf376a6a2a4c87cf67"
+
 # Progress goes to stderr, never stdout: fetch_tool() returns a path through command substitution, and a
 # log line on stdout would be captured into it.
 log() { printf '\033[1;34m==>\033[0m %s\n' "$*" >&2; }
 die() { printf '\033[1;31merror:\033[0m %s\n' "$*" >&2; exit 1; }
+
+command -v sha256sum >/dev/null || die "sha256sum not found; it is required to verify every download"
+sha256_of() { sha256sum "$1" | cut -d' ' -f1; }
+
+# A failed check deletes the file: leaving it behind invites a re-run from cache, and a half-written
+# download would otherwise masquerade as a tampered one forever.
+verify_sha256() {
+    local file="$1" expected="$2" what="$3" actual
+    actual=$(sha256_of "$file")
+    if [ "$actual" = "$expected" ]; then
+        return 0
+    fi
+    rm -f "$file"
+    die "${what}: SHA-256 mismatch — download discarded.
+    expected ${expected}
+    actual   ${actual}
+  If you deliberately bumped the version, update the hash near the top of $(basename "${BASH_SOURCE[0]}")."
+}
 
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
 here="${repo_root}/tools/appimage"
@@ -66,7 +103,8 @@ while [ $# -gt 0 ]; do
         --output)    output="$2"; shift 2 ;;
         --no-mpv)    bundle_mpv=0; shift ;;
         --no-ffmpeg) bundle_ffmpeg=0; shift ;;
-        -h|--help)   sed -n '2,50p' "${BASH_SOURCE[0]}"; exit 0 ;;
+        # Prints the header block: everything after the shebang up to the first non-comment line.
+        -h|--help)   awk 'NR==1{next} /^#/{print; next} {exit}' "${BASH_SOURCE[0]}"; exit 0 ;;
         *)           die "unknown argument: $1" ;;
     esac
 done
@@ -88,6 +126,25 @@ fi
 
 app_title="ofs-ng"
 [ "$app_name" = "ofs-ng-compat" ] && app_title="ofs-ng (compat)"
+
+# Resolve the ffmpeg source here rather than at the download site near the end: a misconfigured override
+# must fail now, not after several minutes of fetching tools and bundling libraries.
+#
+# Upstream serves the newest build from releases/ and moves each superseded one to old-releases/ under the
+# same basename, so a pinned version answers from one path today and the other after the next release. Try
+# both; the hash is what decides either way.
+ffmpeg_sha="$ffmpeg_sha256"
+ffmpeg_urls=(
+    "https://johnvansickle.com/ffmpeg/releases/ffmpeg-${ffmpeg_version}-amd64-static.tar.xz"
+    "https://johnvansickle.com/ffmpeg/old-releases/ffmpeg-${ffmpeg_version}-amd64-static.tar.xz"
+)
+# An override replaces the pin, so it has to carry its own hash. Letting OFS_FFMPEG_URL through unverified
+# would leave a plain env var as the way to smuggle an arbitrary binary into the bundle.
+if [ "$bundle_ffmpeg" -eq 1 ] && [ -n "${OFS_FFMPEG_URL:-}" ]; then
+    [ -n "${OFS_FFMPEG_SHA256:-}" ] || die "OFS_FFMPEG_URL requires OFS_FFMPEG_SHA256 (the override is not verified otherwise)"
+    ffmpeg_urls=("$OFS_FFMPEG_URL")
+    ffmpeg_sha="$OFS_FFMPEG_SHA256"
+fi
 
 # --- Output name -----------------------------------------------------------------------------------
 # Mirrors cmake/MakeDist.cmake: <plat>-<app>-<tag>+<shorthash>[-compat]. Resolved from git at run time so
@@ -117,20 +174,35 @@ mkdir -p "$tools_dir"
 # into a temp dir and run from there instead of mounting.
 export APPIMAGE_EXTRACT_AND_RUN=1
 
+# The cache key carries the version, so bumping a pin fetches afresh instead of reusing the old binary.
+# A cached copy is re-verified on every run rather than trusted on presence: the cache dir is an ordinary
+# writable directory, and a stale or edited entry there must not be able to reach the release.
 fetch_tool() {
-    local name="$1" url="$2" dest="${tools_dir}/$1"
-    if [ ! -x "$dest" ]; then
-        log "fetching ${name}"
-        curl -fsSL "$url" -o "$dest"
+    local name="$1" version="$2" url="$3" sha="$4"
+    # Separate statement: `local` expands every argument before it assigns any of them, so a dest built
+    # from ${name}/${version} on the line above would see them unset (and trip `set -u`).
+    local dest="${tools_dir}/${name}-${version}.AppImage"
+    # Presence decides reuse and the hash decides trust — testing -x would conflate the two and re-download
+    # a byte-identical tool whose +x bit did not survive an archive round-trip or a noexec cache dir.
+    if [ -f "$dest" ] && [ "$(sha256_of "$dest")" = "$sha" ]; then
         chmod +x "$dest"
+        printf '%s' "$dest"
+        return 0
     fi
+    log "fetching ${name} ${version}"
+    rm -f "$dest"
+    curl -fsSL "$url" -o "$dest" || die "failed to download ${name} ${version} from ${url}"
+    verify_sha256 "$dest" "$sha" "${name} ${version}"
+    chmod +x "$dest"
     printf '%s' "$dest"
 }
 
-linuxdeploy=$(fetch_tool linuxdeploy-x86_64.AppImage \
-    "https://github.com/linuxdeploy/linuxdeploy/releases/download/continuous/linuxdeploy-x86_64.AppImage")
-appimagetool=$(fetch_tool appimagetool-x86_64.AppImage \
-    "https://github.com/AppImage/appimagetool/releases/download/continuous/appimagetool-x86_64.AppImage")
+linuxdeploy=$(fetch_tool linuxdeploy "$linuxdeploy_version" \
+    "https://github.com/linuxdeploy/linuxdeploy/releases/download/${linuxdeploy_version}/linuxdeploy-x86_64.AppImage" \
+    "$linuxdeploy_sha256")
+appimagetool=$(fetch_tool appimagetool "$appimagetool_version" \
+    "https://github.com/AppImage/appimagetool/releases/download/${appimagetool_version}/appimagetool-x86_64.AppImage" \
+    "$appimagetool_sha256")
 
 # --- Stage the AppDir ------------------------------------------------------------------------------
 appdir="${repo_root}/bin/AppDir-${app_name}"
@@ -246,10 +318,15 @@ cp -r "${dotnet_root}/shared/Microsoft.NETCore.App/${run_ver}" \
 
 # --- Bundle static ffmpeg / ffprobe -----------------------------------------------------------------
 if [ "$bundle_ffmpeg" -eq 1 ]; then
-    ffmpeg_url="${OFS_FFMPEG_URL:-https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz}"
-    log "bundling static ffmpeg/ffprobe"
+    log "bundling static ffmpeg/ffprobe ${ffmpeg_version}"
     ff="${tmpdir}/ffmpeg"; mkdir -p "$ff"
-    curl -fsSL "$ffmpeg_url" -o "${ff}/ffmpeg.tar.xz"
+    got=0
+    for url in "${ffmpeg_urls[@]}"; do
+        if curl -fsSL "$url" -o "${ff}/ffmpeg.tar.xz"; then got=1; break; fi
+        log "not served from ${url}"
+    done
+    [ "$got" -eq 1 ] || die "could not download ffmpeg ${ffmpeg_version} from any known location"
+    verify_sha256 "${ff}/ffmpeg.tar.xz" "$ffmpeg_sha" "ffmpeg ${ffmpeg_version}"
     tar -xJf "${ff}/ffmpeg.tar.xz" -C "$ff" --strip-components=1
     cp "${ff}/ffmpeg" "${ff}/ffprobe" "${appdir}/usr/bin/"
     chmod +x "${appdir}/usr/bin/ffmpeg" "${appdir}/usr/bin/ffprobe"
