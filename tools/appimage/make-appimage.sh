@@ -266,14 +266,28 @@ ofs_excludes=(
     'libSDL2-*.so*' 'libcaca.so*' 'libsixel.so*'
     # System/service clients that must speak to the host's daemons.
     'libsystemd.so*' 'libselinux.so*' 'libapparmor.so*' 'libcap.so*'
+    # Low-level system/crypto glue that the host-provided libraries above also depend on, so it MUST
+    # track the host, not the build container. These reach the closure only through excluded libs:
+    # host libsixel -> host libcurl needs our bundled libssl/libcrypto, and host libgio -> libmount.
+    # Ubuntu's copies are older than a rolling host's, so bundling them shadows the host's newer ones
+    # and the host consumer fails its version check (libcurl wants OPENSSL_3.2.0; libgio wants
+    # MOUNT_2_40). Worse, libmount DT_NEEDEDs libselinux, which is excluded above and simply ABSENT on
+    # a non-SELinux distro (Arch, and any host without it) — so the bundled libmount fails to load at
+    # all, taking libmpv down with it (the loader then falls through to its .so.1 probe and reports the
+    # misleading "libmpv.so.1: cannot open shared object file"). No bundled lib needs libmount/libblkid;
+    # libssl/libcrypto's only bundled consumer (librabbitmq, an ffmpeg protocol backend OFS never uses)
+    # is fine against the host's newer, backward-compatible openssl.
+    'libssl.so*' 'libcrypto.so*' 'libmount.so*' 'libblkid.so*'
 )
 
 mpv_args=()
 if [ "$bundle_mpv" -eq 1 ]; then
     # Resolve through the loader cache rather than guessing a multiarch path. .so.1 is MpvLoader's own
-    # fallback soname, so honour it here too.
-    mpv_lib=$(ldconfig -p | awk '/libmpv\.so\.2/ {print $NF; exit}')
-    [ -n "$mpv_lib" ] || mpv_lib=$(ldconfig -p | awk '/libmpv\.so\.1/ {print $NF; exit}')
+    # fallback soname, so honour it here too. awk reads ldconfig to EOF and keeps only the first match
+    # (no early `exit`): under `set -o pipefail`, exiting mid-stream SIGPIPEs ldconfig and fails the
+    # pipeline — latent on a small loader cache, fatal on a host with a large one.
+    mpv_lib=$(ldconfig -p | awk '/libmpv\.so\.2/ && !f {print $NF; f=1}')
+    [ -n "$mpv_lib" ] || mpv_lib=$(ldconfig -p | awk '/libmpv\.so\.1/ && !f {print $NF; f=1}')
     [ -n "$mpv_lib" ] || die "libmpv not found; install libmpv2 or pass --no-mpv"
     log "bundling $(basename "$mpv_lib") from ${mpv_lib}"
     mpv_args=(-l "$mpv_lib")
@@ -295,7 +309,7 @@ log "running linuxdeploy (excludelist decides what stays host-provided)"
 # A regression here is silent and only bites on someone else's machine, so assert it at build time:
 # nothing SDL dlopen's, and nothing driver-coupled, may end up in the AppDir.
 banned=$(ls "${appdir}/usr/lib" 2>/dev/null | grep -E \
-    '^(libudev|libsystemd|libvulkan|libva|libvdpau|libOpenCL|libX|libxcb|libxkbcommon|libwayland|libdbus-1|libdecor|libglib-2|libgobject-2|libgio-2|libpulse|libasound|libSDL2)' || true)
+    '^(libudev|libsystemd|libvulkan|libva[.-]|libvdpau|libOpenCL|libX|libxcb|libxkbcommon|libwayland|libdbus-1|libdecor|libglib-2|libgobject-2|libgio-2|libpulse|libasound|libSDL2|libssl|libcrypto|libmount|libblkid|libselinux)' || true)
 [ -z "$banned" ] || die "host-coupled libraries leaked into the AppDir:"$'\n'"$banned"
 
 # --- Bundle the .NET runtime (after linuxdeploy, so it is left untouched) ----------------------------
