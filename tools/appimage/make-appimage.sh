@@ -72,6 +72,15 @@ die() { printf '\033[1;31merror:\033[0m %s\n' "$*" >&2; exit 1; }
 command -v sha256sum >/dev/null || die "sha256sum not found; it is required to verify every download"
 sha256_of() { sha256sum "$1" | cut -d' ' -f1; }
 
+# curl with retry. johnvansickle.com's CDN intermittently answers a plain GET with HTTP 415, so a single
+# attempt fails at random in CI. --retry-all-errors makes curl re-attempt 4xx too (plain --retry only
+# covers 5xx/408/429), which turns the transient 415 into a retry rather than a hard failure. Every
+# download is SHA-256-verified afterward, so retrying is safe. Returns curl's exit status.
+curl_get() {
+    local url="$1" dest="$2"
+    curl -fsSL --retry 5 --retry-all-errors --retry-delay 2 --connect-timeout 20 "$url" -o "$dest"
+}
+
 # A failed check deletes the file: leaving it behind invites a re-run from cache, and a half-written
 # download would otherwise masquerade as a tampered one forever.
 verify_sha256() {
@@ -191,7 +200,7 @@ fetch_tool() {
     fi
     log "fetching ${name} ${version}"
     rm -f "$dest"
-    curl -fsSL "$url" -o "$dest" || die "failed to download ${name} ${version} from ${url}"
+    curl_get "$url" "$dest" || die "failed to download ${name} ${version} from ${url}"
     verify_sha256 "$dest" "$sha" "${name} ${version}"
     chmod +x "$dest"
     printf '%s' "$dest"
@@ -334,14 +343,24 @@ cp -r "${dotnet_root}/shared/Microsoft.NETCore.App/${run_ver}" \
 if [ "$bundle_ffmpeg" -eq 1 ]; then
     log "bundling static ffmpeg/ffprobe ${ffmpeg_version}"
     ff="${tmpdir}/ffmpeg"; mkdir -p "$ff"
-    got=0
-    for url in "${ffmpeg_urls[@]}"; do
-        if curl -fsSL "$url" -o "${ff}/ffmpeg.tar.xz"; then got=1; break; fi
-        log "not served from ${url}"
-    done
-    [ "$got" -eq 1 ] || die "could not download ffmpeg ${ffmpeg_version} from any known location"
-    verify_sha256 "${ff}/ffmpeg.tar.xz" "$ffmpeg_sha" "ffmpeg ${ffmpeg_version}"
-    tar -xJf "${ff}/ffmpeg.tar.xz" -C "$ff" --strip-components=1
+    # Cache the tarball in tools_dir alongside the AppImage tools, so a re-run (or a CI cache of that dir)
+    # skips johnvansickle.com entirely. Same trust model as fetch_tool: presence decides reuse, the hash
+    # decides trust — a cached copy is re-verified below, never trusted on presence, and the version in the
+    # name means bumping the pin fetches afresh.
+    tarball="${tools_dir}/ffmpeg-${ffmpeg_version}-amd64-static.tar.xz"
+    if [ -f "$tarball" ] && [ "$(sha256_of "$tarball")" = "$ffmpeg_sha" ]; then
+        log "using cached ffmpeg tarball"
+    else
+        rm -f "$tarball"
+        got=0
+        for url in "${ffmpeg_urls[@]}"; do
+            if curl_get "$url" "$tarball"; then got=1; break; fi
+            log "not served from ${url}"
+        done
+        [ "$got" -eq 1 ] || die "could not download ffmpeg ${ffmpeg_version} from any known location"
+    fi
+    verify_sha256 "$tarball" "$ffmpeg_sha" "ffmpeg ${ffmpeg_version}"
+    tar -xJf "$tarball" -C "$ff" --strip-components=1
     cp "${ff}/ffmpeg" "${ff}/ffprobe" "${appdir}/usr/bin/"
     chmod +x "${appdir}/usr/bin/ffmpeg" "${appdir}/usr/bin/ffprobe"
 fi

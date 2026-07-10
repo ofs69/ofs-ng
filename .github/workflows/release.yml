@@ -138,6 +138,18 @@ jobs:
         # separate symbols, a sibling zzz-ignore-<plat>[-compat]-<hash>-pdb.zip (Windows native + managed .pdb).
         run: cmake --build build --target dist
 
+      # Persist the AppImage build tools (linuxdeploy, appimagetool) and the static ffmpeg tarball that
+      # make-appimage.sh caches in bin/appimage-tools, so repeat runs don't re-hit johnvansickle.com (whose
+      # CDN flakes with intermittent 415s) or the GitHub release CDN. Keyed on the script hash — every
+      # pinned version lives there, so a pin bump invalidates the cache; each cached file is re-verified
+      # against its SHA-256 on reuse regardless.
+      - name: Cache AppImage tools + ffmpeg
+        if: runner.os == 'Linux'
+        uses: actions/cache@v4
+        with:
+          path: bin/appimage-tools
+          key: appimage-tools-${{ runner.os }}-${{ hashFiles('tools/appimage/make-appimage.sh') }}
+
       - name: Package (AppImage)
         # Ships alongside the loose .zip, not instead of it: the zip suits a user who unpacks into their
         # own tree, the AppImage is the single-file, no-install form. Both are cut from the same bin/release
