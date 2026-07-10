@@ -4,28 +4,26 @@
 #include <imgui_te_context.h>
 #include <imgui_te_engine.h>
 
-// Drives the Project Configuration window's Metadata tab (src/UI/ProjectConfigWindow.cpp). The
-// window is opened from Edit ▸ Project and reads project.metadata, writing every edit through
-// ModifyEvent<FunscriptMetadata> (presets go through ModifyEvent<AppSettings>). basic.ofp
-// ships a populated metadata block (see tools/gen_test_fixtures.py), so the editor has real values
-// to display, edit, remove and clear.
+// Drives the Metadata editor window (src/UI/MetadataWindow.cpp). The window is opened from
+// Edit ▸ Metadata and reads project.metadata, writing every edit through ModifyEvent<FunscriptMetadata>
+// (presets go through ModifyEvent<AppSettings>). basic.ofp ships a populated metadata block (see
+// tools/gen_test_fixtures.py), so the editor has real values to display, edit, remove and clear.
 //
-// Items are addressed by their stable ### ids (meta_tab / title / new_tag / add_tag / tag<i> /
-// perf<i> / preset_*), not display labels, so icon glyphs and visible text can change freely.
+// Items are addressed by their stable ### ids (title / new_tag / add_tag / tag<i> / perf<i> /
+// preset_*), not display labels, so icon glyphs and visible text can change freely.
 
 namespace {
-constexpr const char *kWin = "//project_config"; // window's ###id; absolute so it ignores SetRef
+constexpr const char *kWin = "//metadata_window"; // window's ###id; absolute so it ignores SetRef
 
-// loadFixture → open the window → grow it so the whole form is unclipped → switch to Metadata tab.
-void openMetadataTab(ImGuiTestContext *ctx) {
+// loadFixture → open the Metadata window → grow it so the whole form is unclipped.
+void openMetadataWindow(ImGuiTestContext *ctx) {
     loadFixture(ctx);
-    ctx->MenuClick("//##MainMenuBar/###menu_edit/###menu_project_config");
+    ctx->MenuClick("//##MainMenuBar/###menu_edit/###menu_metadata");
     ctx->Yield(3);
     ctx->SetRef(kWin);
-    // The Tags/Performers inputs sit below the default 600px fold; grow the window (within its
-    // 1200px max-size constraint) so every field is rendered and locatable without scrolling.
+    // The Tags/Performers inputs sit below the default fold; grow the window (within its max-size
+    // constraint) so every field is rendered and locatable without scrolling.
     ctx->WindowResize(kWin, ImVec2(560.f, 1000.f));
-    ctx->ItemClick("**/meta_tab");
     ctx->Yield(2);
 }
 } // namespace
@@ -33,20 +31,20 @@ void openMetadataTab(ImGuiTestContext *ctx) {
 void RegisterMetadataTests(ImGuiTestEngine *e) {
     // The editor opens against the metadata loaded from basic.ofp.
     IM_REGISTER_TEST(e, "metadata", "editor_shows_loaded_fixture_metadata")->TestFunc = [](ImGuiTestContext *ctx) {
-        openMetadataTab(ctx);
+        openMetadataWindow(ctx);
         const auto &m = getTestState().project->metadata;
         IM_CHECK_STR_EQ(m.title.c_str(), "Fixture Project");
         IM_CHECK_STR_EQ(m.creator.c_str(), "OFS Test Suite");
         IM_CHECK_STR_EQ(m.license.c_str(), "Free");
         IM_CHECK_EQ(m.tags.size(), static_cast<size_t>(3));
         IM_CHECK_EQ(m.performers.size(), static_cast<size_t>(2));
-        IM_CHECK(ctx->WindowInfo(kWin).Window != nullptr); // tab rendered without crashing
+        IM_CHECK(ctx->WindowInfo(kWin).Window != nullptr); // window rendered without crashing
         ctx->WindowClose(kWin);
     };
 
     // Typing in the Title field commits a ModifyEvent<FunscriptMetadata> on each edit → project.metadata.title.
     IM_REGISTER_TEST(e, "metadata", "edit_title_updates_project")->TestFunc = [](ImGuiTestContext *ctx) {
-        openMetadataTab(ctx);
+        openMetadataWindow(ctx);
         ctx->ItemInput("**/title");
         ctx->KeyCharsReplace("Edited Title");
         ctx->Yield(2);
@@ -56,7 +54,7 @@ void RegisterMetadataTests(ImGuiTestEngine *e) {
 
     // Typing a tag then pressing Enter (ImGuiInputTextFlags_EnterReturnsTrue) appends it via ModifyEvent.
     IM_REGISTER_TEST(e, "metadata", "add_tag_appends")->TestFunc = [](ImGuiTestContext *ctx) {
-        openMetadataTab(ctx);
+        openMetadataWindow(ctx);
         auto &proj = *getTestState().project;
         const size_t before = proj.metadata.tags.size();
         ctx->ItemInput("**/new_tag");
@@ -69,7 +67,7 @@ void RegisterMetadataTests(ImGuiTestEngine *e) {
 
     // Clicking a tag chip removes that tag (via a guarded ModifyEvent) and shifts the rest down.
     IM_REGISTER_TEST(e, "metadata", "remove_tag_via_chip")->TestFunc = [](ImGuiTestContext *ctx) {
-        openMetadataTab(ctx);
+        openMetadataWindow(ctx);
         auto &proj = *getTestState().project;
         IM_CHECK_EQ(proj.metadata.tags.size(), static_cast<size_t>(3)); // alpha, beta, gamma
         ctx->ItemClick("**/tag0");                                      // remove "alpha"
@@ -82,7 +80,7 @@ void RegisterMetadataTests(ImGuiTestEngine *e) {
 
     // Clicking a performer chip removes that performer (via a guarded ModifyEvent).
     IM_REGISTER_TEST(e, "metadata", "remove_performer_via_chip")->TestFunc = [](ImGuiTestContext *ctx) {
-        openMetadataTab(ctx);
+        openMetadataWindow(ctx);
         auto &proj = *getTestState().project;
         IM_CHECK_EQ(proj.metadata.performers.size(), static_cast<size_t>(2)); // Performer One, Performer Two
         ctx->ItemClick("**/perf0");                                           // remove "Performer One"
@@ -97,7 +95,7 @@ void RegisterMetadataTests(ImGuiTestEngine *e) {
     // (ModifyEvent<FunscriptMetadata>) paths. The just-saved preset is auto-selected, so Load/Delete act on it without
     // touching the combo.
     IM_REGISTER_TEST(e, "metadata", "preset_save_and_load")->TestFunc = [](ImGuiTestContext *ctx) {
-        openMetadataTab(ctx);
+        openMetadataWindow(ctx);
         auto &proj = *getTestState().project;
         IM_CHECK_STR_EQ(proj.metadata.title.c_str(), "Fixture Project");
 
@@ -127,7 +125,7 @@ void RegisterMetadataTests(ImGuiTestEngine *e) {
 
     // The Reset button pushes a ModifyEvent<FunscriptMetadata> that clears every fixture-populated field.
     IM_REGISTER_TEST(e, "metadata", "reset_clears_metadata")->TestFunc = [](ImGuiTestContext *ctx) {
-        openMetadataTab(ctx);
+        openMetadataWindow(ctx);
         auto &proj = *getTestState().project;
         IM_CHECK(!proj.metadata.title.empty()); // fixture supplied one
         ctx->ItemClick("**/reset_meta");
@@ -144,7 +142,7 @@ void RegisterMetadataTests(ImGuiTestEngine *e) {
     // ###cf_opt<n> options are addressed by direct id under SetRef'd windows; everything else (input
     // text, buttons) registers normally and uses **/ refs. See [[reference_ui_test_engine_refs]].
     IM_REGISTER_TEST(e, "metadata", "custom_field_add_edit_delete")->TestFunc = [](ImGuiTestContext *ctx) {
-        openMetadataTab(ctx);
+        openMetadataWindow(ctx);
         auto &proj = *getTestState().project;
         const size_t before = proj.metadata.customFields.size();
 
@@ -181,7 +179,7 @@ void RegisterMetadataTests(ImGuiTestEngine *e) {
     // not only once Enter is pressed. The raw-JSON box lives on row 2 under PushID(i), so it's reached
     // by direct id within the $$<i> scope. See [[reference_ui_test_engine_refs]].
     IM_REGISTER_TEST(e, "metadata", "custom_field_object_saves_without_enter")->TestFunc = [](ImGuiTestContext *ctx) {
-        openMetadataTab(ctx);
+        openMetadataWindow(ctx);
         auto &proj = *getTestState().project;
         IM_CHECK_EQ(proj.metadata.customFields.size(), static_cast<size_t>(0));
 
@@ -217,7 +215,7 @@ void RegisterMetadataTests(ImGuiTestEngine *e) {
     // This also exercises the raw-JSON box reseeding from a freshly loaded value (the jsonEdits
     // buffer keyed by the field key is cleared on Reset) without an Enter or manual edit.
     IM_REGISTER_TEST(e, "metadata", "preset_roundtrips_custom_object_field")->TestFunc = [](ImGuiTestContext *ctx) {
-        openMetadataTab(ctx);
+        openMetadataWindow(ctx);
         auto &proj = *getTestState().project;
         IM_CHECK_EQ(proj.metadata.customFields.size(), static_cast<size_t>(0));
 

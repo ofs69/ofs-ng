@@ -221,12 +221,12 @@ english     = "Project"
 translation = "專案"
 
 [PrefOpenProjectConfig]
-english     = "Open project settings when a project opens"
-translation = "開啟專案時開啟專案設定"
+english     = "Show metadata on open"
+translation = "開啟時顯示中繼資料"
 
 [PrefOpenProjectConfigHint]
-english     = "Automatically show the Project window (metadata, chapters, settings) each time you open a project."
-translation = "每次開啟專案時自動顯示專案視窗（中繼資料、章節、設定）。"
+english     = "Automatically open the Project window on its Metadata tab each time you open a project."
+translation = "每次開啟專案時，自動在中繼資料分頁開啟專案視窗。"
 
 [TranscodeTitle]
 english     = "Optimize Video for Seeking"

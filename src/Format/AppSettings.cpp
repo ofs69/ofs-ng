@@ -194,7 +194,7 @@ void from_json(const nlohmann::json &j, AppSettings &s) {
     s.intraOutputDir = j.value("intraOutputDir", std::string{});
     s.exportDirMode = static_cast<ExportDirMode>(std::clamp(j.value("exportDirMode", 0), 0, 2));
     s.exportDir = j.value("exportDir", std::string{});
-    s.openProjectConfigOnOpen = j.value("openProjectConfigOnOpen", false);
+    s.openProjectConfigOnOpen = j.value("openProjectConfigOnOpen", true);
     s.windowGeometry = j.value("windowGeometry", WindowGeometry{});
 }
 } // namespace ofs

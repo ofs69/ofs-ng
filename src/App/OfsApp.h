@@ -48,6 +48,7 @@ class SelectIntentRouter;
 class UndoSystem;
 class ConfigurationWindow;
 class ProjectConfigWindow;
+class MetadataWindow;
 class ScriptSimulator;
 class ScriptStatisticsWindow;
 class LogWindow;
@@ -274,6 +275,7 @@ class OfsApp : public ofs::Application {
 
     std::unique_ptr<ofs::ConfigurationWindow> configWindow;
     std::unique_ptr<ofs::ProjectConfigWindow> projectConfigWindow;
+    std::unique_ptr<ofs::MetadataWindow> metadataWindow;
     std::unique_ptr<ofs::ScriptTimelineWindow> scriptTimelineWindow;
     std::unique_ptr<ofs::VideoControlsWindow> videoControlsWindow;
     std::unique_ptr<ofs::ScriptSimulator> scriptSimulator;

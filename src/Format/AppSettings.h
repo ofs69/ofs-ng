@@ -125,9 +125,9 @@ struct AppSettings {
     // only in Custom mode — empty there falls back to the last-used dir.
     ExportDirMode exportDirMode = ExportDirMode::VideoFolder;
     std::string exportDir;
-    // Pop the Project (metadata) window automatically whenever a project opens, like old OFS. Off by
-    // default so a normal open stays uncluttered.
-    bool openProjectConfigOnOpen = false;
+    // Pop the Project (metadata) window automatically whenever a project opens, like old OFS. On by
+    // default — most users want to see/edit metadata on open; it's dismissed with one click otherwise.
+    bool openProjectConfigOnOpen = true;
     WindowGeometry windowGeometry;
 
     static AppSettings load();

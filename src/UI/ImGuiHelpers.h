@@ -159,6 +159,11 @@ inline bool comboItem(const char *label, bool selected) {
 // ##/### suffix. Standardizes the two idioms (label-left vs box-left `Checkbox(label)`) that had
 // drifted across the settings rows. Returns true when toggled.
 inline bool labeledCheckbox(const char *label, const char *id, bool *v) {
+    // Align the label to the checkbox's frame padding so the text sits vertically centered against the
+    // box. Without this the raw text sits at the line top and reads as misaligned when the label is the
+    // first item on its row (it only looks centered when it trails another framed widget, which sets the
+    // line's text-baseline offset for us).
+    ImGui::AlignTextToFramePadding();
     ImGui::TextUnformatted(label);
     ImGui::SameLine();
     return ImGui::Checkbox(id, v);

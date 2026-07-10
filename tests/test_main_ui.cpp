@@ -1,6 +1,8 @@
 #include "App/OfsApp.h"
 #include "Core/EventQueue.h"
+#include "Core/Events.h"
 #include "Core/ScriptProject.h"
+#include "Format/AppSettings.h"
 #include "Localization/Translator.h"
 #include "Services/UpdateChecker.h"
 #include "Util/CrashHandler.h"
@@ -61,6 +63,12 @@ class OfsTestApp : public OfsApp {
         g_testState.appSettings = &OfsAppTestAccess::appSettings(*this);
         g_testState.processingPanel = &OfsAppTestAccess::processingPanel(*this);
         g_testState.app = this;
+
+        // Deterministic baseline: openProjectConfigOnOpen ships on, which would pop the Metadata window on
+        // every loadFixture and perturb unrelated suites. Force it off here; the one test that covers the
+        // behavior toggles it on explicitly.
+        g_eventQueue.push(
+            ofs::ModifyEvent<ofs::AppSettings>{[](ofs::AppSettings &s) { s.openProjectConfigOnOpen = false; }});
 
         // Keep the update checker off the real network for the whole suite: the silent startup check
         // (and any test that doesn't install its own override) resolves through this stub, which reports

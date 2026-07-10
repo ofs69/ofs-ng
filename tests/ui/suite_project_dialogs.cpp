@@ -487,23 +487,25 @@ void RegisterProjectDialogsTests(ImGuiTestEngine *e) {
         std::filesystem::remove_all(videoDir);
     };
 
-    // AppSettings::openProjectConfigOnOpen pops the Project window automatically when a project opens.
+    // AppSettings::openProjectConfigOnOpen pops the Metadata editor window when a project opens.
     IM_REGISTER_TEST(e, "project_dialogs", "open_project_config_on_open")->TestFunc = [](ImGuiTestContext *ctx) {
-        constexpr const char *kWin = "//Project###project_config";
+        constexpr const char *kWin = "//metadata_window";
         auto &eq = *getTestState().eventQueue;
         eq.push(ModifyEvent<AppSettings>{[](AppSettings &s) { s.openProjectConfigOnOpen = true; }});
         loadFixture(ctx); // opens basic.ofp → LoadProjectEvent
+        // The Metadata window appears and renders its body (the preset combo is a metadata-only widget).
         const bool appeared =
             yieldUntil(ctx, [&] { return ctx->WindowInfo(kWin, ImGuiTestOpFlags_NoError).Window != nullptr; });
+        const bool onMetadata =
+            appeared && yieldUntil(ctx, [&] { return ctx->ItemExists("//metadata_window/**/preset_name"); });
 
         // Restore the default and close the window so neither bleeds into later tests, then assert.
         eq.push(ModifyEvent<AppSettings>{[](AppSettings &s) { s.openProjectConfigOnOpen = false; }});
-        if (appeared) {
-            const std::string closeRef = std::string(kWin) + "/#CLOSE";
-            ctx->ItemClick(closeRef.c_str());
-        }
+        if (appeared)
+            ctx->WindowClose(kWin);
         ctx->Yield();
         IM_CHECK(appeared);
+        IM_CHECK(onMetadata);
     };
 
     // guardUnsaved's Save branch when no file path exists: the unsaved prompt's "Save" leads into the

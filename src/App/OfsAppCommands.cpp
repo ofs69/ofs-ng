@@ -178,6 +178,14 @@ void OfsApp::initCommands() {
         .run = [this](ofs::EventQueue &) { appState.showProjectConfigWindow = true; },
     });
     commandRegistry.add(ofs::Command{
+        .id = "core.open-metadata",
+        .group = "Core",
+        .title = Str::PcfTabMetadata,
+        .inRebindList = false,
+        .keywords = "metadata creator title tags performers description license", // the metadata editor
+        .run = [this](ofs::EventQueue &) { appState.showMetadataWindow = true; },
+    });
+    commandRegistry.add(ofs::Command{
         .id = "core.open-keybindings",
         .group = "Core",
         .title = Str::CmdCoreOpenKeybindings,

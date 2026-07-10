@@ -221,12 +221,12 @@ english     = "Project"
 translation = "Projekt"
 
 [PrefOpenProjectConfig]
-english     = "Open project settings when a project opens"
-translation = "Projekteinstellungen beim Öffnen eines Projekts anzeigen"
+english     = "Show metadata on open"
+translation = "Metadaten beim Öffnen anzeigen"
 
 [PrefOpenProjectConfigHint]
-english     = "Automatically show the Project window (metadata, chapters, settings) each time you open a project."
-translation = "Das Projektfenster (Metadaten, Kapitel, Einstellungen) bei jedem Öffnen eines Projekts automatisch anzeigen."
+english     = "Automatically open the Project window on its Metadata tab each time you open a project."
+translation = "Öffnet bei jedem Projektöffnen automatisch das Projektfenster auf dem Metadaten-Tab."
 
 [TranscodeTitle]
 english     = "Optimize Video for Seeking"

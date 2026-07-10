@@ -13,6 +13,7 @@ struct AppState {
     bool showShortcutWindow = false;
     bool showConfigWindow = false;
     bool showProjectConfigWindow = false;
+    bool showMetadataWindow = false;
     bool showLogWindow = false;
     bool showAboutWindow = false;
     bool showBackupRestoreWindow = false;

@@ -30,6 +30,7 @@
 #include "UI/Icons.h"
 #include "UI/ImGuiHelpers.h"
 #include "UI/LogWindow.h"
+#include "UI/MetadataWindow.h"
 #include "UI/ModalManager.h"
 #include "UI/ProcessingPanel.h"
 #include "UI/ProjectConfigWindow.h"
@@ -199,11 +200,11 @@ bool OfsApp::init() {
     // the media-change arm, opening a second video after dismissing the prompt once never re-offered.
     eventQueue.on<ofs::LoadProjectEvent>([this](const ofs::LoadProjectEvent &) {
         optimizePromptPending = true;
-        // Opt-in "old OFS" behavior: pop the Project (metadata) window on open. LoadProjectEvent also
-        // fires on close (to the welcome screen), so gate on an actually-loaded project — by drain time
-        // the load has populated it, while a close leaves no active project.
+        // "Old OFS" behavior: pop the Metadata editor on open. LoadProjectEvent also fires on close (to
+        // the welcome screen), so gate on an actually-loaded project — by drain time the load has
+        // populated it, while a close leaves no active project.
         if (appSettings.openProjectConfigOnOpen && projectManager && projectManager->hasActiveProject())
-            appState.showProjectConfigWindow = true;
+            appState.showMetadataWindow = true;
     });
     eventQueue.on<ofs::ChangeMediaPathEvent>(
         [this](const ofs::ChangeMediaPathEvent &) { optimizePromptPending = true; });
@@ -361,6 +362,7 @@ bool OfsApp::init() {
                                                            customCommandTemplates);
     configWindow = std::make_unique<ofs::ConfigurationWindow>(appSettings);
     projectConfigWindow = std::make_unique<ofs::ProjectConfigWindow>(appSettings);
+    metadataWindow = std::make_unique<ofs::MetadataWindow>(appSettings);
     processingPanel = std::make_unique<ofs::ProcessingPanel>();
     // Registers its CheckForUpdatesEvent / result handlers here, before freeze().
     updateChecker = std::make_unique<ofs::UpdateChecker>(eventQueue, jobSystem);
@@ -1006,6 +1008,8 @@ void OfsApp::renderEditor() {
     if (projectConfigWindow)
         projectConfigWindow->render(scriptProject, eventQueue, appState.showProjectConfigWindow, sessionTime,
                                     player ? player->getDuration() : 0.0, dummyPlayer && dummyPlayer->isVideoLoaded());
+    if (metadataWindow)
+        metadataWindow->render(scriptProject, eventQueue, appState.showMetadataWindow);
 
     if (pluginManager)
         pluginManager->renderUI();
@@ -1153,6 +1157,8 @@ void OfsApp::renderMainMenuBar() {
             ImGui::BeginDisabled(!hasProject);
             if (ImGui::MenuItem(Str::AppMenuProject.iconId(ICON_SLIDERS_HORIZONTAL, "menu_project_config")))
                 appState.showProjectConfigWindow = true;
+            if (ImGui::MenuItem(Str::PcfTabMetadata.iconId(ICON_TAGS, "menu_metadata")))
+                appState.showMetadataWindow = true;
             ImGui::EndDisabled();
             ImGui::EndMenu();
         }
