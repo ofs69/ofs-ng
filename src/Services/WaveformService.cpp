@@ -302,8 +302,10 @@ void WaveformService::requestFor(const std::string &sourceUtf8) {
 
     const std::string ffmpegBin = ofs::util::resolveTool("ffmpeg");
     const std::string ffprobeBin = ofs::util::resolveTool("ffprobe");
-    // Cache next to the executable (alongside the bundled ffmpeg), keyed by content fingerprint.
-    const std::filesystem::path cacheDir = ofs::util::getBasePath() / "cache" / "waveforms";
+    // Cache under the writable pref dir, keyed by content fingerprint. Not getBasePath(): the install
+    // dir is read-only for a packaged build (an AppImage runs from a read-only squashfs mount), so a
+    // cache write there fails with ENOENT/EROFS.
+    const std::filesystem::path cacheDir = ofs::util::getPrefPath() / "cache" / "waveforms";
     worker_ = jobSystem.submitTask(
         [&q = eq, cancel = cancel_, ffmpegBin, ffprobeBin, source = sourceUtf8, cacheDir]() -> bool {
             return runExtraction(q, ffmpegBin, ffprobeBin, source, cacheDir, cancel);
