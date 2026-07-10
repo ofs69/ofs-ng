@@ -12,16 +12,15 @@ namespace {
 // changes or when a fresh selection is assigned.
 VectorSet<ScriptAxisAction> selectionWithinActions(const VectorSet<ScriptAxisAction> &src,
                                                    const VectorSet<ScriptAxisAction> &actions) {
-    // A plain loop rather than a `views::filter | views::transform` pipe: clang paired with libstdc++-12
-    // (the ubuntu-22.04 release runner) fails to instantiate a ref_view over a const class range, and
-    // src is already sorted/unique so the filtered-and-mapped result stays ordered for the VectorSet ctor.
-    std::vector<ScriptAxisAction> kept;
-    kept.reserve(src.size());
+    // Not a `views::filter | views::transform` pipe: clang + libstdc++-12 (the ubuntu-22.04 build) can't
+    // instantiate a ref_view over a const class range. src is sorted and unique and the mapping preserves
+    // order, so appendSorted builds the result in one reserved buffer — no intermediate copy, no re-sort.
+    VectorSet<ScriptAxisAction> kept(src.size());
     for (const auto &e : src) {
         if (auto it = actions.find(e); it != actions.end())
-            kept.push_back(*it);
+            kept.appendSorted(ScriptAxisAction(*it));
     }
-    return {kept.begin(), kept.end()};
+    return kept;
 }
 } // namespace
 

@@ -74,7 +74,9 @@ jobs:
   # -DOFS_CLANG_TIDY=OFF keeps this job's build to cached compilation only.
   build-test:
     name: Build + test (Linux)
-    runs-on: ubuntu-latest
+    # Match the release build (release.yml): same clang + libstdc++-12, so a toolchain-specific compile
+    # break can't pass this gate and surface only at release time. Keep in lockstep with the release OS.
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v5
         with:
