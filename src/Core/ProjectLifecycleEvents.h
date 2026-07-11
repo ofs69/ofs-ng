@@ -12,6 +12,12 @@ namespace ofs {
 
 struct LoadProjectEvent {};
 
+// A brand-new project (media, funscript, or empty) finished initializing — distinct from LoadProjectEvent,
+// which also fires on close and on opening an existing .ofp. Pushed by ProjectManager once a fresh project
+// is fully set up; handled by OfsApp to pop the Metadata editor on new projects only (gated on the
+// AppSettings::openProjectConfigOnOpen preference), the "old OFS" new-project behavior.
+struct NewProjectCreatedEvent {};
+
 struct SaveProjectEvent {
     bool saveAs = false;
 };

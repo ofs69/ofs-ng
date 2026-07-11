@@ -487,15 +487,25 @@ void RegisterProjectDialogsTests(ImGuiTestEngine *e) {
         std::filesystem::remove_all(videoDir);
     };
 
-    // AppSettings::openProjectConfigOnOpen pops the Metadata editor window when a project opens.
-    IM_REGISTER_TEST(e, "project_dialogs", "open_project_config_on_open")->TestFunc = [](ImGuiTestContext *ctx) {
+    // AppSettings::openProjectConfigOnOpen pops the Metadata editor window when a *new* project is created
+    // — but not when an existing project is opened (both share LoadProjectEvent; only the former qualifies).
+    IM_REGISTER_TEST(e, "project_dialogs", "metadata_pops_for_new_project_only")->TestFunc = [](ImGuiTestContext *ctx) {
         constexpr const char *kWin = "//metadata_window";
         auto &eq = *getTestState().eventQueue;
+        auto metadataUp = [&] { return ctx->WindowInfo(kWin, ImGuiTestOpFlags_NoError).Window != nullptr; };
         eq.push(ModifyEvent<AppSettings>{[](AppSettings &s) { s.openProjectConfigOnOpen = true; }});
-        loadFixture(ctx); // opens basic.ofp → LoadProjectEvent
-        // The Metadata window appears and renders its body (the preset combo is a metadata-only widget).
-        const bool appeared =
-            yieldUntil(ctx, [&] { return ctx->WindowInfo(kWin, ImGuiTestOpFlags_NoError).Window != nullptr; });
+
+        // Opening an existing .ofp must NOT pop the window.
+        loadFixture(ctx); // opens basic.ofp → LoadProjectEvent (no NewProjectCreatedEvent)
+        for (int i = 0; i < 30; ++i)
+            ctx->Yield();
+        const bool poppedOnOpen = metadataUp();
+
+        // Creating a fresh (empty) project must pop it, rendering its body (the preset combo is a
+        // metadata-only widget). Clear dirty flags first so guardUnsaved doesn't raise a confirm modal.
+        getTestState().project->clearDirtyFlags();
+        eq.push(CreateEmptyProjectEvent{});
+        const bool appeared = yieldUntil(ctx, metadataUp);
         const bool onMetadata =
             appeared && yieldUntil(ctx, [&] { return ctx->ItemExists("//metadata_window/**/preset_name"); });
 
@@ -504,6 +514,7 @@ void RegisterProjectDialogsTests(ImGuiTestEngine *e) {
         if (appeared)
             ctx->WindowClose(kWin);
         ctx->Yield();
+        IM_CHECK(!poppedOnOpen);
         IM_CHECK(appeared);
         IM_CHECK(onMetadata);
     };

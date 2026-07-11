@@ -198,12 +198,11 @@ bool OfsApp::init() {
     // for the async video load to settle, then its canOffer gate (original source, no existing intra copy)
     // decides whether to actually show it — so arming on a switch *to* the intra copy is harmless. Without
     // the media-change arm, opening a second video after dismissing the prompt once never re-offered.
-    eventQueue.on<ofs::LoadProjectEvent>([this](const ofs::LoadProjectEvent &) {
-        optimizePromptPending = true;
-        // "Old OFS" behavior: pop the Metadata editor on open. LoadProjectEvent also fires on close (to
-        // the welcome screen), so gate on an actually-loaded project — by drain time the load has
-        // populated it, while a close leaves no active project.
-        if (appSettings.openProjectConfigOnOpen && projectManager && projectManager->hasActiveProject())
+    eventQueue.on<ofs::LoadProjectEvent>([this](const ofs::LoadProjectEvent &) { optimizePromptPending = true; });
+    // "Old OFS" behavior: pop the Metadata editor when the user creates a *new* project (not on opening an
+    // existing one, which also fires LoadProjectEvent), gated on the preference.
+    eventQueue.on<ofs::NewProjectCreatedEvent>([this](const ofs::NewProjectCreatedEvent &) {
+        if (appSettings.openProjectConfigOnOpen)
             appState.showMetadataWindow = true;
     });
     eventQueue.on<ofs::ChangeMediaPathEvent>(

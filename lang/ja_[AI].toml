@@ -221,12 +221,12 @@ english     = "Project"
 translation = "プロジェクト"
 
 [PrefOpenProjectConfig]
-english     = "Show metadata on open"
-translation = "開いたときにメタデータを表示"
+english     = "Show metadata for new projects"
+translation = "新規プロジェクトでメタデータを表示"
 
 [PrefOpenProjectConfigHint]
-english     = "Automatically open the Project window on its Metadata tab each time you open a project."
-translation = "プロジェクトを開くたびに、プロジェクトウィンドウをメタデータタブで自動的に開きます。"
+english     = "Automatically open the Metadata editor window each time you create a new project."
+translation = "新しいプロジェクトを作成するたびに、メタデータ編集ウィンドウを自動的に開きます。"
 
 [TranscodeTitle]
 english     = "Optimize Video for Seeking"

@@ -225,12 +225,12 @@ english     = "Project"
 description = "Preferences › Application: section header for project-related behavior settings."
 
 [PrefOpenProjectConfig]
-english     = "Show metadata on open"
-description = "Preferences › Application › Project: toggle that automatically opens the Project window on its Metadata tab whenever a project is opened."
+english     = "Show metadata for new projects"
+description = "Preferences › Application › Project: toggle that automatically opens the Metadata editor window whenever a new project is created."
 
 [PrefOpenProjectConfigHint]
-english     = "Automatically open the Project window on its Metadata tab each time you open a project."
-description = "Preferences › Application › Project: help-marker tooltip explaining the show-metadata-on-open toggle."
+english     = "Automatically open the Metadata editor window each time you create a new project."
+description = "Preferences › Application › Project: help-marker tooltip explaining the show-metadata-for-new-projects toggle."
 
 [TranscodeTitle]
 english     = "Optimize Video for Seeking"

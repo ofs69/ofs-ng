@@ -13,7 +13,7 @@ class EventQueue;
 
 // Standalone editor for the project's funscript metadata (title/creator/URLs/license, description, notes,
 // tags, performers, presets, custom fields). Formerly the Project window's "Metadata" tab; split into its
-// own window so it can be popped directly (Edit ▸ Metadata, the open-metadata command, or auto-on-open).
+// own window so it can be popped directly (Edit ▸ Metadata, the open-metadata command, or auto-on-new-project).
 class MetadataWindow {
   public:
     explicit MetadataWindow(const AppSettings &appSettings);

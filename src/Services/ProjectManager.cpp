@@ -635,6 +635,7 @@ co::Fire ProjectManager::initNewProject(std::string mediaPath) {
         // openProjectVideo() starts the dummy player at this duration.
         project.state.dummyDuration = kDefaultDummyDuration;
         eq.push(AxisSelectedEvent{StandardAxis::L0});
+        eq.push(NewProjectCreatedEvent{});
         openProjectVideo();
         co_return; // no co_await reached: this branch completes synchronously on call
     }
@@ -736,6 +737,7 @@ void ProjectManager::finalizeNewProjectOpen(const std::function<void()> &mediaSe
     // longest imported axis bounds it.
     project.state.dummyDuration = mediaLessDuration();
     eq.push(AxisSelectedEvent{StandardAxis::L0});
+    eq.push(NewProjectCreatedEvent{});
     if (mediaSetup)
         mediaSetup();
     openProjectVideo();
