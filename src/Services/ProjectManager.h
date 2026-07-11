@@ -89,7 +89,6 @@ class ProjectManager {
     void onOpenDroppedFile(const OpenDroppedFileEvent &event);
     void onChangeDummyDuration(const ChangeDummyDurationEvent &event);
     void onChangeMediaPath(const ChangeMediaPathEvent &event);
-    void onDeclineOptimize();
     void onCloseProjectRequest(const CloseProjectRequestEvent &);
     void onRestoreBackupRequest(const RestoreBackupRequestEvent &event);
     void onRequestExit(const RequestExitEvent &);

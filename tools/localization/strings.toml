@@ -390,19 +390,19 @@ description = "Intra-frame optimize modals: dismiss the options dialog / abort t
 
 [OptimizePromptTitle]
 english     = "Optimize this video?"
-description = "Modal shown on opening a project whose video isn't optimized: title."
+description = "Modal offered when a new project or newly loaded video isn't optimized: title."
 
 [OptimizePromptBody]
 english     = "This video isn't optimized for seeking. Creating an all-keyframe copy makes frame stepping and seeking much faster — the original is never changed."
-description = "Modal shown on opening a project whose video isn't optimized: explanatory body."
+description = "Modal offered when a new project or newly loaded video isn't optimized: explanatory body."
 
 [OptimizePromptOptimize]
 english     = "Optimize…"
 description = "Optimize-prompt modal: button that opens the optimize options dialog."
 
 [OptimizePromptNotNow]
-english     = "Not now"
-description = "Optimize-prompt modal: button that dismisses the prompt without optimizing."
+english     = "No thanks"
+description = "Optimize-prompt modal: button that dismisses the one-shot optimize offer without optimizing."
 
 [TranscodeTaskLabel]
 english     = "Optimizing video"

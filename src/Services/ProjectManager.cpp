@@ -91,7 +91,6 @@ ProjectManager::ProjectManager(ScriptProject &project, EventQueue &eq, const App
     eq.on<OpenDroppedFileEvent>([this](const OpenDroppedFileEvent &e) { onOpenDroppedFile(e); });
     eq.on<ChangeDummyDurationEvent>([this](const ChangeDummyDurationEvent &e) { onChangeDummyDuration(e); });
     eq.on<ChangeMediaPathEvent>([this](const ChangeMediaPathEvent &e) { onChangeMediaPath(e); });
-    eq.on<DeclineOptimizeEvent>([this](const DeclineOptimizeEvent &) { onDeclineOptimize(); });
     eq.on<CloseProjectRequestEvent>([this](const CloseProjectRequestEvent &e) { onCloseProjectRequest(e); });
     eq.on<RestoreBackupRequestEvent>([this](const RestoreBackupRequestEvent &e) { onRestoreBackupRequest(e); });
     eq.on<RequestExitEvent>([this](const RequestExitEvent &e) { onRequestExit(e); });
@@ -1436,10 +1435,8 @@ void ProjectManager::onChangeMediaPath(const ChangeMediaPathEvent &event) {
     if (!event.path.empty() && event.path == project.state.intraMediaPath) {
         project.activeSource = MediaSource::Intra;
     } else {
-        if (event.path != project.state.originalMediaPath) {
+        if (event.path != project.state.originalMediaPath)
             project.state.intraMediaPath.clear();
-            project.state.intraOptimizeDeclined = false; // a different video — offer optimizing it afresh
-        }
         project.state.originalMediaPath = event.path;
         project.activeSource = MediaSource::Original;
     }
@@ -1460,18 +1457,10 @@ void ProjectManager::onChangeMediaPath(const ChangeMediaPathEvent &event) {
     }
 }
 
-void ProjectManager::onDeclineOptimize() {
-    if (!hasActiveProject() || project.state.intraOptimizeDeclined)
-        return;
-    project.state.intraOptimizeDeclined = true; // persisted; suppresses the prompt for this original
-    project.state.settingsDirty = true;
-}
-
 void ProjectManager::loadFromProject(const Project &proj) {
     // Restore the original source, then resolve which one feeds the player (prefer an existing intra
     // copy) — this also sets state.mediaPath, so openProjectVideo() loads the resolved path.
     project.state.originalMediaPath = proj.originalMediaPath;
-    project.state.intraOptimizeDeclined = proj.intraOptimizeDeclined;
     resolveActiveMedia();
     project.state.dummyDuration = proj.dummyDuration;
     project.state.totalEditingSeconds = proj.totalEditingSeconds;
@@ -1561,7 +1550,6 @@ void ProjectManager::saveToProject(Project &proj) const {
     // set without the original (a fixture, or legacy in-memory state) would reload with no media at all.
     proj.originalMediaPath =
         !project.state.originalMediaPath.empty() ? project.state.originalMediaPath : project.state.mediaPath;
-    proj.intraOptimizeDeclined = project.state.intraOptimizeDeclined;
     proj.dummyDuration = project.state.dummyDuration;
     proj.activeAxisRole = project.state.activeAxis;
     proj.metadata = project.metadata;

@@ -422,7 +422,6 @@ void to_json(nlohmann::json &j, const Project &p) {
     j = nlohmann::json::object({{"ofsProjectVersion", kProjectFileVersion},
                                 {"mediaPath", p.mediaPath},
                                 {"originalMediaPath", p.originalMediaPath},
-                                {"intraOptimizeDeclined", p.intraOptimizeDeclined},
                                 {"dummyDuration", p.dummyDuration},
                                 {"activeAxisRole", std::string(standardAxisTag(p.activeAxisRole))},
                                 {"scriptAxes", p.scriptAxes},
@@ -457,7 +456,6 @@ void to_json(nlohmann::json &j, const Project &p) {
 void from_json(const nlohmann::json &j, Project &p) {
     p.mediaPath = j.value("mediaPath", "");
     p.originalMediaPath = j.value("originalMediaPath", "");
-    p.intraOptimizeDeclined = j.value("intraOptimizeDeclined", false);
     p.dummyDuration = j.value("dummyDuration", 0.0);
     p.activeAxisRole = standardAxisFromTag(j.value("activeAxisRole", "L0")).value_or(StandardAxis::L0);
     p.scriptAxes = j.value("scriptAxes", std::vector<SerializedAxis>{});

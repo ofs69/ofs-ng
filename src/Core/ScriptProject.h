@@ -74,10 +74,6 @@ struct ProjectState {
     // rediscovered on load (discoverExistingIntra), never serialized.
     std::string originalMediaPath;
     std::string intraMediaPath;
-    // Sticky "Not Now" for the optimize prompt, scoped to the current originalMediaPath: set when the
-    // user dismisses the offer, persisted, and cleared when a different original is loaded so a new video
-    // is offered afresh. See OfsApp::maybeOfferOptimize.
-    bool intraOptimizeDeclined = false;
     double dummyDuration = 0.0;
     StandardAxis activeAxis = StandardAxis::L0;
     // Transient fan-out scope for multi-axis editing (session-only): NOT serialized to .ofp, NOT

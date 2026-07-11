@@ -112,8 +112,4 @@ struct MediaInfoReadyEvent {
     MediaInfo info;
 };
 
-// OfsApp → ProjectManager: the user dismissed the optimize prompt ("Not Now") for the current original.
-// Records a per-project flag so reopening this project doesn't re-offer; cleared when a new original loads.
-struct DeclineOptimizeEvent {};
-
 } // namespace ofs

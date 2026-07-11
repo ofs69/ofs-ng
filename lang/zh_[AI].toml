@@ -385,8 +385,8 @@ english     = "Optimize…"
 translation = "优化…"
 
 [OptimizePromptNotNow]
-english     = "Not now"
-translation = "暂不优化"
+english     = "No thanks"
+translation = "不用了"
 
 [TranscodeTaskLabel]
 english     = "Optimizing video"

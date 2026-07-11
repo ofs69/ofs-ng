@@ -87,7 +87,6 @@ Project fullyPopulated() {
     Project p;
     p.mediaPath = "C:/videos/josé/clip.mp4";
     p.originalMediaPath = "C:/videos/josé/clip.mp4";
-    p.intraOptimizeDeclined = true; // sticky "Not Now" persists
     p.dummyDuration = 123.5;
     p.activeAxisRole = StandardAxis::R1;
 
@@ -196,7 +195,6 @@ TEST_CASE("Project save/load round-trips every serialized field") {
 
     // A couple of spot checks so a failure points at a concrete field rather than just "json differs".
     CHECK(loaded->mediaPath == original.mediaPath);
-    CHECK(loaded->intraOptimizeDeclined);
     CHECK(loaded->activeAxisRole == StandardAxis::R1);
     REQUIRE(loaded->scriptAxes.size() == 2);
     CHECK(loaded->scriptAxes[0].isLocked);

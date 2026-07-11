@@ -1801,11 +1801,11 @@ void OfsApp::maybeOfferOptimize() {
     if (noSource || !mediaReady)
         return; // nothing to optimize (no media, or the load failed / was declined)
 
-    // Offer only when optimizing is possible and worthwhile: not already declined for this project's
-    // original, on the original source with no existing copy, an output dir + tools available, and nothing
-    // already running. (Same gate as the command, minus hasMedia which we just confirmed.)
-    const bool canOffer = canOptimizeIntra() && !scriptProject.state.intraOptimizeDeclined &&
-                          scriptProject.state.intraMediaPath.empty() && !appSettings.intraOutputDir.empty();
+    // Offer only when optimizing is possible and worthwhile: on the original source with no existing copy,
+    // an output dir + tools available, and nothing already running. (Same gate as the command, minus
+    // hasMedia which we just confirmed.)
+    const bool canOffer =
+        canOptimizeIntra() && scriptProject.state.intraMediaPath.empty() && !appSettings.intraOutputDir.empty();
     if (!canOffer)
         return;
 
@@ -1823,12 +1823,8 @@ void OfsApp::maybeOfferOptimize() {
                  close = true;
              }
              ImGui::SameLine();
-             if (ImGui::Button(Str::OptimizePromptNotNow.id("optimize_prompt_no"))) {
-                 // Decline is per-project, scoped to the current original: a different video is
-                 // offered afresh, the same project on reopen is not. There is no global opt-out.
-                 eventQueue.push(ofs::DeclineOptimizeEvent{});
-                 close = true;
-             }
+             if (ImGui::Button(Str::OptimizePromptNotNow.id("optimize_prompt_no")))
+                 close = true; // one-shot offer: dismissing it is enough, nothing to persist
              return close;
          }});
 }

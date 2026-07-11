@@ -2217,38 +2217,6 @@ TEST_CASE("ChangeMediaPath sets/clears the media path and emits load/close video
     CHECK(dur.received[0].durationSeconds == doctest::Approx(900.0));
 }
 
-TEST_CASE("DeclineOptimize sets a sticky per-project flag that a new original clears") {
-    TestProject tp;
-    AppSettings appSettings;
-    appSettings.autoBackupEnabled = false;
-    JobSystem jobSystem;
-    EffectRegistryState effectReg;
-    ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
-    tp.eq.freeze();
-    jobSystem.start();
-
-    tp.project.axes[0].showInStrip = true; // active project
-
-    tp.eq.push(ChangeMediaPathEvent{"C:/videos/a.mp4"});
-    tp.eq.drain();
-    tp.project.state.settingsDirty = false; // isolate the decline's own effect below
-
-    tp.eq.push(DeclineOptimizeEvent{});
-    tp.eq.drain();
-    CHECK(tp.project.state.intraOptimizeDeclined);
-    CHECK(tp.project.state.settingsDirty); // the decline must persist with the project
-
-    // Re-selecting the same original keeps the decline — a video already dismissed isn't re-offered.
-    tp.eq.push(ChangeMediaPathEvent{"C:/videos/a.mp4"});
-    tp.eq.drain();
-    CHECK(tp.project.state.intraOptimizeDeclined);
-
-    // A genuinely different original resets it, so the new video is offered afresh.
-    tp.eq.push(ChangeMediaPathEvent{"C:/videos/b.mp4"});
-    tp.eq.drain();
-    CHECK_FALSE(tp.project.state.intraOptimizeDeclined);
-}
-
 TEST_CASE("Unloading a video with no prior dummy span falls back to a non-zero length") {
     TestProject tp;
     AppSettings appSettings;

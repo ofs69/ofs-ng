@@ -42,7 +42,6 @@ struct Project {
     // it lives in the shared output dir under a deterministic <fingerprint>.mp4 name (intraOutputPath()),
     // so its existence is rediscovered on load rather than stored.
     std::string originalMediaPath;
-    bool intraOptimizeDeclined = false; // sticky "Not Now" for the optimize prompt, scoped to originalMediaPath
     double dummyDuration = 0.0;
     StandardAxis activeAxisRole = StandardAxis::L0;
     std::vector<SerializedAxis> scriptAxes;
