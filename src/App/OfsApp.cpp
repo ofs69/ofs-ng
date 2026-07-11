@@ -194,14 +194,14 @@ bool OfsApp::init() {
         if (e.path == transcodeSourceInfoPath)
             transcodeSourceInfo = e.info;
     });
-    // Arm the optimize prompt whenever a project loads or the media changes; maybeOfferOptimize() waits
-    // for the async video load to settle, then its canOffer gate (original source, no existing intra copy)
-    // decides whether to actually show it — so arming on a switch *to* the intra copy is harmless. Without
-    // the media-change arm, opening a second video after dismissing the prompt once never re-offered.
-    eventQueue.on<ofs::LoadProjectEvent>([this](const ofs::LoadProjectEvent &) { optimizePromptPending = true; });
-    // "Old OFS" behavior: pop the Metadata editor when the user creates a *new* project (not on opening an
-    // existing one, which also fires LoadProjectEvent), gated on the preference.
+    // Both the optimize prompt and the Metadata editor pop only when the user brings a *new* video into the
+    // app — creating a new project or changing the media below — not on reopening an existing project (which
+    // fires LoadProjectEvent, not these). maybeOfferOptimize() waits for the async video load to settle, then
+    // its canOffer gate (original source, no existing intra copy, not previously declined) decides whether to
+    // actually show it — so arming on a switch *to* the intra copy is harmless. The Metadata pop is gated on
+    // the preference; "old OFS" new-project behavior.
     eventQueue.on<ofs::NewProjectCreatedEvent>([this](const ofs::NewProjectCreatedEvent &) {
+        optimizePromptPending = true;
         if (appSettings.openProjectConfigOnOpen)
             appState.showMetadataWindow = true;
     });
