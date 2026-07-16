@@ -156,6 +156,81 @@ TEST_CASE("Funscript preserves non-standard custom fields verbatim through JSON"
     CHECK_FALSE(out["metadata"].contains("customFields")); // inline, no wrapper key
 }
 
+TEST_CASE("Funscript writes bookmarks/chapters as OFS timecodes and round-trips them to seconds") {
+    ofs::Funscript fs;
+    fs.actions = {{.at = 1000, .pos = 50}};
+    fs.bookmarks.push_back({.time = 83.456, .name = "intro"}); // 00:01:23.456
+    ofs::Chapter c;
+    c.name = "scene1";
+    c.startTime = 0.0;
+    c.endTime = 90.0; // 00:01:30.000
+    fs.chapters.push_back(std::move(c));
+
+    nlohmann::json j = fs;
+    CHECK(j["metadata"]["bookmarks"][0]["name"] == "intro");
+    CHECK(j["metadata"]["bookmarks"][0]["time"] == "00:01:23.456"); // string timecode, not a number
+    CHECK(j["metadata"]["chapters"][0]["startTime"] == "00:00:00.000");
+    CHECK(j["metadata"]["chapters"][0]["endTime"] == "00:01:30.000");
+    // Standard fields only: ofs-ng's chapter color / scene-view never reach the funscript.
+    CHECK_FALSE(j["metadata"]["chapters"][0].contains("color"));
+    CHECK_FALSE(j["metadata"]["chapters"][0].contains("sceneView"));
+
+    auto back = j.get<ofs::Funscript>();
+    REQUIRE(back.bookmarks.size() == 1);
+    CHECK(back.bookmarks[0].name == "intro");
+    CHECK(back.bookmarks[0].time == doctest::Approx(83.456));
+    REQUIRE(back.chapters.size() == 1);
+    CHECK(back.chapters[0].name == "scene1");
+    CHECK(back.chapters[0].startTime == doctest::Approx(0.0));
+    CHECK(back.chapters[0].endTime == doctest::Approx(90.0));
+}
+
+TEST_CASE("Funscript omits empty bookmarks/chapters from the metadata object") {
+    ofs::Funscript fs;
+    fs.actions = {{.at = 0, .pos = 0}};
+    nlohmann::json j = fs;
+    CHECK_FALSE(j["metadata"].contains("bookmarks"));
+    CHECK_FALSE(j["metadata"].contains("chapters"));
+}
+
+// An OFS-authored funscript stores bookmark/chapter times as "HH:MM:SS.mmm" strings; parse them, and
+// tolerate malformed entries (missing field, unparseable time, start > end) by skipping just those rows.
+TEST_CASE("Funscript parses OFS-style string timecodes and skips malformed bookmark/chapter entries") {
+    nlohmann::json j = {
+        {"actions", nlohmann::json::array()},
+        {"metadata",
+         {{"bookmarks", nlohmann::json::array({
+                            {{"name", "good"}, {"time", "00:00:05.500"}},
+                            {{"name", "no-time"}},                   // missing time — skipped
+                            {{"name", "bad-time"}, {"time", "abc"}}, // unparseable — skipped
+                            {{"name", "numeric"}, {"time", 5}},      // non-string — skipped
+                        })},
+          {"chapters",
+           nlohmann::json::array({
+               {{"name", "ok"}, {"startTime", "00:00:00.000"}, {"endTime", "00:00:10.000"}},
+               {{"name", "inverted"}, {"startTime", "00:00:20.000"}, {"endTime", "00:00:10.000"}}, // start>end
+               {{"name", "missing-end"}, {"startTime", "00:00:30.000"}},                           // skipped
+           })}}}};
+
+    auto fs = j.get<ofs::Funscript>();
+    REQUIRE(fs.bookmarks.size() == 1);
+    CHECK(fs.bookmarks[0].name == "good");
+    CHECK(fs.bookmarks[0].time == doctest::Approx(5.5));
+    REQUIRE(fs.chapters.size() == 1);
+    CHECK(fs.chapters[0].name == "ok");
+    CHECK(fs.chapters[0].endTime == doctest::Approx(10.0));
+    // A funscript's chapters/bookmarks are first-class, not swallowed into customFields.
+    CHECK(fs.metadata.customFields.empty());
+}
+
+TEST_CASE("Funscript accepts shorter MM:SS.mmm timecodes from other tools") {
+    nlohmann::json j = {{"actions", nlohmann::json::array()},
+                        {"metadata", {{"bookmarks", nlohmann::json::array({{{"name", "m"}, {"time", "02:03.250"}}})}}}};
+    auto fs = j.get<ofs::Funscript>();
+    REQUIRE(fs.bookmarks.size() == 1);
+    CHECK(fs.bookmarks[0].time == doctest::Approx(123.25)); // 2*60 + 3.25
+}
+
 TEST_CASE("load returns nullopt for a missing file") {
     CHECK_FALSE(ofs::Funscript::load("does_not_exist_zzz.funscript").has_value());
 }

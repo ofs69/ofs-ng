@@ -470,6 +470,44 @@ TEST_CASE("ProjectManager: export with a target path writes files and records th
     std::filesystem::remove_all(outDir);
 }
 
+// A project's bookmarks/chapters are global; on export they are written into every funscript file's
+// metadata (the standard OFS convention) so other tools — and a re-import — can read them back.
+TEST_CASE("ProjectManager: export writes the project's bookmarks and chapters into the funscript") {
+    TestProject tp;
+    ofs::AppSettings appSettings;
+    appSettings.autoBackupEnabled = false;
+    ofs::JobSystem jobSystem;
+    ofs::EffectRegistryState effectReg;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    tp.eq.freeze();
+    jobSystem.start();
+
+    tp.project.axes[0].showInStrip = true;
+    tp.project.mutate(StandardAxis::L0, [](ofs::AxisState &a) { a.actions.insert({1.0, 50}); }, tp.eq);
+    tp.project.bookmarks.bookmarks.push_back({.time = 5.5, .name = "mark"});
+    tp.project.bookmarks.chapters.push_back({.startTime = 0.0, .endTime = 10.0, .name = "scene"});
+    tp.eq.drain();
+
+    auto outDir = std::filesystem::temp_directory_path() / "ofs_test_marker_export";
+    std::filesystem::remove_all(outDir);
+
+    tp.eq.push(
+        ofs::ExportFunscriptRequestEvent{.axes = {StandardAxis::L0}, .format = 0, .targetPath = outDir.string()});
+    REQUIRE(drainUntil(tp.eq, [&] { return tp.project.state.lastExport.has_value(); }));
+
+    auto loaded = ofs::Funscript::load(outDir / "script.L0.funscript");
+    REQUIRE(loaded.has_value());
+    REQUIRE(loaded->bookmarks.size() == 1);
+    CHECK(loaded->bookmarks[0].name == "mark");
+    CHECK(loaded->bookmarks[0].time == doctest::Approx(5.5));
+    REQUIRE(loaded->chapters.size() == 1);
+    CHECK(loaded->chapters[0].name == "scene");
+    CHECK(loaded->chapters[0].startTime == doctest::Approx(0.0));
+    CHECK(loaded->chapters[0].endTime == doctest::Approx(10.0));
+
+    std::filesystem::remove_all(outDir);
+}
+
 // The remembered export config is per-project state and must survive a .ofp save/reload, or Quick
 // Export would forget the target after the project is reopened.
 TEST_CASE("ProjectManager: Quick Export config round-trips through project save and reload") {

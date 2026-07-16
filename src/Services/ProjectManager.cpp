@@ -437,9 +437,11 @@ struct ImportTrack {
 // carries its auto-detected standard role, or nullopt when its tag maps to no standard axis; the mapping
 // picker (shown on the main thread) defaults a nullopt row to the first free scratch slot.
 struct SiblingScan {
-    // Metadata of the canonical sibling — the file whose stem equals the video stem — falling back to
-    // the first match. Adopted as the project metadata on the main thread.
+    // Metadata + bookmarks/chapters of the canonical sibling — the file whose stem equals the video stem —
+    // falling back to the first match. Adopted onto the project on the main thread (primary-file wins:
+    // sibling axis files contribute their actions only, never their bookmarks/chapters).
     std::optional<FunscriptMetadata> primaryMeta;
+    std::optional<BookmarkChapterState> primaryBookmarks;
     std::vector<ImportTrack> tracks; // directory-iteration order, so scratch defaults fill S0, S1, …
 };
 
@@ -469,8 +471,10 @@ SiblingScan scanSiblingFunscripts(const std::filesystem::path &videoDir, const s
         if (!fs)
             continue;
 
-        if (!out.primaryMeta || fsStem == videoStem)
+        if (!out.primaryMeta || fsStem == videoStem) {
             out.primaryMeta = fs->metadata;
+            out.primaryBookmarks = BookmarkChapterState{.bookmarks = fs->bookmarks, .chapters = fs->chapters};
+        }
 
         if (fs->isMultiAxis()) {
             for (auto &[tag, acts] : fs->toAllAxes()) {
@@ -652,6 +656,11 @@ co::Fire ProjectManager::initNewProject(std::string mediaPath) {
 
     if (scan.primaryMeta)
         project.metadata = std::move(*scan.primaryMeta);
+    if (scan.primaryBookmarks) {
+        project.bookmarks = std::move(*scan.primaryBookmarks);
+        project.bookmarks.sortBookmarks();
+        project.bookmarks.sortChapters();
+    }
 
     // Finalize the open once placement is settled (confirmed or cancelled): restore the confirmed
     // tracks, seed the no-media fallback length, select L0, adopt any optimized copy, and load the video.
@@ -713,6 +722,10 @@ co::Fire ProjectManager::initNewProjectFromFunscript(std::filesystem::path funsc
     std::vector<ImportTrack> tracks;
     if (fs) {
         project.metadata = std::move(fs->metadata);
+        project.bookmarks.bookmarks = std::move(fs->bookmarks);
+        project.bookmarks.chapters = std::move(fs->chapters);
+        project.bookmarks.sortBookmarks();
+        project.bookmarks.sortChapters();
         appendTracksFromFunscript(tracks, *fs, fsStem, StandardAxis::L0);
     }
     if (tracks.empty())
@@ -958,30 +971,35 @@ co::Fire ProjectManager::exportMultipleFunscript10(std::vector<StandardAxis> axe
             {.outPath = outDir / ofs::util::fromUtf8(fmt::format("{}.{}.funscript", stem, tag)), .actions = actions});
     }
     FunscriptMetadata exportMeta = project.metadata;                  // copy for the worker
+    BookmarkChapterState exportMarkers = project.bookmarks;           // global bookmarks/chapters, per file
     const int64_t exportDurationSecs = std::llround(currentDuration); // media length, whole seconds
 
     struct Counts {
         int written = 0;
         int failed = 0;
     };
-    auto counts = co_await JobAwait<Counts>{
-        jobSystem, eq,
-        [jobs = std::move(writeJobs), exportMeta = std::move(exportMeta), outDir, exportDurationSecs]() -> Counts {
-            // Re-export may target a folder the user has since removed; recreate it so the replay lands.
-            std::error_code ec;
-            std::filesystem::create_directories(outDir, ec);
-            Counts c;
-            for (const auto &j : jobs) {
-                Funscript fs = Funscript::fromActions(j.actions);
-                fs.metadata = exportMeta;
-                fs.duration = exportDurationSecs;
-                if (fs.save(j.outPath))
-                    ++c.written;
-                else
-                    ++c.failed;
-            }
-            return c;
-        }};
+    auto counts =
+        co_await JobAwait<Counts>{jobSystem, eq,
+                                  [jobs = std::move(writeJobs), exportMeta = std::move(exportMeta),
+                                   exportMarkers = std::move(exportMarkers), outDir, exportDurationSecs]() -> Counts {
+                                      // Re-export may target a folder the user has since removed; recreate it so the
+                                      // replay lands.
+                                      std::error_code ec;
+                                      std::filesystem::create_directories(outDir, ec);
+                                      Counts c;
+                                      for (const auto &j : jobs) {
+                                          Funscript fs = Funscript::fromActions(j.actions);
+                                          fs.metadata = exportMeta;
+                                          fs.bookmarks = exportMarkers.bookmarks;
+                                          fs.chapters = exportMarkers.chapters;
+                                          fs.duration = exportDurationSecs;
+                                          if (fs.save(j.outPath))
+                                              ++c.written;
+                                          else
+                                              ++c.failed;
+                                      }
+                                      return c;
+                                  }};
 
     if (counts.failed > 0)
         eq.push(NotifyEvent{.level = NotifyLevel::Error,
@@ -1034,22 +1052,27 @@ co::Fire ProjectManager::exportMultiAxisFunscript(std::vector<StandardAxis> axes
     std::filesystem::path outPath = ofs::util::fromUtf8(file);
     const std::string name = ofs::util::toUtf8(outPath.filename());
     FunscriptMetadata meta = project.metadata;                        // copy for the worker
+    BookmarkChapterState markers = project.bookmarks;                 // global bookmarks/chapters
     const int64_t exportDurationSecs = std::llround(currentDuration); // media length, whole seconds
 
     // Build the combined funscript + write it on a worker.
-    bool ok = co_await JobAwait<bool>{
-        jobSystem, eq,
-        [axisData = std::move(axisData), useChannels, meta = std::move(meta), outPath, exportDurationSecs]() -> bool {
-            // Re-export may target a directory the user has since removed; recreate it so the replay lands.
-            if (outPath.has_parent_path()) {
-                std::error_code ec;
-                std::filesystem::create_directories(outPath.parent_path(), ec);
-            }
-            Funscript fs = useChannels ? Funscript::fromAxes20(axisData) : Funscript::fromAxes11(axisData);
-            fs.metadata = meta;
-            fs.duration = exportDurationSecs;
-            return fs.save(outPath);
-        }};
+    bool ok = co_await JobAwait<bool>{jobSystem, eq,
+                                      [axisData = std::move(axisData), useChannels, meta = std::move(meta),
+                                       markers = std::move(markers), outPath, exportDurationSecs]() -> bool {
+                                          // Re-export may target a directory the user has since removed; recreate it so
+                                          // the replay lands.
+                                          if (outPath.has_parent_path()) {
+                                              std::error_code ec;
+                                              std::filesystem::create_directories(outPath.parent_path(), ec);
+                                          }
+                                          Funscript fs = useChannels ? Funscript::fromAxes20(axisData)
+                                                                     : Funscript::fromAxes11(axisData);
+                                          fs.metadata = meta;
+                                          fs.bookmarks = markers.bookmarks;
+                                          fs.chapters = markers.chapters;
+                                          fs.duration = exportDurationSecs;
+                                          return fs.save(outPath);
+                                      }};
 
     if (ok)
         eq.push(NotifyEvent{.level = NotifyLevel::Success, .message = Str::PmExportedOne.fmt(name)});

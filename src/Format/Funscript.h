@@ -1,5 +1,6 @@
 ﻿#pragma once
 
+#include "Core/BookmarkChapterState.h"
 #include "Core/FunscriptMetadata.h"
 #include "Core/ScriptAxisAction.h"
 #include "Core/VectorSet.h"
@@ -41,6 +42,13 @@ struct Funscript {
     // The shared document metadata (same struct the editor and project files use). On disk the funscript
     // spells the URLs snake_case (script_url/video_url) — that mapping happens in to_json/from_json.
     FunscriptMetadata metadata;
+
+    // Standard funscript metadata.bookmarks / metadata.chapters (the OFS interop convention). On disk the
+    // times are "HH:MM:SS.mmm" strings; here they are seconds, converted in to_json/from_json. A Chapter's
+    // color and scene-view are ofs-ng-only and never written to the funscript — only the .ofp project file
+    // carries them, so imported chapters keep the default color.
+    std::vector<Bookmark> bookmarks;
+    std::vector<Chapter> chapters;
 
     std::vector<AxisEntry> axes;                         // funscript 1.1: "axes" array
     std::map<std::string, std::vector<Action>> channels; // funscript 2.0: "channels" object

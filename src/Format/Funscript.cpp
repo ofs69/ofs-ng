@@ -4,7 +4,14 @@
 #include "Util/Log.h"
 #include "Util/PathUtil.h"
 #include <algorithm>
+#include <cerrno>
+#include <charconv>
 #include <cmath>
+#include <cstdlib>
+#include <optional>
+#include <spdlog/fmt/fmt.h>
+#include <string>
+#include <vector>
 
 namespace ofs {
 
@@ -20,8 +27,66 @@ static int64_t secondsToMs(double seconds) {
 
 // Standard on-disk keys (snake_case). Any other key in the metadata object is a custom field.
 static constexpr std::initializer_list<std::string_view> kFunscriptStandardKeys = {
-    "version", "inverted",  "range",      "type", "title",      "creator", "description",
-    "notes",   "video_url", "script_url", "tags", "performers", "license", "duration"};
+    "version",   "inverted",   "range", "type",       "title",   "creator",  "description", "notes",
+    "video_url", "script_url", "tags",  "performers", "license", "duration", "bookmarks",   "chapters"};
+
+// Format seconds as the funscript timecode "HH:MM:SS.mmm" (OFS convention). Plain std::string — usable on
+// a JobSystem worker, unlike TimeUtil::formatTime which returns a main-thread-only frame-arena pointer.
+// Computed at whole-millisecond precision so it round-trips exactly through parseTimecode.
+static std::string formatTimecode(double seconds) {
+    if (std::isnan(seconds) || std::isinf(seconds) || seconds < 0.0)
+        seconds = 0.0;
+    const int64_t totalMs = std::llround(seconds * 1000.0);
+    const int64_t h = totalMs / 3'600'000;
+    const int m = static_cast<int>((totalMs / 60'000) % 60);
+    const int s = static_cast<int>((totalMs / 1'000) % 60);
+    const int ms = static_cast<int>(totalMs % 1'000);
+    return fmt::format("{:02}:{:02}:{:02}.{:03}", h, m, s, ms);
+}
+
+// Parse a funscript timecode back to seconds. Accepts "HH:MM:SS.mmm" and, leniently, the shorter
+// "MM:SS.mmm" / "SS.mmm" other tools may write. All fields but the last must be non-negative integers;
+// the last is a decimal seconds value. Returns nullopt for anything malformed so a bad entry is skipped
+// rather than failing the whole load (matching OFS's import tolerance).
+static std::optional<double> parseTimecode(const std::string &s) {
+    if (s.empty())
+        return std::nullopt;
+
+    std::vector<std::string> parts;
+    for (size_t start = 0;;) {
+        const size_t colon = s.find(':', start);
+        parts.push_back(s.substr(start, colon == std::string::npos ? std::string::npos : colon - start));
+        if (colon == std::string::npos)
+            break;
+        start = colon + 1;
+    }
+    if (parts.empty() || parts.size() > 3)
+        return std::nullopt;
+
+    // Fields carry left-to-right: total = total*60 + field, seconds last. Works for [H,M,S], [M,S], [S].
+    double total = 0.0;
+    for (size_t i = 0; i < parts.size(); ++i) {
+        const std::string &p = parts[i];
+        if (p.empty())
+            return std::nullopt;
+        double value = 0.0;
+        if (i + 1 == parts.size()) {
+            char *end = nullptr;
+            errno = 0;
+            value = std::strtod(p.c_str(), &end);
+            if (end != p.c_str() + p.size() || errno != 0 || value < 0.0)
+                return std::nullopt;
+        } else {
+            int iv = 0;
+            const auto res = std::from_chars(p.data(), p.data() + p.size(), iv);
+            if (res.ec != std::errc{} || res.ptr != p.data() + p.size() || iv < 0)
+                return std::nullopt;
+            value = static_cast<double>(iv);
+        }
+        total = total * 60.0 + value;
+    }
+    return total;
+}
 
 // Build the on-disk "metadata" object: the shared document metadata (URLs spelled snake_case here) plus
 // the funscript-format header fields carried on Funscript. The editor-facing camelCase serialization of
@@ -35,6 +100,23 @@ static nlohmann::json funscriptMetadataToJson(const Funscript &f) {
                         {"notes", m.notes},           {"video_url", m.videoUrl},
                         {"script_url", m.scriptUrl},  {"tags", m.tags},
                         {"performers", m.performers}, {"license", m.license}};
+
+    // Standard OFS bookmarks/chapters. Only emitted when present so a script with none stays byte-clean.
+    // Chapters write only name/startTime/endTime — color and scene-view are ofs-ng-only (kept in the .ofp).
+    if (!f.bookmarks.empty()) {
+        auto arr = nlohmann::json::array();
+        for (const auto &b : f.bookmarks)
+            arr.push_back({{"name", b.name}, {"time", formatTimecode(b.time)}});
+        j["bookmarks"] = std::move(arr);
+    }
+    if (!f.chapters.empty()) {
+        auto arr = nlohmann::json::array();
+        for (const auto &c : f.chapters)
+            arr.push_back(
+                {{"name", c.name}, {"startTime", formatTimecode(c.startTime)}, {"endTime", formatTimecode(c.endTime)}});
+        j["chapters"] = std::move(arr);
+    }
+
     writeCustomFields(j, m.customFields, kFunscriptStandardKeys);
     return j;
 }
@@ -56,6 +138,45 @@ static void funscriptMetadataFromJson(const nlohmann::json &j, Funscript &f) {
     m.tags = j.value("tags", std::vector<std::string>{});
     m.performers = j.value("performers", std::vector<std::string>{});
     m.license = j.value("license", "");
+
+    // Standard OFS bookmarks/chapters. A malformed entry (missing/non-string field, unparseable time, or a
+    // chapter with start > end) is skipped rather than failing the load, matching how OFS imports them.
+    f.bookmarks.clear();
+    if (const auto it = j.find("bookmarks"); it != j.end() && it->is_array()) {
+        for (const auto &jb : *it) {
+            if (!jb.is_object())
+                continue;
+            const auto n = jb.find("name");
+            const auto t = jb.find("time");
+            if (n == jb.end() || t == jb.end() || !n->is_string() || !t->is_string())
+                continue;
+            if (const auto secs = parseTimecode(t->get<std::string>()))
+                f.bookmarks.push_back({.time = *secs, .name = n->get<std::string>()});
+        }
+    }
+    f.chapters.clear();
+    if (const auto it = j.find("chapters"); it != j.end() && it->is_array()) {
+        for (const auto &jc : *it) {
+            if (!jc.is_object())
+                continue;
+            const auto n = jc.find("name");
+            const auto st = jc.find("startTime");
+            const auto et = jc.find("endTime");
+            if (n == jc.end() || st == jc.end() || et == jc.end() || !n->is_string() || !st->is_string() ||
+                !et->is_string())
+                continue;
+            const auto start = parseTimecode(st->get<std::string>());
+            const auto end = parseTimecode(et->get<std::string>());
+            if (!start || !end || *start > *end)
+                continue;
+            Chapter c;
+            c.name = n->get<std::string>();
+            c.startTime = *start;
+            c.endTime = *end;
+            f.chapters.push_back(std::move(c));
+        }
+    }
+
     readCustomFields(j, m.customFields, kFunscriptStandardKeys);
 }
 
