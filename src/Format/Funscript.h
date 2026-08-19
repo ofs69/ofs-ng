@@ -28,8 +28,10 @@ struct Funscript {
     std::vector<Action> actions;
 
     // Funscript-format header fields describing the on-disk encoding (version/inverted/range/type); the
-    // editor never shows or mutates these — read on load, written with these defaults on save, living
-    // inside the "metadata" json object on disk per the funscript spec.
+    // editor never shows or mutates these — read on load, written with these defaults on save.
+    // version/inverted/range are written at the top level of the file, where the funscript spec puts
+    // them, and are also accepted inside "metadata" on load (where other tools — and ofs-ng up to 0.1.x —
+    // put them). `type` is a metadata field in both directions.
     std::string version = "1.0";
     bool inverted = false;
     int range = 100;

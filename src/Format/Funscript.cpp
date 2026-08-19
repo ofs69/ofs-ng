@@ -11,6 +11,7 @@
 #include <optional>
 #include <spdlog/fmt/fmt.h>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace ofs {
@@ -89,17 +90,22 @@ static std::optional<double> parseTimecode(const std::string &s) {
 }
 
 // Build the on-disk "metadata" object: the shared document metadata (URLs spelled snake_case here) plus
-// the funscript-format header fields carried on Funscript. The editor-facing camelCase serialization of
-// FunscriptMetadata lives in FunscriptMetadata.cpp and is used by the .ofp project format, not here.
+// type/duration. version/inverted/range are not here — they belong at the top level of the file (see
+// to_json). The editor-facing camelCase serialization of FunscriptMetadata lives in FunscriptMetadata.cpp
+// and is used by the .ofp project format, not here.
 static nlohmann::json funscriptMetadataToJson(const Funscript &f) {
     const FunscriptMetadata &m = f.metadata;
-    nlohmann::json j = {{"version", f.version},       {"inverted", f.inverted},
-                        {"range", f.range},           {"type", f.type},
-                        {"duration", f.duration},     {"title", m.title},
-                        {"creator", m.creator},       {"description", m.description},
-                        {"notes", m.notes},           {"video_url", m.videoUrl},
-                        {"script_url", m.scriptUrl},  {"tags", m.tags},
-                        {"performers", m.performers}, {"license", m.license}};
+    nlohmann::json j = {{"type", f.type},
+                        {"duration", f.duration},
+                        {"title", m.title},
+                        {"creator", m.creator},
+                        {"description", m.description},
+                        {"notes", m.notes},
+                        {"video_url", m.videoUrl},
+                        {"script_url", m.scriptUrl},
+                        {"tags", m.tags},
+                        {"performers", m.performers},
+                        {"license", m.license}};
 
     // Standard OFS bookmarks/chapters. Only emitted when present so a script with none stays byte-clean.
     // Chapters write only name/startTime/endTime — color and scene-view are ofs-ng-only (kept in the .ofp).
@@ -121,23 +127,43 @@ static nlohmann::json funscriptMetadataToJson(const Funscript &f) {
     return j;
 }
 
-static void funscriptMetadataFromJson(const nlohmann::json &j, Funscript &f) {
-    f.version = j.value("version", "1.0");
-    f.inverted = j.value("inverted", false);
-    f.range = j.value("range", 100);
-    f.type = j.value("type", "basic");
-    f.duration = j.value("duration", (int64_t)0);
+// version/inverted/range live at the top level of the file per the funscript spec — that is where we
+// write them — but plenty of scripts (including ofs-ng's own output up to 0.1.x) carry them inside
+// "metadata" instead. Prefer the spec location, fall back to metadata, then to the default; jsonValueOr
+// degrades a present-but-mistyped value to the next candidate. They stay in kFunscriptStandardKeys so a
+// metadata copy is consumed rather than promoted to a custom field and re-emitted forever.
+template <class T>
+static T headerField(const nlohmann::json &root, const nlohmann::json &meta, std::string_view key, T fallback) {
+    using ofs::util::jsonValueOr;
+    return jsonValueOr(root, key, jsonValueOr(meta, key, std::move(fallback)));
+}
+
+// `root` is the whole file, `j` its "metadata" object (an empty object when the file has none). Every
+// read goes through jsonValueOr: foreign files routinely spell a field with the wrong JSON type (a
+// numeric "version", a fractional "duration"), and one such field must degrade on its own rather than
+// throw and sink the entire import.
+static void funscriptMetadataFromJson(const nlohmann::json &root, const nlohmann::json &j, Funscript &f) {
+    using ofs::util::jsonValueOr;
+
+    f.version = headerField(root, j, "version", std::string("1.0"));
+    f.inverted = headerField(root, j, "inverted", false);
+    // range/duration are whole numbers here but arrive as JSON "number" — read as double so a
+    // fractional encoding narrows instead of falling back to the default.
+    f.range = static_cast<int>(headerField(root, j, "range", 100.0));
+    f.type = jsonValueOr(j, "type", std::string("basic"));
+    f.duration = static_cast<int64_t>(jsonValueOr(j, "duration", 0.0));
 
     FunscriptMetadata &m = f.metadata;
-    m.title = j.value("title", "");
-    m.creator = j.value("creator", "");
-    m.description = j.value("description", "");
-    m.notes = j.value("notes", "");
-    m.videoUrl = j.value("video_url", "");
-    m.scriptUrl = j.value("script_url", "");
-    m.tags = j.value("tags", std::vector<std::string>{});
-    m.performers = j.value("performers", std::vector<std::string>{});
-    m.license = j.value("license", "");
+    m.title = jsonValueOr(j, "title", std::string{});
+    // Some exporters name the script's author at the top level instead of metadata.creator.
+    m.creator = jsonValueOr(j, "creator", jsonValueOr(root, "author", std::string{}));
+    m.description = jsonValueOr(j, "description", std::string{});
+    m.notes = jsonValueOr(j, "notes", std::string{});
+    m.videoUrl = jsonValueOr(j, "video_url", std::string{});
+    m.scriptUrl = jsonValueOr(j, "script_url", std::string{});
+    m.tags = jsonValueOr(j, "tags", std::vector<std::string>{});
+    m.performers = jsonValueOr(j, "performers", std::vector<std::string>{});
+    m.license = jsonValueOr(j, "license", std::string{});
 
     // Standard OFS bookmarks/chapters. A malformed entry (missing/non-string field, unparseable time, or a
     // chapter with start > end) is skipped rather than failing the load, matching how OFS imports them.
@@ -180,8 +206,31 @@ static void funscriptMetadataFromJson(const nlohmann::json &j, Funscript &f) {
     readCustomFields(j, m.customFields, kFunscriptStandardKeys);
 }
 
+// Read an actions array element-wise. Two tolerances, both matching how bookmarks/chapters are read: a
+// malformed entry is skipped rather than dropping every action with it, and at/pos arrive as JSON
+// "number" — some tools write fractional milliseconds — so they are rounded rather than rejected.
+static std::vector<Funscript::Action> readActions(const nlohmann::json &arr) {
+    std::vector<Funscript::Action> out;
+    out.reserve(arr.size());
+    for (const auto &ja : arr) {
+        if (!ja.is_object())
+            continue;
+        const auto at = ja.find("at");
+        const auto pos = ja.find("pos");
+        if (at == ja.end() || pos == ja.end() || !at->is_number() || !pos->is_number())
+            continue;
+        out.push_back(
+            {.at = std::llround(at->get<double>()), .pos = static_cast<int>(std::lround(pos->get<double>()))});
+    }
+    return out;
+}
+
 void to_json(nlohmann::json &j, const Funscript &f) {
-    j = nlohmann::json{{"actions", f.actions}, {"metadata", funscriptMetadataToJson(f)}};
+    j = nlohmann::json{{"version", f.version},
+                       {"inverted", f.inverted},
+                       {"range", f.range},
+                       {"actions", f.actions},
+                       {"metadata", funscriptMetadataToJson(f)}};
     if (!f.axes.empty()) {
         auto axesArr = nlohmann::json::array();
         for (const auto &ax : f.axes)
@@ -201,9 +250,13 @@ void from_json(const nlohmann::json &j, Funscript &f) {
     using ofs::util::jsonObjectIf;
     using ofs::util::jsonValueOr;
 
-    f.actions = jsonValueOr(j, "actions", std::vector<Funscript::Action>{});
-    if (const auto it = j.find("metadata"); it != j.end() && it->is_object())
-        funscriptMetadataFromJson(*it, f);
+    if (const auto *acts = jsonArrayIf(j, "actions"))
+        f.actions = readActions(*acts);
+    // Called even without a "metadata" object: a minimal spec-layout file keeps its header fields
+    // (version/inverted/range) at the top level and may carry no metadata block at all.
+    const nlohmann::json emptyMeta = nlohmann::json::object();
+    const auto meta = j.find("metadata");
+    funscriptMetadataFromJson(j, (meta != j.end() && meta->is_object()) ? *meta : emptyMeta, f);
 
     // funscript 1.1: "axes" array
     f.axes.clear();
@@ -211,7 +264,8 @@ void from_json(const nlohmann::json &j, Funscript &f) {
         for (const auto &ax : *axes) {
             Funscript::AxisEntry entry;
             entry.id = jsonValueOr(ax, "id", std::string{});
-            entry.actions = jsonValueOr(ax, "actions", std::vector<Funscript::Action>{});
+            if (const auto *acts = jsonArrayIf(ax, "actions"))
+                entry.actions = readActions(*acts);
             if (!entry.id.empty())
                 f.axes.push_back(std::move(entry));
         }
@@ -221,8 +275,8 @@ void from_json(const nlohmann::json &j, Funscript &f) {
     f.channels.clear();
     if (const auto *channels = jsonObjectIf(j, "channels")) {
         for (const auto &[key, val] : channels->items())
-            if (jsonArrayIf(val, "actions"))
-                f.channels[key] = val["actions"].get<std::vector<Funscript::Action>>();
+            if (const auto *acts = jsonArrayIf(val, "actions"))
+                f.channels[key] = readActions(*acts);
     }
 }
 
@@ -238,6 +292,9 @@ bool Funscript::save(const std::filesystem::path &path) const {
         // desired on-disk order. (Reordering, not re-sorting: keys within metadata stay as to_json emits.)
         nlohmann::json body = *this;
         nlohmann::ordered_json j;
+        j["version"] = body["version"];
+        j["inverted"] = body["inverted"];
+        j["range"] = body["range"];
         j["metadata"] = body["metadata"];
         j["actions"] = body["actions"];
         if (body.contains("axes"))

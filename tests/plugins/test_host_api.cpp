@@ -439,7 +439,7 @@ TEST_CASE("getFunscriptJson serializes axes per the requested format version") {
     CHECK(j10["actions"][0]["at"] == 1000); // 1.0 s → 1000 ms
     CHECK(j10["actions"][0]["pos"] == 40);
     CHECK(j10["metadata"]["title"] == "MyTitle");
-    CHECK(j10["metadata"]["version"] == "1.0");
+    CHECK(j10["version"] == "1.0"); // top level, per the funscript spec
     CHECK_FALSE(j10.contains("axes"));
     CHECK_FALSE(j10.contains("channels"));
 
@@ -450,14 +450,14 @@ TEST_CASE("getFunscriptJson serializes axes per the requested format version") {
     REQUIRE(j11.contains("axes"));
     CHECK(j11["axes"][0]["id"] == "R0");
     CHECK(j11["axes"][0]["actions"].size() == 1);
-    CHECK(j11["metadata"]["version"] == "1.1");
+    CHECK(j11["version"] == "1.1");
 
     // 2.0 multi-axis: the secondary axis goes under "channels" instead.
     REQUIRE(fx.h().getFunscriptJson(fx.cv(), both, 2, OfsFunscript20, buf, sizeof(buf)) > 0);
     const auto j20 = nlohmann::json::parse(buf);
     REQUIRE(j20.contains("channels"));
     CHECK(j20["channels"].contains("R0"));
-    CHECK(j20["metadata"]["version"] == "2.0");
+    CHECK(j20["version"] == "2.0");
 
     // 1.0 with several roles is still single-axis: only the first valid axis is serialized.
     REQUIRE(fx.h().getFunscriptJson(fx.cv(), both, 2, OfsFunscript10, buf, sizeof(buf)) > 0);

@@ -112,10 +112,13 @@ TEST_CASE("save emits metadata before actions on disk") {
         text = buf.str();
     }
 
+    const auto versionPos = text.find("\"version\"");
     const auto metaPos = text.find("\"metadata\"");
     const auto actionsPos = text.find("\"actions\"");
+    REQUIRE(versionPos != std::string::npos);
     REQUIRE(metaPos != std::string::npos);
     REQUIRE(actionsPos != std::string::npos);
+    CHECK(versionPos < metaPos); // spec header fields lead, then metadata, then the bulk actions array
     CHECK(metaPos < actionsPos);
 
     std::filesystem::remove(path);
@@ -229,6 +232,123 @@ TEST_CASE("Funscript accepts shorter MM:SS.mmm timecodes from other tools") {
     auto fs = j.get<ofs::Funscript>();
     REQUIRE(fs.bookmarks.size() == 1);
     CHECK(fs.bookmarks[0].time == doctest::Approx(123.25)); // 2*60 + 3.25
+}
+
+// Foreign funscripts carry the header fields where the original spec puts them — "version"/"inverted"/
+// "range" at the top level — and often spell metadata.version as a *number*. A single mismatched type
+// must degrade to the default, never sink the whole file.
+TEST_CASE("Funscript imports a spec-layout file with top-level header fields and a numeric version") {
+    nlohmann::json j = {
+        {"version", "1.0"},
+        {"inverted", true},
+        {"range", 90},
+        {"actions", nlohmann::json::array({{{"at", 1000}, {"pos", 50}}})},
+        {"metadata",
+         {{"type", "basic"},
+          {"video_url", "v"},
+          {"studio", "s"}, // custom
+          {"title", "t"},
+          {"description", "d"},
+          {"duration", 1234.5}, // fractional seconds, not an integer
+          {"performers", nlohmann::json::array({"p"})},
+          {"tags", nlohmann::json::array({"a"})},
+          {"released_on", "2026-01-01"}, // custom
+          {"bookmarks", nlohmann::json::array({{{"name", "b"}, {"time", "00:00:05.500"}}})},
+          {"chapters",
+           nlohmann::json::array({{{"name", "c"}, {"startTime", "00:00:00.000"}, {"endTime", "00:00:10.000"}}})},
+          {"version", 1.0},           // number where the spec says string
+          {"average_speed", 42.5}}}}; // custom
+
+    auto fs = j.get<ofs::Funscript>();
+    REQUIRE(fs.actions.size() == 1);
+    CHECK(fs.metadata.title == "t");
+    CHECK(fs.metadata.videoUrl == "v");
+    CHECK(fs.duration == 1234);
+    CHECK(fs.inverted); // read from the top level, where the spec puts it
+    CHECK(fs.range == 90);
+    CHECK(fs.version == "1.0");
+    REQUIRE(fs.bookmarks.size() == 1);
+    REQUIRE(fs.chapters.size() == 1);
+    CHECK(fs.metadata.customFields.size() == 3); // studio, released_on, average_speed
+}
+
+// Every metadata field is read defensively: a wrong type anywhere degrades that one field.
+TEST_CASE("Funscript tolerates mistyped metadata fields instead of failing the load") {
+    nlohmann::json j = {{"actions", nlohmann::json::array({{{"at", 0}, {"pos", 0}}})},
+                        {"metadata",
+                         {{"title", 42},                              // number where a string belongs
+                          {"tags", "not-an-array"},                   // string where an array belongs
+                          {"performers", nlohmann::json::array({1})}, // array of the wrong element type
+                          {"duration", "1234"},                       // string where a number belongs
+                          {"video_url", "v"}}}};
+
+    auto fs = j.get<ofs::Funscript>();
+    CHECK(fs.metadata.title.empty());
+    CHECK(fs.metadata.tags.empty());
+    CHECK(fs.metadata.performers.empty());
+    CHECK(fs.duration == 0);
+    CHECK(fs.metadata.videoUrl == "v"); // the well-typed neighbors still load
+}
+
+// Other tools write at/pos as plain JSON numbers, sometimes fractional. Round them instead of letting a
+// float sink the whole array, and skip a malformed entry rather than the rest of the script with it.
+TEST_CASE("Funscript reads fractional action numbers and skips malformed entries") {
+    nlohmann::json j = {{"actions", nlohmann::json::array({
+                                        {{"at", 1000.6}, {"pos", 49.5}},
+                                        {{"at", 2000}, {"pos", 80}},
+                                        {{"at", "3000"}, {"pos", 10}}, // string — skipped
+                                        {{"at", 4000}},                // no pos — skipped
+                                        nlohmann::json::array(),       // not an object — skipped
+                                    })}};
+
+    auto fs = j.get<ofs::Funscript>();
+    REQUIRE(fs.actions.size() == 2);
+    CHECK(fs.actions[0].at == 1001); // rounded, not truncated
+    CHECK(fs.actions[0].pos == 50);
+    CHECK(fs.actions[1].at == 2000);
+}
+
+// version/inverted/range are file-level fields in the funscript spec, so that is where we write them —
+// the "metadata" object carries only type/duration and the document metadata.
+TEST_CASE("Funscript writes version/inverted/range at the top level, not inside metadata") {
+    ofs::Funscript fs;
+    fs.actions = {{.at = 0, .pos = 0}};
+    fs.version = "1.1";
+    fs.inverted = true;
+    fs.range = 90;
+    fs.duration = 120;
+
+    nlohmann::json j = fs;
+    CHECK(j["version"] == "1.1");
+    CHECK(j["inverted"] == true);
+    CHECK(j["range"] == 90);
+    CHECK_FALSE(j["metadata"].contains("version"));
+    CHECK_FALSE(j["metadata"].contains("inverted"));
+    CHECK_FALSE(j["metadata"].contains("range"));
+    CHECK(j["metadata"]["duration"] == 120); // type/duration stay metadata fields
+
+    auto back = j.get<ofs::Funscript>();
+    CHECK(back.version == "1.1");
+    CHECK(back.inverted);
+    CHECK(back.range == 90);
+    CHECK(back.metadata.customFields.empty()); // never round-tripped as custom fields
+}
+
+// ofs-ng wrote the header fields inside "metadata" up to 0.1.x; those files must still read back the
+// same, and re-exporting one must move the fields up rather than duplicate them.
+TEST_CASE("Funscript reads header fields left inside metadata by an older build") {
+    nlohmann::json j = {{"actions", nlohmann::json::array()},
+                        {"metadata", {{"version", "1.1"}, {"inverted", true}, {"range", 80}, {"title", "t"}}}};
+
+    auto fs = j.get<ofs::Funscript>();
+    CHECK(fs.version == "1.1");
+    CHECK(fs.inverted);
+    CHECK(fs.range == 80);
+    CHECK(fs.metadata.customFields.empty());
+
+    nlohmann::json out = fs;
+    CHECK(out["range"] == 80);
+    CHECK_FALSE(out["metadata"].contains("range"));
 }
 
 TEST_CASE("load returns nullopt for a missing file") {
