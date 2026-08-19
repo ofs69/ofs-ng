@@ -147,90 +147,116 @@ bool isAppVarVec2(int appVarIdx) {
     return appVarIdx == AppVar_NodePadding;
 }
 
+// Name tables for enums we do not own are bound to their enum value so the asserts check
+// *order* as well as count. ImGui's and imnodes' enums gain entries on a submodule bump,
+// sometimes inserted mid-enum; a count-only check cannot see an insertion paired with a
+// removal, and a shifted table silently maps a saved theme's keys onto the wrong slot.
+// The AppCol_/AppVar_ tables keep the count-only check: those enums move only in a
+// deliberate local edit, visible in the same diff as the names.
+struct EnumName {
+    int value;
+    const char *name;
+};
+
+template <std::size_t N> constexpr bool inEnumOrder(const EnumName (&table)[N]) {
+    for (std::size_t i = 0; i < N; ++i)
+        if (table[i].value != static_cast<int>(i))
+            return false;
+    return true;
+}
+
 // Names for the ImGui built-in style vars, indexed by ImGuiStyleVar. ImGui exposes
 // no public GetStyleVarName, so this table is hand-maintained — it MUST track the
-// ImGuiStyleVar_ enum in lib/imgui/imgui.h (the static_assert guards the count).
+// ImGuiStyleVar_ enum in lib/imgui/imgui.h (the static_asserts guard count and order).
 // Names match the imguiVars keys emitted by tools/gen_theme.py.
-constexpr const char *kImGuiStyleVarNames[] = {"Alpha",
-                                               "DisabledAlpha",
-                                               "WindowPadding",
-                                               "WindowRounding",
-                                               "WindowBorderSize",
-                                               "WindowMinSize",
-                                               "WindowTitleAlign",
-                                               "ChildRounding",
-                                               "ChildBorderSize",
-                                               "PopupRounding",
-                                               "PopupBorderSize",
-                                               "FramePadding",
-                                               "FrameRounding",
-                                               "FrameBorderSize",
-                                               "ItemSpacing",
-                                               "ItemInnerSpacing",
-                                               "IndentSpacing",
-                                               "CellPadding",
-                                               "ScrollbarSize",
-                                               "ScrollbarRounding",
-                                               "ScrollbarPadding",
-                                               "GrabMinSize",
-                                               "GrabRounding",
-                                               "ImageRounding",
-                                               "ImageBorderSize",
-                                               "TabRounding",
-                                               "TabBorderSize",
-                                               "TabMinWidthBase",
-                                               "TabMinWidthShrink",
-                                               "TabBarBorderSize",
-                                               "TabBarOverlineSize",
-                                               "TableAngledHeadersAngle",
-                                               "TableAngledHeadersTextAlign",
-                                               "TreeLinesSize",
-                                               "TreeLinesRounding",
-                                               "MenuItemRounding",
-                                               "SelectableRounding",
-                                               "DragDropTargetRounding",
-                                               "ButtonTextAlign",
-                                               "SelectableTextAlign",
-                                               "SeparatorSize",
-                                               "SeparatorTextBorderSize",
-                                               "SeparatorTextAlign",
-                                               "SeparatorTextPadding",
-                                               "DockingSeparatorSize"};
+constexpr EnumName kImGuiStyleVarNames[] = {
+    {.value = ImGuiStyleVar_Alpha, .name = "Alpha"},
+    {.value = ImGuiStyleVar_DisabledAlpha, .name = "DisabledAlpha"},
+    {.value = ImGuiStyleVar_WindowPadding, .name = "WindowPadding"},
+    {.value = ImGuiStyleVar_WindowRounding, .name = "WindowRounding"},
+    {.value = ImGuiStyleVar_WindowBorderSize, .name = "WindowBorderSize"},
+    {.value = ImGuiStyleVar_WindowMinSize, .name = "WindowMinSize"},
+    {.value = ImGuiStyleVar_WindowTitleAlign, .name = "WindowTitleAlign"},
+    {.value = ImGuiStyleVar_ChildRounding, .name = "ChildRounding"},
+    {.value = ImGuiStyleVar_ChildBorderSize, .name = "ChildBorderSize"},
+    {.value = ImGuiStyleVar_PopupRounding, .name = "PopupRounding"},
+    {.value = ImGuiStyleVar_PopupBorderSize, .name = "PopupBorderSize"},
+    {.value = ImGuiStyleVar_FramePadding, .name = "FramePadding"},
+    {.value = ImGuiStyleVar_FrameRounding, .name = "FrameRounding"},
+    {.value = ImGuiStyleVar_FrameBorderSize, .name = "FrameBorderSize"},
+    {.value = ImGuiStyleVar_ItemSpacing, .name = "ItemSpacing"},
+    {.value = ImGuiStyleVar_ItemInnerSpacing, .name = "ItemInnerSpacing"},
+    {.value = ImGuiStyleVar_IndentSpacing, .name = "IndentSpacing"},
+    {.value = ImGuiStyleVar_CellPadding, .name = "CellPadding"},
+    {.value = ImGuiStyleVar_ScrollbarSize, .name = "ScrollbarSize"},
+    {.value = ImGuiStyleVar_ScrollbarRounding, .name = "ScrollbarRounding"},
+    {.value = ImGuiStyleVar_ScrollbarPadding, .name = "ScrollbarPadding"},
+    {.value = ImGuiStyleVar_GrabMinSize, .name = "GrabMinSize"},
+    {.value = ImGuiStyleVar_GrabRounding, .name = "GrabRounding"},
+    {.value = ImGuiStyleVar_ImageRounding, .name = "ImageRounding"},
+    {.value = ImGuiStyleVar_ImageBorderSize, .name = "ImageBorderSize"},
+    {.value = ImGuiStyleVar_TabRounding, .name = "TabRounding"},
+    {.value = ImGuiStyleVar_TabBorderSize, .name = "TabBorderSize"},
+    {.value = ImGuiStyleVar_TabMinWidthBase, .name = "TabMinWidthBase"},
+    {.value = ImGuiStyleVar_TabMinWidthShrink, .name = "TabMinWidthShrink"},
+    {.value = ImGuiStyleVar_TabBarBorderSize, .name = "TabBarBorderSize"},
+    {.value = ImGuiStyleVar_TabBarOverlineSize, .name = "TabBarOverlineSize"},
+    {.value = ImGuiStyleVar_TableAngledHeadersAngle, .name = "TableAngledHeadersAngle"},
+    {.value = ImGuiStyleVar_TableAngledHeadersTextAlign, .name = "TableAngledHeadersTextAlign"},
+    {.value = ImGuiStyleVar_TreeLinesSize, .name = "TreeLinesSize"},
+    {.value = ImGuiStyleVar_TreeLinesRounding, .name = "TreeLinesRounding"},
+    {.value = ImGuiStyleVar_MenuItemRounding, .name = "MenuItemRounding"},
+    {.value = ImGuiStyleVar_SelectableRounding, .name = "SelectableRounding"},
+    {.value = ImGuiStyleVar_DragDropTargetRounding, .name = "DragDropTargetRounding"},
+    {.value = ImGuiStyleVar_ButtonTextAlign, .name = "ButtonTextAlign"},
+    {.value = ImGuiStyleVar_SelectableTextAlign, .name = "SelectableTextAlign"},
+    {.value = ImGuiStyleVar_SeparatorSize, .name = "SeparatorSize"},
+    {.value = ImGuiStyleVar_SeparatorTextBorderSize, .name = "SeparatorTextBorderSize"},
+    {.value = ImGuiStyleVar_SeparatorTextAlign, .name = "SeparatorTextAlign"},
+    {.value = ImGuiStyleVar_SeparatorTextPadding, .name = "SeparatorTextPadding"},
+    {.value = ImGuiStyleVar_DockingSeparatorSize, .name = "DockingSeparatorSize"},
+};
 static_assert(std::size(kImGuiStyleVarNames) == ImGuiStyleVar_COUNT,
               "kImGuiStyleVarNames out of sync with ImGuiStyleVar_ enum (lib/imgui/imgui.h)");
+static_assert(inEnumOrder(kImGuiStyleVarNames),
+              "kImGuiStyleVarNames out of order vs the ImGuiStyleVar_ enum (lib/imgui/imgui.h)");
 
 // Names for the imnodes structural colors, indexed by ImNodesCol. Matches the
 // nodes.colors keys emitted by tools/gen_theme.py.
-constexpr const char *kImNodesColNames[] = {"NodeBackground",
-                                            "NodeBackgroundHovered",
-                                            "NodeBackgroundSelected",
-                                            "NodeOutline",
-                                            "TitleBar",
-                                            "TitleBarHovered",
-                                            "TitleBarSelected",
-                                            "Link",
-                                            "LinkHovered",
-                                            "LinkSelected",
-                                            "Pin",
-                                            "PinHovered",
-                                            "BoxSelector",
-                                            "BoxSelectorOutline",
-                                            "GridBackground",
-                                            "GridLine",
-                                            "GridLinePrimary",
-                                            "MiniMapBackground",
-                                            "MiniMapBackgroundHovered",
-                                            "MiniMapOutline",
-                                            "MiniMapOutlineHovered",
-                                            "MiniMapNodeBackground",
-                                            "MiniMapNodeBackgroundHovered",
-                                            "MiniMapNodeBackgroundSelected",
-                                            "MiniMapNodeOutline",
-                                            "MiniMapLink",
-                                            "MiniMapLinkSelected",
-                                            "MiniMapCanvas",
-                                            "MiniMapCanvasOutline"};
+constexpr EnumName kImNodesColNames[] = {
+    {.value = ImNodesCol_NodeBackground, .name = "NodeBackground"},
+    {.value = ImNodesCol_NodeBackgroundHovered, .name = "NodeBackgroundHovered"},
+    {.value = ImNodesCol_NodeBackgroundSelected, .name = "NodeBackgroundSelected"},
+    {.value = ImNodesCol_NodeOutline, .name = "NodeOutline"},
+    {.value = ImNodesCol_TitleBar, .name = "TitleBar"},
+    {.value = ImNodesCol_TitleBarHovered, .name = "TitleBarHovered"},
+    {.value = ImNodesCol_TitleBarSelected, .name = "TitleBarSelected"},
+    {.value = ImNodesCol_Link, .name = "Link"},
+    {.value = ImNodesCol_LinkHovered, .name = "LinkHovered"},
+    {.value = ImNodesCol_LinkSelected, .name = "LinkSelected"},
+    {.value = ImNodesCol_Pin, .name = "Pin"},
+    {.value = ImNodesCol_PinHovered, .name = "PinHovered"},
+    {.value = ImNodesCol_BoxSelector, .name = "BoxSelector"},
+    {.value = ImNodesCol_BoxSelectorOutline, .name = "BoxSelectorOutline"},
+    {.value = ImNodesCol_GridBackground, .name = "GridBackground"},
+    {.value = ImNodesCol_GridLine, .name = "GridLine"},
+    {.value = ImNodesCol_GridLinePrimary, .name = "GridLinePrimary"},
+    {.value = ImNodesCol_MiniMapBackground, .name = "MiniMapBackground"},
+    {.value = ImNodesCol_MiniMapBackgroundHovered, .name = "MiniMapBackgroundHovered"},
+    {.value = ImNodesCol_MiniMapOutline, .name = "MiniMapOutline"},
+    {.value = ImNodesCol_MiniMapOutlineHovered, .name = "MiniMapOutlineHovered"},
+    {.value = ImNodesCol_MiniMapNodeBackground, .name = "MiniMapNodeBackground"},
+    {.value = ImNodesCol_MiniMapNodeBackgroundHovered, .name = "MiniMapNodeBackgroundHovered"},
+    {.value = ImNodesCol_MiniMapNodeBackgroundSelected, .name = "MiniMapNodeBackgroundSelected"},
+    {.value = ImNodesCol_MiniMapNodeOutline, .name = "MiniMapNodeOutline"},
+    {.value = ImNodesCol_MiniMapLink, .name = "MiniMapLink"},
+    {.value = ImNodesCol_MiniMapLinkSelected, .name = "MiniMapLinkSelected"},
+    {.value = ImNodesCol_MiniMapCanvas, .name = "MiniMapCanvas"},
+    {.value = ImNodesCol_MiniMapCanvasOutline, .name = "MiniMapCanvasOutline"},
+};
 static_assert(std::size(kImNodesColNames) == ImNodesCol_COUNT, "kImNodesColNames out of sync with ImNodesCol_ enum");
+static_assert(inEnumOrder(kImNodesColNames),
+              "kImNodesColNames out of order vs the ImNodesCol_ enum (lib/imnodes/imnodes.h)");
 
 nlohmann::json markToJson(const ImGradientMark &m) {
     return {{"pos", m.position}, {"color", ofs::jsonimgui::colorToHex(m.color[0], m.color[1], m.color[2], m.color[3])}};
@@ -336,7 +362,7 @@ nlohmann::json themeToJson(const Theme &t) {
     nlohmann::json imVars = nlohmann::json::object();
     for (int i = 0; i < ImGuiStyleVar_COUNT; ++i) {
         const bool vec2 = ImGui::GetStyleVarInfo(i)->Count == 2;
-        imVars[kImGuiStyleVarNames[i]] = varToJson(t.vars[i], vec2);
+        imVars[kImGuiStyleVarNames[i].name] = varToJson(t.vars[i], vec2);
     }
 
     nlohmann::json appVars = nlohmann::json::object();
@@ -345,7 +371,7 @@ nlohmann::json themeToJson(const Theme &t) {
 
     nlohmann::json nodeColors = nlohmann::json::object();
     for (int i = 0; i < ImNodesCol_COUNT; ++i)
-        nodeColors[kImNodesColNames[i]] = u32ToColor(t.nodes.Colors[i]);
+        nodeColors[kImNodesColNames[i].name] = u32ToColor(t.nodes.Colors[i]);
 
     nlohmann::json bgMarks = nlohmann::json::array();
     for (const auto &m : t.heatmapColors.getMarks())
@@ -416,7 +442,7 @@ void parseTheme(const nlohmann::json &j, Theme *dst) {
     }
     if (const auto *it = jsonObjectIf(j, "imguiVars")) {
         for (int i = 0; i < ImGuiStyleVar_COUNT; ++i) {
-            if (const auto v = it->find(kImGuiStyleVarNames[i]); v != it->end())
+            if (const auto v = it->find(kImGuiStyleVarNames[i].name); v != it->end())
                 varFromJson(*v, &dst->vars[i]);
         }
     }
@@ -429,7 +455,7 @@ void parseTheme(const nlohmann::json &j, Theme *dst) {
     if (const auto *nodes = jsonObjectIf(j, "nodes")) {
         if (const auto *cols = jsonObjectIf(*nodes, "colors")) {
             for (int i = 0; i < ImNodesCol_COUNT; ++i) {
-                if (const auto c = cols->find(kImNodesColNames[i]); c != cols->end())
+                if (const auto c = cols->find(kImNodesColNames[i].name); c != cols->end())
                     dst->nodes.Colors[i] = colorToU32(c->get<ImColor>());
             }
         }
