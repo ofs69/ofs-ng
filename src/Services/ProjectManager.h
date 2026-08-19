@@ -70,6 +70,10 @@ class ProjectManager {
     co::Fire saveFlow(bool saveAs); // standalone Save / Save As (menu), independent of guardUnsaved
     void doClose();                 // synchronous close work (after any unsaved-changes prompt)
     co::Fire importFunscript();
+    // Shared tail of every import into the open project: parse each path on a worker, fan the files out
+    // into one picker row per axis, then confirm placement. Reports per file, so one unreadable path in a
+    // multi-file drop doesn't abort the rest.
+    co::Fire importFunscriptPaths(std::vector<std::filesystem::path> paths);
     // targetPath engaged → write there and skip the picker (Quick Export re-export). For
     // exportMultipleFunscript10 it is the output folder; for exportMultiAxisFunscript the output file.
     co::Fire exportMultiAxisFunscript(std::vector<StandardAxis> axes, bool useChannels,
@@ -86,7 +90,7 @@ class ProjectManager {
     void onOpenOrNewProjectRequest(const OpenOrNewProjectRequestEvent &);
     void onOpenProjectRequest(const OpenProjectRequestEvent &event);
     void onCreateEmptyProject(const CreateEmptyProjectEvent &);
-    void onOpenDroppedFile(const OpenDroppedFileEvent &event);
+    void onFilesDropped(const FilesDroppedEvent &event);
     void onChangeDummyDuration(const ChangeDummyDurationEvent &event);
     void onChangeMediaPath(const ChangeMediaPathEvent &event);
     void onCloseProjectRequest(const CloseProjectRequestEvent &);

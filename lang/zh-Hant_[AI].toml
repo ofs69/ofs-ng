@@ -3645,6 +3645,10 @@ translation = "新增檔案"
 english     = "Remove"
 translation = "移除"
 
+[PmDropNotFunscript]
+english     = "Only .funscript files can be dropped into an open project."
+translation = "只能將 .funscript 檔案拖放到已開啟的專案中。"
+
 [PmMediaNotFoundTitle]
 english     = "Media Not Found"
 translation = "找不到媒體"

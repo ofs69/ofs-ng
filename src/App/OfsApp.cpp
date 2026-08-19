@@ -1931,12 +1931,20 @@ void OfsApp::onEvent(SDL_Event *event) {
         // same guarded path as the title-bar close button so unsaved changes raise the save prompt
         // instead of being lost. (Native file dialogs are separate OS windows and never reach here.)
         eventQueue.push(ofs::RequestExitEvent{});
+    } else if (event->type == SDL_EVENT_DROP_BEGIN) {
+        droppedPaths_.clear();
     } else if (event->type == SDL_EVENT_DROP_FILE) {
-        // Drag-and-drop is a welcome-screen affordance only: with a project open the editor has its own
-        // explicit load paths and a stray drop must not blow away the current work. event.drop.data is a
-        // SDL-owned UTF-8 path valid for this call, so copy it into the event.
-        if (event->drop.data && projectManager && !projectManager->hasActiveProject())
-            eventQueue.push(ofs::OpenDroppedFileEvent{event->drop.data});
+        // SDL delivers one event per file; accumulate and hand the whole drop over at DROP_COMPLETE so a
+        // multi-file drop becomes one import instead of one picker per file. event.drop.data is a
+        // SDL-owned UTF-8 path valid only for this call, so copy it.
+        if (event->drop.data)
+            droppedPaths_.emplace_back(event->drop.data);
+    } else if (event->type == SDL_EVENT_DROP_COMPLETE) {
+        // What a drop means depends on project state, which is ProjectManager's to judge — the app layer
+        // only batches the paths.
+        if (!droppedPaths_.empty())
+            eventQueue.push(ofs::FilesDroppedEvent{std::move(droppedPaths_)});
+        droppedPaths_.clear();
     } else if (event->type == SDL_EVENT_MOUSE_BUTTON_DOWN) {
         // A click that gives the window focus is not preceded by any key events — those only reach a
         // focused window — so ImGui's modifier state is still stale on that first click. A shift-click

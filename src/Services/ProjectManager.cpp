@@ -88,7 +88,7 @@ ProjectManager::ProjectManager(ScriptProject &project, EventQueue &eq, const App
         [this](const OpenOrNewProjectRequestEvent &e) { onOpenOrNewProjectRequest(e); });
     eq.on<OpenProjectRequestEvent>([this](const OpenProjectRequestEvent &e) { onOpenProjectRequest(e); });
     eq.on<CreateEmptyProjectEvent>([this](const CreateEmptyProjectEvent &e) { onCreateEmptyProject(e); });
-    eq.on<OpenDroppedFileEvent>([this](const OpenDroppedFileEvent &e) { onOpenDroppedFile(e); });
+    eq.on<FilesDroppedEvent>([this](const FilesDroppedEvent &e) { onFilesDropped(e); });
     eq.on<ChangeDummyDurationEvent>([this](const ChangeDummyDurationEvent &e) { onChangeDummyDuration(e); });
     eq.on<ChangeMediaPathEvent>([this](const ChangeMediaPathEvent &e) { onChangeMediaPath(e); });
     eq.on<CloseProjectRequestEvent>([this](const CloseProjectRequestEvent &e) { onCloseProjectRequest(e); });
@@ -406,13 +406,33 @@ void ProjectManager::onCreateEmptyProject(const CreateEmptyProjectEvent &) {
     });
 }
 
-void ProjectManager::onOpenDroppedFile(const OpenDroppedFileEvent &event) {
-    if (event.path.empty())
+void ProjectManager::onFilesDropped(const FilesDroppedEvent &event) {
+    if (event.paths.empty())
         return;
-    guardUnsaved([this, file = event.path] {
-        doClose();
-        openPathByExtension(file);
-    });
+
+    // No project yet: the drop is an open request, dispatched by extension like the Open/New picker. Only
+    // the first path can win — opening is a whole-project operation, not a merge.
+    if (!hasActiveProject()) {
+        guardUnsaved([this, file = event.paths.front()] {
+            doClose();
+            openPathByExtension(file);
+        });
+        return;
+    }
+
+    // Project open: a drop imports scripts into it and can never replace it, so anything that isn't a
+    // funscript is refused rather than guessed at.
+    std::vector<std::filesystem::path> scripts;
+    for (const auto &p : event.paths) {
+        auto path = ofs::util::fromUtf8(p);
+        if (lowerExtension(path) == ".funscript")
+            scripts.push_back(std::move(path));
+    }
+    if (scripts.empty()) {
+        eq.push(NotifyEvent{.level = NotifyLevel::Warning, .message = Str::PmDropNotFunscript.c_str()});
+        return;
+    }
+    importFunscriptPaths(std::move(scripts));
 }
 
 void ProjectManager::setupDefaultAxes() {
@@ -823,25 +843,32 @@ co::Fire ProjectManager::importFunscript() {
     std::string file = co_await FileDialog{eq, funscriptOpenSpec()};
     if (file.empty())
         co_return;
+    importFunscriptPaths({ofs::util::fromUtf8(file)});
+}
 
-    const std::string name = ofs::util::toUtf8(ofs::util::fromUtf8(file).filename());
-    const std::string label = ofs::util::toUtf8(ofs::util::fromUtf8(file).stem());
-    auto fs = co_await JobAwait<std::optional<Funscript>>{
-        jobSystem, eq, [path = ofs::util::fromUtf8(file)] { return Funscript::load(path); }};
-    if (!fs) {
-        eq.push(NotifyEvent{.level = NotifyLevel::Error, .message = Str::PmImportReadFailed.fmt(name)});
+co::Fire ProjectManager::importFunscriptPaths(std::vector<std::filesystem::path> paths) {
+    if (!hasActiveProject() || paths.empty())
         co_return;
-    }
 
-    // Fan the file out into one editable row per axis (a multi-axis script becomes one row per tag). No
+    // Fan every file out into one editable row per axis (a multi-axis script becomes one row per tag). No
     // implicit default to a device axis: importing into an existing project, an unmatched track defaults
     // to a free scratch slot so it never clobbers L0 — the user confirms or retargets in the picker.
     std::vector<ImportTrack> entries;
-    appendTracksFromFunscript(entries, *fs, label, std::nullopt);
-    if (entries.empty()) {
-        eq.push(NotifyEvent{.level = NotifyLevel::Error, .message = Str::PmImportNoActions.fmt(name)});
-        co_return;
+    for (const auto &path : paths) {
+        const std::string name = ofs::util::toUtf8(path.filename());
+        const std::string label = ofs::util::toUtf8(path.stem());
+        auto fs = co_await JobAwait<std::optional<Funscript>>{jobSystem, eq, [path] { return Funscript::load(path); }};
+        if (!fs) {
+            eq.push(NotifyEvent{.level = NotifyLevel::Error, .message = Str::PmImportReadFailed.fmt(name)});
+            continue;
+        }
+        const size_t before = entries.size();
+        appendTracksFromFunscript(entries, *fs, label, std::nullopt);
+        if (entries.size() == before)
+            eq.push(NotifyEvent{.level = NotifyLevel::Error, .message = Str::PmImportNoActions.fmt(name)});
     }
+    if (entries.empty())
+        co_return;
 
     // The picker lets the user remap / remove / add tracks; confirmed tracks apply as one undo step.
     // Cancelling applies nothing.

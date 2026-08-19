@@ -1,6 +1,7 @@
 #include "Core/Events.h"
 #include "Core/ProjectLifecycleEvents.h"
 #include "Core/ScriptProject.h"
+#include "Util/PathUtil.h"
 #include "helpers/TestState.h"
 #include <imgui.h>
 #include <imgui_internal.h> // ImGuiItemFlags_Disabled
@@ -185,7 +186,7 @@ void RegisterWelcomeTests(ImGuiTestEngine *e) {
         IM_CHECK_EQ(proj.state.dummyDuration, ofs::kDefaultDummyDuration);
     };
 
-    // A file dropped onto the welcome screen routes through OpenDroppedFileEvent → ProjectManager's
+    // A file dropped onto the welcome screen routes through FilesDroppedEvent → ProjectManager's
     // extension dispatch (an .ofp opens that project). This drives the event the SDL drop handler pushes;
     // the SDL plumbing itself isn't simulable in the test engine.
     IM_REGISTER_TEST(e, "welcome", "dropped_file_opens_project")->TestFunc = [](ImGuiTestContext *ctx) {
@@ -194,7 +195,7 @@ void RegisterWelcomeTests(ImGuiTestEngine *e) {
         IM_CHECK(windowVisible(ctx, kWelcome));
 
         const std::filesystem::path dir(OFS_TESTS_DIR);
-        getTestState().eventQueue->push(ofs::OpenDroppedFileEvent{(dir / "fixtures" / "basic.ofp").string()});
+        getTestState().eventQueue->push(ofs::FilesDroppedEvent{{ofs::util::toUtf8(dir / "fixtures" / "basic.ofp")}});
         // The .ofp now decodes on a worker; yield until the load lands rather than a fixed frame count,
         // then a few more frames so the UI swaps the welcome screen out for the editor.
         for (int i = 0; i < 240 && noProjectOpen(*getTestState().project); ++i)

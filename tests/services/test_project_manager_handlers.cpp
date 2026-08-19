@@ -60,6 +60,7 @@ struct PMFixture {
     SelectIntentRouter sel;        // sole SelectRequestEvent subscriber: resolves a selection gesture per-axis
     EventCapture<SeekEvent> seeks; // observes seeks (frame-step / next-action emit only a SeekEvent)
     EventCapture<AxisModifiedEvent> axisMods; // observes the re-eval signal a region edit raises
+    EventCapture<NotifyEvent> notes;          // observes user-facing toasts (drop/import refusals)
 
     PMFixture()
         : undo(tp.project, tp.eq), pm(tp.project, tp.eq, appSettings, jobSystem, effectReg),
@@ -67,6 +68,7 @@ struct PMFixture {
         appSettings.autoBackupEnabled = false;
         seeks.attach(tp.eq); // must register before freeze()
         axisMods.attach(tp.eq);
+        notes.attach(tp.eq);
         // Stand in for the ModalManager on the import picker: there is no UI here to resume the
         // co_await AxisPick the project-creation flows now raise, so auto-confirm it with the spec's
         // defaults (the auto-detected axis per row). This keeps the auto-discovery assertions exact —
@@ -3169,7 +3171,7 @@ TEST_CASE("Dropping media auto-discovers sibling funscripts by stem, axis suffix
     writeFunscript(dir / "clip.roll.funscript", 2000, 30);       // ".roll" suffix -> R1
     writeFunscript(dir / "clip.xyz.funscript", 3000, 40);        // unknown suffix -> first hidden scratch slot
 
-    f.push(OpenDroppedFileEvent{ofs::util::toUtf8(video)});
+    f.push(FilesDroppedEvent{{ofs::util::toUtf8(video)}});
     REQUIRE(f.drainUntil([&] { return f.axis(StandardAxis::S0).actions.size() == 1; }));
 
     CHECK(f.proj().state.mediaPath == ofs::util::toUtf8(video));
@@ -3202,7 +3204,7 @@ TEST_CASE("Dropping media adopts a multi-axis sibling funscript, fanning channel
     auto fs = ofs::Funscript::fromAxes11({{"L0", l0}, {"R0", r0}}); // root L0 + axes[] R0
     REQUIRE(fs.save(dir / "clip.funscript"));
 
-    f.push(OpenDroppedFileEvent{ofs::util::toUtf8(video)});
+    f.push(FilesDroppedEvent{{ofs::util::toUtf8(video)}});
     REQUIRE(f.drainUntil([&] { return f.axis(StandardAxis::R0).actions.size() == 1; }));
 
     REQUIRE(f.axis(StandardAxis::L0).actions.size() == 1);
@@ -3221,7 +3223,7 @@ TEST_CASE("Dropping a lone funscript opens a media-less project on its mapped ax
     std::filesystem::create_directories(dir);
     writeFunscript(dir / "solo.funscript", 1500, 60, "Solo"); // no sibling media in this dir
 
-    f.push(OpenDroppedFileEvent{ofs::util::toUtf8(dir / "solo.funscript")});
+    f.push(FilesDroppedEvent{{ofs::util::toUtf8(dir / "solo.funscript")}});
     REQUIRE(f.drainUntil([&] { return f.axis(StandardAxis::L0).actions.size() == 1; }));
 
     CHECK(f.proj().state.mediaPath.empty());   // stays media-less
@@ -3242,13 +3244,88 @@ TEST_CASE("Dropping a funscript that has sibling media defers to the media's aut
     std::ofstream(dir / "clip.mp4").put('x');         // sibling media sharing the funscript stem
     writeFunscript(dir / "clip.funscript", 1000, 50); // dropping THIS resolves to the media
 
-    f.push(OpenDroppedFileEvent{ofs::util::toUtf8(dir / "clip.funscript")});
+    f.push(FilesDroppedEvent{{ofs::util::toUtf8(dir / "clip.funscript")}});
     REQUIRE(f.drainUntil([&] { return f.axis(StandardAxis::L0).actions.size() == 1; }));
 
     // The funscript drop found "clip.mp4" and opened a media-backed project instead of a media-less one.
     CHECK(f.proj().state.mediaPath == ofs::util::toUtf8(dir / "clip.mp4"));
     REQUIRE(f.axis(StandardAxis::L0).actions.size() == 1);
     CHECK(f.axis(StandardAxis::L0).actions[0].at == doctest::Approx(1.0));
+
+    std::filesystem::remove_all(dir);
+}
+
+// With a project open a drop must never replace it: a dropped funscript goes through the import picker
+// (the File > Import Funscript flow, minus the file dialog) and lands beside the existing work.
+TEST_CASE("Dropping a funscript into an open project imports it instead of opening a new one") {
+    PMFixture f;
+
+    const auto dir = std::filesystem::temp_directory_path() / "ofs_drop_import";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    writeFunscript(dir / "extra.funscript", 2500, 70, "Dropped");
+
+    f.showAxis(StandardAxis::L0, {{1.0, 20}}); // an open project with work in it
+    f.drain();
+    f.proj().metadata.title = "Original";
+
+    f.push(FilesDroppedEvent{{ofs::util::toUtf8(dir / "extra.funscript")}});
+    REQUIRE(f.drainUntil([&] { return f.axis(StandardAxis::S0).actions.size() == 1; }));
+
+    CHECK(f.axis(StandardAxis::S0).actions[0].at == doctest::Approx(2.5));
+    REQUIRE(f.axis(StandardAxis::L0).actions.size() == 1); // existing work untouched
+    CHECK(f.axis(StandardAxis::L0).actions[0].at == doctest::Approx(1.0));
+    CHECK(f.proj().metadata.title == "Original"); // an import never adopts the file's metadata
+
+    std::filesystem::remove_all(dir);
+}
+
+// One drop of several files is one import: SDL delivers a file per event, OfsApp batches them, and the
+// picker opens once with a row per file.
+TEST_CASE("Dropping several funscripts into an open project imports them all in one pass") {
+    PMFixture f;
+
+    const auto dir = std::filesystem::temp_directory_path() / "ofs_drop_multi";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    writeFunscript(dir / "one.funscript", 1000, 40);
+    writeFunscript(dir / "two.funscript", 2000, 60);
+
+    f.showAxis(StandardAxis::L0, {{1.0, 20}});
+    f.drain();
+
+    f.push(FilesDroppedEvent{{ofs::util::toUtf8(dir / "one.funscript"), ofs::util::toUtf8(dir / "two.funscript")}});
+    REQUIRE(f.drainUntil([&] { return f.axis(StandardAxis::S1).actions.size() == 1; }));
+
+    REQUIRE(f.axis(StandardAxis::S0).actions.size() == 1); // consecutive free scratch slots
+    CHECK(f.axis(StandardAxis::S0).actions[0].at == doctest::Approx(1.0));
+    CHECK(f.axis(StandardAxis::S1).actions[0].at == doctest::Approx(2.0));
+
+    std::filesystem::remove_all(dir);
+}
+
+// Only funscripts are importable, so a media/project drop onto an open project is refused outright
+// rather than guessed at — the alternative (opening it) would discard the work in progress.
+TEST_CASE("Dropping a non-funscript into an open project changes nothing and warns") {
+    PMFixture f;
+
+    const auto dir = std::filesystem::temp_directory_path() / "ofs_drop_reject";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    std::ofstream(dir / "clip.mp4").put('x');
+
+    f.showAxis(StandardAxis::L0, {{1.0, 20}});
+    f.drain();
+    f.notes.received.clear();
+
+    f.push(FilesDroppedEvent{{ofs::util::toUtf8(dir / "clip.mp4")}});
+    for (int i = 0; i < 5; ++i)
+        f.drain();
+
+    CHECK(f.proj().state.mediaPath.empty()); // the open project was not replaced
+    CHECK(f.axis(StandardAxis::S0).actions.empty());
+    REQUIRE(f.notes.received.size() == 1);
+    CHECK(f.notes.received[0].level == NotifyLevel::Warning);
 
     std::filesystem::remove_all(dir);
 }
@@ -3266,7 +3343,7 @@ TEST_CASE("Dropping a lone multi-axis funscript fans each tagged track onto its 
     auto fs = ofs::Funscript::fromAxes11({{"L0", l0}, {"R0", r0}}); // root L0 + axes[] R0
     REQUIRE(fs.save(dir / "multi.funscript"));                      // no sibling media in this dir
 
-    f.push(OpenDroppedFileEvent{ofs::util::toUtf8(dir / "multi.funscript")});
+    f.push(FilesDroppedEvent{{ofs::util::toUtf8(dir / "multi.funscript")}});
     REQUIRE(f.drainUntil([&] { return f.axis(StandardAxis::R0).actions.size() == 1; }));
 
     CHECK(f.proj().state.mediaPath.empty()); // media-less project

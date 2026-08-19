@@ -3852,6 +3852,10 @@ description = "Button in the funscript import picker that opens a file dialog to
 english     = "Remove"
 description = "Tooltip on the per-row trash button in the funscript import picker; removes that track from the import."
 
+[PmDropNotFunscript]
+english     = "Only .funscript files can be dropped into an open project."
+description = "Warning toast when files dropped onto the window while a project is open contain no funscript."
+
 [PmMediaNotFoundTitle]
 english     = "Media Not Found"
 description = "Title of the confirm modal raised when a project's referenced media file is missing on load."

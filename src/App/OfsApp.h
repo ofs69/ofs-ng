@@ -272,6 +272,9 @@ class OfsApp : public ofs::Application {
 
     double sessionTime = 0.0;
     std::map<SDL_JoystickID, SDL_Gamepad *> gamepads_; // opened on GAMEPAD_ADDED, closed on GAMEPAD_REMOVED
+    // Paths accumulated across one OS drag-and-drop (DROP_BEGIN → n × DROP_FILE → DROP_COMPLETE), pushed
+    // as a single FilesDroppedEvent when the drop completes.
+    std::vector<std::string> droppedPaths_;
 
     std::unique_ptr<ofs::ConfigurationWindow> configWindow;
     std::unique_ptr<ofs::ProjectConfigWindow> projectConfigWindow;
