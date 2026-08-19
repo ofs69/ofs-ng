@@ -27,57 +27,65 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2026-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2026-07-15: OpenGL: Backup and restore GL_UNPACK_ROW_LENGTH and GL_UNPACK_ALIGNMENT in UpdateTexture() to avoid
+//  corrupting caller GL state. (#8802, #9473) 2026-06-17: OpenGL: Expose selected render state in
+//  ImGui_ImplOpenGL3_RenderState, Allowing to dynamically select between use of glBindSampler() and glTexParameter().
+//  You can access in 'void* platform_io.Renderer_RenderState' during rendering. 2026-06-03: OpenGL: GLSL version
+//  detection assume GLSL 410 when GL context is 4.1. Fixes an issue running on macOS with Wine. (#9427, #6577)
 //  2026-04-23: OpenGL: Added support for standard draw callbacks (in platform_io): DrawCallback_ResetRenderState,
-//  DrawCallback_SetSamplerLinear, DrawCallback_SetSamplerNearest. (#9378) 2026-03-12: OpenGL: Fixed invalid assert in
-//  ImGui_ImplOpenGL3_UpdateTexture() if ImTextureID_Invalid is defined to be != 0, which became the default since
-//  2026-03-12. (#9295) 2025-12-11: OpenGL: Fixed embedded loader multiple init/shutdown cycles broken on some
-//  platforms. (#8792, #9112) 2025-09-18: Call platform_io.ClearRendererHandlers() on shutdown. 2025-07-22: OpenGL: Add
-//  and call embedded loader shutdown during ImGui_ImplOpenGL3_Shutdown() to facilitate multiple init/shutdown cycles in
-//  same process. (#8792) 2025-07-15: OpenGL: Set GL_UNPACK_ALIGNMENT to 1 before updating textures (#8802) + restore
-//  non-WebGL/ES update path that doesn't require a CPU-side copy. 2025-06-11: OpenGL: Added support for
-//  ImGuiBackendFlags_RendererHasTextures, for dynamic font atlas. Removed ImGui_ImplOpenGL3_CreateFontsTexture() and
-//  ImGui_ImplOpenGL3_DestroyFontsTexture(). 2025-06-04: OpenGL: Made GLES 3.20 contexts not access
-//  GL_CONTEXT_PROFILE_MASK nor GL_PRIMITIVE_RESTART. (#8664) 2025-02-18: OpenGL: Lazily reinitialize embedded GL loader
-//  for when calling backend from e.g. other DLL boundaries. (#8406) 2024-10-07: OpenGL: Changed default texture sampler
-//  to Clamp instead of Repeat/Wrap. 2024-06-28: OpenGL: ImGui_ImplOpenGL3_NewFrame() recreates font texture if it has
-//  been destroyed by ImGui_ImplOpenGL3_DestroyFontsTexture(). (#7748) 2024-05-07: OpenGL: Update loader for Linux to
-//  support EGL/GLVND. (#7562) 2024-04-16: OpenGL: Detect ES3 contexts on desktop based on version string, to e.g. avoid
-//  calling glPolygonMode() on them. (#7447) 2024-01-09: OpenGL: Update GL3W based imgui_impl_opengl3_loader.h to load
-//  "libGL.so" and variants, fixing regression on distros missing a symlink. 2023-11-08: OpenGL: Update GL3W based
-//  imgui_impl_opengl3_loader.h to load "libGL.so" instead of "libGL.so.1", accommodating for NetBSD systems having only
-//  "libGL.so.3" available. (#6983) 2023-10-05: OpenGL: Rename symbols in our internal loader so that LTO compilation
-//  with another copy of gl3w is possible. (#6875, #6668, #4445) 2023-06-20: OpenGL: Fixed erroneous use
-//  glGetIntegerv(GL_CONTEXT_PROFILE_MASK) on contexts lower than 3.2. (#6539, #6333) 2023-05-09: OpenGL: Support for
-//  glBindSampler() backup/restore on ES3. (#6375) 2023-04-18: OpenGL: Restore front and back polygon mode separately
-//  when supported by context. (#6333) 2023-03-23: OpenGL: Properly restoring "no shader program bound" if it was the
-//  case prior to running the rendering function. (#6267, #6220, #6224) 2023-03-15: OpenGL: Fixed GL loader crash when
-//  GL_VERSION returns nullptr. (#6154, #4445, #3530) 2023-03-06: OpenGL: Fixed restoration of a potentially deleted
-//  OpenGL program, by calling glIsProgram(). (#6220, #6224) 2022-11-09: OpenGL: Reverted use of glBufferSubData(), too
-//  many corruptions issues + old issues seemingly can't be reproed with Intel drivers nowadays (revert 2021-12-15 and
-//  2022-05-23 changes). 2022-10-11: Using 'nullptr' instead of 'NULL' as per our switch to C++11. 2022-09-27: OpenGL:
-//  Added ability to '#define IMGUI_IMPL_OPENGL_DEBUG'. 2022-05-23: OpenGL: Reworking 2021-12-15 "Using buffer
-//  orphaning" so it only happens on Intel GPU, seems to cause problems otherwise. (#4468, #4825, #4832, #5127).
-//  2022-05-13: OpenGL: Fixed state corruption on OpenGL ES 2.0 due to not preserving GL_ELEMENT_ARRAY_BUFFER_BINDING
-//  and vertex attribute states. 2021-12-15: OpenGL: Using buffer orphaning + glBufferSubData(), seems to fix leaks with
-//  multi-viewports with some Intel HD drivers. 2021-08-23: OpenGL: Fixed ES 3.0 shader ("#version 300 es") use normal
-//  precision floats to avoid wobbly rendering at HD resolutions. 2021-08-19: OpenGL: Embed and use our own minimal GL
-//  loader (imgui_impl_opengl3_loader.h), removing requirement and support for third-party loader. 2021-06-29:
-//  Reorganized backend to pull data from a single structure to facilitate usage with multiple-contexts (all g_XXXX
-//  access changed to bd->XXXX). 2021-06-25: OpenGL: Use OES_vertex_array extension on Emscripten + backup/restore
-//  current state. 2021-06-21: OpenGL: Destroy individual vertex/fragment shader objects right after they are linked
-//  into the main shader. 2021-05-24: OpenGL: Access GL_CLIP_ORIGIN when "GL_ARB_clip_control" extension is detected,
-//  inside of just OpenGL 4.5 version. 2021-05-19: OpenGL: Replaced direct access to ImDrawCmd::TextureId with a call to
-//  ImDrawCmd::GetTexID(). (will become a requirement) 2021-04-06: OpenGL: Don't try to read GL_CLIP_ORIGIN unless we're
-//  OpenGL 4.5 or greater. 2021-02-18: OpenGL: Change blending equation to preserve alpha in output buffer. 2021-01-03:
-//  OpenGL: Backup, setup and restore GL_STENCIL_TEST state. 2020-10-23: OpenGL: Backup, setup and restore
-//  GL_PRIMITIVE_RESTART state. 2020-10-15: OpenGL: Use glGetString(GL_VERSION) instead of
-//  glGetIntegerv(GL_MAJOR_VERSION, ...) when the later returns zero (e.g. Desktop GL 2.x) 2020-09-17: OpenGL: Fix to
-//  avoid compiling/calling glBindSampler() on ES or pre-3.3 context which have the defines set by a loader. 2020-07-10:
-//  OpenGL: Added support for glad2 OpenGL loader. 2020-05-08: OpenGL: Made default GLSL version 150 (instead of 130) on
-//  OSX. 2020-04-21: OpenGL: Fixed handling of glClipControl(GL_UPPER_LEFT) by inverting projection matrix. 2020-04-12:
-//  OpenGL: Fixed context version check mistakenly testing for 4.0+ instead of 3.2+ to enable
-//  ImGuiBackendFlags_RendererHasVtxOffset. 2020-03-24: OpenGL: Added support for glbinding 2.x OpenGL loader.
-//  2020-01-07: OpenGL: Added support for glbinding 3.x OpenGL loader.
+//  DrawCallback_SetSamplerLinear, DrawCallback_SetSamplerNearest. (#9378)
+//                      (Breaking): this change prioritize using glBindSampler() when available, which would override
+//                      glTexParameter() settings you may have set on custom textures.
+//  2026-03-12: OpenGL: Fixed invalid assert in ImGui_ImplOpenGL3_UpdateTexture() if ImTextureID_Invalid is defined to
+//  be != 0, which became the default since 2026-03-12. (#9295) 2025-12-11: OpenGL: Fixed embedded loader multiple
+//  init/shutdown cycles broken on some platforms. (#8792, #9112) 2025-09-18: Call platform_io.ClearRendererHandlers()
+//  on shutdown. 2025-07-22: OpenGL: Add and call embedded loader shutdown during ImGui_ImplOpenGL3_Shutdown() to
+//  facilitate multiple init/shutdown cycles in same process. (#8792) 2025-07-15: OpenGL: Set GL_UNPACK_ALIGNMENT to 1
+//  before updating textures (#8802) + restore non-WebGL/ES update path that doesn't require a CPU-side copy.
+//  2025-06-11: OpenGL: Added support for ImGuiBackendFlags_RendererHasTextures, for dynamic font atlas. Removed
+//  ImGui_ImplOpenGL3_CreateFontsTexture() and ImGui_ImplOpenGL3_DestroyFontsTexture(). 2025-06-04: OpenGL: Made
+//  GLES 3.20 contexts not access GL_CONTEXT_PROFILE_MASK nor GL_PRIMITIVE_RESTART. (#8664) 2025-02-18: OpenGL: Lazily
+//  reinitialize embedded GL loader for when calling backend from e.g. other DLL boundaries. (#8406) 2024-10-07: OpenGL:
+//  Changed default texture sampler to Clamp instead of Repeat/Wrap. 2024-06-28: OpenGL: ImGui_ImplOpenGL3_NewFrame()
+//  recreates font texture if it has been destroyed by ImGui_ImplOpenGL3_DestroyFontsTexture(). (#7748) 2024-05-07:
+//  OpenGL: Update loader for Linux to support EGL/GLVND. (#7562) 2024-04-16: OpenGL: Detect ES3 contexts on desktop
+//  based on version string, to e.g. avoid calling glPolygonMode() on them. (#7447) 2024-01-09: OpenGL: Update GL3W
+//  based imgui_impl_opengl3_loader.h to load "libGL.so" and variants, fixing regression on distros missing a symlink.
+//  2023-11-08: OpenGL: Update GL3W based imgui_impl_opengl3_loader.h to load "libGL.so" instead of "libGL.so.1",
+//  accommodating for NetBSD systems having only "libGL.so.3" available. (#6983) 2023-10-05: OpenGL: Rename symbols in
+//  our internal loader so that LTO compilation with another copy of gl3w is possible. (#6875, #6668, #4445) 2023-06-20:
+//  OpenGL: Fixed erroneous use glGetIntegerv(GL_CONTEXT_PROFILE_MASK) on contexts lower than 3.2. (#6539, #6333)
+//  2023-05-09: OpenGL: Support for glBindSampler() backup/restore on ES3. (#6375)
+//  2023-04-18: OpenGL: Restore front and back polygon mode separately when supported by context. (#6333)
+//  2023-03-23: OpenGL: Properly restoring "no shader program bound" if it was the case prior to running the rendering
+//  function. (#6267, #6220, #6224) 2023-03-15: OpenGL: Fixed GL loader crash when GL_VERSION returns nullptr. (#6154,
+//  #4445, #3530) 2023-03-06: OpenGL: Fixed restoration of a potentially deleted OpenGL program, by calling
+//  glIsProgram(). (#6220, #6224) 2022-11-09: OpenGL: Reverted use of glBufferSubData(), too many corruptions issues +
+//  old issues seemingly can't be reproed with Intel drivers nowadays (revert 2021-12-15 and 2022-05-23 changes).
+//  2022-10-11: Using 'nullptr' instead of 'NULL' as per our switch to C++11.
+//  2022-09-27: OpenGL: Added ability to '#define IMGUI_IMPL_OPENGL_DEBUG'.
+//  2022-05-23: OpenGL: Reworking 2021-12-15 "Using buffer orphaning" so it only happens on Intel GPU, seems to cause
+//  problems otherwise. (#4468, #4825, #4832, #5127). 2022-05-13: OpenGL: Fixed state corruption on OpenGL ES 2.0 due to
+//  not preserving GL_ELEMENT_ARRAY_BUFFER_BINDING and vertex attribute states. 2021-12-15: OpenGL: Using buffer
+//  orphaning + glBufferSubData(), seems to fix leaks with multi-viewports with some Intel HD drivers. 2021-08-23:
+//  OpenGL: Fixed ES 3.0 shader ("#version 300 es") use normal precision floats to avoid wobbly rendering at HD
+//  resolutions. 2021-08-19: OpenGL: Embed and use our own minimal GL loader (imgui_impl_opengl3_loader.h), removing
+//  requirement and support for third-party loader. 2021-06-29: Reorganized backend to pull data from a single structure
+//  to facilitate usage with multiple-contexts (all g_XXXX access changed to bd->XXXX). 2021-06-25: OpenGL: Use
+//  OES_vertex_array extension on Emscripten + backup/restore current state. 2021-06-21: OpenGL: Destroy individual
+//  vertex/fragment shader objects right after they are linked into the main shader. 2021-05-24: OpenGL: Access
+//  GL_CLIP_ORIGIN when "GL_ARB_clip_control" extension is detected, inside of just OpenGL 4.5 version. 2021-05-19:
+//  OpenGL: Replaced direct access to ImDrawCmd::TextureId with a call to ImDrawCmd::GetTexID(). (will become a
+//  requirement) 2021-04-06: OpenGL: Don't try to read GL_CLIP_ORIGIN unless we're OpenGL 4.5 or greater. 2021-02-18:
+//  OpenGL: Change blending equation to preserve alpha in output buffer. 2021-01-03: OpenGL: Backup, setup and restore
+//  GL_STENCIL_TEST state. 2020-10-23: OpenGL: Backup, setup and restore GL_PRIMITIVE_RESTART state. 2020-10-15: OpenGL:
+//  Use glGetString(GL_VERSION) instead of glGetIntegerv(GL_MAJOR_VERSION, ...) when the later returns zero (e.g.
+//  Desktop GL 2.x) 2020-09-17: OpenGL: Fix to avoid compiling/calling glBindSampler() on ES or pre-3.3 context which
+//  have the defines set by a loader. 2020-07-10: OpenGL: Added support for glad2 OpenGL loader. 2020-05-08: OpenGL:
+//  Made default GLSL version 150 (instead of 130) on OSX. 2020-04-21: OpenGL: Fixed handling of
+//  glClipControl(GL_UPPER_LEFT) by inverting projection matrix. 2020-04-12: OpenGL: Fixed context version check
+//  mistakenly testing for 4.0+ instead of 3.2+ to enable ImGuiBackendFlags_RendererHasVtxOffset. 2020-03-24: OpenGL:
+//  Added support for glbinding 2.x OpenGL loader. 2020-01-07: OpenGL: Added support for glbinding 3.x OpenGL loader.
 //  2019-10-25: OpenGL: Using a combination of GL define and runtime GL version to decide whether to use
 //  glDrawElementsBaseVertex(). Fix building with pre-3.2 GL loaders. 2019-09-22: OpenGL: Detect default GL loader using
 //  __has_include compiler facility. 2019-09-16: OpenGL: Tweak initialization code to allow application calling
@@ -150,18 +158,14 @@
 #pragma clang diagnostic ignored "-Wnonportable-system-include-path"
 #pragma clang diagnostic ignored                                                                                       \
     "-Wcast-function-type" // warning: cast between incompatible function types (for loader)
-
 #endif
 #if defined(__GNUC__)
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wpragmas" // warning: unknown option after '#pragma GCC diagnostic' kind
-
+#pragma GCC diagnostic ignored "-Wpragmas"                // warning: unknown option after '#pragma GCC diagnostic' kind
 #pragma GCC diagnostic ignored "-Wunknown-warning-option" // warning: unknown warning group 'xxx'
 #pragma GCC diagnostic ignored "-Wcast-function-type" // warning: cast between incompatible function types (for loader)
-
 #pragma GCC diagnostic ignored "-Wstrict-overflow" // warning: assuming signed overflow does not occur when simplifying
                                                    // division / ..when changing X +- C1 cmp C2 to X cmp C2 -+ C1
-
 #endif
 
 // GL includes
@@ -248,7 +252,6 @@
         if (gl_err != 0)                                                                                               \
             fprintf(stderr, "GL error 0x%x returned from '%s'.\n", gl_err, #_CALL);                                    \
     } while (0) // Call with error check
-
 #else
 #define GL_CALL(_CALL) _CALL // Call without error check
 #endif
@@ -275,8 +278,6 @@ struct ImGui_ImplOpenGL3_Data {
     bool HasBindSampler;
     bool HasClipOrigin;
     bool UseBufferSubData;
-    bool UseTexParameterToSetSampler;
-    GLuint NextSampler; // Used if !HasBindSampler && UseTexParameterToSetSampler.
 #ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_BIND_SAMPLER
     GLuint TexSamplers[2]; // Used if HasBindSimpler. (0=linear, 1=nearest)
 #endif
@@ -295,7 +296,6 @@ static ImGui_ImplOpenGL3_Data *ImGui_ImplOpenGL3_GetBackendData() {
 
 // Forward Declarations
 static void ImGui_ImplOpenGL3_InitMultiViewportSupport();
-
 static void ImGui_ImplOpenGL3_ShutdownMultiViewportSupport();
 
 // OpenGL vertex attribute state (for ES 1.0 and ES 2.0 only)
@@ -312,7 +312,6 @@ struct ImGui_ImplOpenGL3_VtxAttribState {
         glGetVertexAttribiv(index, GL_VERTEX_ATTRIB_ARRAY_STRIDE, &Stride);
         glGetVertexAttribPointerv(index, GL_VERTEX_ATTRIB_ARRAY_POINTER, &Ptr);
     }
-
     void SetState(GLint index) {
         glVertexAttribPointer(index, Size, Type, (GLboolean)Normalized, Stride, Ptr);
         if (Enabled)
@@ -325,7 +324,6 @@ struct ImGui_ImplOpenGL3_VtxAttribState {
 
 // Not static to allow third-party code to use that if they want to (but undocumented)
 bool ImGui_ImplOpenGL3_InitLoader();
-
 bool ImGui_ImplOpenGL3_InitLoader() {
     // Lazily initialize our loader if not already done
     // (to facilitate handling multiple DLL boundaries and multiple context shutdowns we call this from all main entry
@@ -356,8 +354,8 @@ void ImGui_ImplOpenGL3_NewFrame() {
             IM_ASSERT(0 && "ImGui_ImplOpenGL3_CreateDeviceObjects() failed!");
 }
 
-static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData *draw_data, int fb_width, int fb_height,
-                                               GLuint vertex_array_object) {
+static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData *draw_data, ImGui_ImplOpenGL3_RenderState *render_state,
+                                               int fb_width, int fb_height, GLuint vertex_array_object) {
     ImGui_ImplOpenGL3_Data *bd = ImGui_ImplOpenGL3_GetBackendData();
 
     // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled, polygon fill
@@ -414,9 +412,11 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData *draw_data, int fb_wid
     glUniformMatrix4fv(bd->AttribLocationProjMtx, 1, GL_FALSE, &ortho_projection[0][0]);
 
 #ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_BIND_SAMPLER
-    if (bd->HasBindSampler)
-        glBindSampler(0, bd->TexSamplers[0]);
-    // We use combined texture/sampler state. Applications using GL 3.3 and GL ES 3.0 may set that otherwise.
+    if (render_state->UseBindSampler) {
+        render_state->CurrentSampler = bd->TexSamplers[0];
+        glBindSampler(0, render_state->CurrentSampler); // We use combined texture/sampler state. Applications using
+                                                        // GL 3.3 and GL ES 3.0 may set that otherwise.
+    }
 #endif
 
     (void)vertex_array_object;
@@ -441,38 +441,36 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData *draw_data, int fb_wid
 // Draw callbacks
 static void ImGui_ImplOpenGL3_DrawCallback_ResetRenderState(const ImDrawList *, const ImDrawCmd *) {
 } // Intentionally empty. Used as an identifier for rendering loop to call its code. Simpler to implement this way.
+static void ImGui_ImplOpenGL3_DrawCallback_SetSamplerLinear(const ImDrawList *, const ImDrawCmd *) {
+    ImGui_ImplOpenGL3_RenderState *render_state = ImGui_ImplOpenGL3_GetRenderState();
 #ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_BIND_SAMPLER
-static void ImGui_ImplOpenGL3_DrawCallback_SetSamplerLinear(const ImDrawList *, const ImDrawCmd *) {
     ImGui_ImplOpenGL3_Data *bd = ImGui_ImplOpenGL3_GetBackendData();
     if (bd->HasBindSampler) {
-        glBindSampler(0, bd->TexSamplers[0]);
-    } else {
-        bd->UseTexParameterToSetSampler = true;
-        bd->NextSampler = GL_LINEAR;
-    }
-}
-static void ImGui_ImplOpenGL3_DrawCallback_SetSamplerNearest(const ImDrawList *, const ImDrawCmd *) {
-    ImGui_ImplOpenGL3_Data *bd = ImGui_ImplOpenGL3_GetBackendData();
-    if (bd->HasBindSampler) {
-        glBindSampler(0, bd->TexSamplers[1]);
-    } else {
-        bd->UseTexParameterToSetSampler = true;
-        bd->NextSampler = GL_NEAREST;
-    }
-}
-#else
-static void ImGui_ImplOpenGL3_DrawCallback_SetSamplerLinear(const ImDrawList *, const ImDrawCmd *) {
-    ImGui_ImplOpenGL3_Data *bd = ImGui_ImplOpenGL3_GetBackendData();
-    bd->UseTexParameterToSetSampler = true;
-    bd->NextSampler = GL_LINEAR;
-}
-
-static void ImGui_ImplOpenGL3_DrawCallback_SetSamplerNearest(const ImDrawList *, const ImDrawCmd *) {
-    ImGui_ImplOpenGL3_Data *bd = ImGui_ImplOpenGL3_GetBackendData();
-    bd->UseTexParameterToSetSampler = true;
-    bd->NextSampler = GL_NEAREST;
-}
+        render_state->CurrentSampler = bd->TexSamplers[0];
+        render_state->UseTexParameterFilter = false;
+        glBindSampler(0, render_state->CurrentSampler);
+    } else
 #endif
+    {
+        render_state->UseTexParameterFilter = true;
+        render_state->CurrentTexParameterFilter = GL_LINEAR;
+    }
+}
+static void ImGui_ImplOpenGL3_DrawCallback_SetSamplerNearest(const ImDrawList *, const ImDrawCmd *) {
+    ImGui_ImplOpenGL3_RenderState *render_state = ImGui_ImplOpenGL3_GetRenderState();
+#ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_BIND_SAMPLER
+    ImGui_ImplOpenGL3_Data *bd = ImGui_ImplOpenGL3_GetBackendData();
+    if (bd->HasBindSampler) {
+        render_state->CurrentSampler = bd->TexSamplers[1];
+        render_state->UseTexParameterFilter = false;
+        glBindSampler(0, render_state->CurrentSampler);
+    } else
+#endif
+    {
+        render_state->UseTexParameterFilter = true;
+        render_state->CurrentTexParameterFilter = GL_NEAREST;
+    }
+}
 
 // OpenGL3 Render function.
 // Note that this implementation is little overcomplicated because we are saving/setting up/restoring every OpenGL state
@@ -570,7 +568,17 @@ void ImGui_ImplOpenGL3_RenderDrawData(ImDrawData *draw_data) {
 #ifdef IMGUI_IMPL_OPENGL_USE_VERTEX_ARRAY
     GL_CALL(glGenVertexArrays(1, &vertex_array_object));
 #endif
-    ImGui_ImplOpenGL3_SetupRenderState(draw_data, fb_width, fb_height, vertex_array_object);
+
+    // Setup render state structure (for callbacks and custom texture bindings)
+    ImGuiPlatformIO &platform_io = ImGui::GetPlatformIO();
+    ImGui_ImplOpenGL3_RenderState render_state;
+    render_state.UseBindSampler = bd->HasBindSampler;
+    render_state.UseTexParameterFilter = false;
+    render_state.CurrentSampler = 0;
+    render_state.CurrentTexParameterFilter = 0;
+    platform_io.Renderer_RenderState = &render_state;
+
+    ImGui_ImplOpenGL3_SetupRenderState(draw_data, &render_state, fb_width, fb_height, vertex_array_object);
 
     // Will project scissor/clipping rectangles into framebuffer space
     ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
@@ -614,7 +622,8 @@ void ImGui_ImplOpenGL3_RenderDrawData(ImDrawData *draw_data) {
             if (pcmd->UserCallback != nullptr) {
                 // User callback, registered via ImDrawList::AddCallback()
                 if (pcmd->UserCallback == ImGui_ImplOpenGL3_DrawCallback_ResetRenderState)
-                    ImGui_ImplOpenGL3_SetupRenderState(draw_data, fb_width, fb_height, vertex_array_object);
+                    ImGui_ImplOpenGL3_SetupRenderState(draw_data, &render_state, fb_width, fb_height,
+                                                       vertex_array_object);
                 else
                     pcmd->UserCallback(draw_list, pcmd);
             } else {
@@ -634,11 +643,11 @@ void ImGui_ImplOpenGL3_RenderDrawData(ImDrawData *draw_data) {
                 GL_CALL(glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->GetTexID()));
 
                 // Emulate sampler change (even though it is technically part of texture data)
-                // As a sort of hack/workaround, we only start writing using glTextParameter() if sampler is ever
-                // changed explicitly.
-                if (!bd->HasBindSampler && bd->UseTexParameterToSetSampler) {
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, bd->NextSampler);
-                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, bd->NextSampler);
+                // As a sort of hack/workaround, we only start writing using glTexParameter() if sampler is ever changed
+                // explicitly.
+                if (render_state.UseTexParameterFilter) {
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, render_state.CurrentTexParameterFilter);
+                    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, render_state.CurrentTexParameterFilter);
                 }
 
 #ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET
@@ -655,6 +664,7 @@ void ImGui_ImplOpenGL3_RenderDrawData(ImDrawData *draw_data) {
             }
         }
     }
+    platform_io.Renderer_RenderState = nullptr;
 
     // Destroy the temporary VAO
 #ifdef IMGUI_IMPL_OPENGL_USE_VERTEX_ARRAY
@@ -741,12 +751,17 @@ static void ImGui_ImplOpenGL3_DestroyTexture(ImTextureData *tex) {
 }
 
 void ImGui_ImplOpenGL3_UpdateTexture(ImTextureData *tex) {
-    // FIXME: Consider backing up and restoring
-    if (tex->Status == ImTextureStatus_WantCreate || tex->Status == ImTextureStatus_WantUpdates) {
+    // Backup GL_UNPACK state that we modify, restore on exit.
+    GLint last_unpack_row_length = 0;
+    (void)last_unpack_row_length;
+    GLint last_unpack_alignment = 0;
+    (void)last_unpack_alignment;
+    const bool last_unpack_state_save_and_restore =
+        (tex->Status == ImTextureStatus_WantCreate || tex->Status == ImTextureStatus_WantUpdates);
+    if (last_unpack_state_save_and_restore) {
 #ifdef GL_UNPACK_ROW_LENGTH // Not on WebGL/ES
-        GL_CALL(glPixelStorei(GL_UNPACK_ROW_LENGTH, 0));
-#endif
-#ifdef GL_UNPACK_ALIGNMENT
+        GL_CALL(glGetIntegerv(GL_UNPACK_ROW_LENGTH, &last_unpack_row_length));
+        GL_CALL(glGetIntegerv(GL_UNPACK_ALIGNMENT, &last_unpack_alignment));
         GL_CALL(glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
 #endif
     }
@@ -770,6 +785,9 @@ void ImGui_ImplOpenGL3_UpdateTexture(ImTextureData *tex) {
         GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR));
         GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE));
         GL_CALL(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE));
+#if GL_UNPACK_ROW_LENGTH // Not on WebGL/ES
+        GL_CALL(glPixelStorei(GL_UNPACK_ROW_LENGTH, 0));
+#endif
         GL_CALL(glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, tex->Width, tex->Height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels));
 
         // Store identifiers
@@ -791,7 +809,6 @@ void ImGui_ImplOpenGL3_UpdateTexture(ImTextureData *tex) {
         for (ImTextureRect &r : tex->Updates)
             GL_CALL(glTexSubImage2D(GL_TEXTURE_2D, 0, r.x, r.y, r.w, r.h, GL_RGBA, GL_UNSIGNED_BYTE,
                                     tex->GetPixelsAt(r.x, r.y)));
-        GL_CALL(glPixelStorei(GL_UNPACK_ROW_LENGTH, 0));
 #else
         // GL ES doesn't have GL_UNPACK_ROW_LENGTH, so we need to (A) copy to a contiguous buffer or (B) upload line by
         // line.
@@ -811,6 +828,14 @@ void ImGui_ImplOpenGL3_UpdateTexture(ImTextureData *tex) {
         GL_CALL(glBindTexture(GL_TEXTURE_2D, last_texture)); // Restore state
     } else if (tex->Status == ImTextureStatus_WantDestroy && tex->UnusedFrames > 0)
         ImGui_ImplOpenGL3_DestroyTexture(tex);
+
+    // Restore GL_UNPACK state
+    if (last_unpack_state_save_and_restore) {
+#ifdef GL_UNPACK_ROW_LENGTH
+        GL_CALL(glPixelStorei(GL_UNPACK_ROW_LENGTH, last_unpack_row_length));
+        GL_CALL(glPixelStorei(GL_UNPACK_ALIGNMENT, last_unpack_alignment));
+#endif
+    }
 }
 
 // If you get an error please report on github. You may try different GL context version or GLSL version. See GL<>GLSL
@@ -1108,8 +1133,8 @@ bool ImGui_ImplOpenGL3_Init(const char *glsl_version) {
     glGetIntegerv(GL_MAJOR_VERSION, &major);
     glGetIntegerv(GL_MINOR_VERSION, &minor);
     if (major == 0 && minor == 0)
-        sscanf(gl_version_str, "%d.%d", &major, &minor);
-    // Query GL_VERSION in desktop GL 2.x, the string will start with "<major>.<minor>"
+        sscanf(gl_version_str, "%d.%d", &major,
+               &minor); // Query GL_VERSION in desktop GL 2.x, the string will start with "<major>.<minor>"
     bd->GlVersion = (GLuint)(major * 100 + minor * 10);
     glGetIntegerv(GL_MAX_TEXTURE_SIZE, &bd->MaxTextureSize);
 
@@ -1146,13 +1171,13 @@ bool ImGui_ImplOpenGL3_Init(const char *glsl_version) {
 
 #ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET
     if (bd->GlVersion >= 320)
-        io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;
-    // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
+        io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset; // We can honor the ImDrawCmd::VtxOffset field,
+                                                                   // allowing for large meshes.
 #endif
-    io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;
-    // We can honor ImGuiPlatformIO::Textures[] requests during render.
-    io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;
-    // We can create multi-viewports on the Renderer side (optional)
+    io.BackendFlags |=
+        ImGuiBackendFlags_RendererHasTextures; // We can honor ImGuiPlatformIO::Textures[] requests during render.
+    io.BackendFlags |=
+        ImGuiBackendFlags_RendererHasViewports; // We can create multi-viewports on the Renderer side (optional)
 
     ImGuiPlatformIO &platform_io = ImGui::GetPlatformIO();
     platform_io.Renderer_TextureMaxWidth = platform_io.Renderer_TextureMaxHeight = (int)bd->MaxTextureSize;
@@ -1170,7 +1195,10 @@ bool ImGui_ImplOpenGL3_Init(const char *glsl_version) {
 #elif defined(__APPLE__)
         glsl_version = "#version 150";
 #else
-        glsl_version = "#version 130";
+        if (bd->GlVersion >= 410)
+            glsl_version = "#version 410";
+        else
+            glsl_version = "#version 130";
 #endif
     }
     IM_ASSERT((int)strlen(glsl_version) + 2 < IM_COUNTOF(bd->GlslVersionString));
