@@ -385,8 +385,8 @@ english     = "Optimize…"
 translation = "Optymalizuj…"
 
 [OptimizePromptNotNow]
-english     = "No thanks"
-translation = "Nie, dziękuję"
+english     = "Not now"
+translation = "Nie teraz"
 
 [TranscodeTaskLabel]
 english     = "Optimizing video"
@@ -3845,3 +3845,123 @@ translation = "Wybierz komponent, aby wyświetlić jego licencję."
 [AboutCopyLicense]
 english     = "Copy"
 translation = "Kopiuj"
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# Plugin manager (src/Services/PluginManager.cpp). Prefix: Plg*
+#
+# The install / trust / uninstall flow and the plugin load-failure toasts. The trust prompt is a
+# security-consent dialog — it is the one place the user authorizes arbitrary code execution, so its
+# wording must stay literal and unhedged in every language: state the capability granted, state that
+# the host cannot vouch for the plugin, and leave the decision with the user. Do not soften it.
+#
+# Plugin-supplied text (a plugin's own toast message, its display name) is never keyed — it passes
+# through verbatim, prefixed with the plugin name.
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+
+[PlgTrustTitle]
+english     = "Load plugin?"
+translation = "Wczytać wtyczkę?"
+
+[PlgTrustBody]
+english     = "Plugin {0} wants to load from:\n{1}\n\nPlugins run with full access to your computer — files, network, everything you can do. We cannot verify a plugin is safe. Only load plugins from sources you trust."
+translation = "Wtyczka {0} chce zostać wczytana z:\n{1}\n\nWtyczki działają z pełnym dostępem do Twojego komputera — plików, sieci, wszystkiego, co możesz zrobić Ty. Nie możemy zweryfikować, czy wtyczka jest bezpieczna. Wczytuj tylko wtyczki z zaufanych źródeł."
+
+[PlgBtnLoad]
+english     = "Load"
+translation = "Wczytaj"
+
+[PlgInstallTitle]
+english     = "Install plugin"
+translation = "Instalacja wtyczki"
+
+[PlgInstallReplaceBody]
+english     = "A plugin named {0} is already installed.\n\nReplace it?"
+translation = "Wtyczka o nazwie {0} jest już zainstalowana.\n\nZastąpić ją?"
+
+[PlgBtnReplace]
+english     = "Replace"
+translation = "Zastąp"
+
+[PlgDlgInstallTitle]
+english     = "Install plugin from zip"
+translation = "Instalowanie wtyczki z pliku zip"
+
+[PlgDlgZipFilter]
+english     = "Plugin zip (*.zip)"
+translation = "Zip wtyczki (*.zip)"
+
+[PlgErrFileGone]
+english     = "The selected file no longer exists."
+translation = "Wybrany plik już nie istnieje."
+
+[PlgErrTempDir]
+english     = "Could not access a temporary directory for staging."
+translation = "Nie można uzyskać dostępu do katalogu tymczasowego na potrzeby rozpakowania."
+
+[PlgErrExtract]
+english     = "Could not extract the zip archive."
+translation = "Nie można rozpakować archiwum zip."
+
+[PlgErrNoPluginFolder]
+english     = "The zip does not contain a valid plugin folder (expected name/name.dll)."
+translation = "Plik zip nie zawiera prawidłowego folderu wtyczki (oczekiwano name/name.dll)."
+
+[PlgErrMissingFiles]
+english     = "Not a valid plugin folder (missing the .dll, .runtimeconfig.json or .deps.json)."
+translation = "To nie jest prawidłowy folder wtyczki (brak pliku .dll, .runtimeconfig.json lub .deps.json)."
+
+[PlgErrReservedName]
+english     = "That name is reserved for a built-in plugin."
+translation = "Ta nazwa jest zarezerwowana dla wbudowanej wtyczki."
+
+[PlgErrReadDll]
+english     = "Could not read the plugin DLL."
+translation = "Nie można odczytać biblioteki DLL wtyczki."
+
+[PlgErrWriteFolder]
+english     = "Could not write into the plugins folder."
+translation = "Nie można zapisać w folderze wtyczek."
+
+[PlgErrInstalledNoLoad]
+english     = "The plugin was installed but failed to load."
+translation = "Wtyczka została zainstalowana, ale nie udało się jej wczytać."
+
+[PlgInstalled]
+english     = "Installed plugin {0}."
+translation = "Zainstalowano wtyczkę {0}."
+
+[PlgUninstallTitle]
+english     = "Uninstall plugin"
+translation = "Odinstalowanie wtyczki"
+
+[PlgUninstallBuiltin]
+english     = "Built-in plugins cannot be uninstalled."
+translation = "Wbudowanych wtyczek nie można odinstalować."
+
+[PlgUninstallBody]
+english     = "Uninstall plugin {0}?\n\nThis deletes it from\n{1}"
+translation = "Odinstalować wtyczkę {0}?\n\nZostanie ona usunięta z\n{1}"
+
+[PlgBtnUninstall]
+english     = "Uninstall"
+translation = "Odinstaluj"
+
+[PlgUninstalled]
+english     = "Uninstalled plugin {0}."
+translation = "Odinstalowano wtyczkę {0}."
+
+[PlgUninstalledPending]
+english     = "Uninstalled {0}. Remaining files are removed on the next launch."
+translation = "Odinstalowano {0}. Pozostałe pliki zostaną usunięte przy następnym uruchomieniu."
+
+[PlgIncompatible]
+english     = "Plugin {0} isn't compatible with this version of ofs-ng. Rebuild it against this ofs-ng build."
+translation = "Wtyczka {0} nie jest zgodna z tą wersją ofs-ng. Skompiluj ją ponownie dla tej kompilacji ofs-ng."
+
+[PlgLoadFailed]
+english     = "Plugin {0} failed to load."
+translation = "Nie udało się wczytać wtyczki {0}."
+
+[PlgReloaded]
+english     = "Reloaded plugin {0}."
+translation = "Ponownie wczytano wtyczkę {0}."

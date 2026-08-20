@@ -385,8 +385,8 @@ english     = "Optimize…"
 translation = "Optimieren…"
 
 [OptimizePromptNotNow]
-english     = "No thanks"
-translation = "Nein danke"
+english     = "Not now"
+translation = "Jetzt nicht"
 
 [TranscodeTaskLabel]
 english     = "Optimizing video"
@@ -3845,3 +3845,123 @@ translation = "Wählen Sie eine Komponente aus, um ihre Lizenz anzuzeigen."
 [AboutCopyLicense]
 english     = "Copy"
 translation = "Kopieren"
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# Plugin manager (src/Services/PluginManager.cpp). Prefix: Plg*
+#
+# The install / trust / uninstall flow and the plugin load-failure toasts. The trust prompt is a
+# security-consent dialog — it is the one place the user authorizes arbitrary code execution, so its
+# wording must stay literal and unhedged in every language: state the capability granted, state that
+# the host cannot vouch for the plugin, and leave the decision with the user. Do not soften it.
+#
+# Plugin-supplied text (a plugin's own toast message, its display name) is never keyed — it passes
+# through verbatim, prefixed with the plugin name.
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+
+[PlgTrustTitle]
+english     = "Load plugin?"
+translation = "Plugin laden?"
+
+[PlgTrustBody]
+english     = "Plugin {0} wants to load from:\n{1}\n\nPlugins run with full access to your computer — files, network, everything you can do. We cannot verify a plugin is safe. Only load plugins from sources you trust."
+translation = "Plugin {0} möchte geladen werden aus:\n{1}\n\nPlugins laufen mit vollem Zugriff auf Ihren Computer — Dateien, Netzwerk, alles, was Sie selbst tun können. Wir können nicht überprüfen, ob ein Plugin sicher ist. Laden Sie nur Plugins aus Quellen, denen Sie vertrauen."
+
+[PlgBtnLoad]
+english     = "Load"
+translation = "Laden"
+
+[PlgInstallTitle]
+english     = "Install plugin"
+translation = "Plugin installieren"
+
+[PlgInstallReplaceBody]
+english     = "A plugin named {0} is already installed.\n\nReplace it?"
+translation = "Ein Plugin namens {0} ist bereits installiert.\n\nErsetzen?"
+
+[PlgBtnReplace]
+english     = "Replace"
+translation = "Ersetzen"
+
+[PlgDlgInstallTitle]
+english     = "Install plugin from zip"
+translation = "Plugin aus ZIP installieren"
+
+[PlgDlgZipFilter]
+english     = "Plugin zip (*.zip)"
+translation = "Plugin-ZIP (*.zip)"
+
+[PlgErrFileGone]
+english     = "The selected file no longer exists."
+translation = "Die ausgewählte Datei existiert nicht mehr."
+
+[PlgErrTempDir]
+english     = "Could not access a temporary directory for staging."
+translation = "Auf ein temporäres Verzeichnis zum Entpacken konnte nicht zugegriffen werden."
+
+[PlgErrExtract]
+english     = "Could not extract the zip archive."
+translation = "Das ZIP-Archiv konnte nicht entpackt werden."
+
+[PlgErrNoPluginFolder]
+english     = "The zip does not contain a valid plugin folder (expected name/name.dll)."
+translation = "Das ZIP enthält keinen gültigen Plugin-Ordner (erwartet wird name/name.dll)."
+
+[PlgErrMissingFiles]
+english     = "Not a valid plugin folder (missing the .dll, .runtimeconfig.json or .deps.json)."
+translation = "Kein gültiger Plugin-Ordner (.dll, .runtimeconfig.json oder .deps.json fehlt)."
+
+[PlgErrReservedName]
+english     = "That name is reserved for a built-in plugin."
+translation = "Dieser Name ist für ein integriertes Plugin reserviert."
+
+[PlgErrReadDll]
+english     = "Could not read the plugin DLL."
+translation = "Die Plugin-DLL konnte nicht gelesen werden."
+
+[PlgErrWriteFolder]
+english     = "Could not write into the plugins folder."
+translation = "In den Plugin-Ordner konnte nicht geschrieben werden."
+
+[PlgErrInstalledNoLoad]
+english     = "The plugin was installed but failed to load."
+translation = "Das Plugin wurde installiert, konnte aber nicht geladen werden."
+
+[PlgInstalled]
+english     = "Installed plugin {0}."
+translation = "Plugin {0} installiert."
+
+[PlgUninstallTitle]
+english     = "Uninstall plugin"
+translation = "Plugin deinstallieren"
+
+[PlgUninstallBuiltin]
+english     = "Built-in plugins cannot be uninstalled."
+translation = "Integrierte Plugins können nicht deinstalliert werden."
+
+[PlgUninstallBody]
+english     = "Uninstall plugin {0}?\n\nThis deletes it from\n{1}"
+translation = "Plugin {0} deinstallieren?\n\nDadurch wird es gelöscht aus\n{1}"
+
+[PlgBtnUninstall]
+english     = "Uninstall"
+translation = "Deinstallieren"
+
+[PlgUninstalled]
+english     = "Uninstalled plugin {0}."
+translation = "Plugin {0} deinstalliert."
+
+[PlgUninstalledPending]
+english     = "Uninstalled {0}. Remaining files are removed on the next launch."
+translation = "{0} deinstalliert. Verbleibende Dateien werden beim nächsten Start entfernt."
+
+[PlgIncompatible]
+english     = "Plugin {0} isn't compatible with this version of ofs-ng. Rebuild it against this ofs-ng build."
+translation = "Plugin {0} ist mit dieser Version von ofs-ng nicht kompatibel. Erstellen Sie es für diesen ofs-ng-Build neu."
+
+[PlgLoadFailed]
+english     = "Plugin {0} failed to load."
+translation = "Plugin {0} konnte nicht geladen werden."
+
+[PlgReloaded]
+english     = "Reloaded plugin {0}."
+translation = "Plugin {0} neu geladen."

@@ -385,8 +385,8 @@ english     = "Optimize…"
 translation = "Optimize Et…"
 
 [OptimizePromptNotNow]
-english     = "No thanks"
-translation = "Hayır, teşekkürler"
+english     = "Not now"
+translation = "Şimdi değil"
 
 [TranscodeTaskLabel]
 english     = "Optimizing video"
@@ -3845,3 +3845,123 @@ translation = "Lisansını görüntülemek için bir bileşen seçin."
 [AboutCopyLicense]
 english     = "Copy"
 translation = "Kopyala"
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# Plugin manager (src/Services/PluginManager.cpp). Prefix: Plg*
+#
+# The install / trust / uninstall flow and the plugin load-failure toasts. The trust prompt is a
+# security-consent dialog — it is the one place the user authorizes arbitrary code execution, so its
+# wording must stay literal and unhedged in every language: state the capability granted, state that
+# the host cannot vouch for the plugin, and leave the decision with the user. Do not soften it.
+#
+# Plugin-supplied text (a plugin's own toast message, its display name) is never keyed — it passes
+# through verbatim, prefixed with the plugin name.
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+
+[PlgTrustTitle]
+english     = "Load plugin?"
+translation = "Eklenti yüklensin mi?"
+
+[PlgTrustBody]
+english     = "Plugin {0} wants to load from:\n{1}\n\nPlugins run with full access to your computer — files, network, everything you can do. We cannot verify a plugin is safe. Only load plugins from sources you trust."
+translation = "{0} eklentisi şu konumdan yüklenmek istiyor:\n{1}\n\nEklentiler bilgisayarınıza tam erişimle çalışır — dosyalar, ağ, sizin yapabildiğiniz her şey. Bir eklentinin güvenli olduğunu doğrulayamayız. Yalnızca güvendiğiniz kaynaklardan gelen eklentileri yükleyin."
+
+[PlgBtnLoad]
+english     = "Load"
+translation = "Yükle"
+
+[PlgInstallTitle]
+english     = "Install plugin"
+translation = "Eklenti yükleme"
+
+[PlgInstallReplaceBody]
+english     = "A plugin named {0} is already installed.\n\nReplace it?"
+translation = "{0} adlı bir eklenti zaten yüklü.\n\nDeğiştirilsin mi?"
+
+[PlgBtnReplace]
+english     = "Replace"
+translation = "Değiştir"
+
+[PlgDlgInstallTitle]
+english     = "Install plugin from zip"
+translation = "Zip'ten eklenti yükle"
+
+[PlgDlgZipFilter]
+english     = "Plugin zip (*.zip)"
+translation = "Eklenti zip'i (*.zip)"
+
+[PlgErrFileGone]
+english     = "The selected file no longer exists."
+translation = "Seçilen dosya artık mevcut değil."
+
+[PlgErrTempDir]
+english     = "Could not access a temporary directory for staging."
+translation = "Hazırlık için geçici bir dizine erişilemedi."
+
+[PlgErrExtract]
+english     = "Could not extract the zip archive."
+translation = "Zip arşivi ayıklanamadı."
+
+[PlgErrNoPluginFolder]
+english     = "The zip does not contain a valid plugin folder (expected name/name.dll)."
+translation = "Zip geçerli bir eklenti klasörü içermiyor (name/name.dll bekleniyordu)."
+
+[PlgErrMissingFiles]
+english     = "Not a valid plugin folder (missing the .dll, .runtimeconfig.json or .deps.json)."
+translation = "Geçerli bir eklenti klasörü değil (.dll, .runtimeconfig.json veya .deps.json eksik)."
+
+[PlgErrReservedName]
+english     = "That name is reserved for a built-in plugin."
+translation = "Bu ad yerleşik bir eklenti için ayrılmıştır."
+
+[PlgErrReadDll]
+english     = "Could not read the plugin DLL."
+translation = "Eklenti DLL'i okunamadı."
+
+[PlgErrWriteFolder]
+english     = "Could not write into the plugins folder."
+translation = "Eklentiler klasörüne yazılamadı."
+
+[PlgErrInstalledNoLoad]
+english     = "The plugin was installed but failed to load."
+translation = "Eklenti yüklendi ancak başlatılamadı."
+
+[PlgInstalled]
+english     = "Installed plugin {0}."
+translation = "{0} eklentisi yüklendi."
+
+[PlgUninstallTitle]
+english     = "Uninstall plugin"
+translation = "Eklenti kaldırma"
+
+[PlgUninstallBuiltin]
+english     = "Built-in plugins cannot be uninstalled."
+translation = "Yerleşik eklentiler kaldırılamaz."
+
+[PlgUninstallBody]
+english     = "Uninstall plugin {0}?\n\nThis deletes it from\n{1}"
+translation = "{0} eklentisi kaldırılsın mı?\n\nŞu konumdan silinecek:\n{1}"
+
+[PlgBtnUninstall]
+english     = "Uninstall"
+translation = "Kaldır"
+
+[PlgUninstalled]
+english     = "Uninstalled plugin {0}."
+translation = "{0} eklentisi kaldırıldı."
+
+[PlgUninstalledPending]
+english     = "Uninstalled {0}. Remaining files are removed on the next launch."
+translation = "{0} kaldırıldı. Kalan dosyalar bir sonraki başlatmada silinecek."
+
+[PlgIncompatible]
+english     = "Plugin {0} isn't compatible with this version of ofs-ng. Rebuild it against this ofs-ng build."
+translation = "{0} eklentisi ofs-ng'nin bu sürümüyle uyumlu değil. Bu ofs-ng derlemesine göre yeniden derleyin."
+
+[PlgLoadFailed]
+english     = "Plugin {0} failed to load."
+translation = "{0} eklentisi yüklenemedi."
+
+[PlgReloaded]
+english     = "Reloaded plugin {0}."
+translation = "{0} eklentisi yeniden yüklendi."

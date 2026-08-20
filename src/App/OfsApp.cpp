@@ -197,8 +197,8 @@ bool OfsApp::init() {
     // Both the optimize prompt and the Metadata editor pop only when the user brings a *new* video into the
     // app — creating a new project or changing the media below — not on reopening an existing project (which
     // fires LoadProjectEvent, not these). maybeOfferOptimize() waits for the async video load to settle, then
-    // its canOffer gate (original source, no existing intra copy, not previously declined) decides whether to
-    // actually show it — so arming on a switch *to* the intra copy is harmless. The Metadata pop is gated on
+    // its canOffer gate (original source, no existing intra copy, an output dir configured) decides whether
+    // to actually show it — so arming on a switch *to* the intra copy is harmless. The Metadata pop is gated on
     // the preference; "old OFS" new-project behavior.
     eventQueue.on<ofs::NewProjectCreatedEvent>([this](const ofs::NewProjectCreatedEvent &) {
         optimizePromptPending = true;
@@ -1823,8 +1823,11 @@ void OfsApp::maybeOfferOptimize() {
                  close = true;
              }
              ImGui::SameLine();
-             if (ImGui::Button(Str::OptimizePromptNotNow.id("optimize_prompt_no")))
-                 close = true; // one-shot offer: dismissing it is enough, nothing to persist
+             // Escape dismisses too: the custom-body modal path has no built-in Escape mapping (unlike
+             // the plain-button one), and an unsolicited offer must not be answerable only by clicking.
+             if (ImGui::Button(Str::OptimizePromptNotNow.id("optimize_prompt_no")) ||
+                 ImGui::IsKeyPressed(ImGuiKey_Escape))
+                 close = true;
              return close;
          }});
 }

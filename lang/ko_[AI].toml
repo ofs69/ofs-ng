@@ -385,8 +385,8 @@ english     = "Optimize…"
 translation = "최적화…"
 
 [OptimizePromptNotNow]
-english     = "No thanks"
-translation = "아니요"
+english     = "Not now"
+translation = "나중에"
 
 [TranscodeTaskLabel]
 english     = "Optimizing video"
@@ -3845,3 +3845,123 @@ translation = "라이선스를 보려면 구성 요소를 선택하세요."
 [AboutCopyLicense]
 english     = "Copy"
 translation = "복사"
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# Plugin manager (src/Services/PluginManager.cpp). Prefix: Plg*
+#
+# The install / trust / uninstall flow and the plugin load-failure toasts. The trust prompt is a
+# security-consent dialog — it is the one place the user authorizes arbitrary code execution, so its
+# wording must stay literal and unhedged in every language: state the capability granted, state that
+# the host cannot vouch for the plugin, and leave the decision with the user. Do not soften it.
+#
+# Plugin-supplied text (a plugin's own toast message, its display name) is never keyed — it passes
+# through verbatim, prefixed with the plugin name.
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+
+[PlgTrustTitle]
+english     = "Load plugin?"
+translation = "플러그인을 불러올까요?"
+
+[PlgTrustBody]
+english     = "Plugin {0} wants to load from:\n{1}\n\nPlugins run with full access to your computer — files, network, everything you can do. We cannot verify a plugin is safe. Only load plugins from sources you trust."
+translation = "플러그인 {0}이(가) 다음 위치에서 로드하려고 합니다:\n{1}\n\n플러그인은 컴퓨터에 대한 전체 액세스 권한 — 파일, 네트워크 등 사용자가 할 수 있는 모든 것 — 으로 실행됩니다. 플러그인이 안전한지는 확인할 수 없습니다. 신뢰할 수 있는 출처의 플러그인만 불러오세요."
+
+[PlgBtnLoad]
+english     = "Load"
+translation = "불러오기"
+
+[PlgInstallTitle]
+english     = "Install plugin"
+translation = "플러그인 설치"
+
+[PlgInstallReplaceBody]
+english     = "A plugin named {0} is already installed.\n\nReplace it?"
+translation = "{0}(이)라는 플러그인이 이미 설치되어 있습니다.\n\n바꿀까요?"
+
+[PlgBtnReplace]
+english     = "Replace"
+translation = "바꾸기"
+
+[PlgDlgInstallTitle]
+english     = "Install plugin from zip"
+translation = "zip에서 플러그인 설치"
+
+[PlgDlgZipFilter]
+english     = "Plugin zip (*.zip)"
+translation = "플러그인 zip (*.zip)"
+
+[PlgErrFileGone]
+english     = "The selected file no longer exists."
+translation = "선택한 파일이 더 이상 존재하지 않습니다."
+
+[PlgErrTempDir]
+english     = "Could not access a temporary directory for staging."
+translation = "준비용 임시 디렉터리에 접근할 수 없습니다."
+
+[PlgErrExtract]
+english     = "Could not extract the zip archive."
+translation = "zip 아카이브의 압축을 풀 수 없습니다."
+
+[PlgErrNoPluginFolder]
+english     = "The zip does not contain a valid plugin folder (expected name/name.dll)."
+translation = "zip에 올바른 플러그인 폴더가 없습니다 (name/name.dll 형식이 필요합니다)."
+
+[PlgErrMissingFiles]
+english     = "Not a valid plugin folder (missing the .dll, .runtimeconfig.json or .deps.json)."
+translation = "올바른 플러그인 폴더가 아닙니다 (.dll, .runtimeconfig.json 또는 .deps.json 누락)."
+
+[PlgErrReservedName]
+english     = "That name is reserved for a built-in plugin."
+translation = "이 이름은 기본 제공 플러그인용으로 예약되어 있습니다."
+
+[PlgErrReadDll]
+english     = "Could not read the plugin DLL."
+translation = "플러그인 DLL을 읽을 수 없습니다."
+
+[PlgErrWriteFolder]
+english     = "Could not write into the plugins folder."
+translation = "플러그인 폴더에 쓸 수 없습니다."
+
+[PlgErrInstalledNoLoad]
+english     = "The plugin was installed but failed to load."
+translation = "플러그인이 설치되었지만 불러오지 못했습니다."
+
+[PlgInstalled]
+english     = "Installed plugin {0}."
+translation = "플러그인 {0}을(를) 설치했습니다."
+
+[PlgUninstallTitle]
+english     = "Uninstall plugin"
+translation = "플러그인 제거"
+
+[PlgUninstallBuiltin]
+english     = "Built-in plugins cannot be uninstalled."
+translation = "기본 제공 플러그인은 제거할 수 없습니다."
+
+[PlgUninstallBody]
+english     = "Uninstall plugin {0}?\n\nThis deletes it from\n{1}"
+translation = "플러그인 {0}을(를) 제거할까요?\n\n다음 위치에서 삭제됩니다:\n{1}"
+
+[PlgBtnUninstall]
+english     = "Uninstall"
+translation = "제거"
+
+[PlgUninstalled]
+english     = "Uninstalled plugin {0}."
+translation = "플러그인 {0}을(를) 제거했습니다."
+
+[PlgUninstalledPending]
+english     = "Uninstalled {0}. Remaining files are removed on the next launch."
+translation = "{0}을(를) 제거했습니다. 남은 파일은 다음 실행 시 삭제됩니다."
+
+[PlgIncompatible]
+english     = "Plugin {0} isn't compatible with this version of ofs-ng. Rebuild it against this ofs-ng build."
+translation = "플러그인 {0}은(는) 이 버전의 ofs-ng와 호환되지 않습니다. 이 ofs-ng 빌드에 맞춰 다시 빌드하세요."
+
+[PlgLoadFailed]
+english     = "Plugin {0} failed to load."
+translation = "플러그인 {0}을(를) 불러오지 못했습니다."
+
+[PlgReloaded]
+english     = "Reloaded plugin {0}."
+translation = "플러그인 {0}을(를) 다시 불러왔습니다."

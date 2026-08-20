@@ -385,8 +385,8 @@ english     = "Optimize…"
 translation = "Оптимизировать…"
 
 [OptimizePromptNotNow]
-english     = "No thanks"
-translation = "Нет, спасибо"
+english     = "Not now"
+translation = "Не сейчас"
 
 [TranscodeTaskLabel]
 english     = "Optimizing video"
@@ -3845,3 +3845,123 @@ translation = "Выберите компонент для просмотра е�
 [AboutCopyLicense]
 english     = "Copy"
 translation = "Копировать"
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# Plugin manager (src/Services/PluginManager.cpp). Prefix: Plg*
+#
+# The install / trust / uninstall flow and the plugin load-failure toasts. The trust prompt is a
+# security-consent dialog — it is the one place the user authorizes arbitrary code execution, so its
+# wording must stay literal and unhedged in every language: state the capability granted, state that
+# the host cannot vouch for the plugin, and leave the decision with the user. Do not soften it.
+#
+# Plugin-supplied text (a plugin's own toast message, its display name) is never keyed — it passes
+# through verbatim, prefixed with the plugin name.
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+
+[PlgTrustTitle]
+english     = "Load plugin?"
+translation = "Загрузить плагин?"
+
+[PlgTrustBody]
+english     = "Plugin {0} wants to load from:\n{1}\n\nPlugins run with full access to your computer — files, network, everything you can do. We cannot verify a plugin is safe. Only load plugins from sources you trust."
+translation = "Плагин {0} пытается загрузиться из:\n{1}\n\nПлагины работают с полным доступом к вашему компьютеру — файлам, сети, всему, что доступно вам. Мы не можем проверить, безопасен ли плагин. Загружайте плагины только из источников, которым доверяете."
+
+[PlgBtnLoad]
+english     = "Load"
+translation = "Загрузить"
+
+[PlgInstallTitle]
+english     = "Install plugin"
+translation = "Установка плагина"
+
+[PlgInstallReplaceBody]
+english     = "A plugin named {0} is already installed.\n\nReplace it?"
+translation = "Плагин с именем {0} уже установлен.\n\nЗаменить его?"
+
+[PlgBtnReplace]
+english     = "Replace"
+translation = "Заменить"
+
+[PlgDlgInstallTitle]
+english     = "Install plugin from zip"
+translation = "Установка плагина из ZIP"
+
+[PlgDlgZipFilter]
+english     = "Plugin zip (*.zip)"
+translation = "ZIP плагина (*.zip)"
+
+[PlgErrFileGone]
+english     = "The selected file no longer exists."
+translation = "Выбранный файл больше не существует."
+
+[PlgErrTempDir]
+english     = "Could not access a temporary directory for staging."
+translation = "Не удалось получить доступ к временному каталогу для распаковки."
+
+[PlgErrExtract]
+english     = "Could not extract the zip archive."
+translation = "Не удалось распаковать ZIP-архив."
+
+[PlgErrNoPluginFolder]
+english     = "The zip does not contain a valid plugin folder (expected name/name.dll)."
+translation = "В ZIP-архиве нет корректной папки плагина (ожидается name/name.dll)."
+
+[PlgErrMissingFiles]
+english     = "Not a valid plugin folder (missing the .dll, .runtimeconfig.json or .deps.json)."
+translation = "Это не корректная папка плагина (отсутствует .dll, .runtimeconfig.json или .deps.json)."
+
+[PlgErrReservedName]
+english     = "That name is reserved for a built-in plugin."
+translation = "Это имя зарезервировано за встроенным плагином."
+
+[PlgErrReadDll]
+english     = "Could not read the plugin DLL."
+translation = "Не удалось прочитать DLL плагина."
+
+[PlgErrWriteFolder]
+english     = "Could not write into the plugins folder."
+translation = "Не удалось выполнить запись в папку плагинов."
+
+[PlgErrInstalledNoLoad]
+english     = "The plugin was installed but failed to load."
+translation = "Плагин установлен, но загрузить его не удалось."
+
+[PlgInstalled]
+english     = "Installed plugin {0}."
+translation = "Плагин {0} установлен."
+
+[PlgUninstallTitle]
+english     = "Uninstall plugin"
+translation = "Удаление плагина"
+
+[PlgUninstallBuiltin]
+english     = "Built-in plugins cannot be uninstalled."
+translation = "Встроенные плагины нельзя удалить."
+
+[PlgUninstallBody]
+english     = "Uninstall plugin {0}?\n\nThis deletes it from\n{1}"
+translation = "Удалить плагин {0}?\n\nОн будет удалён из\n{1}"
+
+[PlgBtnUninstall]
+english     = "Uninstall"
+translation = "Удалить"
+
+[PlgUninstalled]
+english     = "Uninstalled plugin {0}."
+translation = "Плагин {0} удалён."
+
+[PlgUninstalledPending]
+english     = "Uninstalled {0}. Remaining files are removed on the next launch."
+translation = "{0} удалён. Оставшиеся файлы будут удалены при следующем запуске."
+
+[PlgIncompatible]
+english     = "Plugin {0} isn't compatible with this version of ofs-ng. Rebuild it against this ofs-ng build."
+translation = "Плагин {0} несовместим с этой версией ofs-ng. Пересоберите его под эту сборку ofs-ng."
+
+[PlgLoadFailed]
+english     = "Plugin {0} failed to load."
+translation = "Не удалось загрузить плагин {0}."
+
+[PlgReloaded]
+english     = "Reloaded plugin {0}."
+translation = "Плагин {0} перезагружен."

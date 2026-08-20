@@ -401,8 +401,8 @@ english     = "Optimize…"
 description = "Optimize-prompt modal: button that opens the optimize options dialog."
 
 [OptimizePromptNotNow]
-english     = "No thanks"
-description = "Optimize-prompt modal: button that dismisses the one-shot optimize offer without optimizing."
+english     = "Not now"
+description = "Optimize-prompt modal: button that dismisses the offer without optimizing. A neutral decline — the offer is unsolicited, so this must read as an equal choice next to Optimize, never as refusing a favor."
 
 [TranscodeTaskLabel]
 english     = "Optimizing video"
@@ -4089,3 +4089,152 @@ description = "About window — placeholder shown in the license pane before any
 [AboutCopyLicense]
 english     = "Copy"
 description = "About window — button that copies the currently displayed license text to the clipboard."
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# Plugin manager (src/Services/PluginManager.cpp). Prefix: Plg*
+#
+# The install / trust / uninstall flow and the plugin load-failure toasts. The trust prompt is a
+# security-consent dialog — it is the one place the user authorizes arbitrary code execution, so its
+# wording must stay literal and unhedged in every language: state the capability granted, state that
+# the host cannot vouch for the plugin, and leave the decision with the user. Do not soften it.
+#
+# Plugin-supplied text (a plugin's own toast message, its display name) is never keyed — it passes
+# through verbatim, prefixed with the plugin name.
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+
+[PlgTrustTitle]
+english     = "Load plugin?"
+description = "Plugin trust prompt — modal title. Shown before an untrusted (new, or byte-changed) plugin is loaded for the first time."
+
+[PlgTrustBody]
+english      = "Plugin {0} wants to load from:\n{1}\n\nPlugins run with full access to your computer — files, network, everything you can do. We cannot verify a plugin is safe. Only load plugins from sources you trust."
+description  = "Plugin trust prompt — body. The security warning the user consents to; {0} is the plugin name, {1} the folder it would load from."
+placeholders = [
+    "{0} = plugin name, e.g. MyPlugin",
+    "{1} = absolute folder path the plugin would load from",
+]
+
+[PlgBtnLoad]
+english     = "Load"
+description = "Plugin trust prompt — affirmative button: load the plugin (grants it full access). Paired with the shared Cancel."
+
+[PlgInstallTitle]
+english     = "Install plugin"
+description = "Plugin install — title shared by the replace-confirmation modal and every install error dialog."
+
+[PlgInstallReplaceBody]
+english      = "A plugin named {0} is already installed.\n\nReplace it?"
+description  = "Plugin install — body of the confirmation shown when the zip's plugin name matches one already installed."
+placeholders = [
+    "{0} = plugin name, e.g. MyPlugin",
+]
+
+[PlgBtnReplace]
+english     = "Replace"
+description = "Plugin install — affirmative button of the replace confirmation: overwrite the installed plugin. Paired with the shared Cancel."
+
+[PlgDlgInstallTitle]
+english     = "Install plugin from zip"
+description = "Plugin install — title of the native file picker for choosing the plugin .zip."
+
+[PlgDlgZipFilter]
+english     = "Plugin zip (*.zip)"
+description = "Plugin install — file-type filter label in the native picker. Keep the literal *.zip pattern as-is; translate only the words around it."
+
+[PlgErrFileGone]
+english     = "The selected file no longer exists."
+description = "Plugin install failure: the chosen zip was moved or deleted between picking it and installing."
+
+[PlgErrTempDir]
+english     = "Could not access a temporary directory for staging."
+description = "Plugin install failure: no writable temp directory to unpack the zip into before committing it."
+
+[PlgErrExtract]
+english     = "Could not extract the zip archive."
+description = "Plugin install failure: the archive is corrupt or unreadable."
+
+[PlgErrNoPluginFolder]
+english     = "The zip does not contain a valid plugin folder (expected name/name.dll)."
+description = "Plugin install failure: the archive has no folder laid out as a plugin. Keep the literal name/name.dll layout hint."
+
+[PlgErrMissingFiles]
+english     = "Not a valid plugin folder (missing the .dll, .runtimeconfig.json or .deps.json)."
+description = "Plugin install failure: the plugin folder is missing one of the three required .NET entry files. Keep the literal file names."
+
+[PlgErrReservedName]
+english     = "That name is reserved for a built-in plugin."
+description = "Plugin install failure: the zip's plugin name collides with a first-party plugin shipped with the app."
+
+[PlgErrReadDll]
+english     = "Could not read the plugin DLL."
+description = "Plugin install failure: the entry DLL could not be read to compute its trust hash."
+
+[PlgErrWriteFolder]
+english     = "Could not write into the plugins folder."
+description = "Plugin install failure: the staged plugin could not be moved into the user plugins directory."
+
+[PlgErrInstalledNoLoad]
+english     = "The plugin was installed but failed to load."
+description = "Plugin install outcome: the files were committed but the plugin did not initialize."
+
+[PlgInstalled]
+english      = "Installed plugin {0}."
+description  = "Toast confirming a plugin was installed and loaded."
+placeholders = [
+    "{0} = plugin name, e.g. MyPlugin",
+]
+
+[PlgUninstallTitle]
+english     = "Uninstall plugin"
+description = "Plugin uninstall — title shared by the confirmation modal and the built-in-plugin refusal."
+
+[PlgUninstallBuiltin]
+english     = "Built-in plugins cannot be uninstalled."
+description = "Plugin uninstall refusal: first-party plugins ship with the app and are not removable."
+
+[PlgUninstallBody]
+english      = "Uninstall plugin {0}?\n\nThis deletes it from\n{1}"
+description  = "Plugin uninstall — confirmation body naming the plugin and the folder that will be deleted."
+placeholders = [
+    "{0} = plugin name, e.g. MyPlugin",
+    "{1} = absolute folder path that will be deleted",
+]
+
+[PlgBtnUninstall]
+english     = "Uninstall"
+description = "Plugin uninstall — affirmative button of the confirmation. Paired with the shared Cancel."
+
+[PlgUninstalled]
+english      = "Uninstalled plugin {0}."
+description  = "Toast confirming a plugin was uninstalled and its folder removed."
+placeholders = [
+    "{0} = plugin name, e.g. MyPlugin",
+]
+
+[PlgUninstalledPending]
+english      = "Uninstalled {0}. Remaining files are removed on the next launch."
+description  = "Toast shown when a plugin was uninstalled but its files were still locked; the leftovers are deleted at the next startup."
+placeholders = [
+    "{0} = plugin name, e.g. MyPlugin",
+]
+
+[PlgIncompatible]
+english      = "Plugin {0} isn't compatible with this version of ofs-ng. Rebuild it against this ofs-ng build."
+description  = "Plugin load failure the user can act on: the plugin was built against a different Ofs.Api version. \"ofs-ng\" is the app name — do not translate it."
+placeholders = [
+    "{0} = plugin display name, e.g. MyPlugin",
+]
+
+[PlgLoadFailed]
+english      = "Plugin {0} failed to load."
+description  = "Generic plugin load failure with nothing actionable to add; details go to the log."
+placeholders = [
+    "{0} = plugin display name, e.g. MyPlugin",
+]
+
+[PlgReloaded]
+english      = "Reloaded plugin {0}."
+description  = "Toast confirming a hot-reload (developer aid) picked up the plugin's rebuilt DLL."
+placeholders = [
+    "{0} = plugin display name, e.g. MyPlugin",
+]

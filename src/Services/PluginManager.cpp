@@ -1660,6 +1660,10 @@ void PluginManager::notifyPluginFault(const std::string &who, const std::string 
     const auto suppressed = faultThrottle_.onFault(who);
     if (!suppressed) // inside the coalescing window — counted, not emitted
         return;
+    // Not localized, deliberately: hostReportFault is reached from JobSystem workers evaluating plugin
+    // nodes, and the Translator (and the frame arena a TrKey::fmt writes into) is main-thread-only. Fetching
+    // a translation here would race a language swap. ScriptSystem's sibling toast is English for the same
+    // reason; localizing either means routing who/ctx through an event and formatting on the main thread.
     std::string message = *suppressed > 0
                               ? fmt::format("Plugin '{}' error in {} (+{} more) — see log", who, ctx, *suppressed)
                               : fmt::format("Plugin '{}' error in {} — see log", who, ctx);
@@ -1845,10 +1849,8 @@ bool PluginManager::isPluginTrusted(const LoadedPlugin &lp) const {
 }
 
 std::string PluginManager::trustPromptMessage(const std::string &name, const std::filesystem::path &dir) {
-    return std::format("Plugin {} wants to load from:\n{}\n\n"
-                       "Plugins run with full access to your computer — files, network, everything you "
-                       "can do. We cannot verify a plugin is safe. Only load plugins from sources you trust.",
-                       name, ofs::util::toUtf8(dir));
+    const std::string dirUtf8 = ofs::util::toUtf8(dir);
+    return Str::PlgTrustBody.fmt(name, dirUtf8);
 }
 
 void PluginManager::loadFromDir(const std::filesystem::path &pluginDir,
@@ -1970,10 +1972,7 @@ bool PluginManager::doLoad(LoadedPlugin &lp, bool notifyOnFailure) {
 
     if (rc != 0) {
         OFS_CORE_ERROR("Failed to load plugin {0}, error code: {1}", lp.name, rc);
-        notifyFailure(rc == -8 ? fmt::format("Plugin {} isn't compatible with this version of ofs-ng. "
-                                             "Rebuild it against this ofs-ng build.",
-                                             lp.displayName)
-                               : fmt::format("Plugin {} failed to load.", lp.displayName));
+        notifyFailure(rc == -8 ? Str::PlgIncompatible.fmt(lp.displayName) : Str::PlgLoadFailed.fmt(lp.displayName));
         return false;
     }
     // Native↔managed ABI check: the PluginApi struct the bridge filled must match this
@@ -1982,9 +1981,7 @@ bool PluginManager::doLoad(LoadedPlugin &lp, bool notifyOnFailure) {
     if (!isPluginAbiVersionSupported(lp.api.version)) {
         OFS_CORE_ERROR("Plugin {0} unsupported ABI version: {1}", lp.name, lp.api.version);
         std::memset(&lp.api, 0, sizeof(PluginApi));
-        notifyFailure(fmt::format("Plugin {} isn't compatible with this version of ofs-ng. "
-                                  "Rebuild it against this ofs-ng build.",
-                                  lp.displayName));
+        notifyFailure(Str::PlgIncompatible.fmt(lp.displayName));
         return false;
     }
     lp.displayName = (lp.api.getName && lp.api.getName()) ? lp.api.getName() : lp.name;
@@ -1993,10 +1990,10 @@ bool PluginManager::doLoad(LoadedPlugin &lp, bool notifyOnFailure) {
 }
 
 co::Fire PluginManager::installFromZip(std::filesystem::path zipPath) {
-    auto fail = [this](const char *msg) { showError(eventQueue_, "Install plugin", msg); };
+    auto fail = [this](const char *msg) { showError(eventQueue_, Str::PlgInstallTitle.c_str(), msg); };
 
     if (!std::filesystem::exists(zipPath)) {
-        fail("The selected file no longer exists.");
+        fail(Str::PlgErrFileGone);
         co_return;
     }
 
@@ -2005,7 +2002,7 @@ co::Fire PluginManager::installFromZip(std::filesystem::path zipPath) {
     std::error_code ec;
     const std::filesystem::path tempRoot = std::filesystem::temp_directory_path(ec);
     if (ec) {
-        fail("Could not access a temporary directory for staging.");
+        fail(Str::PlgErrTempDir);
         co_return;
     }
     const std::filesystem::path stageRoot = tempRoot / "ofs-plugin-staging";
@@ -2020,13 +2017,13 @@ co::Fire PluginManager::installFromZip(std::filesystem::path zipPath) {
     } guard{stageRoot};
 
     if (!extractZip(zipPath, stageRoot)) {
-        fail("Could not extract the zip archive.");
+        fail(Str::PlgErrExtract);
         co_return;
     }
 
     const std::filesystem::path stagedDir = locatePluginDir(stageRoot);
     if (stagedDir.empty()) {
-        fail("The zip does not contain a valid plugin folder (expected name/name.dll).");
+        fail(Str::PlgErrNoPluginFolder);
         co_return;
     }
     const std::filesystem::path stem = stagedDir.filename(); // lossless; name (UTF-8) is for display
@@ -2040,23 +2037,23 @@ co::Fire PluginManager::installFromZip(std::filesystem::path zipPath) {
     };
     if (!std::filesystem::exists(sibling(".dll")) || !std::filesystem::exists(sibling(".runtimeconfig.json")) ||
         !std::filesystem::exists(sibling(".deps.json"))) {
-        fail("Not a valid plugin folder (missing the .dll, .runtimeconfig.json or .deps.json).");
+        fail(Str::PlgErrMissingFiles);
         co_return;
     }
 
     // 3. COLLIDE: first-party names are reserved; an existing user plugin is the update path.
     if (isFirstPartyName(name)) {
-        fail("That name is reserved for a built-in plugin.");
+        fail(Str::PlgErrReservedName);
         co_return;
     }
     const std::filesystem::path destDir = ofs::util::getPrefPath() / "plugins" / stem;
     const bool replacing = std::filesystem::exists(destDir);
     if (replacing) {
-        const std::string msg = std::format("A plugin named {} is already installed.\n\nReplace it?", name);
+        const std::string msg = Str::PlgInstallReplaceBody.fmt(name);
         if (co_await Confirm{eventQueue_,
-                             {.title = "Install plugin",
+                             {.title = Str::PlgInstallTitle.c_str(),
                               .message = msg,
-                              .buttons = {"Replace", "Cancel"},
+                              .buttons = {Str::PlgBtnReplace.c_str(), Str::AppCancel.c_str()},
                               .severity = ModalSeverity::Warning}} != 0)
             co_return;
     }
@@ -2069,13 +2066,13 @@ co::Fire PluginManager::installFromZip(std::filesystem::path zipPath) {
     staged.path = sibling(".dll");
     auto stagedHash = hashPluginDll(staged);
     if (!stagedHash) {
-        fail("Could not read the plugin DLL.");
+        fail(Str::PlgErrReadDll);
         co_return;
     }
     if (co_await Confirm{eventQueue_,
-                         {.title = "Load plugin?",
+                         {.title = Str::PlgTrustTitle.c_str(),
                           .message = trustPromptMessage(name, staged.path.parent_path()),
-                          .buttons = {"Load", "Cancel"},
+                          .buttons = {Str::PlgBtnLoad.c_str(), Str::AppCancel.c_str()},
                           .severity = ModalSeverity::Warning}} != 0)
         co_return; // declined → nothing committed
     staged.acknowledgedHash = *stagedHash;
@@ -2090,7 +2087,7 @@ co::Fire PluginManager::installFromZip(std::filesystem::path zipPath) {
     }
     std::filesystem::create_directories(destDir.parent_path(), ec);
     if (!moveDir(stagedDir, destDir)) {
-        fail("Could not write into the plugins folder.");
+        fail(Str::PlgErrWriteFolder);
         co_return;
     }
 
@@ -2108,11 +2105,10 @@ co::Fire PluginManager::installFromZip(std::filesystem::path zipPath) {
         OFS_CORE_INFO("Installed and loaded plugin: {0}", name);
         loadedPlugins.push_back(std::move(lp));
         savePluginStates();
-        eventQueue_.push(
-            NotifyEvent{.level = NotifyLevel::Success, .message = std::format("Installed plugin {}.", name)});
+        eventQueue_.push(NotifyEvent{.level = NotifyLevel::Success, .message = Str::PlgInstalled.fmt(name)});
     } else {
         savePluginStates();
-        fail("The plugin was installed but failed to load.");
+        fail(Str::PlgErrInstalledNoLoad);
     }
 }
 
@@ -2124,9 +2120,9 @@ co::Fire PluginManager::onRequestInstallPlugin(RequestInstallPluginEvent e) {
         std::string sel = co_await FileDialog{eventQueue_,
                                               {.kind = FileDialogKind::Open,
                                                .key = "plugin_zip",
-                                               .title = "Install plugin from zip",
+                                               .title = Str::PlgDlgInstallTitle.c_str(),
                                                .filterPatterns = {"*.zip"},
-                                               .filterDesc = "Plugin zip (*.zip)"}};
+                                               .filterDesc = Str::PlgDlgZipFilter.c_str()}};
         if (sel.empty())
             co_return;
         zip = ofs::util::fromUtf8(sel); // dialog results are UTF-8
@@ -2139,19 +2135,19 @@ co::Fire PluginManager::onRequestUninstallPlugin(RequestUninstallPluginEvent e) 
     if (it == loadedPlugins.end())
         co_return;
     if (it->firstParty || isFirstPartyName(e.name)) {
-        showWarning(eventQueue_, "Uninstall plugin", "Built-in plugins cannot be uninstalled.");
+        showWarning(eventQueue_, Str::PlgUninstallTitle.c_str(), Str::PlgUninstallBuiltin.c_str());
         co_return;
     }
 
     // The plugin directory is the entry DLL's parent — capture it (by value) before the await; the
     // `it` iterator must not be used after the co_await (loadedPlugins may change meanwhile).
     const std::filesystem::path dir = it->path.parent_path();
-    const std::string msg =
-        std::format("Uninstall plugin {}?\n\nThis deletes it from\n{}", e.name, ofs::util::toUtf8(dir));
+    const std::string dirUtf8 = ofs::util::toUtf8(dir);
+    const std::string msg = Str::PlgUninstallBody.fmt(e.name, dirUtf8);
     if (co_await Confirm{eventQueue_,
-                         {.title = "Uninstall plugin",
+                         {.title = Str::PlgUninstallTitle.c_str(),
                           .message = msg,
-                          .buttons = {"Uninstall", "Cancel"},
+                          .buttons = {Str::PlgBtnUninstall.c_str(), Str::AppCancel.c_str()},
                           .severity = ModalSeverity::Warning}} != 0)
         co_return;
 
@@ -2166,8 +2162,7 @@ co::Fire PluginManager::onRequestUninstallPlugin(RequestUninstallPluginEvent e) 
     if (removeDirRetry(dir)) {
         pendingUninstall_.erase(e.name);
         OFS_CORE_INFO("Uninstalled plugin: {0}", e.name);
-        eventQueue_.push(
-            NotifyEvent{.level = NotifyLevel::Info, .message = std::format("Uninstalled plugin {}.", e.name)});
+        eventQueue_.push(NotifyEvent{.level = NotifyLevel::Info, .message = Str::PlgUninstalled.fmt(e.name)});
         co_return;
     }
 
@@ -2180,9 +2175,7 @@ co::Fire PluginManager::onRequestUninstallPlugin(RequestUninstallPluginEvent e) 
     pending.insert(e.name);
     savePendingUninstalls(pending);
     pendingUninstall_.insert(e.name); // keep discoverNewPlugins from re-surfacing the still-present folder
-    eventQueue_.push(
-        NotifyEvent{.level = NotifyLevel::Warning,
-                    .message = std::format("Uninstalled {}. Remaining files are removed on the next launch.", e.name)});
+    eventQueue_.push(NotifyEvent{.level = NotifyLevel::Warning, .message = Str::PlgUninstalledPending.fmt(e.name)});
 }
 
 void PluginManager::setPluginEnabled(const std::string &name, bool enable) {
@@ -2240,9 +2233,9 @@ co::Fire PluginManager::enablePluginWithConsent(std::string name) {
             co_return;
         const std::string msg = trustPromptMessage(it->name, it->path.parent_path());
         if (co_await Confirm{eventQueue_,
-                             {.title = "Load plugin?",
+                             {.title = Str::PlgTrustTitle.c_str(),
                               .message = msg,
-                              .buttons = {"Load", "Cancel"},
+                              .buttons = {Str::PlgBtnLoad.c_str(), Str::AppCancel.c_str()},
                               .severity = ModalSeverity::Warning}} != 0) {
             OFS_CORE_INFO("User declined to load plugin: {0}", name);
             co_return;
@@ -2357,8 +2350,7 @@ void PluginManager::reloadPlugin(LoadedPlugin &lp, const std::string &newHash) {
     if (doLoad(lp)) {
         lp.enabled = true;
         savePluginStates();
-        eventQueue_.push(
-            NotifyEvent{.level = NotifyLevel::Success, .message = std::format("Reloaded plugin {}.", lp.displayName)});
+        eventQueue_.push(NotifyEvent{.level = NotifyLevel::Success, .message = Str::PlgReloaded.fmt(lp.displayName)});
     } else {
         lp.enabled = false; // doLoad surfaced the reason (incompatible build vs. generic fault) as a toast
     }

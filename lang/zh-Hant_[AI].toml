@@ -385,8 +385,8 @@ english     = "Optimize…"
 translation = "最佳化…"
 
 [OptimizePromptNotNow]
-english     = "No thanks"
-translation = "不用了"
+english     = "Not now"
+translation = "暫不"
 
 [TranscodeTaskLabel]
 english     = "Optimizing video"
@@ -3845,3 +3845,123 @@ translation = "請選取元件以檢視其授權條款。"
 [AboutCopyLicense]
 english     = "Copy"
 translation = "複製"
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# Plugin manager (src/Services/PluginManager.cpp). Prefix: Plg*
+#
+# The install / trust / uninstall flow and the plugin load-failure toasts. The trust prompt is a
+# security-consent dialog — it is the one place the user authorizes arbitrary code execution, so its
+# wording must stay literal and unhedged in every language: state the capability granted, state that
+# the host cannot vouch for the plugin, and leave the decision with the user. Do not soften it.
+#
+# Plugin-supplied text (a plugin's own toast message, its display name) is never keyed — it passes
+# through verbatim, prefixed with the plugin name.
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+
+[PlgTrustTitle]
+english     = "Load plugin?"
+translation = "載入外掛程式？"
+
+[PlgTrustBody]
+english     = "Plugin {0} wants to load from:\n{1}\n\nPlugins run with full access to your computer — files, network, everything you can do. We cannot verify a plugin is safe. Only load plugins from sources you trust."
+translation = "外掛程式 {0} 要求從以下位置載入：\n{1}\n\n外掛程式以對您電腦的完整存取權執行 — 檔案、網路，以及您能做的一切。我們無法驗證外掛程式是否安全。請只載入您信任的來源提供的外掛程式。"
+
+[PlgBtnLoad]
+english     = "Load"
+translation = "載入"
+
+[PlgInstallTitle]
+english     = "Install plugin"
+translation = "安裝外掛程式"
+
+[PlgInstallReplaceBody]
+english     = "A plugin named {0} is already installed.\n\nReplace it?"
+translation = "已安裝名為 {0} 的外掛程式。\n\n要取代嗎？"
+
+[PlgBtnReplace]
+english     = "Replace"
+translation = "取代"
+
+[PlgDlgInstallTitle]
+english     = "Install plugin from zip"
+translation = "從 zip 安裝外掛程式"
+
+[PlgDlgZipFilter]
+english     = "Plugin zip (*.zip)"
+translation = "外掛程式 zip (*.zip)"
+
+[PlgErrFileGone]
+english     = "The selected file no longer exists."
+translation = "所選檔案已不存在。"
+
+[PlgErrTempDir]
+english     = "Could not access a temporary directory for staging."
+translation = "無法存取用於暫存的暫時目錄。"
+
+[PlgErrExtract]
+english     = "Could not extract the zip archive."
+translation = "無法解壓縮該 zip 封存檔。"
+
+[PlgErrNoPluginFolder]
+english     = "The zip does not contain a valid plugin folder (expected name/name.dll)."
+translation = "此 zip 未包含有效的外掛程式資料夾 (應為 name/name.dll)。"
+
+[PlgErrMissingFiles]
+english     = "Not a valid plugin folder (missing the .dll, .runtimeconfig.json or .deps.json)."
+translation = "不是有效的外掛程式資料夾 (缺少 .dll、.runtimeconfig.json 或 .deps.json)。"
+
+[PlgErrReservedName]
+english     = "That name is reserved for a built-in plugin."
+translation = "該名稱保留給內建外掛程式使用。"
+
+[PlgErrReadDll]
+english     = "Could not read the plugin DLL."
+translation = "無法讀取外掛程式的 DLL。"
+
+[PlgErrWriteFolder]
+english     = "Could not write into the plugins folder."
+translation = "無法寫入外掛程式資料夾。"
+
+[PlgErrInstalledNoLoad]
+english     = "The plugin was installed but failed to load."
+translation = "外掛程式已安裝，但載入失敗。"
+
+[PlgInstalled]
+english     = "Installed plugin {0}."
+translation = "已安裝外掛程式 {0}。"
+
+[PlgUninstallTitle]
+english     = "Uninstall plugin"
+translation = "解除安裝外掛程式"
+
+[PlgUninstallBuiltin]
+english     = "Built-in plugins cannot be uninstalled."
+translation = "內建外掛程式無法解除安裝。"
+
+[PlgUninstallBody]
+english     = "Uninstall plugin {0}?\n\nThis deletes it from\n{1}"
+translation = "要解除安裝外掛程式 {0} 嗎？\n\n這會將它從以下位置刪除：\n{1}"
+
+[PlgBtnUninstall]
+english     = "Uninstall"
+translation = "解除安裝"
+
+[PlgUninstalled]
+english     = "Uninstalled plugin {0}."
+translation = "已解除安裝外掛程式 {0}。"
+
+[PlgUninstalledPending]
+english     = "Uninstalled {0}. Remaining files are removed on the next launch."
+translation = "已解除安裝 {0}。剩餘檔案將在下次啟動時移除。"
+
+[PlgIncompatible]
+english     = "Plugin {0} isn't compatible with this version of ofs-ng. Rebuild it against this ofs-ng build."
+translation = "外掛程式 {0} 與此版本的 ofs-ng 不相容。請針對此 ofs-ng 版本重新建置。"
+
+[PlgLoadFailed]
+english     = "Plugin {0} failed to load."
+translation = "外掛程式 {0} 載入失敗。"
+
+[PlgReloaded]
+english     = "Reloaded plugin {0}."
+translation = "已重新載入外掛程式 {0}。"

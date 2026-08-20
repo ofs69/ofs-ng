@@ -385,8 +385,8 @@ english     = "Optimize…"
 translation = "最適化…"
 
 [OptimizePromptNotNow]
-english     = "No thanks"
-translation = "いいえ"
+english     = "Not now"
+translation = "今はしない"
 
 [TranscodeTaskLabel]
 english     = "Optimizing video"
@@ -3845,3 +3845,123 @@ translation = "コンポーネントを選択するとライセンスが表示�
 [AboutCopyLicense]
 english     = "Copy"
 translation = "コピー"
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# Plugin manager (src/Services/PluginManager.cpp). Prefix: Plg*
+#
+# The install / trust / uninstall flow and the plugin load-failure toasts. The trust prompt is a
+# security-consent dialog — it is the one place the user authorizes arbitrary code execution, so its
+# wording must stay literal and unhedged in every language: state the capability granted, state that
+# the host cannot vouch for the plugin, and leave the decision with the user. Do not soften it.
+#
+# Plugin-supplied text (a plugin's own toast message, its display name) is never keyed — it passes
+# through verbatim, prefixed with the plugin name.
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+
+[PlgTrustTitle]
+english     = "Load plugin?"
+translation = "プラグインを読み込みますか？"
+
+[PlgTrustBody]
+english     = "Plugin {0} wants to load from:\n{1}\n\nPlugins run with full access to your computer — files, network, everything you can do. We cannot verify a plugin is safe. Only load plugins from sources you trust."
+translation = "プラグイン {0} が次の場所から読み込まれようとしています:\n{1}\n\nプラグインはコンピューターへの完全なアクセス権 — ファイル、ネットワーク、あなたにできることすべて — を持って動作します。プラグインが安全かどうかを確認することはできません。信頼できる提供元のプラグインのみを読み込んでください。"
+
+[PlgBtnLoad]
+english     = "Load"
+translation = "読み込む"
+
+[PlgInstallTitle]
+english     = "Install plugin"
+translation = "プラグインのインストール"
+
+[PlgInstallReplaceBody]
+english     = "A plugin named {0} is already installed.\n\nReplace it?"
+translation = "{0} という名前のプラグインは既にインストールされています。\n\n置き換えますか？"
+
+[PlgBtnReplace]
+english     = "Replace"
+translation = "置き換える"
+
+[PlgDlgInstallTitle]
+english     = "Install plugin from zip"
+translation = "zip からプラグインをインストール"
+
+[PlgDlgZipFilter]
+english     = "Plugin zip (*.zip)"
+translation = "プラグイン zip (*.zip)"
+
+[PlgErrFileGone]
+english     = "The selected file no longer exists."
+translation = "選択されたファイルは既に存在しません。"
+
+[PlgErrTempDir]
+english     = "Could not access a temporary directory for staging."
+translation = "展開用の一時ディレクトリにアクセスできませんでした。"
+
+[PlgErrExtract]
+english     = "Could not extract the zip archive."
+translation = "zip アーカイブを展開できませんでした。"
+
+[PlgErrNoPluginFolder]
+english     = "The zip does not contain a valid plugin folder (expected name/name.dll)."
+translation = "この zip には有効なプラグインフォルダーが含まれていません (name/name.dll が必要です)。"
+
+[PlgErrMissingFiles]
+english     = "Not a valid plugin folder (missing the .dll, .runtimeconfig.json or .deps.json)."
+translation = "有効なプラグインフォルダーではありません (.dll、.runtimeconfig.json、.deps.json のいずれかがありません)。"
+
+[PlgErrReservedName]
+english     = "That name is reserved for a built-in plugin."
+translation = "その名前は組み込みプラグイン用に予約されています。"
+
+[PlgErrReadDll]
+english     = "Could not read the plugin DLL."
+translation = "プラグインの DLL を読み取れませんでした。"
+
+[PlgErrWriteFolder]
+english     = "Could not write into the plugins folder."
+translation = "プラグインフォルダーに書き込めませんでした。"
+
+[PlgErrInstalledNoLoad]
+english     = "The plugin was installed but failed to load."
+translation = "プラグインはインストールされましたが、読み込みに失敗しました。"
+
+[PlgInstalled]
+english     = "Installed plugin {0}."
+translation = "プラグイン {0} をインストールしました。"
+
+[PlgUninstallTitle]
+english     = "Uninstall plugin"
+translation = "プラグインのアンインストール"
+
+[PlgUninstallBuiltin]
+english     = "Built-in plugins cannot be uninstalled."
+translation = "組み込みプラグインはアンインストールできません。"
+
+[PlgUninstallBody]
+english     = "Uninstall plugin {0}?\n\nThis deletes it from\n{1}"
+translation = "プラグイン {0} をアンインストールしますか？\n\n次の場所から削除されます:\n{1}"
+
+[PlgBtnUninstall]
+english     = "Uninstall"
+translation = "アンインストール"
+
+[PlgUninstalled]
+english     = "Uninstalled plugin {0}."
+translation = "プラグイン {0} をアンインストールしました。"
+
+[PlgUninstalledPending]
+english     = "Uninstalled {0}. Remaining files are removed on the next launch."
+translation = "{0} をアンインストールしました。残りのファイルは次回の起動時に削除されます。"
+
+[PlgIncompatible]
+english     = "Plugin {0} isn't compatible with this version of ofs-ng. Rebuild it against this ofs-ng build."
+translation = "プラグイン {0} はこのバージョンの ofs-ng と互換性がありません。この ofs-ng ビルドに合わせて再ビルドしてください。"
+
+[PlgLoadFailed]
+english     = "Plugin {0} failed to load."
+translation = "プラグイン {0} の読み込みに失敗しました。"
+
+[PlgReloaded]
+english     = "Reloaded plugin {0}."
+translation = "プラグイン {0} を再読み込みしました。"

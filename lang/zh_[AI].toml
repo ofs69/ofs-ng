@@ -385,8 +385,8 @@ english     = "Optimize…"
 translation = "优化…"
 
 [OptimizePromptNotNow]
-english     = "No thanks"
-translation = "不用了"
+english     = "Not now"
+translation = "暂不"
 
 [TranscodeTaskLabel]
 english     = "Optimizing video"
@@ -3845,3 +3845,123 @@ translation = "选择一个组件以查看其许可证。"
 [AboutCopyLicense]
 english     = "Copy"
 translation = "复制"
+
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# Plugin manager (src/Services/PluginManager.cpp). Prefix: Plg*
+#
+# The install / trust / uninstall flow and the plugin load-failure toasts. The trust prompt is a
+# security-consent dialog — it is the one place the user authorizes arbitrary code execution, so its
+# wording must stay literal and unhedged in every language: state the capability granted, state that
+# the host cannot vouch for the plugin, and leave the decision with the user. Do not soften it.
+#
+# Plugin-supplied text (a plugin's own toast message, its display name) is never keyed — it passes
+# through verbatim, prefixed with the plugin name.
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+
+[PlgTrustTitle]
+english     = "Load plugin?"
+translation = "加载插件？"
+
+[PlgTrustBody]
+english     = "Plugin {0} wants to load from:\n{1}\n\nPlugins run with full access to your computer — files, network, everything you can do. We cannot verify a plugin is safe. Only load plugins from sources you trust."
+translation = "插件 {0} 请求从以下位置加载：\n{1}\n\n插件以对您电脑的完全访问权限运行 — 文件、网络，以及您能做的一切。我们无法验证插件是否安全。请仅加载来自您信任来源的插件。"
+
+[PlgBtnLoad]
+english     = "Load"
+translation = "加载"
+
+[PlgInstallTitle]
+english     = "Install plugin"
+translation = "安装插件"
+
+[PlgInstallReplaceBody]
+english     = "A plugin named {0} is already installed.\n\nReplace it?"
+translation = "已安装名为 {0} 的插件。\n\n要替换吗？"
+
+[PlgBtnReplace]
+english     = "Replace"
+translation = "替换"
+
+[PlgDlgInstallTitle]
+english     = "Install plugin from zip"
+translation = "从 zip 安装插件"
+
+[PlgDlgZipFilter]
+english     = "Plugin zip (*.zip)"
+translation = "插件 zip (*.zip)"
+
+[PlgErrFileGone]
+english     = "The selected file no longer exists."
+translation = "所选文件已不存在。"
+
+[PlgErrTempDir]
+english     = "Could not access a temporary directory for staging."
+translation = "无法访问用于暂存的临时目录。"
+
+[PlgErrExtract]
+english     = "Could not extract the zip archive."
+translation = "无法解压该 zip 压缩包。"
+
+[PlgErrNoPluginFolder]
+english     = "The zip does not contain a valid plugin folder (expected name/name.dll)."
+translation = "此 zip 未包含有效的插件文件夹 (应为 name/name.dll)。"
+
+[PlgErrMissingFiles]
+english     = "Not a valid plugin folder (missing the .dll, .runtimeconfig.json or .deps.json)."
+translation = "不是有效的插件文件夹 (缺少 .dll、.runtimeconfig.json 或 .deps.json)。"
+
+[PlgErrReservedName]
+english     = "That name is reserved for a built-in plugin."
+translation = "该名称保留给内置插件使用。"
+
+[PlgErrReadDll]
+english     = "Could not read the plugin DLL."
+translation = "无法读取插件的 DLL。"
+
+[PlgErrWriteFolder]
+english     = "Could not write into the plugins folder."
+translation = "无法写入插件文件夹。"
+
+[PlgErrInstalledNoLoad]
+english     = "The plugin was installed but failed to load."
+translation = "插件已安装，但加载失败。"
+
+[PlgInstalled]
+english     = "Installed plugin {0}."
+translation = "已安装插件 {0}。"
+
+[PlgUninstallTitle]
+english     = "Uninstall plugin"
+translation = "卸载插件"
+
+[PlgUninstallBuiltin]
+english     = "Built-in plugins cannot be uninstalled."
+translation = "内置插件无法卸载。"
+
+[PlgUninstallBody]
+english     = "Uninstall plugin {0}?\n\nThis deletes it from\n{1}"
+translation = "要卸载插件 {0} 吗？\n\n这会将它从以下位置删除：\n{1}"
+
+[PlgBtnUninstall]
+english     = "Uninstall"
+translation = "卸载"
+
+[PlgUninstalled]
+english     = "Uninstalled plugin {0}."
+translation = "已卸载插件 {0}。"
+
+[PlgUninstalledPending]
+english     = "Uninstalled {0}. Remaining files are removed on the next launch."
+translation = "已卸载 {0}。剩余文件将在下次启动时移除。"
+
+[PlgIncompatible]
+english     = "Plugin {0} isn't compatible with this version of ofs-ng. Rebuild it against this ofs-ng build."
+translation = "插件 {0} 与此版本的 ofs-ng 不兼容。请针对此 ofs-ng 版本重新构建。"
+
+[PlgLoadFailed]
+english     = "Plugin {0} failed to load."
+translation = "插件 {0} 加载失败。"
+
+[PlgReloaded]
+english     = "Reloaded plugin {0}."
+translation = "已重新加载插件 {0}。"
