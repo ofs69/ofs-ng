@@ -1032,11 +1032,23 @@ long long hostNodeUiCurrentKey(void *ctx) {
            static_cast<long long>(static_cast<unsigned int>(p->currentNodeId));
 }
 
+// The calling plugin's name for the three "any thread" callbacks below (log/notify/reportFault). They are
+// the only HostApi entry points reachable off the main thread, and currentPluginName is main-thread state:
+// a worker reading it races the main thread's CurrentPluginScope, which misattributes the message and —
+// because the compiler may reload the field after the null test — can hand a null pointer to a std::string.
+// An off-thread name would name whatever callback the main thread happened to be in anyway, so a worker
+// never looks at the field and reports generically.
+const char *callerName(const PluginCtx *p) {
+    if (!p || std::this_thread::get_id() != p->mainThreadId || !p->currentPluginName)
+        return "plugin";
+    return p->currentPluginName;
+}
+
 void hostLog(void *ctx, int level, const char *msg) {
     if (!msg)
         return;
     auto *p = pc(ctx);
-    const char *who = (p && p->currentPluginName) ? p->currentPluginName : "plugin";
+    const char *who = callerName(p);
     // level matches the managed LogLevel enum. No core debug macro exists, so trace/debug share trace.
     switch (level) {
     case 0:
@@ -1060,16 +1072,15 @@ void hostReportFault(void *ctx, const char *faultCtx) {
     if (!p || !p->manager || !faultCtx)
         return;
     // `faultCtx` is the faulting entry point (e.g. "OnUpdate", "node:gen"); the plugin name comes from
-    // the active call context (null on worker threads, where node faults are attributed generically).
-    const char *who = p->currentPluginName ? p->currentPluginName : "plugin";
-    p->manager->notifyPluginFault(who, faultCtx);
+    // the active call context (worker threads have none, so node faults are attributed generically).
+    p->manager->notifyPluginFault(callerName(p), faultCtx);
 }
 
 void hostNotify(void *ctx, int level, const char *msg) {
     auto *p = pc(ctx);
     if (!p || !p->manager || !msg)
         return;
-    const char *who = p->currentPluginName ? p->currentPluginName : "plugin";
+    const char *who = callerName(p);
     // Clamp an out-of-range level to Info so a bad value can never index past the enum.
     const auto nl = (level >= 0 && level <= static_cast<int>(NotifyLevel::Error)) ? static_cast<NotifyLevel>(level)
                                                                                   : NotifyLevel::Info;
