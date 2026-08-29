@@ -17,6 +17,7 @@ struct AppState {
     bool showLogWindow = false;
     bool showAboutWindow = false;
     bool showBackupRestoreWindow = false;
+    bool showWebSocketApiWindow = false;
 };
 
 struct ProcessingSelectionState {

@@ -44,7 +44,7 @@ target_link_libraries(${PROJECT_NAME} PUBLIC SDL3::SDL3 imgui imgui_stdlib glad2
 
 # dbghelp provides MiniDumpWriteDump for the crash handler (Windows only).
 if (WIN32)
-    target_link_libraries(${PROJECT_NAME} PUBLIC dbghelp)
+    target_link_libraries(${PROJECT_NAME} PUBLIC dbghelp ws2_32)
 endif ()
 
 # Linux: fold the C++ runtime into the binary so the only DT_NEEDED entries left are libm, libc and the
@@ -266,5 +266,4 @@ if (WIN32)
             COMMAND ${CMAKE_COMMAND} -E copy
             "${CMAKE_BINARY_DIR}/ffprobe.exe" "$<TARGET_FILE_DIR:${PROJECT_NAME}>/ffprobe.exe")
 endif ()
-
 

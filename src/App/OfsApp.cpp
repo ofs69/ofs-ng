@@ -22,6 +22,7 @@
 #include "Services/UpdateChecker.h"
 #include "Services/VideoTranscoder.h"
 #include "Services/WaveformService.h"
+#include "Services/WebSocketApi.h"
 #include "UI/AboutWindow.h"
 #include "UI/BackupRestoreWindow.h"
 #include "UI/ConfigurationWindow.h"
@@ -45,6 +46,7 @@
 #include "UI/VideoPlayerWindow.h"
 #include "UI/WaveformRenderer.h"
 #include "UI/WelcomeScreen.h"
+#include "UI/WebSocketApiWindow.h"
 #include "Util/FileFingerprint.h"
 #include "Util/FrameAllocator.h"
 #include "Util/Log.h"
@@ -348,6 +350,7 @@ bool OfsApp::init() {
     logWindow = std::make_unique<ofs::LogWindow>();
     aboutWindow = std::make_unique<ofs::AboutWindow>();
     backupRestoreWindow = std::make_unique<ofs::BackupRestoreWindow>();
+    webSocketApiWindow = std::make_unique<ofs::WebSocketApiWindow>();
     welcomeScreen = std::make_unique<ofs::WelcomeScreen>();
     // Register the custom-command kind menu (step / move-position / move-time) before the store and the
     // Shortcut window, both of which hold the registry by const reference. project & appSettings are
@@ -365,6 +368,7 @@ bool OfsApp::init() {
     processingPanel = std::make_unique<ofs::ProcessingPanel>();
     // Registers its CheckForUpdatesEvent / result handlers here, before freeze().
     updateChecker = std::make_unique<ofs::UpdateChecker>(eventQueue, jobSystem);
+    webSocketApi = std::make_unique<ofs::WebSocketApi>(scriptProject, eventQueue, appSettings);
     // Surface the update-check outcome as a footer notification: always for an available update (the
     // discovery path for the silent startup check), and — only for a user-initiated check — a confirming
     // "up to date" / failure toast so a command-palette run isn't silent. The UpdateChecker itself owns
@@ -555,6 +559,8 @@ void OfsApp::onUpdate(float dt) {
         player->update(dt);
         scriptProject.playback.cursorPos = player->getLogicalPosition();
     }
+    if (webSocketApi)
+        webSocketApi->update(dt);
     if (videoPreview)
         videoPreview->update(dt);
     sessionTime += dt;
@@ -953,6 +959,8 @@ void OfsApp::onImGuiRender() {
         aboutWindow->render(appState.showAboutWindow, updateChecker->status(), eventQueue);
     if (backupRestoreWindow)
         backupRestoreWindow->render(appState.showBackupRestoreWindow, scriptProject, eventQueue);
+    if (webSocketApiWindow && webSocketApi)
+        webSocketApiWindow->render(appState.showWebSocketApiWindow, appSettings, *webSocketApi, eventQueue);
 
     // One top-level branch: the editor (dockspace + windows) only renders with an active project;
     // otherwise the welcome screen takes the body. Every editor window may therefore assume a project
@@ -1197,6 +1205,8 @@ void OfsApp::renderMainMenuBar() {
                 appSettingsDirty_ = true;
             ImGui::MenuItem(Str::AppMenuLog.iconId(ICON_SCROLL_TEXT, "menu_view_log"), nullptr,
                             &appState.showLogWindow);
+            ImGui::MenuItem(Str::WsTitle.id("menu_view_websocket_api"), nullptr,
+                            &appState.showWebSocketApiWindow);
             ImGui::Separator();
             // Live checkmark reflects the actual window flag; dispatches directly (main-thread UI),
             // exactly as the title-bar minimize/maximize do. F11 hint is omitted because the binding

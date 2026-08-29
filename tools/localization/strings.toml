@@ -28,6 +28,47 @@
 english     = "Preferences"
 description = "Title of the Preferences window."
 
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# Classic OFS WebSocket API window (src/UI/WebSocketApiWindow.cpp)
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+
+[WsTitle]
+english     = "WebSocket API"
+description = "Title of the classic OFS-compatible WebSocket API window and its View-menu entry."
+
+[WsServerActive]
+english     = "Server active"
+description = "WebSocket API window: toggle that starts or stops the loopback server."
+
+[WsPort]
+english     = "Port"
+description = "WebSocket API window: TCP listening port."
+
+[WsEndpoint]
+english      = "Endpoint: ws://127.0.0.1:{0}/ofs"
+description  = "WebSocket API window: endpoint applications should connect to. Keep the URL syntax and /ofs path unchanged."
+placeholders = [
+    "{0} = TCP port number, e.g. 8080",
+]
+
+[WsListening]
+english      = "Listening — {0} connected"
+description  = "WebSocket API window: server-running status and number of connected applications."
+placeholders = [
+    "{0} = connected client count",
+]
+
+[WsStopped]
+english     = "Server stopped"
+description = "WebSocket API window: status when the server is disabled."
+
+[WsError]
+english      = "Server error: {0}"
+description  = "WebSocket API window: status when the loopback server failed to start."
+placeholders = [
+    "{0} = operating-system socket error summary",
+]
+
 [PrefTabApplication]
 english     = "Application"
 description = "Preferences tab: general application settings (video, backup, view, localization)."

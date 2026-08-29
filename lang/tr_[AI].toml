@@ -24,6 +24,38 @@ culture = "tr"
 english     = "Preferences"
 translation = "Tercihler"
 
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# Classic OFS WebSocket API window (src/UI/WebSocketApiWindow.cpp)
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+
+[WsTitle]
+english     = "WebSocket API"
+translation = "WebSocket API"
+
+[WsServerActive]
+english     = "Server active"
+translation = "Sunucu etkin"
+
+[WsPort]
+english     = "Port"
+translation = "Bağlantı noktası"
+
+[WsEndpoint]
+english     = "Endpoint: ws://127.0.0.1:{0}/ofs"
+translation = "Uç nokta: ws://127.0.0.1:{0}/ofs"
+
+[WsListening]
+english     = "Listening — {0} connected"
+translation = "Dinleniyor — {0} bağlı"
+
+[WsStopped]
+english     = "Server stopped"
+translation = "Sunucu durduruldu"
+
+[WsError]
+english     = "Server error: {0}"
+translation = "Sunucu hatası: {0}"
+
 [PrefTabApplication]
 english     = "Application"
 translation = "Uygulama"

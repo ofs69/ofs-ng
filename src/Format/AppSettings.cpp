@@ -163,6 +163,8 @@ void to_json(nlohmann::json &j, const AppSettings &s) {
                                 {"exportDirMode", static_cast<int>(s.exportDirMode)},
                                 {"exportDir", s.exportDir},
                                 {"openProjectConfigOnOpen", s.openProjectConfigOnOpen},
+                                {"webSocketServerEnabled", s.webSocketServerEnabled},
+                                {"webSocketPort", s.webSocketPort},
                                 {"windowGeometry", s.windowGeometry}});
 }
 
@@ -195,6 +197,8 @@ void from_json(const nlohmann::json &j, AppSettings &s) {
     s.exportDirMode = static_cast<ExportDirMode>(std::clamp(j.value("exportDirMode", 0), 0, 2));
     s.exportDir = j.value("exportDir", std::string{});
     s.openProjectConfigOnOpen = j.value("openProjectConfigOnOpen", true);
+    s.webSocketServerEnabled = j.value("webSocketServerEnabled", false);
+    s.webSocketPort = std::clamp(j.value("webSocketPort", 8080), 1, 65535);
     s.windowGeometry = j.value("windowGeometry", WindowGeometry{});
 }
 } // namespace ofs

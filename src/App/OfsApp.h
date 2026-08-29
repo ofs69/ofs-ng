@@ -67,6 +67,8 @@ class WaveformService;
 class WaveformRenderer;
 class UpdateChecker;
 class UiSoundService;
+class WebSocketApi;
+class WebSocketApiWindow;
 } // namespace ofs
 
 class OfsApp : public ofs::Application {
@@ -286,6 +288,7 @@ class OfsApp : public ofs::Application {
     std::unique_ptr<ofs::LogWindow> logWindow;
     std::unique_ptr<ofs::AboutWindow> aboutWindow;
     std::unique_ptr<ofs::BackupRestoreWindow> backupRestoreWindow;
+    std::unique_ptr<ofs::WebSocketApiWindow> webSocketApiWindow;
     std::unique_ptr<ofs::ShortcutWindow> shortcutWindow;
     std::unique_ptr<ofs::ProcessingSystem> processingSystem;
     std::unique_ptr<ofs::ScriptSystem> scriptSystem;
@@ -299,6 +302,10 @@ class OfsApp : public ofs::Application {
     // Plays short UI feedback SFX in response to NotifyEvent. Owns an SDL audio device + decoded PCM;
     // independent of the GL context, so its destruction order among the GL services doesn't matter.
     std::unique_ptr<ofs::UiSoundService> uiSoundService;
+
+    // Classic OFS protocol adapter. Polls non-blocking sockets on the main thread and subscribes to
+    // playback events, so it is constructed before EventQueue::freeze().
+    std::unique_ptr<ofs::WebSocketApi> webSocketApi;
 
     // Audio waveform behind the timeline: the service extracts/caches peaks and owns the GL texture; the
     // renderer (declared after, so it destructs first — it holds a reference to the service) owns the

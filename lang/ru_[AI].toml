@@ -24,6 +24,38 @@ culture = "ru"
 english     = "Preferences"
 translation = "Настройки"
 
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# Classic OFS WebSocket API window (src/UI/WebSocketApiWindow.cpp)
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+
+[WsTitle]
+english     = "WebSocket API"
+translation = "WebSocket API"
+
+[WsServerActive]
+english     = "Server active"
+translation = "Сервер активен"
+
+[WsPort]
+english     = "Port"
+translation = "Порт"
+
+[WsEndpoint]
+english     = "Endpoint: ws://127.0.0.1:{0}/ofs"
+translation = "Адрес: ws://127.0.0.1:{0}/ofs"
+
+[WsListening]
+english     = "Listening — {0} connected"
+translation = "Ожидание подключений — подключено: {0}"
+
+[WsStopped]
+english     = "Server stopped"
+translation = "Сервер остановлен"
+
+[WsError]
+english     = "Server error: {0}"
+translation = "Ошибка сервера: {0}"
+
 [PrefTabApplication]
 english     = "Application"
 translation = "Приложение"

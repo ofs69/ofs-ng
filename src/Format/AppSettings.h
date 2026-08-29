@@ -128,6 +128,10 @@ struct AppSettings {
     // Pop the Project (metadata) window automatically whenever a project opens, like old OFS. On by
     // default — most users want to see/edit metadata on open; it's dismissed with one click otherwise.
     bool openProjectConfigOnOpen = true;
+    // Classic OFS-compatible loopback WebSocket API. Disabled until the user enables it from the View
+    // window, matching classic OFS; MultiFunPlayer's stock OFS source connects to this endpoint.
+    bool webSocketServerEnabled = false;
+    int webSocketPort = 8080;
     WindowGeometry windowGeometry;
 
     static AppSettings load();

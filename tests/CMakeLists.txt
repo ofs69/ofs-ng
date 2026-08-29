@@ -251,6 +251,7 @@ add_executable(ofs-unit-tests
         services/test_command_registry.cpp
         services/test_video_transcoder.cpp
         services/test_waveform_peaks.cpp
+        services/test_websocket_protocol.cpp
         video/test_playback_cursor.cpp
         localization/test_translator.cpp
 
@@ -288,6 +289,7 @@ add_executable(ofs-unit-tests
         ${CMAKE_SOURCE_DIR}/src/Util/Subprocess.cpp
         # Pure waveform helpers (ofs::waveform): bucketing math + cache round-trip, no GL.
         ${CMAKE_SOURCE_DIR}/src/Services/WaveformPeaks.cpp
+        ${CMAKE_SOURCE_DIR}/src/Services/WebSocketProtocol.cpp
         ${CMAKE_SOURCE_DIR}/src/Video/PlaybackCursor.cpp
 )
 
@@ -574,6 +576,9 @@ set(OFS_UI_TEST_LIBS
         SDL3::SDL3 imgui_te imgui_stdlib imgui_test_engine glad2 spdlog::spdlog
         nlohmann_json::nlohmann_json glm::glm stb imnodes miniz
         Bitsery::bitsery concurrentqueue thread_pool tomlplusplus::tomlplusplus NetHost::NetHost)
+if (WIN32)
+    list(APPEND OFS_UI_TEST_LIBS ws2_32)
+endif ()
 
 if (OFS_UI_TESTS_GL)
     # Real-GL binary: compiles the suites + the whole app (OFS_APP_SOURCES includes PathUtil.cpp, which

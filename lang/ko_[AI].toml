@@ -24,6 +24,38 @@ culture = "ko"
 english     = "Preferences"
 translation = "환경설정"
 
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# Classic OFS WebSocket API window (src/UI/WebSocketApiWindow.cpp)
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+
+[WsTitle]
+english     = "WebSocket API"
+translation = "WebSocket API"
+
+[WsServerActive]
+english     = "Server active"
+translation = "서버 활성화"
+
+[WsPort]
+english     = "Port"
+translation = "포트"
+
+[WsEndpoint]
+english     = "Endpoint: ws://127.0.0.1:{0}/ofs"
+translation = "엔드포인트: ws://127.0.0.1:{0}/ofs"
+
+[WsListening]
+english     = "Listening — {0} connected"
+translation = "수신 대기 중 — {0}개 연결됨"
+
+[WsStopped]
+english     = "Server stopped"
+translation = "서버 중지됨"
+
+[WsError]
+english     = "Server error: {0}"
+translation = "서버 오류: {0}"
+
 [PrefTabApplication]
 english     = "Application"
 translation = "애플리케이션"

@@ -21,6 +21,8 @@ TEST_CASE("AppSettings round-trips all scalar fields through JSON") {
     in.language = "de";
     in.liveReloadTranslations = true;
     in.lastProjectPaths = {"a.ofp", "b.ofp"};
+    in.webSocketServerEnabled = true;
+    in.webSocketPort = 9090;
 
     nlohmann::json j;
     to_json(j, in);
@@ -37,6 +39,8 @@ TEST_CASE("AppSettings round-trips all scalar fields through JSON") {
     CHECK(out.autoBackupEnabled == false);
     CHECK(out.language == "de");
     CHECK(out.liveReloadTranslations == true);
+    CHECK(out.webSocketServerEnabled == true);
+    CHECK(out.webSocketPort == 9090);
     REQUIRE(out.lastProjectPaths.size() == 2);
     CHECK(out.lastProjectPaths[0] == "a.ofp");
 }
@@ -54,6 +58,14 @@ TEST_CASE("AppSettings from_json on an empty object yields documented defaults")
     CHECK(out.language.empty());
     CHECK(out.lastProjectPaths.empty());
     CHECK(out.metadataPresets.empty());
+    CHECK(out.webSocketServerEnabled == false);
+    CHECK(out.webSocketPort == 8080);
+}
+
+TEST_CASE("AppSettings clamps the classic OFS WebSocket port") {
+    AppSettings out;
+    from_json(nlohmann::json{{"webSocketPort", 99999}}, out);
+    CHECK(out.webSocketPort == 65535);
 }
 
 TEST_CASE("AppSettings simulator sub-struct round-trips (key is \"simulatorVisuals\")") {

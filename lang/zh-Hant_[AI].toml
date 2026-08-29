@@ -24,6 +24,38 @@ culture = "zh-Hant"
 english     = "Preferences"
 translation = "偏好設定"
 
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+# Classic OFS WebSocket API window (src/UI/WebSocketApiWindow.cpp)
+# ─────────────────────────────────────────────────────────────────────────────────────────────
+
+[WsTitle]
+english     = "WebSocket API"
+translation = "WebSocket API"
+
+[WsServerActive]
+english     = "Server active"
+translation = "伺服器啟用"
+
+[WsPort]
+english     = "Port"
+translation = "連接埠"
+
+[WsEndpoint]
+english     = "Endpoint: ws://127.0.0.1:{0}/ofs"
+translation = "端點：ws://127.0.0.1:{0}/ofs"
+
+[WsListening]
+english     = "Listening — {0} connected"
+translation = "正在接聽 — 已連線 {0} 個"
+
+[WsStopped]
+english     = "Server stopped"
+translation = "伺服器已停止"
+
+[WsError]
+english     = "Server error: {0}"
+translation = "伺服器錯誤：{0}"
+
 [PrefTabApplication]
 english     = "Application"
 translation = "應用程式"
