@@ -197,5 +197,11 @@ void RegisterVideoControlsTests(ImGuiTestEngine *e) {
         ctx->Yield(3);
         IM_CHECK(std::abs(dummy->lastRenderWidth - fullW / 2) <= 2);
         IM_CHECK(std::abs(dummy->lastRenderHeight - fullH / 2) <= 2);
+
+        // Restore the normal "no media" dummy. Media presence gates real commands — with ffmpeg on
+        // PATH it is the only thing holding video.optimize-intra disabled — so a leaked fake frame
+        // fails a later suite rather than this one.
+        dummy->setFakeVideoForTesting(0, 0, 0);
+        ctx->Yield(2);
     };
 }
