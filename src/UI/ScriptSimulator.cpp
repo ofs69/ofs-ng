@@ -10,6 +10,7 @@
 #include "Platform/Headless.h"
 #include "Scenegraph/VrCamera.h"
 #include "UI/AxisColors.h"
+#include "UI/GlViewportRect.h"
 #include "UI/Icons.h"
 #include "UI/ImGuiHelpers.h"
 #include "UI/Theme.h"
@@ -361,24 +362,18 @@ float model3dValueAt(ofs::StandardAxis role, const ImVec2 &mouse, const ImVec2 &
 namespace ofs {
 
 // ImGui's GL backend does NOT update glScissor for user callbacks (only for regular draw cmds),
-// so the stale scissor from the previous draw command would clip our rendering. Disable it explicitly.
+// so the stale scissor from the previous draw command would clip our rendering. Set it ourselves.
 void ScriptSimulator::glCallbackFunc(const ImDrawList * /*parentList*/, const ImDrawCmd *cmd) {
     const auto *d = static_cast<const Sim3DCallbackData *>(cmd->UserCallbackData);
     const ImDrawData *dd = ImGui::GetDrawData();
 
     // Viewport: maps the overlay rect into GL framebuffer space.
-    const float vpX = d->contentMin.x - dd->DisplayPos.x;
-    const float vpY = dd->DisplaySize.y - (d->contentMin.y - dd->DisplayPos.y) - d->contentSize.y;
-    const float vpW = d->contentSize.x;
-    const float vpH = d->contentSize.y;
+    const ofs::ui::GlRect vp = ofs::ui::glRectFromScreen(d->contentMin, d->contentSize, *dd);
 
     // Scissor: use cmd->ClipRect so GL rendering is bounded by the enclosing ImGui window,
     // rather than disabling scissor which would let the 3D content bleed over adjacent windows.
     const ImVec4 &cr = cmd->ClipRect;
-    const float scX = cr.x - dd->DisplayPos.x;
-    const float scY = dd->DisplaySize.y - (cr.y - dd->DisplayPos.y) - (cr.w - cr.y);
-    const float scW = cr.z - cr.x;
-    const float scH = cr.w - cr.y;
+    const ofs::ui::GlRect sc = ofs::ui::glRectFromScreen({cr.x, cr.y}, {cr.z - cr.x, cr.w - cr.y}, *dd);
 
     GLint prevVp[4];
     GLint prevScissorBox[4];
@@ -388,9 +383,9 @@ void ScriptSimulator::glCallbackFunc(const ImDrawList * /*parentList*/, const Im
     GLboolean prevDepthMask = GL_TRUE;
     glGetBooleanv(GL_DEPTH_WRITEMASK, &prevDepthMask);
 
-    glViewport(static_cast<GLint>(vpX), static_cast<GLint>(vpY), static_cast<GLsizei>(vpW), static_cast<GLsizei>(vpH));
+    glViewport(vp.x, vp.y, vp.w, vp.h);
     glEnable(GL_SCISSOR_TEST);
-    glScissor(static_cast<GLint>(scX), static_cast<GLint>(scY), static_cast<GLsizei>(scW), static_cast<GLsizei>(scH));
+    glScissor(sc.x, sc.y, sc.w, sc.h);
     glEnable(GL_DEPTH_TEST);
     glDepthMask(GL_TRUE);
     glClear(GL_DEPTH_BUFFER_BIT);
