@@ -396,8 +396,20 @@ void ProjectManager::openPathByExtension(std::string file) {
         loadProjectInternal(path);
     else if (ext == ".funscript")
         initNewProjectFromFunscript(path);
-    else
+    else {
+        // A project's default save name is the media stem beside the media. Prefer that project when
+        // opening the video again, so opening clip.mp4 resumes clip.ofp instead of creating a second,
+        // empty project around the same video. Iterate rather than constructing "stem.ofp" so extension
+        // matching remains case-insensitive on case-sensitive hosts too.
+        std::error_code ec;
+        for (const auto &entry : std::filesystem::directory_iterator(path.parent_path(), ec)) {
+            if (lowerExtension(entry.path()) != ".ofp" || entry.path().stem() != path.stem())
+                continue;
+            loadProjectInternal(entry.path());
+            return;
+        }
         initNewProject(std::move(file));
+    }
 }
 
 void ProjectManager::onCreateEmptyProject(const CreateEmptyProjectEvent &) {
@@ -422,16 +434,21 @@ void ProjectManager::onFilesDropped(const FilesDroppedEvent &event) {
         return;
     }
 
-    // Project open: a drop imports scripts into it and can never replace it, so anything that isn't a
-    // funscript is refused rather than guessed at.
+    // Funscript-only drops import into the current project. A media/project drop is a whole-project
+    // open, matching the Open/New picker: guard the current work, close it, then dispatch the dropped
+    // path. In a mixed drop the first non-funscript wins; scripts beside a video are discovered by the
+    // normal new-project flow if no matching .ofp exists.
     std::vector<std::filesystem::path> scripts;
     for (const auto &p : event.paths) {
         auto path = ofs::util::fromUtf8(p);
-        if (lowerExtension(path) == ".funscript")
+        if (lowerExtension(path) == ".funscript") {
             scripts.push_back(std::move(path));
-    }
-    if (scripts.empty()) {
-        eq.push(NotifyEvent{.level = NotifyLevel::Warning, .message = Str::PmDropNotFunscript.c_str()});
+            continue;
+        }
+        guardUnsaved([this, file = p] {
+            doClose();
+            openPathByExtension(file);
+        });
         return;
     }
     importFunscriptPaths(std::move(scripts));

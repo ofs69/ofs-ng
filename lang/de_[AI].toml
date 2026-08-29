@@ -3713,10 +3713,6 @@ translation = "Datei hinzufügen"
 english     = "Remove"
 translation = "Entfernen"
 
-[PmDropNotFunscript]
-english     = "Only .funscript files can be dropped into an open project."
-translation = "In ein geöffnetes Projekt können nur .funscript-Dateien gezogen werden."
-
 [PmMediaNotFoundTitle]
 english     = "Media Not Found"
 translation = "Mediendatei nicht gefunden"

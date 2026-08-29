@@ -38,8 +38,8 @@ struct CreateEmptyProjectEvent {};
 // One drag-and-drop of one or more files onto the window, batched by OfsApp across the OS drop
 // sequence. ProjectManager dispatches on whether a project is open: with none, the first path goes
 // through the same extension dispatch as the merged Open/New picker (.ofp opens, .funscript starts a
-// project around the script, anything else is media); with one open, only .funscript paths are taken and
-// they run the import picker, so a stray drop can never replace the work in progress.
+// project around the script, anything else is media); with one open, a funscript-only drop runs the
+// import picker, while a media/project drop goes through the unsaved-changes guard and replaces it.
 struct FilesDroppedEvent {
     std::vector<std::string> paths; // UTF-8 absolute paths from the OS drag-and-drop, in drop order
 };

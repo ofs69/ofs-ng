@@ -3249,6 +3249,36 @@ TEST_CASE("Dropping media adopts a multi-axis sibling funscript, fanning channel
     std::filesystem::remove_all(dir);
 }
 
+TEST_CASE("Opening media loads a same-stem sibling project instead of creating a new one") {
+    PMFixture f;
+
+    const auto dir = std::filesystem::temp_directory_path() / "ofs_disc_project";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    const auto video = dir / "clip.mp4";
+    const auto projectPath = dir / "clip.ofp";
+    std::ofstream(video).put('x');
+
+    Project saved;
+    saved.mediaPath = ofs::util::toUtf8(video);
+    saved.originalMediaPath = ofs::util::toUtf8(video);
+    saved.metadata.title = "Existing project";
+    SerializedAxis l0;
+    l0.actions.insert({4.0, 75});
+    saved.scriptAxes.push_back(std::move(l0));
+    REQUIRE(saved.save(projectPath));
+
+    f.push(FilesDroppedEvent{{ofs::util::toUtf8(video)}});
+    REQUIRE(f.drainUntil([&] { return f.proj().state.filePath == ofs::util::toUtf8(projectPath); }));
+
+    CHECK(f.proj().state.mediaPath == ofs::util::toUtf8(video));
+    CHECK(f.proj().metadata.title == "Existing project");
+    REQUIRE(f.axis(StandardAxis::L0).actions.size() == 1);
+    CHECK(f.axis(StandardAxis::L0).actions[0].at == doctest::Approx(4.0));
+
+    std::filesystem::remove_all(dir);
+}
+
 TEST_CASE("Dropping a lone funscript opens a media-less project on its mapped axis") {
     PMFixture f;
 
@@ -3338,9 +3368,7 @@ TEST_CASE("Dropping several funscripts into an open project imports them all in 
     std::filesystem::remove_all(dir);
 }
 
-// Only funscripts are importable, so a media/project drop onto an open project is refused outright
-// rather than guessed at — the alternative (opening it) would discard the work in progress.
-TEST_CASE("Dropping a non-funscript into an open project changes nothing and warns") {
+TEST_CASE("Dropping media into a clean open project replaces it with a project for that media") {
     PMFixture f;
 
     const auto dir = std::filesystem::temp_directory_path() / "ofs_drop_reject";
@@ -3350,16 +3378,14 @@ TEST_CASE("Dropping a non-funscript into an open project changes nothing and war
 
     f.showAxis(StandardAxis::L0, {{1.0, 20}});
     f.drain();
-    f.notes.received.clear();
+    f.proj().clearDirtyFlags(); // the dirty branch suspends on the save/don't-save/cancel prompt
 
     f.push(FilesDroppedEvent{{ofs::util::toUtf8(dir / "clip.mp4")}});
-    for (int i = 0; i < 5; ++i)
-        f.drain();
+    REQUIRE(f.drainUntil([&] { return f.proj().state.mediaPath == ofs::util::toUtf8(dir / "clip.mp4"); }));
 
-    CHECK(f.proj().state.mediaPath.empty()); // the open project was not replaced
+    CHECK(f.proj().state.filePath.empty());
+    CHECK(f.axis(StandardAxis::L0).actions.empty()); // old project's work was replaced
     CHECK(f.axis(StandardAxis::S0).actions.empty());
-    REQUIRE(f.notes.received.size() == 1);
-    CHECK(f.notes.received[0].level == NotifyLevel::Warning);
 
     std::filesystem::remove_all(dir);
 }
