@@ -325,7 +325,7 @@ void Application::endFrame() {
         return;
     }
 
-    glViewport(0, 0, window->getWidth(), window->getHeight());
+    glViewport(0, 0, window->getPixelWidth(), window->getPixelHeight());
     glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

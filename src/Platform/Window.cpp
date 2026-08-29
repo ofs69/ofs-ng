@@ -438,6 +438,18 @@ int Window::getHeight() const {
     return h;
 }
 
+int Window::getPixelWidth() const {
+    int w = 0, h = 0;
+    SDL_GetWindowSizeInPixels(window, &w, &h);
+    return w;
+}
+
+int Window::getPixelHeight() const {
+    int w = 0, h = 0;
+    SDL_GetWindowSizeInPixels(window, &w, &h);
+    return h;
+}
+
 SDL_HitTestResult SDLCALL Window::hitTest(SDL_Window *win, const SDL_Point *area, void *data) {
     const auto *info = static_cast<const TitleBarHitInfo *>(data);
     if (!info || !info->enabled)

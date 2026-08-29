@@ -54,9 +54,17 @@ class Window {
     [[nodiscard]] SDL_Window *getNativeWindow() const { return window; }
     [[nodiscard]] SDL_GLContext getGLContext() const { return glContext; }
 
+    // Logical window size, in the display units SDL input and ImGui layout use.
     [[nodiscard]] int getWidth() const;
 
     [[nodiscard]] int getHeight() const;
+
+    // Size of the window's default framebuffer, in physical pixels. Equal to getWidth()/getHeight()
+    // only where the desktop does not scale (Windows, X11); a Wayland desktop at 150% and a Retina
+    // display both report a larger pixel size. Raw GL that addresses the framebuffer needs this one.
+    [[nodiscard]] int getPixelWidth() const;
+
+    [[nodiscard]] int getPixelHeight() const;
 
     // The window title (git-identity string built in Application::init()). Used by the custom title
     // bar, which replaces the native caption that would otherwise show this text.
