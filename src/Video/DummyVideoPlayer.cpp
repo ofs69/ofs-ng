@@ -7,6 +7,8 @@ namespace ofs {
 DummyVideoPlayer::DummyVideoPlayer(EventQueue &eventQueue) : eventQueue(eventQueue) {}
 
 bool DummyVideoPlayer::init() {
+    eventQueue.on<SetRenderSizeEvent>([this](const SetRenderSizeEvent &e) { setRenderSize(e.width, e.height); });
+
     eventQueue.on<ChangeDummyDurationEvent>([this](const ChangeDummyDurationEvent &e) {
         active = true;
         duration = e.durationSeconds;

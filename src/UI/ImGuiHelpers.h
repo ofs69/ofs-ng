@@ -241,4 +241,17 @@ inline void addTextShadow(ImDrawList *drawList, const ImVec2 &pos, ImU32 color, 
     drawList->AddText(pos, color, text.data(), text.data() + text.size());
 }
 
+// Pixels per display unit for the viewport hosting the current window.
+//
+// ImGuiViewport::FramebufferScale is filled in only for secondary platform viewports (via
+// Platform_GetWindowFramebufferScale); on the main viewport it stays zero-initialized, so reading it
+// bare yields (0,0) in the common single-window case. ImGui's own readers treat zero as "unset" and
+// fall back to io.DisplayFramebufferScale — match them.
+inline ImVec2 viewportFramebufferScale() {
+    const ImGuiViewport *vp = ImGui::GetWindowViewport();
+    if (vp != nullptr && vp->FramebufferScale.x != 0.0f)
+        return vp->FramebufferScale;
+    return ImGui::GetIO().DisplayFramebufferScale;
+}
+
 } // namespace ofs::ui

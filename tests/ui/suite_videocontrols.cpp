@@ -2,6 +2,7 @@
 #include "Core/Events.h"
 #include "UI/Icons.h"
 #include "UI/Notifications.h"
+#include "Video/DummyVideoPlayer.h"
 #include "Video/VideoPlayer.h"
 #include "helpers/TestState.h"
 #include <cmath>
@@ -151,5 +152,50 @@ void RegisterVideoControlsTests(ImGuiTestEngine *e) {
         ctx->Yield(2);
 
         IM_CHECK_LT(std::abs(player->getPlaybackSpeed() - 1.5f), 0.05f);
+    };
+
+    // Regression: the render-target size handed to the player must describe the pixels the image
+    // actually covers. It is derived from live ImGui viewport state, and reading a viewport's
+    // FramebufferScale bare yields (0,0) on the main viewport (ImGui fills it in only for secondary
+    // platform viewports), which collapsed the request to a 1x1 target — the video became one flat
+    // colour. Only a real ImGui context can catch that; the arithmetic alone unit-tests clean.
+    IM_REGISTER_TEST(e, "videocontrols", "render_size_tracks_displayed_image")->TestFunc = [](ImGuiTestContext *ctx) {
+        loadFixture(ctx);
+        auto &eq = *getTestState().eventQueue;
+
+        auto *dummy = static_cast<ofs::DummyVideoPlayer *>(getTestState().videoPlayer);
+        // A source far larger than the panel, so the "never exceed the source" cap cannot bind and
+        // the request is free to track the displayed size exactly.
+        constexpr int kSrcW = 3840;
+        constexpr int kSrcH = 2160;
+        dummy->setFakeVideoForTesting(kSrcW, kSrcH, 1);
+        eq.push(ofs::ChangeDummyDurationEvent{.durationSeconds = 60.0});
+        eq.push(ofs::ModifyEvent<ofs::VideoPlayerState>{[](ofs::VideoPlayerState &v) {
+            v.activeMode = ofs::VideoMode::Full;
+            v.resolutionScale = 1.0f;
+        }});
+        ctx->Yield(2);
+
+        // The Video Player shares its dock node with the Processing panel; bring it forward so it
+        // renders the image and issues a render-size request.
+        ctx->WindowFocus("Video Player###video_player");
+        ctx->Yield(3);
+
+        const int fullW = dummy->lastRenderWidth;
+        const int fullH = dummy->lastRenderHeight;
+        IM_CHECK(fullW > 1); // a collapsed request is the bug this guards
+        IM_CHECK(fullH > 1);
+        IM_CHECK(fullW <= kSrcW); // never asks for more than the source carries
+        IM_CHECK(fullH <= kSrcH);
+        // The image is fitted to the panel, so the request keeps the source's aspect.
+        const float aspect = static_cast<float>(fullW) / static_cast<float>(fullH);
+        IM_CHECK(std::fabs(aspect - static_cast<float>(kSrcW) / static_cast<float>(kSrcH)) < 0.05f);
+
+        // Halving the user's quality setting halves the request: it tracks the settings rather than
+        // being a constant that merely happens to look sane.
+        eq.push(ofs::ModifyEvent<ofs::VideoPlayerState>{[](ofs::VideoPlayerState &v) { v.resolutionScale = 0.5f; }});
+        ctx->Yield(3);
+        IM_CHECK(std::abs(dummy->lastRenderWidth - fullW / 2) <= 2);
+        IM_CHECK(std::abs(dummy->lastRenderHeight - fullH / 2) <= 2);
     };
 }

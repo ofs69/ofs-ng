@@ -50,7 +50,15 @@ class DummyVideoPlayer : public VideoPlayer {
 
     void notifySwap() override {}
 
-    void setRenderSize(int, int) override {}
+    // Recorded, not applied: the dummy decodes nothing, but the size VideoPlayerWindow asks for is
+    // derived from live ImGui viewport state, so it is only observable with a real context up.
+    void setRenderSize(int width, int height) override {
+        lastRenderWidth = width;
+        lastRenderHeight = height;
+    }
+
+    int lastRenderWidth = 0;
+    int lastRenderHeight = 0;
 
   private:
     void openVideo(const std::string &) override {}

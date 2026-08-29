@@ -7,6 +7,7 @@
 #include "Scenegraph/VrCamera.h"
 #include "Scenegraph/VrShader.h"
 #include "UI/Icons.h"
+#include "UI/ImGuiHelpers.h"
 #include "UI/VideoRenderSize.h"
 #include "Video/VideoPlayer.h"
 #include "imgui.h"
@@ -186,8 +187,8 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
     // framebuffer pixels, so the request goes through the window's own viewport density — the video
     // window may sit on a second monitor scaled differently from the main one.
     const ofs::ui::RenderPixelSize req =
-        ofs::ui::videoRenderPixels(baseSize * multiplier, state.resolutionScale,
-                                   ImGui::GetWindowViewport()->FramebufferScale, player.getWidth(), player.getHeight());
+        ofs::ui::videoRenderPixels(baseSize * multiplier, state.resolutionScale, ofs::ui::viewportFramebufferScale(),
+                                   player.getWidth(), player.getHeight());
 
     if (req.w != lastReqWidth || req.h != lastReqHeight) {
         lastReqWidth = req.w;
