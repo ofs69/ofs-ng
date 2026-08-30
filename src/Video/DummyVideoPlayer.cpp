@@ -36,6 +36,14 @@ bool DummyVideoPlayer::init() {
         eventQueue.push(PlayStateChangedEvent{!paused});
     });
 
+    eventQueue.on<SetPlayingEvent>([this](const SetPlayingEvent &e) {
+        const bool wantPaused = !e.playing;
+        if (!active || paused == wantPaused)
+            return;
+        paused = wantPaused;
+        eventQueue.push(PlayStateChangedEvent{!paused});
+    });
+
     eventQueue.on<PlaybackSpeedEvent>([this](const PlaybackSpeedEvent &e) {
         if (!active)
             return;

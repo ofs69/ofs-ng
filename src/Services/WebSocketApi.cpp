@@ -451,12 +451,10 @@ struct WebSocketApi::Impl {
                 if constexpr (std::is_same_v<T, ws::SeekCommand>) {
                     eq.push(SeekEvent{typedCommand.time});
                 } else if constexpr (std::is_same_v<T, ws::SetPlayingCommand>) {
-                    if (typedCommand.playing != playing) {
-                        // Latch the requested state until PlayStateChangedEvent arrives next frame so two clients
-                        // asking for the same state cannot enqueue two toggles that cancel each other out.
-                        playing = typedCommand.playing;
-                        eq.push(PlayPauseEvent{});
-                    }
+                    // Absolute, never a toggle: `playing` may only be advanced by the PlayStateChangedEvent
+                    // the player actually emits, so a request the player drops (no media loaded) cannot
+                    // leave us believing the opposite of the truth and inverting the next command.
+                    eq.push(SetPlayingEvent{typedCommand.playing});
                 } else if constexpr (std::is_same_v<T, ws::SetSpeedCommand>) {
                     eq.push(PlaybackSpeedEvent{typedCommand.speed});
                 }

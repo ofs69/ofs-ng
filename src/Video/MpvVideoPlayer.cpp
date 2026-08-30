@@ -42,6 +42,7 @@ MpvVideoPlayer::~MpvVideoPlayer() {
 
 bool MpvVideoPlayer::init() {
     eventQueue.on<PlayPauseEvent>([this](const PlayPauseEvent &e) { onPlayPauseEvent(e); });
+    eventQueue.on<SetPlayingEvent>([this](const SetPlayingEvent &e) { onSetPlayingEvent(e); });
     eventQueue.on<SeekEvent>([this](const SeekEvent &e) { onSeekEvent(e); });
     eventQueue.on<SetPauseOnSeekEvent>([this](const SetPauseOnSeekEvent &e) { onSetPauseOnSeekEvent(e); });
     eventQueue.on<PlaybackSpeedEvent>([this](const PlaybackSpeedEvent &e) { onPlaybackSpeedEvent(e); });
@@ -361,6 +362,10 @@ void MpvVideoPlayer::onMpvRenderUpdate(void *ctx) {
 
 void MpvVideoPlayer::onPlayPauseEvent(const PlayPauseEvent &event) {
     setPaused(!isPaused());
+}
+
+void MpvVideoPlayer::onSetPlayingEvent(const SetPlayingEvent &event) {
+    setPaused(!event.playing);
 }
 
 void MpvVideoPlayer::onSeekEvent(const SeekEvent &event) {

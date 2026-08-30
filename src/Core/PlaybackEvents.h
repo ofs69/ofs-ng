@@ -10,6 +10,15 @@ namespace ofs {
 
 struct PlayPauseEvent {};
 
+// Absolute play/pause request, as opposed to the PlayPauseEvent toggle. A remote controller (the
+// WebSocket API) asks for a *state*, not a flip: a toggle it cannot observe the outcome of — the
+// player drops it while no media is loaded — desynchronises the controller from the real state and
+// inverts every later request. Applying the state is idempotent, so concurrent identical requests
+// cannot cancel each other out either.
+struct SetPlayingEvent {
+    bool playing;
+};
+
 struct LoadVideoEvent {
     std::string path;
 };

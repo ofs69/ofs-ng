@@ -59,6 +59,7 @@ class MpvVideoPlayer : public VideoPlayer {
     void setPlaybackSpeed(float speed) override;
 
     void onPlayPauseEvent(const PlayPauseEvent &event);
+    void onSetPlayingEvent(const SetPlayingEvent &event);
     void onSeekEvent(const SeekEvent &event);
     void onSetPauseOnSeekEvent(const SetPauseOnSeekEvent &event);
     void onPlaybackSpeedEvent(const PlaybackSpeedEvent &event);
