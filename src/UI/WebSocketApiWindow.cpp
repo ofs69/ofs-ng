@@ -40,8 +40,13 @@ void WebSocketApiWindow::render(bool &open, const AppSettings &settings, const W
     if (status.running) {
         ImGui::TextColored(theme::GetStyleColorVec4(AppCol_Success), "%s",
                            Str::WsListening.fmt(fmtScratch("{}", status.clientCount)));
-    } else if (enabled && !status.error.empty()) {
-        ImGui::TextColored(theme::GetStyleColorVec4(AppCol_Error), "%s", Str::WsError.fmt(status.error));
+    } else if (enabled && status.error != WebSocketApiError::None) {
+        const char *message = Str::WsErrorListen.fmt(status.errorPort);
+        if (status.error == WebSocketApiError::WinsockInit)
+            message = Str::WsErrorWinsock.c_str();
+        else if (status.error == WebSocketApiError::CreateSocket)
+            message = Str::WsErrorCreateSocket.c_str();
+        ImGui::TextColored(theme::GetStyleColorVec4(AppCol_Error), "%s", message);
     } else {
         ImGui::TextDisabled("%s", Str::WsStopped.c_str());
     }

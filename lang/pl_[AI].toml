@@ -52,9 +52,17 @@ translation = "Nasłuchiwanie — połączono: {0}"
 english     = "Server stopped"
 translation = "Serwer zatrzymany"
 
-[WsError]
-english     = "Server error: {0}"
-translation = "Błąd serwera: {0}"
+[WsErrorWinsock]
+english     = "Server error: unable to initialize Winsock"
+translation = "Błąd serwera: nie można zainicjować Winsock"
+
+[WsErrorCreateSocket]
+english     = "Server error: unable to create the listening socket"
+translation = "Błąd serwera: nie można utworzyć gniazda nasłuchującego"
+
+[WsErrorListen]
+english     = "Server error: unable to listen on 127.0.0.1:{0}"
+translation = "Błąd serwera: nie można nasłuchiwać na 127.0.0.1:{0}"
 
 [PrefTabApplication]
 english     = "Application"

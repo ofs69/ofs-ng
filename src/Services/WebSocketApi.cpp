@@ -283,14 +283,14 @@ struct WebSocketApi::Impl {
 #ifdef _WIN32
         WSADATA data{};
         if (WSAStartup(MAKEWORD(2, 2), &data) != 0) {
-            status.error = "Unable to initialize Winsock";
+            status.error = WebSocketApiError::WinsockInit;
             return false;
         }
         socketsInitialized = true;
 #endif
         listener = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
         if (listener == kInvalidSocket) {
-            status.error = "Unable to create the listening socket";
+            status.error = WebSocketApiError::CreateSocket;
             stop();
             return false;
         }
@@ -315,13 +315,14 @@ struct WebSocketApi::Impl {
         address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
         if (bind(listener, reinterpret_cast<const sockaddr *>(&address), sizeof(address)) != 0 ||
             listen(listener, static_cast<int>(kMaxClients)) != 0 || !setNonBlocking(listener)) {
-            status.error = "Unable to listen on 127.0.0.1:" + std::to_string(port);
+            status.error = WebSocketApiError::Listen;
+            status.errorPort = port;
             stop();
             return false;
         }
         activePort = port;
         status.running = true;
-        status.error.clear();
+        status.error = WebSocketApiError::None;
         OFS_CORE_INFO("Classic OFS WebSocket API listening on ws://127.0.0.1:{}/ofs", port);
         return true;
     }
@@ -335,7 +336,7 @@ struct WebSocketApi::Impl {
                 stop();
             attemptedEnabled = false;
             attemptedPort = port;
-            status.error.clear();
+            status.error = WebSocketApiError::None;
             return;
         }
         if (running() && activePort == port)

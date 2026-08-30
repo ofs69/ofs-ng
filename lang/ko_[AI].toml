@@ -52,9 +52,17 @@ translation = "수신 대기 중 — {0}개 연결됨"
 english     = "Server stopped"
 translation = "서버 중지됨"
 
-[WsError]
-english     = "Server error: {0}"
-translation = "서버 오류: {0}"
+[WsErrorWinsock]
+english     = "Server error: unable to initialize Winsock"
+translation = "서버 오류: Winsock을 초기화할 수 없습니다"
+
+[WsErrorCreateSocket]
+english     = "Server error: unable to create the listening socket"
+translation = "서버 오류: 수신 소켓을 만들 수 없습니다"
+
+[WsErrorListen]
+english     = "Server error: unable to listen on 127.0.0.1:{0}"
+translation = "서버 오류: 127.0.0.1:{0}에서 수신 대기할 수 없습니다"
 
 [PrefTabApplication]
 english     = "Application"

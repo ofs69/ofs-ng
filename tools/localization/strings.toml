@@ -62,11 +62,19 @@ placeholders = [
 english     = "Server stopped"
 description = "WebSocket API window: status when the server is disabled."
 
-[WsError]
-english      = "Server error: {0}"
-description  = "WebSocket API window: status when the loopback server failed to start."
+[WsErrorWinsock]
+english     = "Server error: unable to initialize Winsock"
+description = "WebSocket API window: the Windows socket library could not be started, so the server did not run."
+
+[WsErrorCreateSocket]
+english     = "Server error: unable to create the listening socket"
+description = "WebSocket API window: the operating system refused to create the server's network socket."
+
+[WsErrorListen]
+english      = "Server error: unable to listen on 127.0.0.1:{0}"
+description  = "WebSocket API window: the server could not claim the port, usually because another program already holds it."
 placeholders = [
-    "{0} = operating-system socket error summary",
+    "{0} = TCP port number, e.g. 8080",
 ]
 
 [PrefTabApplication]

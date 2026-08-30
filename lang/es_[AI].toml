@@ -52,9 +52,17 @@ translation = "Escuchando — {0} conectado(s)"
 english     = "Server stopped"
 translation = "Servidor detenido"
 
-[WsError]
-english     = "Server error: {0}"
-translation = "Error del servidor: {0}"
+[WsErrorWinsock]
+english     = "Server error: unable to initialize Winsock"
+translation = "Error del servidor: no se pudo inicializar Winsock"
+
+[WsErrorCreateSocket]
+english     = "Server error: unable to create the listening socket"
+translation = "Error del servidor: no se pudo crear el socket de escucha"
+
+[WsErrorListen]
+english     = "Server error: unable to listen on 127.0.0.1:{0}"
+translation = "Error del servidor: no se pudo escuchar en 127.0.0.1:{0}"
 
 [PrefTabApplication]
 english     = "Application"

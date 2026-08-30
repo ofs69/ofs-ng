@@ -52,9 +52,17 @@ translation = "正在接聽 — 已連線 {0} 個"
 english     = "Server stopped"
 translation = "伺服器已停止"
 
-[WsError]
-english     = "Server error: {0}"
-translation = "伺服器錯誤：{0}"
+[WsErrorWinsock]
+english     = "Server error: unable to initialize Winsock"
+translation = "伺服器錯誤：無法初始化 Winsock"
+
+[WsErrorCreateSocket]
+english     = "Server error: unable to create the listening socket"
+translation = "伺服器錯誤：無法建立監聽通訊端"
+
+[WsErrorListen]
+english     = "Server error: unable to listen on 127.0.0.1:{0}"
+translation = "伺服器錯誤：無法在 127.0.0.1:{0} 上監聽"
 
 [PrefTabApplication]
 english     = "Application"

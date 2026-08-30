@@ -52,9 +52,17 @@ translation = "待機中 — {0} 件接続"
 english     = "Server stopped"
 translation = "サーバー停止中"
 
-[WsError]
-english     = "Server error: {0}"
-translation = "サーバーエラー: {0}"
+[WsErrorWinsock]
+english     = "Server error: unable to initialize Winsock"
+translation = "サーバーエラー: Winsock を初期化できません"
+
+[WsErrorCreateSocket]
+english     = "Server error: unable to create the listening socket"
+translation = "サーバーエラー: リッスン用ソケットを作成できません"
+
+[WsErrorListen]
+english     = "Server error: unable to listen on 127.0.0.1:{0}"
+translation = "サーバーエラー: 127.0.0.1:{0} で待ち受けできません"
 
 [PrefTabApplication]
 english     = "Application"
