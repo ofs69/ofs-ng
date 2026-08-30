@@ -170,8 +170,14 @@ std::optional<Command> parseCommand(std::string_view text) {
 }
 
 std::optional<std::string> handshakeResponse(std::string_view request) {
+    static constexpr std::string_view kGet = "GET ";
+    static constexpr std::string_view kVersion = " HTTP/1.1";
     const size_t firstEnd = request.find("\r\n");
-    if (firstEnd == std::string_view::npos || request.substr(0, firstEnd) != "GET /ofs HTTP/1.1")
+    if (firstEnd == std::string_view::npos)
+        return std::nullopt;
+    const std::string_view requestLine = request.substr(0, firstEnd);
+    if (requestLine.size() != kGet.size() + kPath.size() + kVersion.size() || !requestLine.starts_with(kGet) ||
+        !requestLine.ends_with(kVersion) || requestLine.substr(kGet.size(), kPath.size()) != kPath)
         return std::nullopt;
 
     std::string_view key;

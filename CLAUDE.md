@@ -18,6 +18,7 @@ Deeper references live in `docs/`:
 |-----|--------|
 | `docs/ARCHITECTURE.md` | The three-primitive design in prose, the interaction extension points, and the processing-node model |
 | `docs/TRANSLATING.md` | Maintaining translation catalogs and adding languages via `tools/translations.py` (the `sync`/`todo`/`apply` workflow) |
+| `docs/WEBSOCKET_API.md` | The Classic OFS-compatible loopback WebSocket endpoint: message schema, commands, limits, and security model |
 
 ## Build
 
@@ -111,6 +112,7 @@ Services own behavior. They do not own project state (that lives in `ScriptProje
 | `CommandRegistry` | Command palette / invocable command table |
 | `EffectRegistry` | Built-in and plugin-contributed effects |
 | `UpdateChecker` | Off-thread check of the GitHub releases feed against the build's git tag (HTTP via the .NET-backed `Ofs.HostServices`, see *Plugin system*) |
+| `WebSocketApi` | Opt-in Classic OFS-compatible loopback WebSocket endpoint; non-blocking sockets polled from the main-thread frame loop (see `docs/WEBSOCKET_API.md`) |
 
 **Rules:**
 - **MUST** accept `ScriptProject&` and `EventQueue&` by reference. Never store `Application*` or `OfsApp*`.
