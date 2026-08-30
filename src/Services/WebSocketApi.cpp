@@ -232,9 +232,9 @@ struct WebSocketApi::Impl {
 
     ~Impl() { stop(); }
 
-    bool running() const { return listener != kInvalidSocket; }
+    [[nodiscard]] bool running() const { return listener != kInvalidSocket; }
 
-    std::bitset<kStandardAxisCount> shownAxes() const {
+    [[nodiscard]] std::bitset<kStandardAxisCount> shownAxes() const {
         std::bitset<kStandardAxisCount> result;
         for (size_t i = 0; i < kStandardAxisCount; ++i)
             result.set(i, project.axes[i].showInStrip);
@@ -407,7 +407,7 @@ struct WebSocketApi::Impl {
         if (!projectActive(project))
             return emitted;
         for (size_t i = 0; i < kStandardAxisCount; ++i) {
-            const StandardAxis role = static_cast<StandardAxis>(i);
+            const auto role = static_cast<StandardAxis>(i);
             if (role == StandardAxis::L0 || project.axes[i].exists())
                 emitted = sink(funscriptEvent(project, role, currentDuration), i) && emitted;
         }
@@ -555,7 +555,7 @@ struct WebSocketApi::Impl {
 
         if (!client.upgraded) {
             static constexpr std::array<uint8_t, 4> end = {'\r', '\n', '\r', '\n'};
-            const auto headerEnd = std::search(client.input.begin(), client.input.end(), end.begin(), end.end());
+            const auto headerEnd = std::ranges::search(client.input, end).begin();
             if (headerEnd == client.input.end())
                 return true;
             const size_t headerSize = static_cast<size_t>(std::distance(client.input.begin(), headerEnd)) + end.size();
@@ -644,7 +644,7 @@ struct WebSocketApi::Impl {
         for (size_t i = 0; i < kStandardAxisCount; ++i) {
             if (!dirtyAxes.test(i))
                 continue;
-            const StandardAxis role = static_cast<StandardAxis>(i);
+            const auto role = static_cast<StandardAxis>(i);
             const bool exists = projectActive(project) && (role == StandardAxis::L0 || project.axes[i].exists());
             if (exists) {
                 broadcast(funscriptEvent(project, role, currentDuration));

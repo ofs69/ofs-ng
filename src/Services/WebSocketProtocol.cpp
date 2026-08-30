@@ -145,7 +145,7 @@ std::optional<Command> parseCommand(std::string_view text) {
     if (data == root.end() || !data->is_object())
         return std::nullopt;
 
-    const std::string &commandName = name->get_ref<const std::string &>();
+    const auto &commandName = name->get_ref<const std::string &>();
     if (commandName == "change_time") {
         const auto value = data->find("time");
         if (value != data->end() && value->is_number()) {
