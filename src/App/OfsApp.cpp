@@ -960,7 +960,7 @@ void OfsApp::onImGuiRender() {
     if (backupRestoreWindow)
         backupRestoreWindow->render(appState.showBackupRestoreWindow, scriptProject, eventQueue);
     if (webSocketApiWindow && webSocketApi)
-        webSocketApiWindow->render(appState.showWebSocketApiWindow, appSettings, *webSocketApi, eventQueue);
+        webSocketApiWindow->render(appState.showWebSocketApiWindow, appSettings, webSocketApi->status(), eventQueue);
 
     // One top-level branch: the editor (dockspace + windows) only renders with an active project;
     // otherwise the welcome screen takes the body. Every editor window may therefore assume a project

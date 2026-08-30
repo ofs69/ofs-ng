@@ -4,6 +4,7 @@
 #include <optional>
 #include <string>
 #include <string_view>
+#include <variant>
 #include <vector>
 
 namespace ofs::ws {
@@ -11,13 +12,16 @@ namespace ofs::ws {
 inline constexpr std::string_view kPath = "/ofs";
 inline constexpr std::string_view kSubprotocol = "ofs-api.json";
 
-enum class CommandKind { Seek, SetPlaying, SetSpeed };
-
-struct Command {
-    CommandKind kind = CommandKind::Seek;
-    double number = 0.0;
-    bool boolean = false;
+struct SeekCommand {
+    double time = 0.0;
 };
+struct SetPlayingCommand {
+    bool playing = false;
+};
+struct SetSpeedCommand {
+    float speed = 1.0f;
+};
+using Command = std::variant<SeekCommand, SetPlayingCommand, SetSpeedCommand>;
 
 // Parse the classic OFS command envelope. Unknown or malformed commands are ignored.
 std::optional<Command> parseCommand(std::string_view text);
@@ -27,6 +31,7 @@ std::optional<std::string> handshakeResponse(std::string_view request);
 
 // Encode one unmasked server-to-client frame.
 std::string encodeFrame(uint8_t opcode, std::string_view payload);
+void encodeFrame(std::string &frame, uint8_t opcode, std::string_view payload);
 
 // Extract one complete client-to-server frame from buffer. Client frames must be masked.
 // Returns nullopt when more bytes are required; protocolError is set for malformed input.

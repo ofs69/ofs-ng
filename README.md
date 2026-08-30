@@ -17,6 +17,8 @@ SDL3, Dear ImGui, OpenGL, and libmpv.
 - **Live 3D simulator** — a real-time 3D preview that plays back the script as you edit.
 - **Node-based processing graph** — compose per-region effects and transforms in a visual node editor.
 - **C# plugin system** — extend the editor with managed .NET plugins; no C ABI to deal with.
+- **Classic OFS WebSocket API** — connect compatible local applications to playback and live funscript
+  updates through the documented [`/ofs` endpoint](docs/WEBSOCKET_API.md).
 - **Localized UI** — every string is translatable, with multiple languages shipped.
 
 ## Platform support

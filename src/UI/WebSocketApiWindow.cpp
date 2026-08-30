@@ -13,7 +13,8 @@
 
 namespace ofs {
 
-void WebSocketApiWindow::render(bool &open, const AppSettings &settings, const WebSocketApi &api, EventQueue &eq) {
+void WebSocketApiWindow::render(bool &open, const AppSettings &settings, const WebSocketApiStatus &status,
+                                EventQueue &eq) {
     if (!open)
         return;
     if (!ImGui::Begin(Str::WsTitle.id("websocket_api"), &open, ImGuiWindowFlags_AlwaysAutoResize)) {
@@ -36,11 +37,11 @@ void WebSocketApiWindow::render(bool &open, const AppSettings &settings, const W
 
     ImGui::Separator();
     ImGui::TextUnformatted(Str::WsEndpoint.fmt(fmtScratch("{}", settings.webSocketPort)));
-    if (api.isRunning()) {
+    if (status.running) {
         ImGui::TextColored(theme::GetStyleColorVec4(AppCol_Success), "%s",
-                           Str::WsListening.fmt(fmtScratch("{}", api.clientCount())));
-    } else if (enabled && !api.lastError().empty()) {
-        ImGui::TextColored(theme::GetStyleColorVec4(AppCol_Error), "%s", Str::WsError.fmt(api.lastError()));
+                           Str::WsListening.fmt(fmtScratch("{}", status.clientCount)));
+    } else if (enabled && !status.error.empty()) {
+        ImGui::TextColored(theme::GetStyleColorVec4(AppCol_Error), "%s", Str::WsError.fmt(status.error));
     } else {
         ImGui::TextDisabled("%s", Str::WsStopped.c_str());
     }

@@ -4,6 +4,7 @@
 #include <array>
 #include <bit>
 #include <cctype>
+#include <cmath>
 #include <cstring>
 #include <limits>
 #include <nlohmann/json.hpp>
@@ -133,25 +134,37 @@ std::string base64(const std::array<uint8_t, 20> &bytes) {
 
 std::optional<Command> parseCommand(std::string_view text) {
     const nlohmann::json root = nlohmann::json::parse(text, nullptr, false);
-    if (!root.is_object() || root.value("type", "") != "command")
+    if (!root.is_object())
+        return std::nullopt;
+    const auto type = root.find("type");
+    const auto name = root.find("name");
+    if (type == root.end() || !type->is_string() || type->get_ref<const std::string &>() != "command" ||
+        name == root.end() || !name->is_string())
         return std::nullopt;
     const auto data = root.find("data");
     if (data == root.end() || !data->is_object())
         return std::nullopt;
 
-    const std::string name = root.value("name", "");
-    if (name == "change_time") {
+    const std::string &commandName = name->get_ref<const std::string &>();
+    if (commandName == "change_time") {
         const auto value = data->find("time");
-        if (value != data->end() && value->is_number())
-            return Command{.kind = CommandKind::Seek, .number = value->get<double>()};
-    } else if (name == "change_play") {
+        if (value != data->end() && value->is_number()) {
+            const double time = value->get<double>();
+            if (std::isfinite(time) && time >= 0.0)
+                return SeekCommand{time};
+        }
+    } else if (commandName == "change_play") {
         const auto value = data->find("playing");
         if (value != data->end() && value->is_boolean())
-            return Command{.kind = CommandKind::SetPlaying, .boolean = value->get<bool>()};
-    } else if (name == "change_playbackspeed") {
+            return SetPlayingCommand{value->get<bool>()};
+    } else if (commandName == "change_playbackspeed") {
         const auto value = data->find("speed");
-        if (value != data->end() && value->is_number())
-            return Command{.kind = CommandKind::SetSpeed, .number = value->get<double>()};
+        if (value != data->end() && value->is_number()) {
+            const double speed = value->get<double>();
+            if (std::isfinite(speed) && speed > 0.0 &&
+                speed <= static_cast<double>((std::numeric_limits<float>::max)()))
+                return SetSpeedCommand{static_cast<float>(speed)};
+        }
     }
     return std::nullopt;
 }
@@ -200,6 +213,12 @@ std::optional<std::string> handshakeResponse(std::string_view request) {
 
 std::string encodeFrame(uint8_t opcode, std::string_view payload) {
     std::string frame;
+    encodeFrame(frame, opcode, payload);
+    return frame;
+}
+
+void encodeFrame(std::string &frame, uint8_t opcode, std::string_view payload) {
+    frame.clear();
     frame.reserve(payload.size() + 10);
     frame.push_back(static_cast<char>(0x80u | (opcode & 0x0fu)));
     if (payload.size() <= 125) {
@@ -215,7 +234,6 @@ std::string encodeFrame(uint8_t opcode, std::string_view payload) {
             frame.push_back(static_cast<char>((size >> shift) & 0xffu));
     }
     frame.append(payload);
-    return frame;
 }
 
 std::optional<Frame> consumeFrame(std::vector<uint8_t> &buffer, bool &protocolError) {

@@ -4,11 +4,11 @@ namespace ofs {
 
 struct AppSettings;
 class EventQueue;
-class WebSocketApi;
+struct WebSocketApiStatus;
 
 class WebSocketApiWindow {
   public:
-    void render(bool &open, const AppSettings &settings, const WebSocketApi &api, EventQueue &eq);
+    void render(bool &open, const AppSettings &settings, const WebSocketApiStatus &status, EventQueue &eq);
 };
 
 } // namespace ofs

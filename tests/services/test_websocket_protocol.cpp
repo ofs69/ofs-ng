@@ -2,6 +2,7 @@
 
 #include <doctest/doctest.h>
 #include <string>
+#include <variant>
 #include <vector>
 
 using namespace ofs::ws;
@@ -43,22 +44,36 @@ TEST_CASE("WebSocket handshake accepts clients that do not request a subprotocol
 TEST_CASE("Classic OFS commands parse into typed intents") {
     const auto seek = parseCommand(R"({"type":"command","name":"change_time","data":{"time":12.5}})");
     REQUIRE(seek.has_value());
-    CHECK(seek->kind == CommandKind::Seek);
-    CHECK(seek->number == doctest::Approx(12.5));
+    REQUIRE(std::holds_alternative<SeekCommand>(*seek));
+    CHECK(std::get<SeekCommand>(*seek).time == doctest::Approx(12.5));
 
     const auto play = parseCommand(R"({"type":"command","name":"change_play","data":{"playing":true}})");
     REQUIRE(play.has_value());
-    CHECK(play->kind == CommandKind::SetPlaying);
-    CHECK(play->boolean);
+    REQUIRE(std::holds_alternative<SetPlayingCommand>(*play));
+    CHECK(std::get<SetPlayingCommand>(*play).playing);
 
     const auto speed =
         parseCommand(R"({"type":"command","name":"change_playbackspeed","data":{"speed":1.25}})");
     REQUIRE(speed.has_value());
-    CHECK(speed->kind == CommandKind::SetSpeed);
-    CHECK(speed->number == doctest::Approx(1.25));
+    REQUIRE(std::holds_alternative<SetSpeedCommand>(*speed));
+    CHECK(std::get<SetSpeedCommand>(*speed).speed == doctest::Approx(1.25f));
 
     CHECK_FALSE(parseCommand(R"({"type":"event","name":"change_time","data":{"time":1}})").has_value());
     CHECK_FALSE(parseCommand(R"({"type":"command","name":"unknown","data":{}})").has_value());
+}
+
+TEST_CASE("Malformed Classic OFS command fields are ignored without throwing") {
+    const std::string_view malformed[] = {
+        R"({"type":1,"name":"change_time","data":{"time":1}})",
+        R"({"type":"command","name":false,"data":{"time":1}})",
+        R"({"type":"command","name":"change_time","data":{"time":"soon"}})",
+        R"({"type":"command","name":"change_play","data":{"playing":1}})",
+        R"({"type":"command","name":"change_playbackspeed","data":{"speed":1e100}})",
+    };
+    for (const std::string_view text : malformed) {
+        CHECK_NOTHROW(parseCommand(text));
+        CHECK_FALSE(parseCommand(text).has_value());
+    }
 }
 
 TEST_CASE("Masked client frames are decoded and consumed") {
@@ -87,4 +102,14 @@ TEST_CASE("Server frames use the unmasked RFC 6455 length encodings") {
     CHECK(static_cast<unsigned char>(frame[1]) == 126);
     CHECK(static_cast<unsigned char>(frame[2]) == 0);
     CHECK(static_cast<unsigned char>(frame[3]) == 126);
+}
+
+TEST_CASE("Server frame encoding can reuse caller-owned storage") {
+    std::string frame;
+    frame.reserve(256);
+    encodeFrame(frame, 0x1, "first");
+    CHECK(frame == std::string("\x81\x05" "first", 7));
+
+    encodeFrame(frame, 0xA, "ok");
+    CHECK(frame == std::string("\x8a\x02ok", 4));
 }

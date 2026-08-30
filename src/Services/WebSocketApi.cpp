@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <array>
 #include <bitset>
+#include <charconv>
 #include <cerrno>
 #include <cmath>
 #include <cstring>
@@ -24,6 +25,7 @@
 #include <optional>
 #include <ranges>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -138,7 +140,13 @@ nlohmann::json funscriptEvent(const ScriptProject &project, StandardAxis role, d
 
 struct WebSocketApi::Impl {
     struct Client {
-        Socket socket = kInvalidSocket;
+        explicit Client(Socket clientSocket) : socket(clientSocket) {
+            input.reserve(kMaxHandshake);
+            output.reserve(kMaxHandshake);
+            fragmentedText.reserve(kMaxHandshake);
+        }
+
+        Socket socket;
         bool upgraded = false;
         bool closeAfterWrite = false;
         std::vector<uint8_t> input;
@@ -151,9 +159,9 @@ struct WebSocketApi::Impl {
     ScriptProject &project;
     EventQueue &eq;
     const AppSettings &settings;
+    WebSocketApiStatus status;
     Socket listener = kInvalidSocket;
     std::vector<Client> clients;
-    std::string error;
     int activePort = 0;
     int attemptedPort = 0;
     bool attemptedEnabled = false;
@@ -163,14 +171,22 @@ struct WebSocketApi::Impl {
     double duration = 0.0;
     double lastPosition = -1.0;
     uint64_t lastRevision = 0;
-    std::string lastProjectKey;
+    std::string lastProjectPath;
+    std::string lastMediaPath;
+    std::bitset<kStandardAxisCount> lastShownAxes;
     std::bitset<kStandardAxisCount> announcedAxes;
     std::bitset<kStandardAxisCount> dirtyAxes;
     double dirtyForSeconds = 0.0;
     bool fullResyncPending = false;
+    std::string serializedPayload;
+    std::string serializedFrame;
 
     Impl(ScriptProject &projectRef, EventQueue &queue, const AppSettings &settingsRef)
         : project(projectRef), eq(queue), settings(settingsRef) {
+        clients.reserve(kMaxClients);
+        serializedPayload.reserve(256);
+        serializedFrame.reserve(272);
+        cacheProjectIdentity();
         eq.on<PlayStateChangedEvent>([this](const PlayStateChangedEvent &e) {
             playing = e.playing;
             broadcast(event("play_change", {{"playing", playing}}));
@@ -200,23 +216,37 @@ struct WebSocketApi::Impl {
 
     bool running() const { return listener != kInvalidSocket; }
 
-    std::string projectKey() const {
-        std::string key = project.state.filePath;
-        key.push_back('\n');
-        key += project.state.mediaPath;
-        key.push_back('\n');
-        for (const AxisState &axis : project.axes)
-            key.push_back(axis.showInStrip ? '1' : '0');
-        return key;
+    std::bitset<kStandardAxisCount> shownAxes() const {
+        std::bitset<kStandardAxisCount> result;
+        for (size_t i = 0; i < kStandardAxisCount; ++i)
+            result.set(i, project.axes[i].showInStrip);
+        return result;
+    }
+
+    void cacheProjectIdentity() {
+        lastProjectPath = project.state.filePath;
+        lastMediaPath = project.state.mediaPath;
+        lastShownAxes = shownAxes();
+    }
+
+    bool projectIdentityChanged() {
+        const auto currentShownAxes = shownAxes();
+        if (lastProjectPath == project.state.filePath && lastMediaPath == project.state.mediaPath &&
+            lastShownAxes == currentShownAxes)
+            return false;
+        cacheProjectIdentity();
+        return true;
     }
 
     void stop() {
         for (Client &client : clients)
             closeSocket(client.socket);
         clients.clear();
+        status.clientCount = 0;
         closeSocket(listener);
         listener = kInvalidSocket;
         activePort = 0;
+        status.running = false;
 #ifdef _WIN32
         if (socketsInitialized)
             WSACleanup();
@@ -228,14 +258,14 @@ struct WebSocketApi::Impl {
 #ifdef _WIN32
         WSADATA data{};
         if (WSAStartup(MAKEWORD(2, 2), &data) != 0) {
-            error = "Unable to initialize Winsock";
+            status.error = "Unable to initialize Winsock";
             return false;
         }
         socketsInitialized = true;
 #endif
         listener = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
         if (listener == kInvalidSocket) {
-            error = "Unable to create the listening socket";
+            status.error = "Unable to create the listening socket";
             stop();
             return false;
         }
@@ -248,12 +278,13 @@ struct WebSocketApi::Impl {
         address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
         if (bind(listener, reinterpret_cast<const sockaddr *>(&address), sizeof(address)) != 0 ||
             listen(listener, static_cast<int>(kMaxClients)) != 0 || !setNonBlocking(listener)) {
-            error = "Unable to listen on 127.0.0.1:" + std::to_string(port);
+            status.error = "Unable to listen on 127.0.0.1:" + std::to_string(port);
             stop();
             return false;
         }
         activePort = port;
-        error.clear();
+        status.running = true;
+        status.error.clear();
         OFS_CORE_INFO("Classic OFS WebSocket API listening on ws://127.0.0.1:{}/ofs", port);
         return true;
     }
@@ -267,7 +298,7 @@ struct WebSocketApi::Impl {
                 stop();
             attemptedEnabled = false;
             attemptedPort = port;
-            error.clear();
+            status.error.clear();
             return;
         }
         if (running() && activePort == port)
@@ -281,7 +312,7 @@ struct WebSocketApi::Impl {
         start(port);
     }
 
-    static bool appendOutput(Client &client, std::string data) {
+    static bool appendOutput(Client &client, std::string_view data) {
         if (client.outputOffset == client.output.size()) {
             client.output.clear();
             client.outputOffset = 0;
@@ -293,56 +324,78 @@ struct WebSocketApi::Impl {
         return true;
     }
 
-    static bool queueJson(Client &client, const nlohmann::json &json) {
-        return appendOutput(client, ws::encodeFrame(0x1, json.dump()));
+    void serializeJson(const nlohmann::json &json) {
+        serializedPayload = json.dump();
+        ws::encodeFrame(serializedFrame, 0x1, serializedPayload);
     }
 
-    void broadcast(const nlohmann::json &json) {
+    bool queueJson(Client &client, const nlohmann::json &json) {
+        serializeJson(json);
+        return appendOutput(client, serializedFrame);
+    }
+
+    void broadcastFrame(std::string_view frame) {
         if (clients.empty())
             return;
-        const std::string frame = ws::encodeFrame(0x1, json.dump());
         for (Client &client : clients)
             if (client.upgraded && !appendOutput(client, frame))
                 client.closeAfterWrite = true;
     }
 
-    bool sendFullState(Client &client) {
-        bool queued = queueJson(client, nlohmann::json{{"connected", "OFS " + versionTitle()}});
-        queued = queueJson(client, event("project_change", nlohmann::json::object())) && queued;
-        queued = queueJson(client, event("media_change", {{"path", project.state.mediaPath}})) && queued;
-        queued = queueJson(client, event("playbackspeed_change", {{"speed", speed}})) && queued;
-        queued = queueJson(client, event("play_change", {{"playing", playing}})) && queued;
+    void broadcast(const nlohmann::json &json) {
+        serializeJson(json);
+        broadcastFrame(serializedFrame);
+    }
+
+    void broadcastPosition(double position) {
+        std::array<char, 32> number{};
+        const auto [end, errorCode] = std::to_chars(number.data(), number.data() + number.size(), position);
+        if (errorCode != std::errc{})
+            return;
+        serializedPayload.clear();
+        serializedPayload.append(R"({"data":{"time":)");
+        serializedPayload.append(number.data(), end);
+        serializedPayload.append(R"(},"name":"time_change","type":"event"})");
+        ws::encodeFrame(serializedFrame, 0x1, serializedPayload);
+        broadcastFrame(serializedFrame);
+    }
+
+    template <class Sink> bool emitFullState(Sink &&sink) {
+        bool emitted = sink(event("project_change", nlohmann::json::object()), std::nullopt);
+        emitted = sink(event("media_change", {{"path", project.state.mediaPath}}), std::nullopt) && emitted;
+        emitted = sink(event("playbackspeed_change", {{"speed", speed}}), std::nullopt) && emitted;
+        emitted = sink(event("play_change", {{"playing", playing}}), std::nullopt) && emitted;
         const double currentDuration = duration > 0.0 ? duration : project.state.dummyDuration;
-        queued = queueJson(client, event("duration_change", {{"duration", currentDuration}})) && queued;
-        queued = queueJson(client, event("time_change", {{"time", (std::max)(0.0, project.playback.cursorPos)}})) && queued;
+        emitted = sink(event("duration_change", {{"duration", currentDuration}}), std::nullopt) && emitted;
+        emitted = sink(event("time_change", {{"time", (std::max)(0.0, project.playback.cursorPos)}}), std::nullopt) &&
+                  emitted;
         if (!projectActive(project))
-            return queued;
+            return emitted;
         for (size_t i = 0; i < kStandardAxisCount; ++i) {
             const StandardAxis role = static_cast<StandardAxis>(i);
             if (role == StandardAxis::L0 || project.axes[i].exists())
-                queued = queueJson(client, funscriptEvent(project, role, currentDuration)) && queued;
+                emitted = sink(funscriptEvent(project, role, currentDuration), i) && emitted;
         }
+        return emitted;
+    }
+
+    bool sendFullState(Client &client) {
+        bool queued = queueJson(client, nlohmann::json{{"connected", "OFS " + versionTitle()}});
+        queued = emitFullState([this, &client](const nlohmann::json &json, std::optional<size_t>) {
+                     return queueJson(client, json);
+                 }) &&
+                 queued;
         return queued;
     }
 
     void broadcastFullState() {
-        broadcast(event("project_change", nlohmann::json::object()));
-        broadcast(event("media_change", {{"path", project.state.mediaPath}}));
-        broadcast(event("playbackspeed_change", {{"speed", speed}}));
-        broadcast(event("play_change", {{"playing", playing}}));
-        const double currentDuration = duration > 0.0 ? duration : project.state.dummyDuration;
-        broadcast(event("duration_change", {{"duration", currentDuration}}));
-        broadcast(event("time_change", {{"time", (std::max)(0.0, project.playback.cursorPos)}}));
         announcedAxes.reset();
-        if (projectActive(project)) {
-            for (size_t i = 0; i < kStandardAxisCount; ++i) {
-                const StandardAxis role = static_cast<StandardAxis>(i);
-                if (role == StandardAxis::L0 || project.axes[i].exists()) {
-                    broadcast(funscriptEvent(project, role, currentDuration));
-                    announcedAxes.set(i);
-                }
-            }
-        }
+        emitFullState([this](const nlohmann::json &json, std::optional<size_t> axis) {
+            broadcast(json);
+            if (axis)
+                announcedAxes.set(*axis);
+            return true;
+        });
         dirtyAxes.reset();
         dirtyForSeconds = 0.0;
     }
@@ -352,32 +405,36 @@ struct WebSocketApi::Impl {
             Socket accepted = accept(listener, nullptr, nullptr);
             if (accepted == kInvalidSocket) {
                 if (!wouldBlock())
-                    error = "Failed while accepting a WebSocket client";
+                    status.error = "Failed while accepting a WebSocket client";
                 break;
             }
             if (!setNonBlocking(accepted)) {
                 closeSocket(accepted);
                 continue;
             }
-            clients.push_back(Client{.socket = accepted});
+            clients.emplace_back(accepted);
         }
+        status.clientCount = clients.size();
     }
 
     void runCommand(const ws::Command &command) {
-        switch (command.kind) {
-        case ws::CommandKind::Seek:
-            if (std::isfinite(command.number) && command.number >= 0.0)
-                eq.push(SeekEvent{command.number});
-            break;
-        case ws::CommandKind::SetPlaying:
-            if (command.boolean != playing)
-                eq.push(PlayPauseEvent{});
-            break;
-        case ws::CommandKind::SetSpeed:
-            if (std::isfinite(command.number) && command.number > 0.0)
-                eq.push(PlaybackSpeedEvent{static_cast<float>(command.number)});
-            break;
-        }
+        std::visit(
+            [this](const auto &typedCommand) {
+                using T = std::decay_t<decltype(typedCommand)>;
+                if constexpr (std::is_same_v<T, ws::SeekCommand>) {
+                    eq.push(SeekEvent{typedCommand.time});
+                } else if constexpr (std::is_same_v<T, ws::SetPlayingCommand>) {
+                    if (typedCommand.playing != playing) {
+                        // Latch the requested state until PlayStateChangedEvent arrives next frame so two clients
+                        // asking for the same state cannot enqueue two toggles that cancel each other out.
+                        playing = typedCommand.playing;
+                        eq.push(PlayPauseEvent{});
+                    }
+                } else if constexpr (std::is_same_v<T, ws::SetSpeedCommand>) {
+                    eq.push(PlaybackSpeedEvent{typedCommand.speed});
+                }
+            },
+            command);
     }
 
     bool processFrames(Client &client) {
@@ -498,12 +555,11 @@ struct WebSocketApi::Impl {
                 ++i;
             }
         }
+        status.clientCount = clients.size();
     }
 
     void publishProjectChanges(float dt) {
-        const std::string key = projectKey();
-        if (key != lastProjectKey) {
-            lastProjectKey = key;
+        if (projectIdentityChanged()) {
             fullResyncPending = true;
         }
         if (project.editRevision != lastRevision) {
@@ -550,7 +606,7 @@ struct WebSocketApi::Impl {
         const double position = (std::max)(0.0, project.playback.cursorPos);
         if (position != lastPosition) {
             lastPosition = position;
-            broadcast(event("time_change", {{"time", position}}));
+            broadcastPosition(position);
         }
         publishProjectChanges(dt);
         for (size_t i = 0; i < clients.size();) {
@@ -561,6 +617,7 @@ struct WebSocketApi::Impl {
                 ++i;
             }
         }
+        status.clientCount = clients.size();
     }
 };
 
@@ -573,16 +630,8 @@ void WebSocketApi::update(float dt) {
     impl->update(dt);
 }
 
-bool WebSocketApi::isRunning() const {
-    return impl->running();
-}
-
-size_t WebSocketApi::clientCount() const {
-    return impl->clients.size();
-}
-
-const std::string &WebSocketApi::lastError() const {
-    return impl->error;
+const WebSocketApiStatus &WebSocketApi::status() const {
+    return impl->status;
 }
 
 } // namespace ofs

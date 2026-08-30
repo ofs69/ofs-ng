@@ -197,6 +197,8 @@ void from_json(const nlohmann::json &j, AppSettings &s) {
     s.exportDirMode = static_cast<ExportDirMode>(std::clamp(j.value("exportDirMode", 0), 0, 2));
     s.exportDir = j.value("exportDir", std::string{});
     s.openProjectConfigOnOpen = j.value("openProjectConfigOnOpen", true);
+    // COMPAT(2026-08-30): settings written before the Classic OFS WebSocket feature have neither key;
+    // keep the endpoint disabled on upgrade and retain the classic default port.
     s.webSocketServerEnabled = j.value("webSocketServerEnabled", false);
     s.webSocketPort = std::clamp(j.value("webSocketPort", 8080), 1, 65535);
     s.windowGeometry = j.value("windowGeometry", WindowGeometry{});
