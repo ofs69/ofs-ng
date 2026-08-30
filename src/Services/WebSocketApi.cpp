@@ -62,6 +62,9 @@ constexpr double kScriptDebounceSeconds = 0.2;
 // busy but healthy peer is never disconnected; short enough that a peer which stops reading cannot
 // pin its slot and its buffer for the life of the process.
 constexpr double kWriteStallSeconds = 10.0;
+// A peer that opens a socket and never completes the upgrade would otherwise hold its slot forever;
+// sixteen of them lock the real integration out.
+constexpr double kHandshakeSeconds = 10.0;
 
 void closeSocket(Socket socket) {
     if (socket == kInvalidSocket)
@@ -164,6 +167,7 @@ struct WebSocketApi::Impl {
         std::string fragmentedText;
         bool receivingFragmentedText = false;
         double undrainedFor = 0.0;
+        double unupgradedFor = 0.0;
     };
 
     ScriptProject &project;
@@ -184,6 +188,9 @@ struct WebSocketApi::Impl {
     std::string lastProjectPath;
     std::string lastMediaPath;
     std::bitset<kStandardAxisCount> lastShownAxes;
+    FunscriptMetadata lastMetadata;
+    std::vector<Bookmark> lastBookmarks;
+    std::vector<Chapter> lastChapters;
     std::bitset<kStandardAxisCount> announcedAxes;
     std::bitset<kStandardAxisCount> dirtyAxes;
     double dirtyForSeconds = 0.0;
@@ -430,8 +437,30 @@ struct WebSocketApi::Impl {
     // Adopt the project's current state as already-published without sending anything. Used while no
     // client is connected: the bookkeeping would otherwise go stale and the first poll after a connect
     // would re-broadcast every axis on top of the full state the new client was just sent.
+    // Bookmarks/chapters are compared on the fields that reach the wire only; Chapter::sceneView is
+    // per-chapter camera memory that no client ever sees.
+    bool embeddedProjectDataChanged() {
+        const auto &bookmarks = project.bookmarks.bookmarks;
+        const auto &chapters = project.bookmarks.chapters;
+        const bool same =
+            project.metadata == lastMetadata &&
+            std::ranges::equal(
+                bookmarks, lastBookmarks,
+                [](const Bookmark &a, const Bookmark &b) { return a.time == b.time && a.name == b.name; }) &&
+            std::ranges::equal(chapters, lastChapters, [](const Chapter &a, const Chapter &b) {
+                return a.startTime == b.startTime && a.endTime == b.endTime && a.name == b.name && a.color == b.color;
+            });
+        if (same)
+            return false;
+        lastMetadata = project.metadata;
+        lastBookmarks = bookmarks;
+        lastChapters = chapters;
+        return true;
+    }
+
     void adoptCurrentStateAsPublished() {
         projectIdentityChanged();
+        embeddedProjectDataChanged();
         lastRevision = project.editRevision;
         dirtyAxes.reset();
         dirtyForSeconds = 0.0;
@@ -454,14 +483,23 @@ struct WebSocketApi::Impl {
         while (clients.size() < kMaxClients) {
             Socket accepted = accept(listener, nullptr, nullptr);
             if (accepted == kInvalidSocket) {
+                // Transient, and the listener is still up. status.error is the *start* failure the
+                // window renders while stopped; writing accept failures there showed nothing and then
+                // resurfaced misleadingly the next time the server failed to start.
                 if (!wouldBlock())
-                    status.error = "Failed while accepting a WebSocket client";
+                    OFS_CORE_WARN("WebSocket API: accept failed");
                 break;
             }
             if (!setNonBlocking(accepted)) {
                 closeSocket(accepted);
                 continue;
             }
+#ifdef __APPLE__
+            // macOS has no MSG_NOSIGNAL, and nothing in the app installs a SIGPIPE handler, so a peer
+            // vanishing mid-send would take the process down.
+            const int noSigPipe = 1;
+            setsockopt(accepted, SOL_SOCKET, SO_NOSIGPIPE, &noSigPipe, sizeof(noSigPipe));
+#endif
             clients.emplace_back(accepted);
         }
         status.clientCount = clients.size();
@@ -597,6 +635,13 @@ struct WebSocketApi::Impl {
     // A peer that stops reading blocks send() forever: the drain loop never finishes, so the queue
     // grows to kMaxQueuedOutput and the closeAfterWrite set by broadcastFrame can never be honoured.
     // Nothing else bounds that, so time-box it.
+    static bool handshakeExpired(Client &client, float dt) {
+        if (client.upgraded)
+            return false;
+        client.unupgradedFor += dt;
+        return client.unupgradedFor > kHandshakeSeconds;
+    }
+
     static bool writeStalled(Client &client, float dt) {
         if (client.outputOffset == client.output.size()) {
             client.undrainedFor = 0.0;
@@ -626,8 +671,15 @@ struct WebSocketApi::Impl {
         }
         if (project.editRevision != lastRevision) {
             lastRevision = project.editRevision;
-            dirtyAxes.set();
-            dirtyForSeconds = 0.0;
+            // editRevision bumps on *every* mutation, axis or not, so keying the all-axes republish off
+            // it alone re-serialized all 20 axes after any edit -- megabytes on a large project, on one
+            // main-thread frame. Only the parts each funscript payload embeds force axes the user did
+            // not touch to be re-sent; AxisModifiedEvent and EvalCompleteEvent cover the rest. The
+            // comparison runs at most once per edit pause and is far cheaper than the re-serialize.
+            if (embeddedProjectDataChanged()) {
+                dirtyAxes.set();
+                dirtyForSeconds = 0.0;
+            }
         }
         if (fullResyncPending) {
             broadcastFullState();
@@ -675,7 +727,7 @@ struct WebSocketApi::Impl {
         }
         publishProjectChanges(dt);
         for (size_t i = 0; i < clients.size();) {
-            if (!flush(clients[i]) || writeStalled(clients[i], dt)) {
+            if (!flush(clients[i]) || writeStalled(clients[i], dt) || handshakeExpired(clients[i], dt)) {
                 closeSocket(clients[i].socket);
                 clients.erase(clients.begin() + static_cast<std::ptrdiff_t>(i));
             } else {
