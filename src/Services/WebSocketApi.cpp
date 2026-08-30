@@ -15,8 +15,8 @@
 #include <algorithm>
 #include <array>
 #include <bitset>
-#include <charconv>
 #include <cerrno>
+#include <charconv>
 #include <cmath>
 #include <cstring>
 #include <filesystem>
@@ -31,8 +31,8 @@
 
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
-#include <WinSock2.h>
 #include <WS2tcpip.h>
+#include <WinSock2.h>
 #else
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -291,8 +291,8 @@ struct WebSocketApi::Impl {
 
     void reconcileSettings() {
         const bool enabled = settings.webSocketServerEnabled;
-        const int port = std::clamp(settings.webSocketPort, 1,
-                                    static_cast<int>((std::numeric_limits<uint16_t>::max)()));
+        const int port =
+            std::clamp(settings.webSocketPort, 1, static_cast<int>((std::numeric_limits<uint16_t>::max)()));
         if (!enabled) {
             if (running())
                 stop();
@@ -489,7 +489,8 @@ struct WebSocketApi::Impl {
     bool receive(Client &client) {
         std::array<uint8_t, 16u * 1024u> chunk{};
         while (true) {
-            const int count = recv(client.socket, reinterpret_cast<char *>(chunk.data()), static_cast<int>(chunk.size()), 0);
+            const int count =
+                recv(client.socket, reinterpret_cast<char *>(chunk.data()), static_cast<int>(chunk.size()), 0);
             if (count == 0)
                 return false;
             if (count < 0) {
@@ -527,8 +528,8 @@ struct WebSocketApi::Impl {
     bool flush(Client &client) {
         while (client.outputOffset < client.output.size()) {
             const size_t remaining = client.output.size() - client.outputOffset;
-            const int length = static_cast<int>(
-                (std::min)(remaining, static_cast<size_t>((std::numeric_limits<int>::max)())));
+            const int length =
+                static_cast<int>((std::min)(remaining, static_cast<size_t>((std::numeric_limits<int>::max)())));
             const int count = send(client.socket, client.output.data() + client.outputOffset, length, sendFlags());
             if (count < 0) {
                 if (wouldBlock())
