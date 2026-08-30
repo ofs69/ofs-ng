@@ -128,7 +128,12 @@ std::string scriptName(const ScriptProject &project, StandardAxis role) {
 }
 
 nlohmann::json funscriptEvent(const ScriptProject &project, StandardAxis role, double duration) {
-    Funscript script = Funscript::fromActions(project.axes[static_cast<size_t>(role)].actions);
+    // Publish what the rest of the app treats as the script: the processing graph's output where a
+    // region resolved one, the raw actions otherwise. Export (ProjectManager) and the live simulator
+    // both read it this way, and a client driving a device off the raw actions would disagree with
+    // everything the user can see.
+    const AxisState &axis = project.axes[static_cast<size_t>(role)];
+    Funscript script = Funscript::fromActions(axis.resolved ? axis.resolved->actions : axis.actions);
     script.metadata = project.metadata;
     script.bookmarks = project.bookmarks.bookmarks;
     script.chapters = project.bookmarks.chapters;
@@ -204,6 +209,14 @@ struct WebSocketApi::Impl {
             fullResyncPending = true;
         });
         eq.on<AxisModifiedEvent>([this](const AxisModifiedEvent &e) {
+            dirtyAxes.set(static_cast<size_t>(e.role));
+            dirtyForSeconds = 0.0;
+        });
+        // An edit marks the axis dirty before its evaluation has run, so the debounced publish would
+        // otherwise ship the pre-processing actions and never correct them. ProcessingSystem installs
+        // AxisState::resolved in its own handler for this event; we only re-arm the debounce here and
+        // read `resolved` later from update(), so handler order does not matter.
+        eq.on<EvalCompleteEvent>([this](const EvalCompleteEvent &e) {
             dirtyAxes.set(static_cast<size_t>(e.role));
             dirtyForSeconds = 0.0;
         });
