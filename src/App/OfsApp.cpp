@@ -45,8 +45,8 @@
 #include "UI/VideoPlayerControls.h"
 #include "UI/VideoPlayerWindow.h"
 #include "UI/WaveformRenderer.h"
-#include "UI/WelcomeScreen.h"
 #include "UI/WebSocketApiWindow.h"
+#include "UI/WelcomeScreen.h"
 #include "Util/FileFingerprint.h"
 #include "Util/FrameAllocator.h"
 #include "Util/Log.h"
@@ -1205,8 +1205,7 @@ void OfsApp::renderMainMenuBar() {
                 appSettingsDirty_ = true;
             ImGui::MenuItem(Str::AppMenuLog.iconId(ICON_SCROLL_TEXT, "menu_view_log"), nullptr,
                             &appState.showLogWindow);
-            ImGui::MenuItem(Str::WsTitle.id("menu_view_websocket_api"), nullptr,
-                            &appState.showWebSocketApiWindow);
+            ImGui::MenuItem(Str::WsTitle.id("menu_view_websocket_api"), nullptr, &appState.showWebSocketApiWindow);
             ImGui::Separator();
             // Live checkmark reflects the actual window flag; dispatches directly (main-thread UI),
             // exactly as the title-bar minimize/maximize do. F11 hint is omitted because the binding
