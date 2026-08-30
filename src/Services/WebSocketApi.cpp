@@ -58,6 +58,10 @@ constexpr size_t kMaxMessage = 16u * 1024u * 1024u;
 constexpr size_t kMaxBufferedInput = kMaxMessage * 2u;
 constexpr size_t kMaxQueuedOutput = 64u * 1024u * 1024u;
 constexpr double kScriptDebounceSeconds = 0.2;
+// How long a client may leave its output queue undrained before we drop it. Generous enough that a
+// busy but healthy peer is never disconnected; short enough that a peer which stops reading cannot
+// pin its slot and its buffer for the life of the process.
+constexpr double kWriteStallSeconds = 10.0;
 
 void closeSocket(Socket socket) {
     if (socket == kInvalidSocket)
@@ -159,6 +163,7 @@ struct WebSocketApi::Impl {
         size_t outputOffset = 0;
         std::string fragmentedText;
         bool receivingFragmentedText = false;
+        double undrainedFor = 0.0;
     };
 
     ScriptProject &project;
@@ -340,6 +345,11 @@ struct WebSocketApi::Impl {
     static bool appendOutput(Client &client, std::string_view data) {
         if (client.outputOffset == client.output.size()) {
             client.output.clear();
+            client.outputOffset = 0;
+        } else if (client.outputOffset > kMaxHandshake) {
+            // Compact: the cap below measures only the unsent remainder, so without this the sent
+            // prefix of a slow client's buffer keeps the allocation above kMaxQueuedOutput.
+            client.output.erase(0, client.outputOffset);
             client.outputOffset = 0;
         }
         const size_t pending = client.output.size() - client.outputOffset;
@@ -580,7 +590,20 @@ struct WebSocketApi::Impl {
         }
         client.output.clear();
         client.outputOffset = 0;
+        client.undrainedFor = 0.0;
         return !client.closeAfterWrite;
+    }
+
+    // A peer that stops reading blocks send() forever: the drain loop never finishes, so the queue
+    // grows to kMaxQueuedOutput and the closeAfterWrite set by broadcastFrame can never be honoured.
+    // Nothing else bounds that, so time-box it.
+    static bool writeStalled(Client &client, float dt) {
+        if (client.outputOffset == client.output.size()) {
+            client.undrainedFor = 0.0;
+            return false;
+        }
+        client.undrainedFor += dt;
+        return client.undrainedFor > kWriteStallSeconds;
     }
 
     void pollClients() {
@@ -652,7 +675,7 @@ struct WebSocketApi::Impl {
         }
         publishProjectChanges(dt);
         for (size_t i = 0; i < clients.size();) {
-            if (!flush(clients[i])) {
+            if (!flush(clients[i]) || writeStalled(clients[i], dt)) {
                 closeSocket(clients[i].socket);
                 clients.erase(clients.begin() + static_cast<std::ptrdiff_t>(i));
             } else {
