@@ -270,8 +270,20 @@ struct WebSocketApi::Impl {
             return false;
         }
 
-        int reuse = 1;
-        setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, reinterpret_cast<const char *>(&reuse), sizeof(reuse));
+        // SO_REUSEADDR means opposite things on the two platforms. On POSIX it only lets us rebind our
+        // own address through TIME_WAIT. On Windows it lets an *unrelated* process bind the same
+        // 127.0.0.1:port and take over the endpoint — measured: a second listener with SO_REUSEADDR
+        // steals the port outright. SO_EXCLUSIVEADDRUSE is the Windows option that reserves it (the
+        // thief then gets WSAEACCES), and it costs no restart latency: a listener closed after its
+        // accepted connections rebinds immediately.
+#ifdef _WIN32
+        const int exclusive = 1;
+        setsockopt(listener, SOL_SOCKET, SO_EXCLUSIVEADDRUSE, reinterpret_cast<const char *>(&exclusive),
+                   sizeof(exclusive));
+#else
+        const int reuse = 1;
+        setsockopt(listener, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
+#endif
         sockaddr_in address{};
         address.sin_family = AF_INET;
         address.sin_port = htons(static_cast<uint16_t>(port));
@@ -381,11 +393,26 @@ struct WebSocketApi::Impl {
 
     bool sendFullState(Client &client) {
         bool queued = queueJson(client, nlohmann::json{{"connected", "OFS " + versionTitle()}});
-        queued = emitFullState([this, &client](const nlohmann::json &json, std::optional<size_t>) {
+        queued = emitFullState([this, &client](const nlohmann::json &json, std::optional<size_t> axis) {
+                     // Record what this client was told exists, or a later removal of the axis would find
+                     // its announcedAxes bit clear and skip the funscript_remove.
+                     if (axis)
+                         announcedAxes.set(*axis);
                      return queueJson(client, json);
                  }) &&
                  queued;
         return queued;
+    }
+
+    // Adopt the project's current state as already-published without sending anything. Used while no
+    // client is connected: the bookkeeping would otherwise go stale and the first poll after a connect
+    // would re-broadcast every axis on top of the full state the new client was just sent.
+    void adoptCurrentStateAsPublished() {
+        projectIdentityChanged();
+        lastRevision = project.editRevision;
+        dirtyAxes.reset();
+        dirtyForSeconds = 0.0;
+        fullResyncPending = false;
     }
 
     void broadcastFullState() {
@@ -602,8 +629,11 @@ struct WebSocketApi::Impl {
         if (!running())
             return;
         pollClients();
-        if (clients.empty())
+        if (clients.empty()) {
+            adoptCurrentStateAsPublished();
+            announcedAxes.reset();
             return;
+        }
         const double position = (std::max)(0.0, project.playback.cursorPos);
         if (position != lastPosition) {
             lastPosition = position;
