@@ -44,11 +44,15 @@
 namespace ofs {
 namespace {
 
+// Winsock's recv/send return int; the POSIX ones return ssize_t. Storing either in an int narrows
+// on POSIX, so the result type follows the platform too.
 #ifdef _WIN32
 using Socket = SOCKET;
+using SockResult = int;
 constexpr Socket kInvalidSocket = INVALID_SOCKET;
 #else
 using Socket = int;
+using SockResult = ssize_t;
 constexpr Socket kInvalidSocket = -1;
 #endif
 
@@ -576,7 +580,7 @@ struct WebSocketApi::Impl {
     bool receive(Client &client) {
         std::array<uint8_t, 16u * 1024u> chunk{};
         while (true) {
-            const int count =
+            const SockResult count =
                 recv(client.socket, reinterpret_cast<char *>(chunk.data()), static_cast<int>(chunk.size()), 0);
             if (count == 0)
                 return false;
@@ -617,7 +621,8 @@ struct WebSocketApi::Impl {
             const size_t remaining = client.output.size() - client.outputOffset;
             const int length =
                 static_cast<int>((std::min)(remaining, static_cast<size_t>((std::numeric_limits<int>::max)())));
-            const int count = send(client.socket, client.output.data() + client.outputOffset, length, sendFlags());
+            const SockResult count =
+                send(client.socket, client.output.data() + client.outputOffset, length, sendFlags());
             if (count < 0) {
                 if (wouldBlock())
                     return true;
