@@ -1,4 +1,5 @@
 #include "Core/ScriptAxisAction.h"
+#include "Core/StandardAxis.h"
 #include "Core/VectorSet.h"
 #include "Format/Funscript.h"
 #include <doctest/doctest.h>
@@ -381,9 +382,9 @@ TEST_CASE("fromAxes20 emits a channels object and finds L0 when it is not the fi
     // R0 first, L0 second: buildMultiAxis must still pick L0 as the primary (root actions).
     auto fs = ofs::Funscript::fromAxes20({{"R0", r0}, {"L0", l0}});
     REQUIRE(fs.actions.size() == 1);
-    CHECK(fs.actions[0].at == 2000); // L0 → root
-    REQUIRE(fs.channels.count("R0") == 1);
-    CHECK(fs.channels["R0"][0].at == 1000);
+    CHECK(fs.actions[0].at == 2000);          // L0 → root
+    REQUIRE(fs.channels.count("twist") == 1); // R0 → its TCode track name
+    CHECK(fs.channels["twist"][0].at == 1000);
 }
 
 TEST_CASE("fromAxes11/20 return an empty funscript for an empty axis list") {
@@ -391,4 +392,96 @@ TEST_CASE("fromAxes11/20 return an empty funscript for an empty axis list") {
     auto fs = ofs::Funscript::fromAxes20({});
     CHECK(fs.actions.empty());
     CHECK(fs.channels.empty());
+}
+
+// Root "actions" is L0 by convention, and readers assign it to L0 unconditionally — MultiFunPlayer's
+// FunscriptReader does exactly that, without consulting axes[]/channels{}. So an export that does not
+// include L0 must leave root empty and give every axis its own id, or the promoted axis plays as stroke.
+TEST_CASE("fromAxes11/20 leave root actions empty when no L0 axis is exported") {
+    ofs::VectorSet<ofs::ScriptAxisAction> r1;
+    r1.insert({1.0, 20});
+    ofs::VectorSet<ofs::ScriptAxisAction> r2;
+    r2.insert({2.0, 70});
+
+    auto fs11 = ofs::Funscript::fromAxes11({{"R1", r1}, {"R2", r2}});
+    CHECK(fs11.actions.empty());
+    REQUIRE(fs11.axes.size() == 2);
+    CHECK(fs11.axes[0].id == "R1");
+    CHECK(fs11.axes[1].id == "R2");
+
+    auto fs20 = ofs::Funscript::fromAxes20({{"R1", r1}, {"R2", r2}});
+    CHECK(fs20.actions.empty());
+    REQUIRE(fs20.channels.count("roll") == 1);
+    REQUIRE(fs20.channels.count("pitch") == 1);
+    CHECK(fs20.channels["roll"][0].at == 1000);
+
+    // Our own reader must recover both axes under their real ids, with no phantom L0.
+    auto all = fs11.toAllAxes();
+    CHECK(all.count("L0") == 0);
+    REQUIRE(all.count("R1") == 1);
+    CHECK(all["R1"][0].at == doctest::Approx(1.0));
+}
+
+// XTPlayer/XTEngine keys its funscript 2.0 "channels" object on the TCode track name and matches it
+// against its channel table by exact string, so a short-tag key ("R0") matches nothing and the axis is
+// dropped silently. V1/A0 have no TCode track name and keep their tag.
+TEST_CASE("fromAxes20 keys channels on the TCode track name") {
+    ofs::VectorSet<ofs::ScriptAxisAction> acts;
+    acts.insert({1.0, 50});
+
+    auto fs = ofs::Funscript::fromAxes20({{"L0", acts},
+                                          {"L1", acts},
+                                          {"L2", acts},
+                                          {"R0", acts},
+                                          {"R1", acts},
+                                          {"R2", acts},
+                                          {"V0", acts},
+                                          {"V1", acts},
+                                          {"A0", acts},
+                                          {"A1", acts}});
+
+    CHECK(fs.actions.size() == 1); // L0 stays in root actions, where every reader expects stroke
+    for (const auto *key : {"surge", "sway", "twist", "roll", "pitch", "vib", "suck"})
+        CHECK(fs.channels.count(key) == 1);
+    // No track name for these two, so the canonical tag is kept rather than inventing one.
+    CHECK(fs.channels.count("V1") == 1);
+    CHECK(fs.channels.count("A0") == 1);
+    CHECK(fs.channels.count("stroke") == 0);
+    CHECK(fs.channels.count("R0") == 0);
+}
+
+// The track-name keys must survive a round-trip through our own reader, which resolves them via
+// standardAxisFromTag's alias table.
+TEST_CASE("fromAxes20 track-name channels re-import under their canonical tag") {
+    ofs::VectorSet<ofs::ScriptAxisAction> r0;
+    r0.insert({1.0, 20});
+    ofs::VectorSet<ofs::ScriptAxisAction> v0;
+    v0.insert({2.0, 70});
+
+    auto fs = ofs::Funscript::fromAxes20({{"R0", r0}, {"V0", v0}});
+    auto all = fs.toAllAxes();
+    REQUIRE(all.count("twist") == 1);
+    REQUIRE(all.count("vib") == 1);
+    CHECK(ofs::standardAxisFromTag("twist") == ofs::StandardAxis::R0);
+    CHECK(ofs::standardAxisFromTag("vib") == ofs::StandardAxis::V0);
+    CHECK(all["vib"][0].at == doctest::Approx(2.0));
+}
+
+// 1.1 keeps the short tag: MultiFunPlayer resolves axes[] ids through DeviceAxis.TryParse, which only
+// knows the L0/R0 names, so a track-name id there would be dropped.
+TEST_CASE("fromAxes11 keeps the short tag as the axes[] id") {
+    ofs::VectorSet<ofs::ScriptAxisAction> acts;
+    acts.insert({1.0, 50});
+    auto fs = ofs::Funscript::fromAxes11({{"L0", acts}, {"R0", acts}, {"V0", acts}});
+    REQUIRE(fs.axes.size() == 2);
+    CHECK(fs.axes[0].id == "R0");
+    CHECK(fs.axes[1].id == "V0");
+}
+
+TEST_CASE("fromAxes11/20 stamp the funscript version they produce") {
+    ofs::VectorSet<ofs::ScriptAxisAction> acts;
+    acts.insert({1.0, 50});
+    CHECK(ofs::Funscript::fromAxes11({{"L0", acts}}).version == "1.1");
+    CHECK(ofs::Funscript::fromAxes20({{"L0", acts}}).version == "2.0");
+    CHECK(ofs::Funscript::fromActions(acts).version == "1.0");
 }

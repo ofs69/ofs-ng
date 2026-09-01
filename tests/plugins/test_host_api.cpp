@@ -452,11 +452,13 @@ TEST_CASE("getFunscriptJson serializes axes per the requested format version") {
     CHECK(j11["axes"][0]["actions"].size() == 1);
     CHECK(j11["version"] == "1.1");
 
-    // 2.0 multi-axis: the secondary axis goes under "channels" instead.
+    // 2.0 multi-axis: the secondary axis goes under "channels" instead, keyed on its TCode track name
+    // ("twist" for R0) — the key XTPlayer matches against, not the short tag 1.1 uses for axes[] ids.
     REQUIRE(fx.h().getFunscriptJson(fx.cv(), both, 2, OfsFunscript20, buf, sizeof(buf)) > 0);
     const auto j20 = nlohmann::json::parse(buf);
     REQUIRE(j20.contains("channels"));
-    CHECK(j20["channels"].contains("R0"));
+    CHECK(j20["channels"].contains("twist"));
+    CHECK_FALSE(j20["channels"].contains("R0"));
     CHECK(j20["version"] == "2.0");
 
     // 1.0 with several roles is still single-axis: only the first valid axis is serialized.

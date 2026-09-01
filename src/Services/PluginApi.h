@@ -56,8 +56,9 @@ typedef struct {
 typedef enum { OfsSignalDiscrete = 0, OfsSignalFunctional = 1 } OfsSignalKind;
 
 // Funscript on-disk format selected by getFunscriptJson. 1.0 is single-axis (root "actions" only); 1.1
-// carries extra axes in an "axes" array; 2.0 in a "channels" object. Mirrored as FunscriptVersion in
-// Ofs.Api (Project.cs).
+// carries extra axes in an "axes" array keyed by the short tag ("R0"); 2.0 in a "channels" object keyed by
+// the TCode track name ("twist") — the two formats' readers spell axis ids differently. Mirrored as
+// FunscriptVersion in Ofs.Api (Project.cs).
 typedef enum { OfsFunscript10 = 0, OfsFunscript11 = 1, OfsFunscript20 = 2 } OfsFunscriptVersion;
 
 // A node declares N input pins and M output pins (see OfsNodeDef). Both directions are capped at 16 so
@@ -688,8 +689,10 @@ struct HostApi {
     // Build a funscript document for one or more axes and write it as UTF-8 JSON into buf. `roles` points
     // to `count` StandardAxis values (as int); `version` is an OfsFunscriptVersion selecting the format:
     // 1.0 serializes a SINGLE axis (the first valid role; extra roles ignored) as {actions, metadata};
-    // 1.1 carries the primary axis's actions at top level and the rest under "axes":[{id,actions},…];
-    // 2.0 is the same shape but under a "channels" object. Absent, empty, scratch (S0–S9, which have no
+    // 1.1 carries L0's actions at top level and the rest under "axes":[{id,actions},…] keyed by the short
+    // tag ("R0"); 2.0 is the same shape under a "channels" object keyed by the TCode track name ("twist").
+    // Root "actions" holds L0 alone — request no L0 and it stays empty, since readers take the root as the
+    // stroke axis. Absent, empty, scratch (S0–S9, which have no
     // funscript tag), and duplicate roles are skipped; an empty result (no exportable axis) writes "" and
     // returns 0. The document carries the project metadata block (with its version field set to match) and
     // action times are milliseconds, matching the host's own export. Returns the required byte length

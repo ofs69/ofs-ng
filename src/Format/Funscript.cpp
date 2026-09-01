@@ -1,4 +1,5 @@
 #include "Funscript.h"
+#include "Core/StandardAxis.h"
 #include "Util/FileUtil.h"
 #include "Util/JsonUtil.h"
 #include "Util/Log.h"
@@ -357,24 +358,40 @@ std::map<std::string, VectorSet<ScriptAxisAction>> Funscript::toAllAxes() const 
     return result;
 }
 
+// funscript 2.0 keys "channels" on the TCode track name ("twist", "vib"), where 1.1's axes[] ids use the
+// short L0/R0 tag. XTPlayer/XTEngine matches the key against its channel table by exact string, so a
+// short-tag key matches nothing and the axis is dropped without a diagnostic. Axes TCode names no track
+// for (V1, A0) and scratch axes keep their tag: no reader recognizes them either way, and the tag is what
+// makes the file re-importable here.
+static std::string channelKey(const std::string &tag) {
+    if (const auto role = standardAxisFromTag(tag))
+        return std::string(standardAxisTrackName(*role));
+    return tag;
+}
+
 static Funscript buildMultiAxis(const std::vector<std::pair<std::string, VectorSet<ScriptAxisAction>>> &axes,
                                 bool useChannels) {
     Funscript fs;
+    fs.version = useChannels ? "2.0" : "1.1";
     if (axes.empty())
         return fs;
 
-    // L0 is canonical primary; fall back to first entry
+    // Root "actions" is L0 by convention, and readers assign it to L0 unconditionally without consulting
+    // axes[]/channels{} (MultiFunPlayer's FunscriptReader does exactly that). So L0 is the only axis that
+    // may occupy root: when it is not part of the export, root stays empty and every axis goes out under
+    // its own id, rather than an arbitrary axis being promoted and played back as stroke.
     const auto l0 = std::ranges::find_if(axes, [](const auto &ax) { return ax.first == "L0"; });
-    const size_t primaryIdx = l0 != axes.end() ? static_cast<size_t>(std::distance(axes.begin(), l0)) : 0;
+    const size_t primaryIdx = l0 != axes.end() ? static_cast<size_t>(std::distance(axes.begin(), l0)) : axes.size();
 
-    fs.actions = toActionVec(axes[primaryIdx].second);
+    if (primaryIdx < axes.size())
+        fs.actions = toActionVec(axes[primaryIdx].second);
 
     for (size_t i = 0; i < axes.size(); ++i) {
         if (i == primaryIdx)
             continue;
         const auto &[tag, acts] = axes[i];
         if (useChannels)
-            fs.channels[tag] = toActionVec(acts);
+            fs.channels[channelKey(tag)] = toActionVec(acts);
         else
             fs.axes.push_back({.id = tag, .actions = toActionVec(acts)});
     }

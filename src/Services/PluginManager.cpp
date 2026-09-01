@@ -1225,15 +1225,12 @@ int hostGetFunscriptJson(void *ctx, const int *roles, int count, int version, ch
     switch (version) {
     case OfsFunscript20:
         fs = Funscript::fromAxes20(axisData);
-        fs.version = "2.0";
         break;
     case OfsFunscript11:
         fs = Funscript::fromAxes11(axisData);
-        fs.version = "1.1";
         break;
     default: // OfsFunscript10 — single axis
         fs = Funscript::fromActions(axisData.front().second);
-        fs.version = "1.0";
         break;
     }
     fs.metadata = p->project->metadata;

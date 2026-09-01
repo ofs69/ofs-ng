@@ -49,13 +49,34 @@ namespace detail {
 struct AxisNames {
     std::string_view shortName; // canonical tag, e.g. "L0"
     std::string_view fullName;  // short name + role suffix, e.g. "L0 (Stroke)"
+    // The TCode track name players key multi-axis funscripts on: the funscript 2.0 "channels" key and the
+    // per-file ".<name>.funscript" suffix. XTPlayer/XTEngine matches it against its channel table by exact
+    // string; MultiFunPlayer accepts it alongside the short tag. Empty where TCode names no track for the
+    // axis (V1/A0) and for scratch axes — standardAxisTrackName() falls back to the short tag there.
+    std::string_view trackName;
 };
 // Indexed by StandardAxis; scratch axes have no role suffix so short == full.
 inline constexpr std::array<AxisNames, kStandardAxisCount> kAxisNames = {{
-    {"L0", "L0 (Stroke)"}, {"L1", "L1 (Surge)"}, {"L2", "L2 (Sway)"},  {"R0", "R0 (Twist)"}, {"R1", "R1 (Roll)"},
-    {"R2", "R2 (Pitch)"},  {"V0", "V0 (Vibe)"},  {"V1", "V1 (Vibe2)"}, {"A0", "A0 (Air)"},   {"A1", "A1 (Air2)"},
-    {"S0", "S0"},          {"S1", "S1"},         {"S2", "S2"},         {"S3", "S3"},         {"S4", "S4"},
-    {"S5", "S5"},          {"S6", "S6"},         {"S7", "S7"},         {"S8", "S8"},         {"S9", "S9"},
+    {"L0", "L0 (Stroke)", "stroke"},
+    {"L1", "L1 (Surge)", "surge"},
+    {"L2", "L2 (Sway)", "sway"},
+    {"R0", "R0 (Twist)", "twist"},
+    {"R1", "R1 (Roll)", "roll"},
+    {"R2", "R2 (Pitch)", "pitch"},
+    {"V0", "V0 (Vibe)", "vib"},
+    {"V1", "V1 (Vibe2)", ""},
+    {"A0", "A0 (Air)", ""},
+    {"A1", "A1 (Air2)", "suck"},
+    {"S0", "S0", ""},
+    {"S1", "S1", ""},
+    {"S2", "S2", ""},
+    {"S3", "S3", ""},
+    {"S4", "S4", ""},
+    {"S5", "S5", ""},
+    {"S6", "S6", ""},
+    {"S7", "S7", ""},
+    {"S8", "S8", ""},
+    {"S9", "S9", ""},
 }};
 } // namespace detail
 
@@ -67,6 +88,16 @@ constexpr std::string_view standardAxisName(StandardAxis a) noexcept {
 constexpr std::string_view standardAxisShortName(StandardAxis a) noexcept {
     const auto i = static_cast<size_t>(a);
     return i < kStandardAxisCount ? detail::kAxisNames[i].shortName : std::string_view{};
+}
+
+// The name a multi-axis funscript should carry for this axis (see AxisNames::trackName), falling back to
+// the canonical short tag for axes TCode names no track for.
+constexpr std::string_view standardAxisTrackName(StandardAxis a) noexcept {
+    const auto i = static_cast<size_t>(a);
+    if (i >= kStandardAxisCount)
+        return {};
+    const auto &names = detail::kAxisNames[i];
+    return names.trackName.empty() ? names.shortName : names.trackName;
 }
 
 std::string_view standardAxisTag(StandardAxis a) noexcept;

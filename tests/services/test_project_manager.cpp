@@ -457,8 +457,9 @@ TEST_CASE("ProjectManager: export with a target path writes files and records th
         ofs::ExportFunscriptRequestEvent{.axes = {StandardAxis::L0}, .format = 0, .targetPath = outDir.string()});
     // Wait for lastExport, set after the worker resumes — by then the file is fully written and closed.
     REQUIRE(drainUntil(tp.eq, [&] { return tp.project.state.lastExport.has_value(); }));
-    // Format 0 (1.0, one file per axis) writes "<stem>.<tag>.funscript"; stem is "script" with no media path.
-    CHECK(std::filesystem::exists(outDir / "script.L0.funscript"));
+    // Format 0 (1.0) writes one file per axis; L0 is the bare "<stem>.funscript" every player reads as
+    // the stroke axis. Stem is "script" with no media path.
+    CHECK(std::filesystem::exists(outDir / "script.funscript"));
 
     REQUIRE(tp.project.state.lastExport.has_value());
     CHECK(tp.project.state.lastExport->format == 0);
@@ -466,6 +467,42 @@ TEST_CASE("ProjectManager: export with a target path writes files and records th
     CHECK(tp.project.state.lastExport->axes[0] == StandardAxis::L0);
     CHECK(tp.project.state.lastExport->outputPath == outDir.string());
     CHECK(pm.isDirty()); // recording the config marks dirty so the next save captures it
+
+    std::filesystem::remove_all(outDir);
+}
+
+// A per-axis file is matched on its name alone, so the name is the interop contract: L0 is the bare
+// "<stem>.funscript", every other axis carries its TCode track name (the spelling XTPlayer probes for and
+// MultiFunPlayer accepts), and an axis TCode names no track for keeps its tag.
+TEST_CASE("ProjectManager: per-axis export names files by TCode track name") {
+    TestProject tp;
+    ofs::AppSettings appSettings;
+    appSettings.autoBackupEnabled = false;
+    ofs::JobSystem jobSystem;
+    ofs::EffectRegistryState effectReg;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    tp.eq.freeze();
+    jobSystem.start();
+
+    const std::vector<StandardAxis> roles = {StandardAxis::L0, StandardAxis::R0, StandardAxis::V0, StandardAxis::A0};
+    for (const auto role : roles) {
+        tp.project.axes[static_cast<size_t>(role)].showInStrip = true;
+        tp.project.mutate(role, [](ofs::AxisState &a) { a.actions.insert({1.0, 50}); }, tp.eq);
+    }
+    tp.eq.drain();
+
+    auto outDir = std::filesystem::temp_directory_path() / "ofs_test_track_name_export";
+    std::filesystem::remove_all(outDir);
+
+    tp.eq.push(ofs::ExportFunscriptRequestEvent{.axes = roles, .format = 0, .targetPath = outDir.string()});
+    REQUIRE(drainUntil(tp.eq, [&] { return tp.project.state.lastExport.has_value(); }));
+
+    CHECK(std::filesystem::exists(outDir / "script.funscript"));       // L0 carries no suffix
+    CHECK(std::filesystem::exists(outDir / "script.twist.funscript")); // R0
+    CHECK(std::filesystem::exists(outDir / "script.vib.funscript"));   // V0
+    CHECK(std::filesystem::exists(outDir / "script.A0.funscript"));    // no track name, keeps the tag
+    CHECK_FALSE(std::filesystem::exists(outDir / "script.L0.funscript"));
+    CHECK(pm.isDirty());
 
     std::filesystem::remove_all(outDir);
 }
@@ -495,7 +532,7 @@ TEST_CASE("ProjectManager: export writes the project's bookmarks and chapters in
         ofs::ExportFunscriptRequestEvent{.axes = {StandardAxis::L0}, .format = 0, .targetPath = outDir.string()});
     REQUIRE(drainUntil(tp.eq, [&] { return tp.project.state.lastExport.has_value(); }));
 
-    auto loaded = ofs::Funscript::load(outDir / "script.L0.funscript");
+    auto loaded = ofs::Funscript::load(outDir / "script.funscript");
     REQUIRE(loaded.has_value());
     REQUIRE(loaded->bookmarks.size() == 1);
     CHECK(loaded->bookmarks[0].name == "mark");

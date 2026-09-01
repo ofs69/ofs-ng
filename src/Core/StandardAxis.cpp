@@ -24,7 +24,10 @@ std::optional<StandardAxis> standardAxisFromTag(std::string_view tag) noexcept {
         StandardAxis axis;
     };
     using enum StandardAxis;
-    static constexpr std::array<Alias, 12> kRoleAliases = {{
+    // "vib"/"suck"/"valve" are TCode track names (see AxisNames::trackName). "vib" and "suck" are what a
+    // funscript 2.0 export writes as channel keys, so reading them back is what makes that export
+    // round-trip; "valve" only ever arrives from other tools, since A0 has no track name we emit.
+    static constexpr std::array<Alias, 15> kRoleAliases = {{
         {.name = "stroke", .axis = L0},
         {.name = "surge", .axis = L1},
         {.name = "sway", .axis = L2},
@@ -33,10 +36,13 @@ std::optional<StandardAxis> standardAxisFromTag(std::string_view tag) noexcept {
         {.name = "pitch", .axis = R2},
         {.name = "vibe", .axis = V0},
         {.name = "vibrate", .axis = V0},
+        {.name = "vib", .axis = V0},
         {.name = "vibe2", .axis = V1},
         {.name = "vibrate2", .axis = V1},
         {.name = "air", .axis = A0},
+        {.name = "valve", .axis = A0},
         {.name = "air2", .axis = A1},
+        {.name = "suck", .axis = A1},
     }};
 
     std::string lower(tag);

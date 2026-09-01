@@ -20,9 +20,11 @@ namespace Ofs
     {
         /// <summary>Funscript 1.0 — single axis only (root <c>actions</c>).</summary>
         V10 = 0,
-        /// <summary>Funscript 1.1 — multi-axis via an <c>axes</c> array (primary axis at the root).</summary>
+        /// <summary>Funscript 1.1 — multi-axis via an <c>axes</c> array keyed by the short tag
+        /// (<c>"R0"</c>), with L0 at the root.</summary>
         V11 = 1,
-        /// <summary>Funscript 2.0 — multi-axis via a <c>channels</c> object (primary axis at the root).</summary>
+        /// <summary>Funscript 2.0 — multi-axis via a <c>channels</c> object keyed by the TCode track name
+        /// (<c>"twist"</c>), with L0 at the root.</summary>
         V20 = 2,
     }
 
@@ -110,8 +112,10 @@ namespace Ofs
         /// <summary>
         /// The funscript document for one or more axes, as a UTF-8 JSON string, in the given format version.
         /// <see cref="FunscriptVersion.V10"/> is single-axis only — pass exactly one role, or it throws.
-        /// <see cref="FunscriptVersion.V11"/>/<see cref="FunscriptVersion.V20"/> carry the primary axis's
-        /// actions at the root and the rest under <c>"axes"</c>/<c>"channels"</c>. Absent, empty, scratch
+        /// <see cref="FunscriptVersion.V11"/>/<see cref="FunscriptVersion.V20"/> carry L0's actions at the
+        /// root and the rest under <c>"axes"</c> (keyed by the short tag, <c>"R0"</c>) or <c>"channels"</c>
+        /// (keyed by the TCode track name, <c>"twist"</c>). Root actions stay empty when L0 was not
+        /// requested, since readers take the root as the stroke axis. Absent, empty, scratch
         /// (S0–S9), and duplicate roles are skipped; the document carries the project metadata block and
         /// action times are in milliseconds, matching the host's own export. Returns an empty string when no
         /// requested axis is exportable. Main-thread only.

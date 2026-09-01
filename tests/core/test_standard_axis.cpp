@@ -155,3 +155,35 @@ TEST_CASE("standard axis colors fall back to neutral gray for out-of-range axes"
     CHECK(vec4Eq(ofs::standardAxisColorVec4(StandardAxis::Count), ImVec4(0.5f, 0.5f, 0.5f, 1.0f)));
     CHECK(vec4Eq(ofs::standardAxisColorDimVec4(StandardAxis::Count), ImVec4(0.27f, 0.27f, 0.27f, 1.0f)));
 }
+
+TEST_CASE("standardAxisFromTag resolves the TCode track names") {
+    CHECK(standardAxisFromTag("vib") == StandardAxis::V0);
+    CHECK(standardAxisFromTag("suck") == StandardAxis::A1);
+    CHECK(standardAxisFromTag("valve") == StandardAxis::A0);
+    CHECK(standardAxisFromTag("VIB") == StandardAxis::V0);
+}
+
+// The names a multi-axis funscript carries: what XTPlayer matches a 2.0 "channels" key against, and what
+// MultiFunPlayer accepts as a per-file ".<name>.funscript" suffix.
+TEST_CASE("standardAxisTrackName gives the TCode track name, or the short tag where TCode names none") {
+    using ofs::standardAxisTrackName;
+    CHECK(standardAxisTrackName(StandardAxis::L0) == "stroke");
+    CHECK(standardAxisTrackName(StandardAxis::L1) == "surge");
+    CHECK(standardAxisTrackName(StandardAxis::L2) == "sway");
+    CHECK(standardAxisTrackName(StandardAxis::R0) == "twist");
+    CHECK(standardAxisTrackName(StandardAxis::R1) == "roll");
+    CHECK(standardAxisTrackName(StandardAxis::R2) == "pitch");
+    CHECK(standardAxisTrackName(StandardAxis::V0) == "vib");
+    CHECK(standardAxisTrackName(StandardAxis::V1) == "V1");
+    CHECK(standardAxisTrackName(StandardAxis::A0) == "A0");
+    CHECK(standardAxisTrackName(StandardAxis::A1) == "suck");
+    CHECK(standardAxisTrackName(StandardAxis::S3) == "S3");
+}
+
+// Every track name we write must read back as the axis it came from, or an export stops round-tripping.
+TEST_CASE("standardAxisTrackName round-trips through standardAxisFromTag") {
+    for (size_t i = 0; i < ofs::kStandardAxisCount; ++i) {
+        const auto axis = static_cast<StandardAxis>(i);
+        CHECK(standardAxisFromTag(ofs::standardAxisTrackName(axis)) == axis);
+    }
+}

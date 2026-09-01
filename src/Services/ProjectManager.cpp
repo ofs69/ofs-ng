@@ -993,9 +993,14 @@ co::Fire ProjectManager::exportMultipleFunscript10(std::vector<StandardAxis> axe
         const auto &actions = axis.resolved ? axis.resolved->actions : axis.actions;
         if (actions.empty())
             continue;
-        std::string tag(standardAxisTag(role));
-        writeJobs.push_back(
-            {.outPath = outDir / ofs::util::fromUtf8(fmt::format("{}.{}.funscript", stem, tag)), .actions = actions});
+        // Players locate a per-axis script by its filename: XTPlayer probes "<stem>.<track name>.funscript"
+        // by exact string and reads the bare "<stem>.funscript" as the stroke axis, while MultiFunPlayer
+        // accepts the track name alongside the short tag. So the track name is the one spelling both find,
+        // and L0 drops the suffix entirely.
+        const std::string name = role == StandardAxis::L0
+                                     ? fmt::format("{}.funscript", stem)
+                                     : fmt::format("{}.{}.funscript", stem, standardAxisTrackName(role));
+        writeJobs.push_back({.outPath = outDir / ofs::util::fromUtf8(name), .actions = actions});
     }
     FunscriptMetadata exportMeta = project.metadata;                  // copy for the worker
     BookmarkChapterState exportMarkers = project.bookmarks;           // global bookmarks/chapters, per file

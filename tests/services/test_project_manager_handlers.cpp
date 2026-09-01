@@ -2494,7 +2494,7 @@ TEST_CASE("Export stamps the media length (whole seconds) into the funscript dur
     std::filesystem::remove_all(singleAxis);
     f.push(ExportFunscriptRequestEvent{.axes = {StandardAxis::L0}, .format = 0, .targetPath = singleAxis.string()});
     REQUIRE(f.drainUntil([&] { return f.proj().state.lastExport && f.proj().state.lastExport->format == 0; }));
-    auto perAxis = ofs::Funscript::load(singleAxis / "script.L0.funscript");
+    auto perAxis = ofs::Funscript::load(singleAxis / "script.funscript");
     REQUIRE(perAxis.has_value());
     CHECK(perAxis->duration == 123); // 123.4 rounded to whole seconds
 
