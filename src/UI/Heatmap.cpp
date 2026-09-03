@@ -1,7 +1,7 @@
 ﻿#include "Heatmap.h"
 
 #include "Platform/Headless.h"
-#include "Scenegraph/Shader.h"
+#include "Scenegraph/ImGuiQuadShader.h"
 #include "UI/Theme.h"
 #include <algorithm>
 #include <array>
@@ -10,42 +10,22 @@
 #include <memory>
 
 namespace ofs {
-class HeatmapShader : public Shader {
+class HeatmapShader : public ImGuiQuadShader {
   public:
-    HeatmapShader() : Shader(vtxShader, fragShader) {
-        projMtxLoc = glGetUniformLocation(program, "ProjMtx");
+    HeatmapShader() : ImGuiQuadShader(fragShader) {
         speedTexLoc = glGetUniformLocation(program, "speedTex");
         colorLutLoc = glGetUniformLocation(program, "colorLut");
         bakeFadeLoc = glGetUniformLocation(program, "bakeFade");
     }
 
-    void setProjMtx(const float *mat4) const { glUniformMatrix4fv(projMtxLoc, 1, GL_FALSE, mat4); }
     void setSpeedTex(int32_t unit) const { glUniform1i(speedTexLoc, unit); }
     void setColorLut(int32_t unit) const { glUniform1i(colorLutLoc, unit); }
     void setBakeFade(bool bake) const { glUniform1f(bakeFadeLoc, bake ? 1.0f : 0.0f); }
 
   private:
-    int32_t projMtxLoc = -1;
     int32_t speedTexLoc = -1;
     int32_t colorLutLoc = -1;
     int32_t bakeFadeLoc = -1;
-
-    static constexpr const char *vtxShader = R"(#version 330 core
-        layout (location = 0) in vec2 Position;
-        layout (location = 1) in vec2 UV;
-        layout (location = 2) in vec4 Color;
-
-        uniform mat4 ProjMtx;
-
-        out vec2 Frag_UV;
-        out vec4 Frag_Color;
-
-        void main() {
-            Frag_UV = UV;
-            Frag_Color = Color;
-            gl_Position = ProjMtx * vec4(Position.xy, 0, 1);
-        }
-    )";
 
     static constexpr const char *fragShader = R"(#version 330 core
         precision highp float;
@@ -221,19 +201,7 @@ void Heatmap::draw(ImDrawList *drawList, const ImVec2 &min, const ImVec2 &max) {
             glBindTexture(GL_TEXTURE_2D, self->m_speedTexture);
             glActiveTexture(GL_TEXTURE0);
 
-            ImDrawData *drawData = ImGui::GetDrawData();
-            float l = drawData->DisplayPos.x;
-            float r = drawData->DisplayPos.x + drawData->DisplaySize.x;
-            float t = drawData->DisplayPos.y;
-            float b = drawData->DisplayPos.y + drawData->DisplaySize.y;
-            const float orthoProjection[4][4] = {
-                {2.0f / (r - l), 0.0f, 0.0f, 0.0f},
-                {0.0f, 2.0f / (t - b), 0.0f, 0.0f},
-                {0.0f, 0.0f, -1.0f, 0.0f},
-                {(r + l) / (l - r), (t + b) / (b - t), 0.0f, 1.0f},
-            };
-            sHeatmapShader->use();
-            sHeatmapShader->setProjMtx(&orthoProjection[0][0]);
+            sHeatmapShader->useForImGuiDraw();
             sHeatmapShader->setSpeedTex(1);
             sHeatmapShader->setColorLut(2);
             sHeatmapShader->setBakeFade(false);

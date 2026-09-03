@@ -3,23 +3,6 @@
 
 namespace ofs {
 
-// Shares ImGui's vertex attribute layout (the quad is emitted by ImDrawList::AddImage), so it forwards
-// UV exactly like the waveform shader.
-static const char *fogVertexSource = R"(#version 330 core
-        layout (location = 0) in vec2 Position;
-        layout (location = 1) in vec2 UV;
-        layout (location = 2) in vec4 Color;
-
-        uniform mat4 ProjMtx;
-
-        out vec2 Frag_UV;
-
-        void main() {
-            Frag_UV = UV;
-            gl_Position = ProjMtx * vec4(Position.xy, 0, 1);
-        }
-    )";
-
 static const char *fogFragmentSource = R"(#version 330 core
         precision highp float;
 
@@ -132,18 +115,13 @@ static const char *fogFragmentSource = R"(#version 330 core
         }
     )";
 
-FogShader::FogShader() : Shader(fogVertexSource, fogFragmentSource) {
+FogShader::FogShader() : ImGuiQuadShader(fogFragmentSource) {
     if (program == 0) // base ctor compiled nothing (headless, or a compile failure)
         return;
-    projMtxLoc = glGetUniformLocation(program, "ProjMtx");
     phaseLoc = glGetUniformLocation(program, "uPhase");
     aspectLoc = glGetUniformLocation(program, "uAspect");
     colorLoc = glGetUniformLocation(program, "uColor");
     centerLoc = glGetUniformLocation(program, "uCenter");
-}
-
-void FogShader::setProjMtx(const float *mat4) const {
-    glUniformMatrix4fv(projMtxLoc, 1, GL_FALSE, mat4);
 }
 
 void FogShader::setPhase(float phase) const {

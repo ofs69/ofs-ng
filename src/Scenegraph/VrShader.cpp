@@ -5,23 +5,6 @@
 
 namespace ofs {
 
-static const char *vrVertexSource = R"(#version 330 core
-        layout (location = 0) in vec2 Position;
-        layout (location = 1) in vec2 UV;
-        layout (location = 2) in vec4 Color;
-
-        uniform mat4 ProjMtx;
-
-        out vec2 Frag_UV;
-        out vec4 Frag_Color;
-
-        void main() {
-            Frag_UV = UV;
-            Frag_Color = Color;
-            gl_Position = ProjMtx * vec4(Position.xy, 0, 1);
-        }
-    )";
-
 static const char *vrFragBody = R"(
         precision highp float;
 
@@ -77,10 +60,9 @@ static std::string buildVrFragSource() {
                        vrFragBody);
 }
 
-VrShader::VrShader() : Shader(vrVertexSource, buildVrFragSource().c_str()) {
+VrShader::VrShader() : ImGuiQuadShader(buildVrFragSource().c_str()) {
     if (program == 0) // base ctor compiled nothing (headless, or a compile failure)
         return;
-    projMtxLoc = glGetUniformLocation(program, "ProjMtx");
     rotationLoc = glGetUniformLocation(program, "Rotation");
     zoomLoc = glGetUniformLocation(program, "Zoom");
     aspectLoc = glGetUniformLocation(program, "AspectRatio");
@@ -88,10 +70,6 @@ VrShader::VrShader() : Shader(vrVertexSource, buildVrFragSource().c_str()) {
 
     use();
     glUniform1i(glGetUniformLocation(program, "Texture"), 0);
-}
-
-void VrShader::setProjMtx(const float *mat4) const {
-    glUniformMatrix4fv(projMtxLoc, 1, GL_FALSE, mat4);
 }
 
 void VrShader::setRotation(float x, float y) const {

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Scenegraph/Shader.h"
+#include "Scenegraph/ImGuiQuadShader.h"
 
 #include <cstdint>
 
@@ -24,11 +24,10 @@ inline constexpr int kWaveformMaxScan = 32;
 // the motion so the envelope reads as one solid unit translating, not a comb of flickering lines. When
 // zoomed in past the data resolution (one bucket spanning many pixels) it instead interpolates adjacent
 // buckets, so the stored stairs read as a smooth curve. See WaveformRenderer for the call site.
-class WaveformShader : public Shader {
+class WaveformShader : public ImGuiQuadShader {
   public:
     WaveformShader();
 
-    void setProjMtx(const float *mat4) const;
     void setPeaks(int32_t unit) const;
     // Visible window as fractional bucket positions at the rect's left/right edges, the decimation group
     // size (`step`, in buckets, a power of two), the in-group sample stride (`stride`, sized so the group
@@ -43,7 +42,6 @@ class WaveformShader : public Shader {
     void setColor(float r, float g, float b, float a) const;
 
   private:
-    int32_t projMtxLoc = -1;
     int32_t peaksLoc = -1;
     int32_t startBucketLoc = -1;
     int32_t endBucketLoc = -1;

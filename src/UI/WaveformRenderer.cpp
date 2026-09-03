@@ -22,20 +22,7 @@ void WaveformRenderer::glCallback(const ImDrawList * /*parentList*/, const ImDra
     glBindTexture(GL_TEXTURE_2D, d->textureId);
     glActiveTexture(GL_TEXTURE0);
 
-    const ImDrawData *dd = ImGui::GetDrawData();
-    const float l = dd->DisplayPos.x;
-    const float r = dd->DisplayPos.x + dd->DisplaySize.x;
-    const float t = dd->DisplayPos.y;
-    const float b = dd->DisplayPos.y + dd->DisplaySize.y;
-    const float ortho[4][4] = {
-        {2.0f / (r - l), 0.0f, 0.0f, 0.0f},
-        {0.0f, 2.0f / (t - b), 0.0f, 0.0f},
-        {0.0f, 0.0f, -1.0f, 0.0f},
-        {(r + l) / (l - r), (t + b) / (b - t), 0.0f, 1.0f},
-    };
-
-    d->shader->use();
-    d->shader->setProjMtx(&ortho[0][0]);
+    d->shader->useForImGuiDraw();
     d->shader->setPeaks(1);
     d->shader->setWindow(d->startBucket, d->endBucket, d->step, d->stride, d->bucketsPerPixel);
     d->shader->setTexDims(d->bucketCount, d->texW, d->texH);

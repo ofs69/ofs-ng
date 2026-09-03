@@ -1,7 +1,6 @@
 #include "UI/FogBackground.h"
 #include "Scenegraph/FogShader.h"
 #include <algorithm>
-#include <glad/gl.h>
 
 namespace ofs {
 
@@ -12,20 +11,7 @@ FogBackground::~FogBackground() = default;
 void FogBackground::glCallback(const ImDrawList * /*parentList*/, const ImDrawCmd *cmd) {
     const auto *d = static_cast<const CallbackData *>(cmd->UserCallbackData);
 
-    const ImDrawData *dd = ImGui::GetDrawData();
-    const float l = dd->DisplayPos.x;
-    const float r = dd->DisplayPos.x + dd->DisplaySize.x;
-    const float t = dd->DisplayPos.y;
-    const float b = dd->DisplayPos.y + dd->DisplaySize.y;
-    const float ortho[4][4] = {
-        {2.0f / (r - l), 0.0f, 0.0f, 0.0f},
-        {0.0f, 2.0f / (t - b), 0.0f, 0.0f},
-        {0.0f, 0.0f, -1.0f, 0.0f},
-        {(r + l) / (l - r), (t + b) / (b - t), 0.0f, 1.0f},
-    };
-
-    d->shader->use();
-    d->shader->setProjMtx(&ortho[0][0]);
+    d->shader->useForImGuiDraw();
     d->shader->setPhase(d->phase);
     d->shader->setAspect(d->aspect);
     d->shader->setColor(d->color[0], d->color[1], d->color[2], d->color[3]);

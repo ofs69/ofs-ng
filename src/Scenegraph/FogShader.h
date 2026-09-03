@@ -1,6 +1,6 @@
 #pragma once
 
-#include "Scenegraph/Shader.h"
+#include "Scenegraph/ImGuiQuadShader.h"
 
 #include <cstdint>
 
@@ -12,11 +12,10 @@ namespace ofs {
 // seconds), so the drift runs at the same speed at any frame rate. Cheap by construction — 4 noise
 // octaves, no textures — so it is fine to run at full window resolution. Drawn via
 // ImDrawList::AddCallback, the same raw-GL-into-ImGui pattern as WaveformRenderer.
-class FogShader : public Shader {
+class FogShader : public ImGuiQuadShader {
   public:
     FogShader();
 
-    void setProjMtx(const float *mat4) const;
     // Monotonically increasing per-frame counter; drives both translation and evolution of the fog.
     void setPhase(float phase) const;
     // width/height of the quad, so the noise domain stays square regardless of window proportions.
@@ -31,7 +30,6 @@ class FogShader : public Shader {
     void setCenter(float r, float g, float b, float a) const;
 
   private:
-    int32_t projMtxLoc = -1;
     int32_t phaseLoc = -1;
     int32_t aspectLoc = -1;
     int32_t colorLoc = -1;

@@ -272,20 +272,7 @@ void VideoPlayerWindow::onImGuiRender(const ScriptProject &project, EventQueue &
             [](const ImDrawList *parentList, const ImDrawCmd *cmd) {
                 auto *self = static_cast<VideoPlayerWindow *>(cmd->UserCallbackData);
 
-                ImDrawData *drawData = ImGui::GetDrawData();
-                float left = drawData->DisplayPos.x;
-                float right = drawData->DisplayPos.x + drawData->DisplaySize.x;
-                float top = drawData->DisplayPos.y;
-                float bottom = drawData->DisplayPos.y + drawData->DisplaySize.y;
-                const float orthoProjection[4][4] = {
-                    {2.0f / (right - left), 0.0f, 0.0f, 0.0f},
-                    {0.0f, 2.0f / (top - bottom), 0.0f, 0.0f},
-                    {0.0f, 0.0f, -1.0f, 0.0f},
-                    {(right + left) / (left - right), (top + bottom) / (bottom - top), 0.0f, 1.0f},
-                };
-
-                self->vrShader->use();
-                self->vrShader->setProjMtx(&orthoProjection[0][0]);
+                self->vrShader->useForImGuiDraw();
                 self->vrShader->setRotation(self->vrRotation.x, self->vrRotation.y);
                 self->vrShader->setZoom(self->vrZoom_.value());
                 self->vrShader->setAspectRatio(self->lastContentWidth / self->lastContentHeight);

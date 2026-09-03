@@ -5,21 +5,6 @@
 
 namespace ofs {
 
-static const char *waveformVertexSource = R"(#version 330 core
-        layout (location = 0) in vec2 Position;
-        layout (location = 1) in vec2 UV;
-        layout (location = 2) in vec4 Color;
-
-        uniform mat4 ProjMtx;
-
-        out vec2 Frag_UV;
-
-        void main() {
-            Frag_UV = UV;
-            gl_Position = ProjMtx * vec4(Position.xy, 0, 1);
-        }
-    )";
-
 // The body after the `#version`/constant header, which buildWaveformFragSource() prepends. Keeping the
 // body a separate raw-string argument (not the format string) means fmt never tries to parse its GLSL
 // braces — the same split buildVrFragSource() uses.
@@ -150,10 +135,9 @@ static std::string buildWaveformFragSource() {
     return fmt::format("#version 330 core\n        const int kMaxScan = {};\n{}", kWaveformMaxScan, waveformFragBody);
 }
 
-WaveformShader::WaveformShader() : Shader(waveformVertexSource, buildWaveformFragSource().c_str()) {
+WaveformShader::WaveformShader() : ImGuiQuadShader(buildWaveformFragSource().c_str()) {
     if (program == 0) // base ctor compiled nothing (headless, or a compile failure)
         return;
-    projMtxLoc = glGetUniformLocation(program, "ProjMtx");
     peaksLoc = glGetUniformLocation(program, "uPeaks");
     startBucketLoc = glGetUniformLocation(program, "uStartBucket");
     endBucketLoc = glGetUniformLocation(program, "uEndBucket");
@@ -165,10 +149,6 @@ WaveformShader::WaveformShader() : Shader(waveformVertexSource, buildWaveformFra
     texHLoc = glGetUniformLocation(program, "uTexH");
     scaleLoc = glGetUniformLocation(program, "uScale");
     colorLoc = glGetUniformLocation(program, "uColor");
-}
-
-void WaveformShader::setProjMtx(const float *mat4) const {
-    glUniformMatrix4fv(projMtxLoc, 1, GL_FALSE, mat4);
 }
 
 void WaveformShader::setPeaks(int32_t unit) const {
