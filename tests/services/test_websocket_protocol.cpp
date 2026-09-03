@@ -8,14 +8,13 @@
 using namespace ofs::ws;
 
 TEST_CASE("WebSocket handshake matches the RFC 6455 accept example and OFS subprotocol") {
-    const std::string request =
-        "GET /ofs HTTP/1.1\r\n"
-        "Host: 127.0.0.1:8080\r\n"
-        "Upgrade: websocket\r\n"
-        "Connection: keep-alive, Upgrade\r\n"
-        "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
-        "Sec-WebSocket-Version: 13\r\n"
-        "Sec-WebSocket-Protocol: other, ofs-api.json\r\n\r\n";
+    const std::string request = "GET /ofs HTTP/1.1\r\n"
+                                "Host: 127.0.0.1:8080\r\n"
+                                "Upgrade: websocket\r\n"
+                                "Connection: keep-alive, Upgrade\r\n"
+                                "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n"
+                                "Sec-WebSocket-Version: 13\r\n"
+                                "Sec-WebSocket-Protocol: other, ofs-api.json\r\n\r\n";
 
     const auto response = handshakeResponse(request);
     REQUIRE(response.has_value());
@@ -25,9 +24,8 @@ TEST_CASE("WebSocket handshake matches the RFC 6455 accept example and OFS subpr
 }
 
 TEST_CASE("WebSocket handshake rejects paths other than the classic OFS endpoint") {
-    const std::string request =
-        "GET /wrong HTTP/1.1\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
-        "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\r\n";
+    const std::string request = "GET /wrong HTTP/1.1\r\nUpgrade: websocket\r\nConnection: Upgrade\r\n"
+                                "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n\r\n";
     CHECK_FALSE(handshakeResponse(request).has_value());
 }
 
@@ -52,8 +50,7 @@ TEST_CASE("Classic OFS commands parse into typed intents") {
     REQUIRE(std::holds_alternative<SetPlayingCommand>(*play));
     CHECK(std::get<SetPlayingCommand>(*play).playing);
 
-    const auto speed =
-        parseCommand(R"({"type":"command","name":"change_playbackspeed","data":{"speed":1.25}})");
+    const auto speed = parseCommand(R"({"type":"command","name":"change_playbackspeed","data":{"speed":1.25}})");
     REQUIRE(speed.has_value());
     REQUIRE(std::holds_alternative<SetSpeedCommand>(*speed));
     CHECK(std::get<SetSpeedCommand>(*speed).speed == doctest::Approx(1.25f));
@@ -79,7 +76,7 @@ TEST_CASE("Malformed Classic OFS command fields are ignored without throwing") {
 TEST_CASE("Masked client frames are decoded and consumed") {
     const std::string payload = "hello";
     const unsigned char mask[4] = {0x37, 0xfa, 0x21, 0x3d};
-    std::vector<uint8_t> bytes = {0x81, static_cast<uint8_t>(0x80u | payload.size()), mask[0], mask[1], mask[2],
+    std::vector<uint8_t> bytes = {0x81,   static_cast<uint8_t>(0x80u | payload.size()), mask[0], mask[1], mask[2],
                                   mask[3]};
     for (size_t i = 0; i < payload.size(); ++i)
         bytes.push_back(static_cast<uint8_t>(payload[i]) ^ mask[i % 4]);
@@ -108,8 +105,19 @@ TEST_CASE("Server frame encoding can reuse caller-owned storage") {
     std::string frame;
     frame.reserve(256);
     encodeFrame(frame, 0x1, "first");
-    CHECK(frame == std::string("\x81\x05" "first", 7));
+    CHECK(frame == std::string("\x81\x05"
+                               "first",
+                               7));
 
     encodeFrame(frame, 0xA, "ok");
     CHECK(frame == std::string("\x8a\x02ok", 4));
+}
+
+TEST_CASE("Script names are Classic OFS titles: extension-free, axis tag last") {
+    // Third-party clients (OFS_Simulator3D, MultiFunPlayer) map a script to an axis by the last
+    // dot-separated segment of this name, so a trailing ".funscript" would hide the tag from all of them.
+    CHECK(scriptName("video", ofs::StandardAxis::L0) == "video");
+    CHECK(scriptName("video", ofs::StandardAxis::L1) == "video.L1");
+    CHECK(scriptName("video", ofs::StandardAxis::R1) == "video.R1");
+    CHECK(scriptName("my.video.2160p", ofs::StandardAxis::R2) == "my.video.2160p.R2");
 }

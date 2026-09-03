@@ -76,8 +76,10 @@ State changes then use this event envelope:
 | `funscript_remove` | `{ "name": string }` | A previously announced axis no longer exists. |
 
 `funscript_change.data.funscript` is a standard funscript document containing actions plus the current
-metadata, bookmarks, chapters, and duration. The primary stroke axis uses `<media-name>.funscript`; other
-standard axes use `<media-name>.<axis-tag>.funscript`.
+metadata, bookmarks, chapters, and duration. `name` is the script's Classic OFS *title*, not a file name:
+the primary stroke axis uses `<media-name>` and every other standard axis `<media-name>.<axis-tag>`
+(e.g. `video` and `video.R1`), with **no `.funscript` extension**. Clients map a script to an axis by the
+last dot-separated segment of the name, so an extension there hides the tag from them.
 
 ## Protocol limits
 

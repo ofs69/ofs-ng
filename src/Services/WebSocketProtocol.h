@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Core/StandardAxis.h"
+
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -28,6 +30,13 @@ std::optional<Command> parseCommand(std::string_view text);
 
 // Build the RFC 6455 upgrade response for GET /ofs. Returns nullopt for an invalid request.
 std::optional<std::string> handshakeResponse(std::string_view request);
+
+// The name a script is published under: `baseName` (the media/project file name, extension already
+// stripped) for the primary stroke axis, `baseName.<axis-tag>` for every other axis. Classic OFS took
+// this from Funscript::Title() — a title, not a file name — and clients key their axis mapping off the
+// last dot-separated segment, so the ".funscript" extension must stay off: OFS_Simulator3D reads it as
+// the axis tag and then recognizes no axis at all, and MultiFunPlayer appends the extension itself.
+std::string scriptName(std::string_view baseName, StandardAxis role);
 
 // Encode one unmasked server-to-client frame.
 std::string encodeFrame(uint8_t opcode, std::string_view payload);

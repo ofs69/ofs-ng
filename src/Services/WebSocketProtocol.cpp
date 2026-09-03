@@ -217,6 +217,15 @@ std::optional<std::string> handshakeResponse(std::string_view request) {
     return response;
 }
 
+std::string scriptName(std::string_view baseName, StandardAxis role) {
+    std::string name(baseName);
+    if (role != StandardAxis::L0) {
+        name.push_back('.');
+        name.append(standardAxisTag(role));
+    }
+    return name;
+}
+
 std::string encodeFrame(uint8_t opcode, std::string_view payload) {
     std::string frame;
     encodeFrame(frame, opcode, payload);

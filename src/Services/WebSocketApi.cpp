@@ -128,16 +128,6 @@ std::string scriptBaseName(const ScriptProject &project) {
     return "untitled";
 }
 
-std::string scriptName(const ScriptProject &project, StandardAxis role) {
-    std::string name = scriptBaseName(project);
-    if (role != StandardAxis::L0) {
-        name.push_back('.');
-        name.append(standardAxisTag(role));
-    }
-    name += ".funscript";
-    return name;
-}
-
 nlohmann::json funscriptEvent(const ScriptProject &project, StandardAxis role, double duration) {
     // Publish what the rest of the app treats as the script: the processing graph's output where a
     // region resolved one, the raw actions otherwise. Export (ProjectManager) and the live simulator
@@ -149,7 +139,7 @@ nlohmann::json funscriptEvent(const ScriptProject &project, StandardAxis role, d
     script.bookmarks = project.bookmarks.bookmarks;
     script.chapters = project.bookmarks.chapters;
     script.duration = (std::max<int64_t>)(0, std::llround(duration));
-    return event("funscript_change", {{"name", scriptName(project, role)}, {"funscript", script}});
+    return event("funscript_change", {{"name", ws::scriptName(scriptBaseName(project), role)}, {"funscript", script}});
 }
 
 } // namespace
@@ -708,7 +698,7 @@ struct WebSocketApi::Impl {
                 broadcast(funscriptEvent(project, role, currentDuration));
                 announcedAxes.set(i);
             } else if (announcedAxes.test(i)) {
-                broadcast(event("funscript_remove", {{"name", scriptName(project, role)}}));
+                broadcast(event("funscript_remove", {{"name", ws::scriptName(scriptBaseName(project), role)}}));
                 announcedAxes.reset(i);
             }
         }
