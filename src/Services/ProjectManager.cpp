@@ -2139,6 +2139,12 @@ void ProjectManager::onToggleAxisLock(const ToggleAxisLockEvent &event) {
     setDirty(true);
 }
 
+namespace {
+ImU32 regionColor(const ProcessingRegion &r) {
+    return r.color;
+}
+} // namespace
+
 void ProjectManager::onCreateRegion(const CreateRegionEvent &event) {
     const auto roleIdx = static_cast<size_t>(event.axisRole);
     if (event.axisRole >= StandardAxis::Count)
@@ -2181,7 +2187,7 @@ void ProjectManager::onCreateRegion(const CreateRegionEvent &event) {
     region.endTime = newEnd;
     region.name = ofs::generateMnemonic(project.state.autoNameSeed + newId);
     region.color =
-        ofs::util::goldenRatioColor(static_cast<size_t>(project.state.autoNameSeed) + project.regions.size());
+        ofs::util::nextDistinctColor(static_cast<size_t>(project.state.autoNameSeed), project.regions, regionColor);
     region.nodeGraph = buildDefaultGraph(roles);
     region.showSourceActions = true;
     region.axisRoles = roles;
@@ -2237,7 +2243,8 @@ void ProjectManager::onSplitRegion(const SplitRegionEvent &event) {
     right.id = newId;
     right.startTime = t;
     right.name = ofs::generateMnemonic(project.state.autoNameSeed + newId);
-    right.color = ofs::util::goldenRatioColor(static_cast<size_t>(project.state.autoNameSeed) + project.regions.size());
+    right.color =
+        ofs::util::nextDistinctColor(static_cast<size_t>(project.state.autoNameSeed), project.regions, regionColor);
     const AxisRoles roles = right.axisRoles;
     region->endTime = t;
 

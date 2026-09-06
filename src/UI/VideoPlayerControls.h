@@ -48,6 +48,10 @@ class VideoControlsWindow {
         enum class ActiveEdit { None, ChapterColor, ChapterName, BookmarkName };
         ActiveEdit activeEdit = ActiveEdit::None;
 
+        // Chapter the last band click seeked into, so a repeat click on it advances to its end
+        // (see the onClick handler in drawBookmarkBar). -1 = the next click seeks to a start.
+        int seekedChapterIdx = -1;
+
         struct DragState {
             bool hasDragCandidate = false;
             bool isDragging = false;

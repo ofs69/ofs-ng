@@ -125,6 +125,7 @@ and fan across its edit group — only the geometry differs (a gesture maps to t
 | Drag bookmark | Move bookmark |
 | Alt+drag bookmark | Cancel, snap back |
 | Right-click bookmark | Edit / delete |
+| Click chapter | Seek to its start; click again to its end |
 | Drag chapter edge | Resize chapter |
 | Drag chapter body | Move chapter |
 | Alt+drag chapter | Cancel, snap back |

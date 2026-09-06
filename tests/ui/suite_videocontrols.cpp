@@ -96,6 +96,74 @@ void RegisterVideoControlsTests(ImGuiTestEngine *e) {
         IM_CHECK_LT(std::abs(proj.bookmarks.bookmarks[0].time - targetTime), dur * 0.05);
     };
 
+    // Clicking a chapter band walks the chapter: start, then end, then start again.
+    IM_REGISTER_TEST(e, "videocontrols", "chapter_click_cycles_start_then_end")->TestFunc = [](ImGuiTestContext *ctx) {
+        loadFixture(ctx);
+        auto &proj = *getTestState().project;
+        auto &eq = *getTestState().eventQueue;
+        const double dur = proj.state.dummyDuration;
+        const double chStart = dur * 0.3;
+        const double chEnd = dur * 0.6;
+        eq.push(ofs::ModifyBookmarkChapterEvent{.apply = [chStart, chEnd](ofs::BookmarkChapterState &s) {
+            s.chapters.push_back({.startTime = chStart, .endTime = chEnd, .name = "c"});
+        }});
+        ctx->Yield(2);
+        IM_CHECK_EQ(proj.bookmarks.chapters.size(), static_cast<size_t>(1));
+
+        // The band is drawn by BandBar's own hit testing, not as an addressable item, so the click
+        // goes to a computed pixel inside the band (mid-span, clear of both resize edge zones).
+        ctx->MouseMoveToPos(bookmarkPixel(ctx, (chStart + chEnd) * 0.5));
+        ctx->MouseClick(ImGuiMouseButton_Left);
+        ctx->Yield(2);
+        IM_CHECK_LT(std::abs(proj.playback.cursorPos - chStart), dur * 0.05);
+
+        // Playhead still inside the chapter the first click put it in → advance to its end.
+        ctx->MouseClick(ImGuiMouseButton_Left);
+        ctx->Yield(2);
+        IM_CHECK_LT(std::abs(proj.playback.cursorPos - chEnd), dur * 0.05);
+
+        ctx->MouseClick(ImGuiMouseButton_Left);
+        ctx->Yield(2);
+        IM_CHECK_LT(std::abs(proj.playback.cursorPos - chStart), dur * 0.05);
+    };
+
+    // A chapter created after a middle one was deleted must not wear a surviving chapter's color:
+    // the auto color is picked by probing for a free slot, not from the chapter count.
+    IM_REGISTER_TEST(e, "videocontrols", "chapter_colors_stay_distinct_after_delete")->TestFunc =
+        [](ImGuiTestContext *ctx) {
+            loadFixture(ctx);
+            auto &proj = *getTestState().project;
+            const double dur = proj.state.dummyDuration;
+
+            auto addChapterAt = [ctx](ImVec2 pos) {
+                ctx->MouseMoveToPos(pos);
+                ctx->MouseClick(ImGuiMouseButton_Right);
+                ctx->Yield(2);
+                ctx->ItemClick("**/###add_chapter_here");
+                ctx->Yield(2);
+            };
+            // Each chapter spans 10% of the duration from the clicked time, so these three don't collide.
+            addChapterAt(bookmarkPixel(ctx, dur * 0.05));
+            addChapterAt(bookmarkPixel(ctx, dur * 0.40));
+            addChapterAt(bookmarkPixel(ctx, dur * 0.70));
+            IM_CHECK_EQ(proj.bookmarks.chapters.size(), static_cast<size_t>(3));
+
+            ctx->MouseMoveToPos(bookmarkPixel(ctx, dur * 0.45)); // inside the middle chapter
+            ctx->MouseClick(ImGuiMouseButton_Right);
+            ctx->Yield(2);
+            ctx->ItemClick("**/###vpc_ch_delete");
+            ctx->Yield(2);
+            IM_CHECK_EQ(proj.bookmarks.chapters.size(), static_cast<size_t>(2));
+
+            addChapterAt(bookmarkPixel(ctx, dur * 0.45)); // into the gap the delete left
+            IM_CHECK_EQ(proj.bookmarks.chapters.size(), static_cast<size_t>(3));
+
+            const auto &chs = proj.bookmarks.chapters;
+            IM_CHECK(chs[0].color != chs[1].color);
+            IM_CHECK(chs[1].color != chs[2].color);
+            IM_CHECK(chs[0].color != chs[2].color);
+        };
+
     // The transport play/pause button toggles the player's paused state. The dummy player starts
     // paused, so the first click plays and the second pauses; the button glyph flips with it.
     IM_REGISTER_TEST(e, "videocontrols", "play_pause_button_toggles")->TestFunc = [](ImGuiTestContext *ctx) {

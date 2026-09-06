@@ -29,6 +29,21 @@ TEST_CASE("CreateRegion auto-assigns a distinct golden-ratio band color") {
     CHECK(f.project().regions[0].color != f.project().regions[1].color);
 }
 
+TEST_CASE("A region created after a delete does not reuse a live sibling's color") {
+    PmFixture f;
+    for (double t = 0.0; t < 30.0; t += 10.0)
+        f.send(ofs::CreateRegionEvent{.axisRole = StandardAxis::L0, .startTime = t, .endTime = t + 5.0});
+    REQUIRE(f.project().regions.size() == 3);
+    const auto keptFirst = f.project().regions[0].color;
+    const auto keptThird = f.project().regions[2].color;
+    f.send(ofs::DeleteRegionEvent{.regionId = f.project().regions[1].id});
+    f.send(ofs::CreateRegionEvent{.axisRole = StandardAxis::L0, .startTime = 40.0, .endTime = 45.0});
+    REQUIRE(f.project().regions.size() == 3);
+    const auto fresh = f.project().regions[2].color;
+    CHECK(fresh != keptFirst);
+    CHECK(fresh != keptThird);
+}
+
 TEST_CASE("ModifyRegion updates a region's band color") {
     PmFixture f;
     f.send(ofs::CreateRegionEvent{.axisRole = StandardAxis::L0, .startTime = 0.0, .endTime = 10.0});

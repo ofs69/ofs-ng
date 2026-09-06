@@ -30,6 +30,14 @@
 
 namespace ofs {
 
+namespace {
+
+ImU32 chapterColor(const Chapter &c) {
+    return c.color;
+}
+
+} // namespace
+
 VideoControlsWindow::VideoControlsWindow(EventQueue &eventQueue) : heatmap(std::make_shared<Heatmap>()) {
     eventQueue.on<AxisModifiedEvent>([this](const AxisModifiedEvent &e) { onAxisModified(e); });
     eventQueue.on<AxisSelectedEvent>([this](const AxisSelectedEvent &e) { onAxisSelected(e); });
@@ -355,7 +363,17 @@ void VideoControlsWindow::drawBookmarkBar(const ScriptProject &project, EventQue
         }});
     };
 
-    callbacks.onClick = [&](int idx) { eq.push(SeekEvent{bcState.chapters[idx].startTime}); };
+    // A click on a chapter walks it: first to its start, then — on a repeat click, while the playhead is
+    // still inside the chapter the previous click put it in — to its end, then back to the start. Gating on
+    // the playhead (not the click count alone) keeps the cycle honest: once the user has navigated out of
+    // the chapter, the next click reads as a fresh "take me to this chapter" and seeks to its start again.
+    callbacks.onClick = [&](int idx) {
+        const auto &ch = bcState.chapters[idx];
+        const bool advanceToEnd =
+            barState.seekedChapterIdx == idx && playheadTime >= ch.startTime && playheadTime < ch.endTime;
+        eq.push(SeekEvent{advanceToEnd ? ch.endTime : ch.startTime});
+        barState.seekedChapterIdx = advanceToEnd ? -1 : idx;
+    };
 
     callbacks.onRightClick = [&](int idx, double t) {
         barState.activeCtx = BookmarkBarState::CtxTarget::Chapter;
@@ -451,8 +469,8 @@ void VideoControlsWindow::drawBookmarkBar(const ScriptProject &project, EventQue
             const double chEnd = slot.start + std::min(duration * 0.1, slot.length());
             eq.push(ModifyBookmarkChapterEvent{
                 .apply = [start = slot.start, chEnd,
-                          color = ofs::util::goldenRatioColor(static_cast<size_t>(project.state.autoNameSeed) +
-                                                              bcState.chapters.size())](BookmarkChapterState &s) {
+                          seed = static_cast<size_t>(project.state.autoNameSeed)](BookmarkChapterState &s) {
+                    const ImU32 color = ofs::util::nextDistinctColor(seed, s.chapters, chapterColor);
                     s.chapters.push_back({.startTime = start, .endTime = chEnd, .name = "", .color = color});
                 }});
         };
@@ -602,7 +620,7 @@ void VideoControlsWindow::drawBookmarkBar(const ScriptProject &project, EventQue
                             return;
                         Chapter right = s.chapters[idx];
                         right.startTime = splitT;
-                        right.color = ofs::util::goldenRatioColor(static_cast<size_t>(seed) + s.chapters.size());
+                        right.color = ofs::util::nextDistinctColor(static_cast<size_t>(seed), s.chapters, chapterColor);
                         s.chapters[idx].endTime = splitT;
                         s.chapters.push_back(std::move(right));
                     }});
