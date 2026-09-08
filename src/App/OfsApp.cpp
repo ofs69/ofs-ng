@@ -1207,7 +1207,8 @@ void OfsApp::renderMainMenuBar() {
                 appSettingsDirty_ = true;
             ImGui::MenuItem(Str::AppMenuLog.iconId(ICON_SCROLL_TEXT, "menu_view_log"), nullptr,
                             &appState.showLogWindow);
-            ImGui::MenuItem(Str::WsTitle.id("menu_view_websocket_api"), nullptr, &appState.showWebSocketApiWindow);
+            ImGui::MenuItem(Str::WsTitle.iconId(ICON_RADIO_TOWER, "menu_view_websocket_api"), nullptr,
+                            &appState.showWebSocketApiWindow);
             ImGui::Separator();
             // Live checkmark reflects the actual window flag; dispatches directly (main-thread UI),
             // exactly as the title-bar minimize/maximize do. F11 hint is omitted because the binding
