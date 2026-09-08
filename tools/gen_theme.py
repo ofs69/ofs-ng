@@ -240,6 +240,12 @@ _DARK_ROLES = {
     # both schemes so band labels stay bright on dark AND light (it must read on a saturated fill,
     # not follow onSurface, which flips dark in the light scheme).
     "brightText": ("neutral", 96),
+    # Audio waveform fill. A bespoke role because it is picked against two constraints no M3 token
+    # balances: it must clear the near-black track by value, yet stay far enough from the neutral
+    # on-surface tones that the grid/overlay lines drawn over it (0.20-0.55 alpha) still read. Taken
+    # straight off the teal ramp rather than blended toward the track — a blend costs chroma at the
+    # same tone, and chroma is what makes the envelope read as a waveform instead of dark chrome.
+    "waveform": ("secondary", 45),
 }
 
 _LIGHT_ROLES = {
@@ -263,6 +269,9 @@ _LIGHT_ROLES = {
     "outline": ("neutralVariant", 50), "outlineVariant": ("neutralVariant", 80),
     "inverseSurface": ("neutral", 20), "inverseOnSurface": ("neutral", 95),
     "brightText": ("neutral", 96),  # see _DARK_ROLES: bright band-label text, identical in both schemes
+    # See _DARK_ROLES: same two constraints, mirrored — a mid tone that clears the near-white track
+    # downward while the dark grid lines still read on top of it.
+    "waveform": ("secondary", 65),
 }
 
 
@@ -525,9 +534,14 @@ MAP_APP = {
     "ScriptLineBgTop": _mix(_mix("surfaceContainerLowest", "surfaceContainerLow", 0.25), "primary", 0.05),
     "ScriptLineBgBottom": "surfaceContainerLowest",
     "ScriptLineHoverBg": _ra("onSurface", 0.015),
-    # Opaque, muted foreground: visible against the recessed script-line track without overpowering the
-    # heat-colored script lines that draw on top. onSurfaceVariant reads softer than full onSurface.
-    "Waveform": "onSurfaceVariant",
+    # Out-of-range gutter veil, pulled off the track far enough to read as its own strip when the waveform
+    # is off. The blend has a ceiling, not just a floor: it travels toward the waveform's own tone, so past
+    # ~0.3 the veil stops cutting the waveform overshoot and the 0/100 bound its edge draws vanishes on a
+    # loud passage. Tuned by eye between the two — the gutter is a boundary marker, not a second band.
+    "ScriptLineOutOfRange": _alpha(_mix("surfaceContainerLowest", "onSurface", 0.16), 0.90),
+    # Opaque teal, per-scheme tone (see the `waveform` role): it carries the grid/overlay lines drawn over
+    # it, and the cool hue keeps it clear of the warm heat-colored script lines drawn on top.
+    "Waveform": "waveform",
     "GridLine": _ra("onSurfaceVariant", 0.30),
     "GridLineMid": _ra("onSurfaceVariant", 0.55),
     "SelectedLine": "primary",
@@ -628,7 +642,7 @@ _APP_VARS = {
 # Number of entries the "colors" JSON object must contain.
 # = AppCol_COUNT - ImGuiCol_COUNT minus the 20 AxisDim* slots,
 #   which are always derived in C++ (fillAxisDimColors) and never serialised.
-_APP_COL_JSON_COUNT = 86
+_APP_COL_JSON_COUNT = 87
 
 
 def _c(rgba):

@@ -598,6 +598,7 @@ constexpr ColorItem kTimelineColors[] = {
     {AppCol_ScriptLineBgTop, "Script Line BG Top"},
     {AppCol_ScriptLineBgBottom, "Script Line BG Bottom"},
     {AppCol_ScriptLineHoverBg, "Script Line Hover"},
+    {AppCol_ScriptLineOutOfRange, "Out-of-Range Wash"},
     {AppCol_Waveform, "Waveform"},
     {AppCol_GridLine, "Grid Line"},
     {AppCol_GridLineMid, "Grid Line Mid"},

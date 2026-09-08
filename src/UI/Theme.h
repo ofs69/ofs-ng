@@ -90,7 +90,12 @@ enum AppCol : int {
     AppCol_ScriptLineBgTop,
     AppCol_ScriptLineBgBottom,
     AppCol_ScriptLineHoverBg,
-    AppCol_Waveform, // audio waveform envelope drawn behind the script lines; opaque, high-contrast vs the track
+    // Veil over the strips the band keeps past pos 0/100 for end-point dot clearance. Nearly opaque: it
+    // masks the waveform overshoot, so its edge is what draws the 0/100 bound.
+    AppCol_ScriptLineOutOfRange,
+    // Audio waveform envelope drawn behind the script lines. Opaque, and deliberately NOT near the
+    // GridLine/OverlayLine hue: those draw over it at low alpha and must stay readable.
+    AppCol_Waveform,
     AppCol_GridLine,
     AppCol_GridLineMid,
     // Timeline actions

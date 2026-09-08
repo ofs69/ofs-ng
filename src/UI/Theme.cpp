@@ -82,6 +82,7 @@ constexpr const char *kCustomColorNames[] = {"AxisL0",
                                              "ScriptLineBgTop",
                                              "ScriptLineBgBottom",
                                              "ScriptLineHoverBg",
+                                             "ScriptLineOutOfRange",
                                              "Waveform",
                                              "GridLine",
                                              "GridLineMid",
@@ -577,9 +578,15 @@ void fillBaseAppColors(Theme *dst) {
     dst->colors[AppCol_ScriptLineBgTop] = mix(win, text, 0.03f);
     dst->colors[AppCol_ScriptLineBgBottom] = ImColor(win);
     dst->colors[AppCol_ScriptLineHoverBg] = t(0.02f);
-    // Opaque but muted: a blend toward the text color reads clearly on the recessed script-line track
-    // without overpowering the script lines drawn on top.
-    dst->colors[AppCol_Waveform] = mix(win, text, 0.62f);
+    // Off the track far enough to read as its own strip when the waveform is off, but not so far that it
+    // reaches the waveform's own tone — past that it no longer cuts the overshoot and the 0/100 bound its
+    // edge draws vanishes on a loud passage.
+    const ImVec4 gutter = mix(win, text, 0.16f).Value;
+    dst->colors[AppCol_ScriptLineOutOfRange] = ImColor(gutter.x, gutter.y, gutter.z, 0.90f);
+    // Held near the middle of the window->text range and pushed hard into the accent: the grid/overlay
+    // lines drawn over the waveform are text-colored at low alpha, so a fill blended far toward `text`
+    // swallows them, and it is chroma, not value, that buys the envelope its presence on the track.
+    dst->colors[AppCol_Waveform] = mix(mix(win, text, 0.45f).Value, accent, 0.55f);
     dst->colors[AppCol_GridLine] = t(0.18f);
     dst->colors[AppCol_GridLineMid] = t(0.30f);
 

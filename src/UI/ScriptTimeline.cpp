@@ -40,12 +40,12 @@ namespace ofs {
 static float stripWidth() {
     return ImGui::GetFontSize() * 3.5f;
 }
-// Source-dot radius and the click hit-radius around it, both font-relative so the dots and their
-// grab zones stay the same physical size at any font scale / DPI (≈8 px and ≈12 px at the 18 px
-// default). Call within a frame.
-static float dotRadius() {
-    return ImGui::GetFontSize() * 0.45f;
-}
+// The dot radius and the band margin sized off it are shared with the UI tests (TimelineLayout.h).
+using ui::dotRadius;
+using ui::scriptLineVMargin;
+
+// Click hit-radius around a source dot — a grab zone wider than the dot, font-relative for the same
+// reason (≈12 px at the 18 px default font). Call within a frame.
 static float dotHitRadius() {
     return ImGui::GetFontSize() * 0.67f;
 }
@@ -63,14 +63,6 @@ static constexpr float kDotPopDamping = 0.5f; // poppier dot-scale overshoot
 
 static float easeOutExpo(float x) noexcept {
     return x >= 1.f ? 1.f : 1.f - powf(2, -10 * x);
-}
-
-// Breathing room kept above pos=100 and below pos=0 so the end-point dots aren't clipped at the band
-// edge. kScriptLineVMargin for a normal full-height band, but capped at a quarter of the band so a thin
-// Lanes row (many visible axes) still leaves the script line at least half the lane — without this cap a
-// fixed 8px-per-side margin exceeds a <16px lane, inverting posToScreenY and pinning screenYToPos to 0.
-static float scriptLineVMargin(float bandHeight) {
-    return std::min(ofs::ui::kScriptLineVMargin, bandHeight * 0.25f);
 }
 
 static float posToScreenY(int posVal, const ImVec2 &pos, const ImVec2 &size) {
@@ -498,9 +490,15 @@ void ScriptTimelineWindow::renderScriptLines(const ScriptProject &project, ImDra
         }
     }
 
-    // Grid: the nine 0-100 reference lines (mid/50 emphasized). One band in Overlay; in Lanes each row
-    // gets its own band so every lane reads against its own 0/50/100.
+    // Grid: the nine interior 0-100 reference lines (mid/50 emphasized), over a wash filling the strips the
+    // band keeps past 0/100 for end-point dot clearance. The wash is what marks 0 and 100 — drawing them as
+    // lines instead leaves each one stranded inside the margin, a hair from the band edge and, in Lanes, from
+    // the lane separator. One band in Overlay; in Lanes each row gets its own band so every lane reads
+    // against its own 0/50/100.
+    const ImU32 outOfRangeCol = ofs::theme::GetColorU32(AppCol_ScriptLineOutOfRange);
     auto drawGrid = [&](const ImVec2 &gp, const ImVec2 &gs) {
+        drawList->AddRectFilled(gp, {gp.x + gs.x, posToScreenY(100, gp, gs)}, outOfRangeCol);
+        drawList->AddRectFilled({gp.x, posToScreenY(0, gp, gs)}, gp + gs, outOfRangeCol);
         for (int i = 0; i < 9; i++) {
             float y = posToScreenY((i + 1) * 10, gp, gs);
             ImU32 gridCol =

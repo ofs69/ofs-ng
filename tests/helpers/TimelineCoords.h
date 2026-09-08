@@ -12,7 +12,7 @@
 //
 // Mirrors ScriptTimeline.cpp's timeToScreenX / posToScreenY exactly:
 //   x = line.x + ((time - offsetTime) / visibleTime) * line.width
-//   y = line.y + margin + (1 - pos/100) * (line.height - 2*margin)   (margin = 8)
+//   y = line.y + margin + (1 - pos/100) * (line.height - 2*margin)   (margin = scriptLineVMargin)
 //
 // The script-line interaction surface is the "##timeline" InvisibleButton in Overlay layout; in Lanes
 // layout it is split into one "##lane_<role>" button per axis, so there is no "##timeline" — query L0's
@@ -30,7 +30,7 @@ inline ImVec2 timelinePixel(ImGuiTestContext *ctx, double time, int pos) {
     const double visibleTime = tv.visibleTime > 0.0 ? tv.visibleTime : 10.0;
     const double offsetTime = tv.offsetTime;
 
-    constexpr float margin = ofs::ui::kScriptLineVMargin;
+    const float margin = ofs::ui::scriptLineVMargin(r.GetHeight());
     const float x = r.Min.x + static_cast<float>((time - offsetTime) / visibleTime) * r.GetWidth();
     const float y = r.Min.y + margin + (1.0f - static_cast<float>(pos) / 100.0f) * (r.GetHeight() - 2.0f * margin);
     return ImVec2(x, y);
