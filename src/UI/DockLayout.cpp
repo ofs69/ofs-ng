@@ -33,8 +33,14 @@ float layoutUiScale() {
     return dpi * fontFactor;
 }
 
-// Discards any existing arrangement and builds the hardcoded default split layout.
-void buildDefault(ImGuiID dockspaceId, ImGuiViewport *viewport) {
+// Discards any existing arrangement and builds the hardcoded default split layout. Declines (returns
+// false, arrangement untouched) while the main viewport has no area: the ImGui SDL3 backend reports a
+// 0x0 DisplaySize for as long as the window is minimized, every split below is a fraction of that
+// size, and DockBuilderSetNodeSize asserts outright on a zero one. Callers retry on a later frame.
+bool buildDefault(ImGuiID dockspaceId, ImGuiViewport *viewport) {
+    if (viewport->Size.x <= 0.f || viewport->Size.y <= 0.f)
+        return false;
+
     ImGui::DockBuilderRemoveNode(dockspaceId);
     ImGui::DockBuilderAddNode(dockspaceId, ImGuiDockNodeFlags_DockSpace);
     ImGui::DockBuilderSetNodeSize(dockspaceId, viewport->Size);
@@ -80,6 +86,7 @@ void buildDefault(ImGuiID dockspaceId, ImGuiViewport *viewport) {
     ImGui::DockBuilderDockWindow("Tool Options###tool_options", dockIdToolOptions);
     ImGui::DockBuilderDockWindow("Simulator###Simulator", dockIdSimulator);
     ImGui::DockBuilderFinish(dockspaceId);
+    return true;
 }
 
 // Per-node chrome hidden while locked: the whole tab/title bar (NoTabBar), the top-left
@@ -109,8 +116,11 @@ void beginDockspace(bool locked) {
     ImGuiID dockspaceId = ImGui::GetID("MyDockSpace");
     ImGuiViewport *viewport = ImGui::GetMainViewport();
 
-    if (ImGui::DockBuilderGetNode(dockspaceId) == nullptr)
-        buildDefault(dockspaceId, viewport);
+    // DockSpaceOverViewport creates the node on its own, so a declined first-run build must skip the
+    // dockspace as well: leaving it to run would make the node exist from then on and the default
+    // arrangement would never be built. Nothing is visible while minimized anyway.
+    if (ImGui::DockBuilderGetNode(dockspaceId) == nullptr && !buildDefault(dockspaceId, viewport))
+        return;
 
     // Enforce the locked chrome on every node before DockSpace() folds LocalFlags into MergedFlags.
     applyLockToAllNodes(locked);
@@ -146,8 +156,8 @@ void beginDockspace(bool locked) {
         g.NavWindow->Flags |= ImGuiWindowFlags_NoNavInputs;
 }
 
-void applyDefaultLayout() {
-    buildDefault(ImGui::GetID("MyDockSpace"), ImGui::GetMainViewport());
+bool applyDefaultLayout() {
+    return buildDefault(ImGui::GetID("MyDockSpace"), ImGui::GetMainViewport());
 }
 
 void applyLayoutIni(const std::string &ini, float scaleFactor) {

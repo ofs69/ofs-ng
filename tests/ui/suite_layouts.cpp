@@ -399,4 +399,36 @@ void RegisterLayoutTests(ImGuiTestEngine *e) {
         ofs::ui::applyDefaultLayout();
         ctx->Yield(3);
     };
+
+    // A minimized window makes the ImGui SDL3 backend report a 0x0 DisplaySize, so any frame can see an
+    // empty main viewport. The Default arrangement is derived from that size (and DockBuilderSetNodeSize
+    // asserts outright on a zero one), so the rebuild must decline and leave the live arrangement
+    // untouched, letting the caller retry once the window is restored.
+    IM_REGISTER_TEST(e, "layouts", "empty_viewport_defers_default_rebuild")->TestFunc = [](ImGuiTestContext *ctx) {
+        loadFixture(ctx);
+        selectDefaultLayout(ctx);
+
+        // Co-locate two windows the Default arrangement keeps apart, so a rebuild is observable.
+        revealTabBar(ctx, "Video Controls###video_controls");
+        ctx->DockInto("Video Controls###video_controls", "Statistics###statistics");
+        ctx->Yield(3);
+        IM_CHECK(coLocated(ctx, "Video Controls###video_controls", "Statistics###statistics"));
+
+        // Stand in for the minimized window. The backend rewrites the viewport at the next NewFrame, so
+        // the size is restored before yielding — only the rebuild call itself sees the empty viewport.
+        ImGuiViewport *viewport = ImGui::GetMainViewport();
+        const ImVec2 realSize = viewport->Size;
+        viewport->Size = ImVec2(0.0f, 0.0f);
+        const bool appliedWhileEmpty = ofs::ui::applyDefaultLayout();
+        viewport->Size = realSize;
+
+        IM_CHECK(!appliedWhileEmpty);
+        ctx->Yield(3);
+        IM_CHECK(coLocated(ctx, "Video Controls###video_controls", "Statistics###statistics"));
+
+        // The deferred rebuild lands on the first frame with a real viewport.
+        IM_CHECK(ofs::ui::applyDefaultLayout());
+        ctx->Yield(3);
+        IM_CHECK(!coLocated(ctx, "Video Controls###video_controls", "Statistics###statistics"));
+    };
 }

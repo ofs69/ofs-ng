@@ -13,7 +13,10 @@ void beginDockspace(bool locked);
 
 // Rebuild the hardcoded default arrangement immediately, discarding the current one. Call between
 // frames (e.g. at the top of onUpdate, before windows are submitted) to factory-reset the layout.
-void applyDefaultLayout();
+// Returns false with the arrangement untouched while the main viewport has no area — the ImGui SDL3
+// backend reports a 0x0 DisplaySize for as long as the window is minimized, and the default splits are
+// fractions of that size. The caller must then keep the request pending and retry on a later frame.
+bool applyDefaultLayout();
 
 // Load a saved layout's ImGui ini, then DPI-correct it. The ini stores absolute node pixel sizes
 // captured at some content scale; `scaleFactor` is current/savedScale. With factor 1 (or non-positive,

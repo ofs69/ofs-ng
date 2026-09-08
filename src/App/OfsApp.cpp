@@ -547,8 +547,10 @@ void OfsApp::onUpdate(float dt) {
     // Apply a pending docking-layout change now — after NewFrame but before windows are submitted
     // in onImGuiRender(), so it doesn't fight the DockSpaceOverViewport already submitted this frame.
     if (pendingDefaultReset_) {
-        ofs::ui::applyDefaultLayout();
-        pendingDefaultReset_ = false;
+        // Stays pending while the window is minimized (no viewport to build against, see DockLayout);
+        // the rebuild then lands on the first restored frame, at the size the user will actually see.
+        if (ofs::ui::applyDefaultLayout())
+            pendingDefaultReset_ = false;
     } else if (pendingLayoutApply_) {
         ofs::ui::applyLayoutIni(pendingLayoutIni_, layoutScaleFactor(pendingLayoutSavedScale_));
         pendingLayoutApply_ = false;
