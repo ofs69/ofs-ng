@@ -94,7 +94,9 @@ struct ProjectState {
     // Action total (across all axes) captured when this session began — the baseline for the Info tab's
     // "this session" net-edits delta. Transient: recomputed on every open, never serialized.
     int sessionBaselineActions = 0;
-    std::optional<ExportConfig> lastExport; // last funscript export; drives dialog-less Quick Export
+    // Last funscript export; drives dialog-less Quick Export. Not serialized with the project — it is
+    // restored from AppSettings::lastExports on load, so an export never marks the project dirty.
+    std::optional<ExportConfig> lastExport;
     // Per-project offset into the auto-naming/coloring sequences (region mnemonics, chapter hues), so
     // two projects don't both open on "Bold Arc"/the same first color. Randomized for a fresh project
     // in ProjectManager::clearProject, persisted so a reopened project reproduces its names/colors.

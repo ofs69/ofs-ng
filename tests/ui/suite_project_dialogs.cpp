@@ -416,8 +416,10 @@ void RegisterProjectDialogsTests(ImGuiTestEngine *e) {
 
         // The write now runs on a worker, so file existence alone is mid-write (the handle may still be
         // open). Wait for lastExport, recorded after the worker resumes — by then the file is closed.
-        // basic.ofp carries no export config, so lastExport is nullopt until this export records it.
+        // Clear it first: it is restored from AppSettings on load, so an earlier run's config would
+        // otherwise satisfy the wait before this export has written anything.
         auto &proj = *getTestState().project;
+        proj.state.lastExport.reset();
         eq.push(ExportFunscriptRequestEvent{.axes = {StandardAxis::L0}, .format = 0}); // no targetPath => picker
         IM_CHECK(yieldUntil(ctx, [&] { return proj.state.lastExport.has_value(); }));
         IM_CHECK(std::filesystem::exists(dir) && !std::filesystem::is_empty(dir));
@@ -442,8 +444,10 @@ void RegisterProjectDialogsTests(ImGuiTestEngine *e) {
         auto dlg = installDialog(ofs::util::toUtf8(out));
 
         // Wait for lastExport (recorded after the worker resumes), not bare file existence — the worker
-        // may still hold the handle mid-write. basic.ofp carries no export config, so it starts nullopt.
+        // may still hold the handle mid-write. Cleared first so a config restored from AppSettings
+        // can't satisfy the wait before this export runs.
         auto &proj = *getTestState().project;
+        proj.state.lastExport.reset();
         eq.push(ExportFunscriptRequestEvent{.axes = {StandardAxis::L0, StandardAxis::R0}, .format = 1});
         IM_CHECK(yieldUntil(ctx, [&] { return proj.state.lastExport.has_value(); }));
         IM_CHECK(std::filesystem::exists(out));

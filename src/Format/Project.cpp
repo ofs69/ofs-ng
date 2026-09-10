@@ -401,23 +401,6 @@ void from_json(const nlohmann::json &j, SerializedAxis &a) {
     a.actions = (it != j.end() && it->is_binary()) ? actionsFromBlob(it->get_binary()) : VectorSet<ScriptAxisAction>{};
 }
 
-void to_json(nlohmann::json &j, const ExportConfig &c) {
-    std::vector<std::string> axisTags;
-    axisTags.reserve(c.axes.size());
-    for (const auto role : c.axes)
-        axisTags.emplace_back(standardAxisTag(role));
-    j = {{"format", c.format}, {"axes", axisTags}, {"outputPath", c.outputPath}};
-}
-
-void from_json(const nlohmann::json &j, ExportConfig &c) {
-    c.format = j.value("format", 0);
-    c.outputPath = j.value("outputPath", "");
-    c.axes.clear();
-    for (const auto &tag : j.value("axes", std::vector<std::string>{}))
-        if (auto role = standardAxisFromTag(tag))
-            c.axes.push_back(*role);
-}
-
 void to_json(nlohmann::json &j, const Project &p) {
     j = nlohmann::json::object({{"ofsProjectVersion", kProjectFileVersion},
                                 {"mediaPath", p.mediaPath},
@@ -446,8 +429,6 @@ void to_json(nlohmann::json &j, const Project &p) {
                                 {"activeSelectionMode", p.activeSelectionMode},
                                 {"showAudioWaveform", p.showAudioWaveform},
                                 {"timelineLayout", p.timelineLayout}});
-    if (p.lastExport)
-        j["lastExport"] = *p.lastExport;
     // Only persist plugin data when something is stored, so an untouched project doesn't carry a "{}".
     if (p.pluginData.is_object() && !p.pluginData.empty())
         j["pluginData"] = p.pluginData;
@@ -482,6 +463,9 @@ void from_json(const nlohmann::json &j, Project &p) {
     p.showAudioWaveform = j.value("showAudioWaveform", false);
     // COMPAT(2026-06-30): timeline layout absent in pre-lanes projects; default Overlay (the prior look).
     p.timelineLayout = j.value("timelineLayout", TimelineLayout::Overlay);
+    // COMPAT(2026-09-10): the Quick Export config used to live in the .ofp, which made an export mark
+    // the project dirty. It is app-side state now (AppSettings::lastExports); ProjectManager migrates
+    // what it reads here on the next load. Removable once no pre-date project files are in circulation.
     if (j.contains("lastExport"))
         p.lastExport = j["lastExport"].get<ExportConfig>();
     // Absent or a non-object (corrupt) → empty object, never null.

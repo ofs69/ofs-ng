@@ -165,12 +165,6 @@ Project fullyPopulated() {
     p.activeSelectionMode = "ofs.core.peaks";      // a non-default (plugin) id to prove it round-trips
     p.timelineLayout = ofs::TimelineLayout::Lanes; // non-default layout round-trips
 
-    ofs::ExportConfig ec;
-    ec.format = 2;
-    ec.axes = {StandardAxis::L0, StandardAxis::R0};
-    ec.outputPath = "C:/out/clip.funscript";
-    p.lastExport = ec;
-
     // Per-plugin project data: two plugins' namespaced key→value stores, each a nested JSON value.
     p.pluginData = {{"Ofs.Core", {{"settings", {{"Mode", 1}, {"FixedTop", 90}}}}},
                     {"Other", {{"count", 3}, {"flag", true}}}};
@@ -211,9 +205,6 @@ TEST_CASE("Project save/load round-trips every serialized field") {
     REQUIRE(loaded->bookmarkChapters.chapters.size() == 1);
     REQUIRE(loaded->bookmarkChapters.chapters[0].sceneView.has_value());
     CHECK(loaded->bookmarkChapters.chapters[0].sceneView->inverted);
-    REQUIRE(loaded->lastExport.has_value());
-    CHECK(loaded->lastExport->format == 2);
-    CHECK(loaded->lastExport->axes == std::vector<StandardAxis>{StandardAxis::L0, StandardAxis::R0});
     CHECK(loaded->pluginData["Ofs.Core"]["settings"]["FixedTop"] == 90);
     CHECK(loaded->pluginData["Other"]["flag"] == true);
     CHECK(loaded->activeNavigator == "ofs.core.next-action");
@@ -226,6 +217,35 @@ TEST_CASE("Project save/load round-trips every serialized field") {
     CHECK(loaded->editSessionCount == 7);
 
     std::filesystem::remove(path);
+}
+
+// COMPAT(2026-09-10): the Quick Export config used to be written into the .ofp. Projects saved by
+// those builds are still out there, so the read must keep working — ProjectManager migrates what it
+// finds into AppSettings. Nothing writes the key any more, so a re-save drops it.
+TEST_CASE("Project::load still reads a pre-move lastExport, and a save no longer writes one") {
+    const auto path = tempPath("ofs_test_project_legacy_export.ofp");
+    writeCbor(path, nlohmann::json{{"ofsProjectVersion", ofs::kProjectFileVersion},
+                                   {"lastExport",
+                                    {{"format", 2},
+                                     {"axes", std::vector<std::string>{"L0", "R0"}},
+                                     {"outputPath", "C:/out/clip.funscript"}}}});
+
+    auto loaded = Project::load(path);
+    REQUIRE(loaded.has_value());
+    REQUIRE(loaded->lastExport.has_value());
+    CHECK(loaded->lastExport->format == 2);
+    CHECK(loaded->lastExport->axes == std::vector<StandardAxis>{StandardAxis::L0, StandardAxis::R0});
+    CHECK(loaded->lastExport->outputPath == "C:/out/clip.funscript");
+
+    // Round-tripping the very same document through a save drops the field: it is app-side state now.
+    const auto resaved = tempPath("ofs_test_project_legacy_export_resaved.ofp");
+    REQUIRE(loaded->save(resaved));
+    auto reloaded = Project::load(resaved);
+    REQUIRE(reloaded.has_value());
+    CHECK_FALSE(reloaded->lastExport.has_value());
+
+    std::filesystem::remove(path);
+    std::filesystem::remove(resaved);
 }
 
 TEST_CASE("Project::load fills defaults for a sparse document") {

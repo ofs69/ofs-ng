@@ -163,3 +163,76 @@ TEST_CASE("AppSettings::load swallows a malformed settings file and returns defa
 
     std::filesystem::remove(settingsPath);
 }
+
+// The Quick Export config lives here rather than in the .ofp so an export never marks the project
+// dirty. That makes AppSettings responsible for the bookkeeping the .ofp used to give for free: one
+// entry per project, most-recently-exported first, and a bound so the file can't grow forever.
+TEST_CASE("AppSettings::rememberExport keys one config per project, most recent first") {
+    AppSettings s;
+    s.rememberExport("a.ofp", ofs::ExportConfig{.format = 0, .axes = {}, .outputPath = "out/a"});
+    s.rememberExport("b.ofp", ofs::ExportConfig{.format = 1, .axes = {}, .outputPath = "out/b"});
+
+    REQUIRE(s.lastExports.size() == 2);
+    CHECK(s.lastExports.front().projectPath == "b.ofp"); // newest first
+
+    REQUIRE(s.findExport("a.ofp") != nullptr);
+    CHECK(s.findExport("a.ofp")->outputPath == "out/a");
+    CHECK(s.findExport("never-exported.ofp") == nullptr);
+
+    // Re-exporting a project replaces its entry rather than appending a second one, and promotes it.
+    s.rememberExport("a.ofp", ofs::ExportConfig{.format = 2, .axes = {}, .outputPath = "out/a2"});
+    REQUIRE(s.lastExports.size() == 2);
+    CHECK(s.lastExports.front().projectPath == "a.ofp");
+    REQUIRE(s.findExport("a.ofp") != nullptr);
+    CHECK(s.findExport("a.ofp")->format == 2);
+    CHECK(s.findExport("a.ofp")->outputPath == "out/a2");
+}
+
+TEST_CASE("AppSettings::rememberExport ignores an untitled project and caps the list") {
+    AppSettings s;
+    // An unsaved project has no path to key on; its config lives only in the session.
+    s.rememberExport("", ofs::ExportConfig{});
+    CHECK(s.lastExports.empty());
+    CHECK(s.findExport("") == nullptr);
+
+    for (size_t i = 0; i < ofs::kMaxExportMemories + 5; ++i)
+        s.rememberExport(std::to_string(i) + ".ofp", ofs::ExportConfig{});
+
+    CHECK(s.lastExports.size() == ofs::kMaxExportMemories);
+    // The five least recently exported projects were evicted, the newest is kept.
+    CHECK(s.findExport("0.ofp") == nullptr);
+    CHECK(s.findExport(std::to_string(ofs::kMaxExportMemories + 4) + ".ofp") != nullptr);
+}
+
+TEST_CASE("AppSettings round-trips remembered exports through JSON") {
+    AppSettings in;
+    in.rememberExport("C:/proj/clip.ofp", ofs::ExportConfig{.format = 2,
+                                                            .axes = {ofs::StandardAxis::L0, ofs::StandardAxis::R0},
+                                                            .outputPath = "C:/out/clip.funscript"});
+
+    nlohmann::json j;
+    to_json(j, in);
+    AppSettings out;
+    from_json(j, out);
+
+    const ofs::ExportConfig *cfg = out.findExport("C:/proj/clip.ofp");
+    REQUIRE(cfg != nullptr);
+    CHECK(cfg->format == 2);
+    // Axes persist as TCode tags, so the enum's numeric order is not part of the on-disk contract.
+    CHECK(cfg->axes == std::vector<ofs::StandardAxis>{ofs::StandardAxis::L0, ofs::StandardAxis::R0});
+    CHECK(cfg->outputPath == "C:/out/clip.funscript");
+}
+
+TEST_CASE("AppSettings trims an over-long remembered-export list on read") {
+    nlohmann::json entries = nlohmann::json::array();
+    for (size_t i = 0; i < ofs::kMaxExportMemories + 10; ++i)
+        entries.push_back({{"projectPath", std::to_string(i) + ".ofp"}, {"config", ofs::ExportConfig{}}});
+
+    nlohmann::json j;
+    to_json(j, AppSettings{});
+    j["lastExports"] = entries;
+
+    AppSettings out;
+    from_json(j, out);
+    CHECK(out.lastExports.size() == ofs::kMaxExportMemories);
+}

@@ -140,6 +140,7 @@ set(OFS_OBJ_BASE_SRC
         ${CMAKE_SOURCE_DIR}/src/Core/ScriptProject.cpp
         ${CMAKE_SOURCE_DIR}/src/Core/StandardAxis.cpp
         ${CMAKE_SOURCE_DIR}/src/Core/FunscriptMetadata.cpp
+        ${CMAKE_SOURCE_DIR}/src/Core/ExportConfig.cpp
         ${CMAKE_SOURCE_DIR}/src/Services/JobSystem.cpp
         ${CMAKE_SOURCE_DIR}/src/Services/ProcessingSystem.cpp
         ${CMAKE_SOURCE_DIR}/src/Services/ScriptHeader.cpp

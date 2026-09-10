@@ -133,6 +133,32 @@ void from_json(const nlohmann::json &j, MetadataPreset &p) {
     p.metadata = j.value("metadata", FunscriptMetadata{});
 }
 
+void to_json(nlohmann::json &j, const ProjectExportMemory &m) {
+    j = {{"projectPath", m.projectPath}, {"config", m.config}};
+}
+
+void from_json(const nlohmann::json &j, ProjectExportMemory &m) {
+    m.projectPath = j.value("projectPath", "");
+    m.config = j.value("config", ExportConfig{});
+}
+
+void AppSettings::rememberExport(std::string projectPath, ExportConfig config) {
+    if (projectPath.empty())
+        return;
+    std::erase_if(lastExports, [&](const ProjectExportMemory &m) { return m.projectPath == projectPath; });
+    lastExports.insert(lastExports.begin(),
+                       ProjectExportMemory{.projectPath = std::move(projectPath), .config = std::move(config)});
+    if (lastExports.size() > kMaxExportMemories)
+        lastExports.resize(kMaxExportMemories);
+}
+
+const ExportConfig *AppSettings::findExport(const std::string &projectPath) const {
+    if (projectPath.empty())
+        return nullptr;
+    const auto it = std::ranges::find(lastExports, projectPath, &ProjectExportMemory::projectPath);
+    return it == lastExports.end() ? nullptr : &it->config;
+}
+
 void to_json(nlohmann::json &j, const AppSettings &s) {
     j = nlohmann::json::object({{"version", kAppSettingsVersion},
                                 {"lastProjectPaths", s.lastProjectPaths},
@@ -165,7 +191,8 @@ void to_json(nlohmann::json &j, const AppSettings &s) {
                                 {"openProjectConfigOnOpen", s.openProjectConfigOnOpen},
                                 {"webSocketServerEnabled", s.webSocketServerEnabled},
                                 {"webSocketPort", s.webSocketPort},
-                                {"windowGeometry", s.windowGeometry}});
+                                {"windowGeometry", s.windowGeometry},
+                                {"lastExports", s.lastExports}});
 }
 
 void from_json(const nlohmann::json &j, AppSettings &s) {
@@ -202,5 +229,10 @@ void from_json(const nlohmann::json &j, AppSettings &s) {
     s.webSocketServerEnabled = j.value("webSocketServerEnabled", false);
     s.webSocketPort = std::clamp(j.value("webSocketPort", 8080), 1, 65535);
     s.windowGeometry = j.value("windowGeometry", WindowGeometry{});
+    s.lastExports = j.value("lastExports", std::vector<ProjectExportMemory>{});
+    // A hand-edited or truncated file could carry more than the cap; trim on read so the bound holds
+    // regardless of how the entries got there.
+    if (s.lastExports.size() > kMaxExportMemories)
+        s.lastExports.resize(kMaxExportMemories);
 }
 } // namespace ofs

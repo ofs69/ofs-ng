@@ -1038,7 +1038,10 @@ co::Fire ProjectManager::exportMultipleFunscript10(std::vector<StandardAxis> axe
                             .message = Str::PmExportPartial.fmt(counts.written, counts.failed)});
     else
         eq.push(NotifyEvent{.level = NotifyLevel::Success, .message = Str::PmExportDone.fmt(counts.written)});
-    recordLastExport(0, std::move(axes), dir);
+    // Remember a target that actually received files; replaying a run that wrote nothing would only
+    // reproduce the failure without the dialog that lets the user pick somewhere else.
+    if (counts.written > 0)
+        recordLastExport(0, std::move(axes), dir);
 }
 
 co::Fire ProjectManager::exportMultiAxisFunscript(std::vector<StandardAxis> axes, bool useChannels,
@@ -1110,7 +1113,8 @@ co::Fire ProjectManager::exportMultiAxisFunscript(std::vector<StandardAxis> axes
         eq.push(NotifyEvent{.level = NotifyLevel::Success, .message = Str::PmExportedOne.fmt(name)});
     else
         eq.push(NotifyEvent{.level = NotifyLevel::Error, .message = Str::PmExportFailedOne.fmt(name)});
-    recordLastExport(useChannels ? 2 : 1, std::move(axes), file);
+    if (ok)
+        recordLastExport(useChannels ? 2 : 1, std::move(axes), file);
 }
 
 bool ProjectManager::isDirty() const {
@@ -1178,6 +1182,17 @@ void ProjectManager::applyLoadedProject(const Project &loaded, const std::filesy
     project.state.sessionBaselineActions = baseline;
     if (!project.state.filePath.empty())
         eq.push(RememberRecentProjectEvent{project.state.filePath});
+
+    // Quick Export's remembered config is app-side (see recordLastExport), so it is restored from
+    // settings rather than from the project file.
+    // COMPAT(2026-09-10): the else-branch migrates a config still carried by a pre-move .ofp into
+    // settings once, so the memory survives the re-save that drops the field. Removable with
+    // Project::lastExport.
+    if (const ExportConfig *remembered = appSettings.findExport(project.state.filePath))
+        project.state.lastExport = *remembered;
+    else if (project.state.lastExport)
+        eq.push(ModifyEvent<AppSettings>{[path = project.state.filePath, cfg = *project.state.lastExport](
+                                             AppSettings &s) { s.rememberExport(path, cfg); }});
 
     // Select the saved active axis, or fall back to L0 if it's out of range.
     StandardAxis toSelect = loaded.activeAxisRole;
@@ -1523,6 +1538,8 @@ void ProjectManager::loadFromProject(const Project &proj) {
     project.state.modifiedAtUnix = proj.modifiedAtUnix;
     project.state.editSessionCount = proj.editSessionCount;
     project.state.autoNameSeed = proj.autoNameSeed;
+    // COMPAT(2026-09-10): only a pre-move .ofp carries this; applyLoadedProject prefers the
+    // app-side config and migrates whatever lands here.
     project.state.lastExport = proj.lastExport;
     // The authored ids are applied verbatim to the stored fields; the effective fields start equal and
     // the routers validate them against their registries on the LoadProjectEvent, falling the *effective*
@@ -1617,7 +1634,6 @@ void ProjectManager::saveToProject(Project &proj) const {
     proj.editSessionCount = project.state.editSessionCount;
     proj.playbackPosition = project.playback.cursorPos;
     proj.autoNameSeed = project.state.autoNameSeed;
-    proj.lastExport = project.state.lastExport;
     // Persist the *stored* (authored) ids, never the effective ones — so a project saved while fallen
     // back to native/follow-overlay (its plugin absent) keeps the original selection on disk.
     proj.activeNavigator = project.storedNavigator;
@@ -2925,9 +2941,13 @@ void ProjectManager::onExportFunscriptRequest(const ExportFunscriptRequestEvent 
 void ProjectManager::recordLastExport(int format, std::vector<StandardAxis> axes, std::string outputPath) {
     project.state.lastExport =
         ExportConfig{.format = format, .axes = std::move(axes), .outputPath = std::move(outputPath)};
-    // Mark dirty so the remembered config is captured on the next save — that is what lets Quick
-    // Export survive a reopen of the project.
-    setDirty(true);
+    // Deliberately no setDirty(): an export writes no document state, so it must neither raise the
+    // unsaved-changes prompt nor advance editRevision (which would arm an auto-backup whose only delta
+    // is this config, evicting a genuinely distinct snapshot). The config is app-side instead, keyed by
+    // the project path — an untitled project has no key yet and keeps it for the session only.
+    eq.push(ModifyEvent<AppSettings>{[path = project.state.filePath, cfg = *project.state.lastExport](AppSettings &s) {
+        s.rememberExport(path, cfg);
+    }});
 }
 
 } // namespace ofs

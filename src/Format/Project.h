@@ -71,6 +71,8 @@ struct Project {
     // Active selection mode id (what a selection gesture selects). Round-trips with the project; mirrors
     // ScriptProject::activeSelectionMode. Default matches the native selection mode.
     std::string activeSelectionMode = "native";
+    // COMPAT(2026-09-10): read-only. Projects written before the Quick Export config moved to
+    // AppSettings carry it here; nothing writes this field back, so a re-save drops it.
     std::optional<ExportConfig> lastExport;
     // Whether the timeline audio waveform is enabled for this project. Opt-in and persisted; mirrors
     // ScriptProject::timelineView.showAudioWaveform. Default off.

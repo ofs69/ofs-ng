@@ -466,7 +466,7 @@ TEST_CASE("ProjectManager: export with a target path writes files and records th
     REQUIRE(tp.project.state.lastExport->axes.size() == 1);
     CHECK(tp.project.state.lastExport->axes[0] == StandardAxis::L0);
     CHECK(tp.project.state.lastExport->outputPath == outDir.string());
-    CHECK(pm.isDirty()); // recording the config marks dirty so the next save captures it
+    CHECK_FALSE(pm.isDirty()); // an export writes no document state, so it must not dirty the project
 
     std::filesystem::remove_all(outDir);
 }
@@ -502,7 +502,6 @@ TEST_CASE("ProjectManager: per-axis export names files by TCode track name") {
     CHECK(std::filesystem::exists(outDir / "script.vib.funscript"));   // V0
     CHECK(std::filesystem::exists(outDir / "script.A0.funscript"));    // no track name, keeps the tag
     CHECK_FALSE(std::filesystem::exists(outDir / "script.L0.funscript"));
-    CHECK(pm.isDirty());
 
     std::filesystem::remove_all(outDir);
 }
@@ -545,15 +544,18 @@ TEST_CASE("ProjectManager: export writes the project's bookmarks and chapters in
     std::filesystem::remove_all(outDir);
 }
 
-// The remembered export config is per-project state and must survive a .ofp save/reload, or Quick
-// Export would forget the target after the project is reopened.
-TEST_CASE("ProjectManager: Quick Export config round-trips through project save and reload") {
+// The remembered export config lives app-side, keyed by the project path, so Quick Export must still
+// find it after the project is closed and reopened — without the .ofp carrying it.
+TEST_CASE("ProjectManager: Quick Export config survives a reopen through AppSettings") {
     TestProject tp;
     ofs::AppSettings appSettings;
     appSettings.autoBackupEnabled = false;
     ofs::JobSystem jobSystem;
     ofs::EffectRegistryState effectReg;
     ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    // OfsApp owns AppSettings in the app; stand in for its single-write-path handler here.
+    tp.eq.on<ofs::ModifyEvent<ofs::AppSettings>>(
+        [&](const ofs::ModifyEvent<ofs::AppSettings> &e) { e.apply(appSettings); });
     tp.eq.freeze();
     jobSystem.start();
 
@@ -561,27 +563,108 @@ TEST_CASE("ProjectManager: Quick Export config round-trips through project save 
     tp.project.mutate(StandardAxis::L0, [](ofs::AxisState &a) { a.actions.insert({1.0, 50}); }, tp.eq);
     tp.eq.drain();
 
-    tp.project.state.lastExport = ofs::ExportConfig{
-        .format = 2, .axes = {StandardAxis::L0, StandardAxis::R0}, .outputPath = "D:/scripts/foo.funscript"};
-
     auto filePath = std::filesystem::temp_directory_path() / "ofs_test_export_config.ofp";
     tp.project.state.filePath = filePath.string();
-    tp.project.axes[0].dirty = true;
+    auto outDir = std::filesystem::temp_directory_path() / "ofs_test_export_config_out";
+    std::filesystem::remove_all(outDir);
+
+    tp.eq.push(
+        ofs::ExportFunscriptRequestEvent{.axes = {StandardAxis::L0}, .format = 0, .targetPath = outDir.string()});
+    REQUIRE(drainUntil(tp.eq, [&] { return appSettings.findExport(filePath.string()) != nullptr; }));
+
     tp.eq.push(ofs::SaveProjectEvent{false});
     tp.eq.drain();
     REQUIRE(waitForSave(pm));
 
+    // Wipe the live value so only a restore from settings can bring it back.
+    tp.project.state.lastExport.reset();
     tp.eq.push(ofs::OpenProjectRequestEvent{filePath.string()});
     REQUIRE(drainUntil(tp.eq, [&] { return tp.project.state.lastExport.has_value(); }));
 
     REQUIRE(tp.project.state.lastExport.has_value());
-    CHECK(tp.project.state.lastExport->format == 2);
-    REQUIRE(tp.project.state.lastExport->axes.size() == 2);
+    CHECK(tp.project.state.lastExport->format == 0);
+    REQUIRE(tp.project.state.lastExport->axes.size() == 1);
     CHECK(tp.project.state.lastExport->axes[0] == StandardAxis::L0);
-    CHECK(tp.project.state.lastExport->axes[1] == StandardAxis::R0);
-    CHECK(tp.project.state.lastExport->outputPath == "D:/scripts/foo.funscript");
+    CHECK(tp.project.state.lastExport->outputPath == outDir.string());
+
+    std::filesystem::remove_all(outDir);
+    std::filesystem::remove(filePath);
+}
+
+// COMPAT(2026-09-10): projects saved before the Quick Export config moved into AppSettings still carry
+// it in the .ofp. Opening one must both honour the config and migrate it app-side, so it is not lost
+// on the re-save that drops the field.
+TEST_CASE("ProjectManager: a pre-move project's export config is honoured and migrated to AppSettings") {
+    TestProject tp;
+    ofs::AppSettings appSettings;
+    appSettings.autoBackupEnabled = false;
+    ofs::JobSystem jobSystem;
+    ofs::EffectRegistryState effectReg;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    tp.eq.on<ofs::ModifyEvent<ofs::AppSettings>>(
+        [&](const ofs::ModifyEvent<ofs::AppSettings> &e) { e.apply(appSettings); });
+    tp.eq.freeze();
+    jobSystem.start();
+
+    // Write a project the way the old build did: the config inline in the .ofp, nothing in settings.
+    auto filePath = std::filesystem::temp_directory_path() / "ofs_test_legacy_export_config.ofp";
+    ofs::Project legacy;
+    nlohmann::json j = legacy;
+    j["lastExport"] = {{"format", 2}, {"axes", std::vector<std::string>{"L0"}}, {"outputPath", "D:/old.funscript"}};
+    const auto cbor = nlohmann::json::to_cbor(j);
+    REQUIRE(ofs::util::writeFile(filePath, cbor.data(), cbor.size()));
+
+    tp.eq.push(ofs::OpenProjectRequestEvent{filePath.string()});
+    REQUIRE(drainUntil(tp.eq, [&] { return appSettings.findExport(filePath.string()) != nullptr; }));
+
+    // Honoured: Quick Export replays the old target straight away.
+    REQUIRE(tp.project.state.lastExport.has_value());
+    CHECK(tp.project.state.lastExport->outputPath == "D:/old.funscript");
+    // Migrated: it now lives app-side, so the field the re-save drops is no longer the only copy.
+    const ofs::ExportConfig *migrated = appSettings.findExport(filePath.string());
+    REQUIRE(migrated != nullptr);
+    CHECK(migrated->format == 2);
+    CHECK(migrated->outputPath == "D:/old.funscript");
 
     std::filesystem::remove(filePath);
+}
+
+// Quick Export replays the recorded target without a dialog, so recording one that received no files
+// would silently re-run a failure. A run that wrote nothing must leave the previous memory alone.
+TEST_CASE("ProjectManager: a failed export records nothing") {
+    TestProject tp;
+    ofs::AppSettings appSettings;
+    appSettings.autoBackupEnabled = false;
+    ofs::JobSystem jobSystem;
+    ofs::EffectRegistryState effectReg;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    tp.eq.on<ofs::ModifyEvent<ofs::AppSettings>>(
+        [&](const ofs::ModifyEvent<ofs::AppSettings> &e) { e.apply(appSettings); });
+    ofs::test::EventCapture<ofs::NotifyEvent> notes;
+    notes.attach(tp.eq);
+    tp.eq.freeze();
+    jobSystem.start();
+
+    tp.project.axes[0].showInStrip = true;
+    tp.project.mutate(StandardAxis::L0, [](ofs::AxisState &a) { a.actions.insert({1.0, 50}); }, tp.eq);
+    tp.eq.drain();
+    tp.project.state.filePath = (std::filesystem::temp_directory_path() / "ofs_test_failed_export.ofp").string();
+    tp.project.clearDirtyFlags();
+
+    // A single-file export (format 1) whose destination is an existing *directory*: the write can't
+    // succeed, so nothing lands and nothing is remembered.
+    auto blocked = std::filesystem::temp_directory_path() / "ofs_test_failed_export_dir";
+    std::filesystem::create_directories(blocked);
+    tp.eq.push(
+        ofs::ExportFunscriptRequestEvent{.axes = {StandardAxis::L0}, .format = 1, .targetPath = blocked.string()});
+    REQUIRE(drainUntil(tp.eq, [&] { return !notes.received.empty(); }));
+
+    CHECK(notes.received.front().level == ofs::NotifyLevel::Error);
+    CHECK_FALSE(tp.project.state.lastExport.has_value());
+    CHECK(appSettings.findExport(tp.project.state.filePath) == nullptr);
+    CHECK_FALSE(pm.isDirty());
+
+    std::filesystem::remove_all(blocked);
 }
 
 TEST_CASE("Project::load returns nullopt for a missing file") {
