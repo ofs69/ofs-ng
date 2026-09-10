@@ -1161,6 +1161,8 @@ void OfsApp::renderMainMenuBar() {
         if (ImGui::BeginMenu(Str::AppMenuEdit.id("menu_edit"))) {
             if (ImGui::MenuItem(Str::AppMenuPreferences.iconId(ICON_SETTINGS, "menu_preferences")))
                 appState.showConfigWindow = true;
+            if (ImGui::MenuItem(Str::AppMenuShortcuts.iconId(ICON_KEYBOARD, "menu_shortcuts")))
+                appState.showShortcutWindow = true;
             // Gate on hasProject, not filePath: a fresh untitled project (no file yet) still needs
             // Project Configuration to load its video — the New Project dialog points users here.
             ImGui::BeginDisabled(!hasProject);
@@ -1173,8 +1175,6 @@ void OfsApp::renderMainMenuBar() {
         }
 
         if (ImGui::BeginMenu(Str::AppMenuView.id("menu_view"))) {
-            ImGui::MenuItem(Str::AppMenuShortcuts.iconId(ICON_KEYBOARD, "menu_shortcuts"), nullptr,
-                            &appState.showShortcutWindow);
             if (ImGui::BeginMenu(Str::AppMenuSimulator.iconId(ICON_AXIS_3D, "menu_view_simulator"))) {
                 if (ImGui::MenuItem(Str::AppMenuSimulatorShow.id("menu_view_simulator_show"), nullptr,
                                     &appSettings.showSimulator))

@@ -55,10 +55,10 @@ void RegisterWindowTests(ImGuiTestEngine *e) {
 
     IM_REGISTER_TEST(e, "windows", "shortcut_window_renders_bindings")->TestFunc = [](ImGuiTestContext *ctx) {
         loadFixture(ctx);
-        ctx->MenuClick("//##MainMenuBar/###menu_view/###menu_shortcuts"); // toggles appState.showShortcutWindow
+        ctx->MenuClick("//##MainMenuBar/###menu_edit/###menu_shortcuts"); // sets appState.showShortcutWindow = true
         expectWindow(ctx, "Shortcut Bindings###shortcut_bindings");
-        ctx->MenuClick("//##MainMenuBar/###menu_view/###menu_shortcuts"); // close again — don't leak the open
-                                                                          // (NoDocking) window into later suites
+        // close again — don't leak the open (NoDocking) window into later suites
+        ctx->WindowClose("Shortcut Bindings###shortcut_bindings");
     };
 
     // ── Bookmark bar (drawn inside Video Controls) reflects an added bookmark ──

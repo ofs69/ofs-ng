@@ -380,7 +380,7 @@ void RegisterPluginUiTests(ImGuiTestEngine *e) {
         binding.saveBindings();
 
         // Open the Shortcut window and filter to just the plugin command so its row is the only one.
-        ctx->MenuClick("//##MainMenuBar/###menu_view/###menu_shortcuts");
+        ctx->MenuClick("//##MainMenuBar/###menu_edit/###menu_shortcuts");
         ctx->Yield(2);
         ctx->ItemClick("Shortcut Bindings###shortcut_bindings/###scfilter");
         ctx->KeyCharsReplace("Nudge");

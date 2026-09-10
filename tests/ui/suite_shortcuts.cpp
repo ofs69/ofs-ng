@@ -30,7 +30,7 @@ namespace {
 
 // The window's ### id, absolute so it ignores the current SetRef.
 constexpr const char *kWin = "//Shortcut Bindings###shortcut_bindings";
-constexpr const char *kMenu = "//##MainMenuBar/###menu_view/###menu_shortcuts";
+constexpr const char *kMenu = "//##MainMenuBar/###menu_edit/###menu_shortcuts";
 
 // BeginPopupModal pushes onto OpenPopupStack, so this reports whether any modal is up without touching
 // the current window — safe between frames (mirrors suite_modals / suite_command_palette).
@@ -97,9 +97,9 @@ bool presetListed(const std::string &slug) {
     return false;
 }
 
-// The View ▸ Keyboard Shortcuts menu item is a toggle, and a prior suite may leave it open/closed.
-// Guard with the NoError flag — without it a missing-window probe flags the context error state and
-// silently skips all later ctx ops (see reference_ui_test_engine_refs).
+// A prior suite may leave the window open or closed, so both helpers probe first. Guard the probe with
+// the NoError flag — without it a missing-window probe flags the context error state and silently skips
+// all later ctx ops (see reference_ui_test_engine_refs).
 void openWindow(ImGuiTestContext *ctx) {
     if (ctx->WindowInfo(kWin, ImGuiTestOpFlags_NoError).Window == nullptr) {
         ctx->MenuClick(kMenu);
@@ -110,7 +110,7 @@ void openWindow(ImGuiTestContext *ctx) {
 
 void closeWindow(ImGuiTestContext *ctx) {
     if (ctx->WindowInfo(kWin, ImGuiTestOpFlags_NoError).Window != nullptr) {
-        ctx->MenuClick(kMenu);
+        ctx->WindowClose(kWin);
         ctx->Yield(2);
     }
 }
