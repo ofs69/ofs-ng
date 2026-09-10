@@ -1,6 +1,5 @@
 #include "UI/ScriptStatistics.h"
 
-#include "Core/ScriptAxisAction.h"
 #include "Core/ScriptProject.h"
 #include "Localization/Translator.h"
 #include "UI/Icons.h"
@@ -35,16 +34,7 @@ void ScriptStatisticsWindow::render(const ScriptProject &project, bool &open) co
     }
 
     const double currentTime = project.playback.cursorPos;
-
-    // Find the actions immediately before and after the playhead.
-    // upperBound gives the first action strictly after currentTime.
-    auto it = actions.upperBound(ScriptAxisAction{currentTime, 0});
-    const ScriptAxisAction *front = (it != actions.end()) ? &*it : nullptr;
-    const ScriptAxisAction *behind = nullptr;
-    if (it != actions.begin()) {
-        --it;
-        behind = &*it;
-    }
+    const ui::PlayheadStroke stroke = ui::strokeAtPlayhead(actions, currentTime);
 
     // A 2-column table (icon+label | value) auto-fits the label column to the widest *translated*
     // label, replacing the old hand-padded spaces. The values are pre-formatted fixed-width (%6.2f →
@@ -59,17 +49,17 @@ void ScriptStatisticsWindow::render(const ScriptProject &project, bool &open) co
     };
 
     // All playhead rows render every frame regardless of where the cursor sits — a row whose value
-    // needs a neighbouring action that isn't there shows a dash, so the table keeps a constant height
-    // and the window doesn't jump as the playhead crosses actions. Interval needs only the previous
-    // action; Speed/Duration/Delta need both surrounding actions.
+    // needs an action that isn't there shows a dash, so the table keeps a constant height and the
+    // window doesn't jump as the playhead crosses actions. Interval needs only the previous action;
+    // Speed/Duration/Delta need the stroke.
     const char *kNoValue = "—";
-    const bool haveSpan = behind != nullptr && front != nullptr;
-    const double duration = haveSpan ? front->at - behind->at : 0.0;
-    const int delta = haveSpan ? front->pos - behind->pos : 0;
+    const bool haveSpan = stroke.to != nullptr;
+    const double duration = haveSpan ? stroke.to->at - stroke.from->at : 0.0;
+    const int delta = haveSpan ? stroke.to->pos - stroke.from->pos : 0;
 
     if (ImGui::BeginTable("##statplayhead", 2, ImGuiTableFlags_SizingFixedFit)) {
-        const char *intervalVal = (behind != nullptr)
-                                      ? Str::StatMs.fmt(fmtScratch("{:6.2f}", (currentTime - behind->at) * 1000.0))
+        const char *intervalVal = (stroke.prev != nullptr)
+                                      ? Str::StatMs.fmt(fmtScratch("{:6.2f}", (currentTime - stroke.prev->at) * 1000.0))
                                       : kNoValue;
         valRow(ICON_CLOCK_3, Str::StatInterval, intervalVal);
 
@@ -82,9 +72,9 @@ void ScriptStatisticsWindow::render(const ScriptProject &project, bool &open) co
         // The row icon carries the direction (neutral up-down when there's no span); the value is the
         // magnitude and from→to diagram. {:3d} keeps each field fixed-width (pos 0-100, |delta| <= 100).
         const char *deltaIcon = !haveSpan ? ICON_ARROW_UP_DOWN : (delta >= 0 ? ICON_ARROW_UP : ICON_ARROW_DOWN);
-        const char *deltaVal =
-            haveSpan ? fmtScratch("{:3d}  ({:3d} " ICON_ARROW_RIGHT " {:3d})", std::abs(delta), behind->pos, front->pos)
-                     : kNoValue;
+        const char *deltaVal = haveSpan ? fmtScratch("{:3d}  ({:3d} " ICON_ARROW_RIGHT " {:3d})", std::abs(delta),
+                                                     stroke.from->pos, stroke.to->pos)
+                                        : kNoValue;
         valRow(deltaIcon, Str::StatDelta, deltaVal);
         ImGui::EndTable();
     }

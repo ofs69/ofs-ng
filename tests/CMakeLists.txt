@@ -224,6 +224,7 @@ add_executable(ofs-unit-tests
         ui/test_gl_viewport_rect.cpp
         ui/test_timeline_layout.cpp
         ui/test_video_render_size.cpp
+        ui/test_script_statistics.cpp
         app/test_style_scale.cpp
 
         # Round 2 - ProjectManager mutation handlers, format, util, localization
