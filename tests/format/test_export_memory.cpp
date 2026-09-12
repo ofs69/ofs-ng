@@ -74,9 +74,7 @@ TEST_CASE("ExportMemory round-trips through its own file and trims an over-long 
     const auto dir = ofs::util::getPrefPath();
     std::filesystem::create_directories(dir);
     const auto path = dir / "export_configs.json";
-    const auto settingsPath = dir / "settings.json";
     std::filesystem::remove(path);
-    std::filesystem::remove(settingsPath);
 
     ExportMemory in;
     in.remember("C:/proj/clip.ofp",
@@ -92,34 +90,6 @@ TEST_CASE("ExportMemory round-trips through its own file and trims an over-long 
         entries.push_back({{"projectPath", std::to_string(i) + ".ofp"}, {"config", ofs::ExportConfig{}}});
     REQUIRE(ofs::util::writeFileAtomic(path, nlohmann::json::object({{"exports", entries}}).dump()));
     CHECK(ExportMemory::load().entries.size() == ofs::kMaxExportMemories);
-
-    std::filesystem::remove(path);
-}
-
-// COMPAT(2026-09-12): v0.2.9 kept these entries in settings.json. The first launch after the upgrade
-// finds no export_configs.json and must adopt them — and write them out straight away, because the next
-// settings save drops the legacy key and would otherwise take the only copy with it.
-TEST_CASE("ExportMemory adopts v0.2.9's entries from settings.json and rewrites them into its own file") {
-    const auto dir = ofs::util::getPrefPath();
-    std::filesystem::create_directories(dir);
-    const auto path = dir / "export_configs.json";
-    const auto settingsPath = dir / "settings.json";
-    std::filesystem::remove(path);
-
-    nlohmann::json legacy = nlohmann::json::object();
-    legacy["lastExports"] = nlohmann::json::array(
-        {{{"projectPath", "C:/proj/old.ofp"},
-          {"config", ofs::ExportConfig{.format = 2, .axes = {ofs::StandardAxis::L0}, .outputPath = "C:/out/old.fs"}}}});
-    REQUIRE(ofs::util::writeFileAtomic(settingsPath, legacy.dump()));
-
-    const ExportMemory migrated = ExportMemory::load();
-    REQUIRE(migrated.find("C:/proj/old.ofp") != nullptr);
-    CHECK(migrated.find("C:/proj/old.ofp")->outputPath == "C:/out/old.fs");
-    REQUIRE(std::filesystem::exists(path)); // rewritten, so losing the legacy key costs nothing
-
-    // Its own file now wins: a stale legacy entry is no longer consulted.
-    std::filesystem::remove(settingsPath);
-    CHECK(ExportMemory::load().find("C:/proj/old.ofp") != nullptr);
 
     std::filesystem::remove(path);
 }

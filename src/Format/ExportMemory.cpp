@@ -9,22 +9,6 @@ namespace {
 std::filesystem::path exportMemoryPath() {
     return ofs::util::getPrefPath() / "export_configs.json";
 }
-
-// COMPAT(2026-09-12): v0.2.9 kept these entries under "lastExports" in settings.json. Read them back
-// once, when this file does not exist yet, so upgrading doesn't forget every project's Quick Export
-// target. Removable once no v0.2.9 settings.json is in circulation.
-std::vector<ProjectExportMemory> readLegacySettingsEntries() {
-    try {
-        auto text = ofs::util::readFile(ofs::util::getPrefPath() / "settings.json");
-        if (!text)
-            return {};
-        const nlohmann::json j = nlohmann::json::parse(*text);
-        return j.value("lastExports", std::vector<ProjectExportMemory>{});
-    } catch (const std::exception &e) {
-        OFS_CORE_ERROR("Failed to read legacy export configs from settings.json: {}", e.what());
-        return {};
-    }
-}
 } // namespace
 
 void to_json(nlohmann::json &j, const ProjectExportMemory &m) {
@@ -38,14 +22,9 @@ void from_json(const nlohmann::json &j, ProjectExportMemory &m) {
 
 ExportMemory ExportMemory::load() {
     ExportMemory memory;
-    bool migrated = false;
     try {
         if (auto text = ofs::util::readFile(exportMemoryPath()))
             memory.entries = nlohmann::json::parse(*text).value("exports", std::vector<ProjectExportMemory>{});
-        else {
-            memory.entries = readLegacySettingsEntries();
-            migrated = !memory.entries.empty();
-        }
     } catch (const std::exception &e) {
         OFS_CORE_ERROR("Failed to load export_configs.json: {}", e.what());
     }
@@ -53,10 +32,6 @@ ExportMemory ExportMemory::load() {
     // how the entries got there.
     if (memory.entries.size() > kMaxExportMemories)
         memory.entries.resize(kMaxExportMemories);
-    // Write the migrated entries out now rather than waiting for the next export: the settings save that
-    // follows any preference change drops the legacy key, and this file is then the only copy.
-    if (migrated)
-        memory.save();
     return memory;
 }
 

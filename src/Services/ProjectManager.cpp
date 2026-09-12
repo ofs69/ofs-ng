@@ -1186,15 +1186,8 @@ void ProjectManager::applyLoadedProject(const Project &loaded, const std::filesy
 
     // Quick Export's remembered config is app-side (see recordLastExport), so it is restored from
     // export_configs.json rather than from the project file.
-    // COMPAT(2026-09-10): the else-branch adopts a config still carried by a pre-move .ofp and migrates
-    // it into the export store once, so the memory survives the re-save that drops the field. Removable
-    // with Project::lastExport.
-    if (const ExportConfig *remembered = exportMemory.find(project.state.filePath)) {
+    if (const ExportConfig *remembered = exportMemory.find(project.state.filePath))
         project.state.lastExport = *remembered;
-    } else if (loaded.lastExport) {
-        project.state.lastExport = *loaded.lastExport;
-        persistLastExport();
-    }
 
     // Select the saved active axis, or fall back to L0 if it's out of range.
     StandardAxis toSelect = loaded.activeAxisRole;

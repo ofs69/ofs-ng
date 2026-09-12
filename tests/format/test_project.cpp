@@ -219,35 +219,6 @@ TEST_CASE("Project save/load round-trips every serialized field") {
     std::filesystem::remove(path);
 }
 
-// COMPAT(2026-09-10): the Quick Export config used to be written into the .ofp. Projects saved by
-// those builds are still out there, so the read must keep working — ProjectManager migrates what it
-// finds into AppSettings. Nothing writes the key any more, so a re-save drops it.
-TEST_CASE("Project::load still reads a pre-move lastExport, and a save no longer writes one") {
-    const auto path = tempPath("ofs_test_project_legacy_export.ofp");
-    writeCbor(path, nlohmann::json{{"ofsProjectVersion", ofs::kProjectFileVersion},
-                                   {"lastExport",
-                                    {{"format", 2},
-                                     {"axes", std::vector<std::string>{"L0", "R0"}},
-                                     {"outputPath", "C:/out/clip.funscript"}}}});
-
-    auto loaded = Project::load(path);
-    REQUIRE(loaded.has_value());
-    REQUIRE(loaded->lastExport.has_value());
-    CHECK(loaded->lastExport->format == 2);
-    CHECK(loaded->lastExport->axes == std::vector<StandardAxis>{StandardAxis::L0, StandardAxis::R0});
-    CHECK(loaded->lastExport->outputPath == "C:/out/clip.funscript");
-
-    // Round-tripping the very same document through a save drops the field: it is app-side state now.
-    const auto resaved = tempPath("ofs_test_project_legacy_export_resaved.ofp");
-    REQUIRE(loaded->save(resaved));
-    auto reloaded = Project::load(resaved);
-    REQUIRE(reloaded.has_value());
-    CHECK_FALSE(reloaded->lastExport.has_value());
-
-    std::filesystem::remove(path);
-    std::filesystem::remove(resaved);
-}
-
 TEST_CASE("Project::load fills defaults for a sparse document") {
     // Only the version field present — every other field must default.
     const auto path = tempPath("ofs_test_project_sparse.ofp");
@@ -264,7 +235,6 @@ TEST_CASE("Project::load fills defaults for a sparse document") {
     CHECK(loaded->videoPlayerState.resolutionScale == doctest::Approx(1.0f));
     CHECK(loaded->playbackPosition == doctest::Approx(0.0)); // absent → start of timeline
     CHECK(loaded->bookmarkChapters.bookmarks.empty());
-    CHECK_FALSE(loaded->lastExport.has_value());
     CHECK(loaded->pluginData.is_object());
     CHECK(loaded->pluginData.empty());                             // absent key → empty object, never null
     CHECK(loaded->activeNavigator == "follow-overlay");            // absent → native navigator default

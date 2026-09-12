@@ -603,43 +603,6 @@ TEST_CASE("ProjectManager: Quick Export config survives a reopen through AppSett
     std::filesystem::remove(filePath);
 }
 
-// COMPAT(2026-09-10): projects saved before the Quick Export config moved into AppSettings still carry
-// it in the .ofp. Opening one must both honour the config and migrate it app-side, so it is not lost
-// on the re-save that drops the field.
-TEST_CASE("ProjectManager: a pre-move project's export config is honoured and migrated to AppSettings") {
-    TestProject tp;
-    ofs::AppSettings appSettings;
-    appSettings.autoBackupEnabled = false;
-    ofs::JobSystem jobSystem;
-    ofs::EffectRegistryState effectReg;
-    ofs::ExportMemory exportMemory;
-    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
-    tp.eq.freeze();
-    jobSystem.start();
-
-    // Write a project the way the old build did: the config inline in the .ofp, nothing in settings.
-    auto filePath = std::filesystem::temp_directory_path() / "ofs_test_legacy_export_config.ofp";
-    ofs::Project legacy;
-    nlohmann::json j = legacy;
-    j["lastExport"] = {{"format", 2}, {"axes", std::vector<std::string>{"L0"}}, {"outputPath", "D:/old.funscript"}};
-    const auto cbor = nlohmann::json::to_cbor(j);
-    REQUIRE(ofs::util::writeFile(filePath, cbor.data(), cbor.size()));
-
-    tp.eq.push(ofs::OpenProjectRequestEvent{filePath.string()});
-    REQUIRE(drainUntil(tp.eq, [&] { return exportMemory.find(filePath.string()) != nullptr; }));
-
-    // Honoured: Quick Export replays the old target straight away.
-    REQUIRE(tp.project.state.lastExport.has_value());
-    CHECK(tp.project.state.lastExport->outputPath == "D:/old.funscript");
-    // Migrated: it now lives app-side, so the field the re-save drops is no longer the only copy.
-    const ofs::ExportConfig *migrated = exportMemory.find(filePath.string());
-    REQUIRE(migrated != nullptr);
-    CHECK(migrated->format == 2);
-    CHECK(migrated->outputPath == "D:/old.funscript");
-
-    std::filesystem::remove(filePath);
-}
-
 // Quick Export replays the recorded target without a dialog, so recording one that received no files
 // would silently re-run a failure. A run that wrote nothing must leave the previous memory alone.
 TEST_CASE("ProjectManager: a failed export records nothing") {
