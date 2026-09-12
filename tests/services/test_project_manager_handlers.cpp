@@ -50,6 +50,7 @@ struct PMFixture {
     AppSettings appSettings;
     JobSystem jobSystem;
     EffectRegistryState effectReg;
+    ExportMemory exportMemory;
     UndoSystem undo; // constructed before pm: its snapshot handlers must register first
     ProjectManager pm;
     NavigatorRegistry navReg;
@@ -63,7 +64,7 @@ struct PMFixture {
     EventCapture<NotifyEvent> notes;          // observes user-facing toasts (drop/import refusals)
 
     PMFixture()
-        : undo(tp.project, tp.eq), pm(tp.project, tp.eq, appSettings, jobSystem, effectReg),
+        : undo(tp.project, tp.eq), pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg),
           nav(tp.project, tp.eq, navReg), edit(tp.project, tp.eq, editReg), sel(tp.project, tp.eq, selReg) {
         appSettings.autoBackupEnabled = false;
         seeks.attach(tp.eq); // must register before freeze()
@@ -2137,7 +2138,8 @@ TEST_CASE("update() resolves the active scene view and emits RestoreSceneViewEve
     appSettings.autoBackupEnabled = false;
     JobSystem jobSystem;
     EffectRegistryState effectReg;
-    ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ExportMemory exportMemory;
+    ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     EventCapture<RestoreSceneViewEvent> restore;
     restore.attach(tp.eq);
     tp.eq.freeze();
@@ -2189,7 +2191,8 @@ TEST_CASE("ChangeMediaPath sets/clears the media path and emits load/close video
     appSettings.autoBackupEnabled = false;
     JobSystem jobSystem;
     EffectRegistryState effectReg;
-    ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ExportMemory exportMemory;
+    ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     EventCapture<LoadVideoEvent> load;
     EventCapture<CloseVideoEvent> close;
     EventCapture<ChangeDummyDurationEvent> dur;
@@ -2225,7 +2228,8 @@ TEST_CASE("Unloading a video with no prior dummy span falls back to a non-zero l
     appSettings.autoBackupEnabled = false;
     JobSystem jobSystem;
     EffectRegistryState effectReg;
-    ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ExportMemory exportMemory;
+    ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     EventCapture<ChangeDummyDurationEvent> dur;
     dur.attach(tp.eq);
     tp.eq.freeze();
@@ -2260,7 +2264,8 @@ TEST_CASE("CloseProjectRequest on a clean project clears it and emits LoadProjec
     appSettings.autoBackupEnabled = false;
     JobSystem jobSystem;
     EffectRegistryState effectReg;
-    ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ExportMemory exportMemory;
+    ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     EventCapture<LoadProjectEvent> load;
     EventCapture<CloseVideoEvent> close;
     load.attach(tp.eq);
@@ -2286,7 +2291,8 @@ TEST_CASE("Closing a project resets document settings so none bleed into the nex
     appSettings.autoBackupEnabled = false;
     JobSystem jobSystem;
     EffectRegistryState effectReg;
-    ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ExportMemory exportMemory;
+    ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     tp.eq.freeze();
     jobSystem.start();
 
@@ -2326,7 +2332,8 @@ TEST_CASE("Saving and opening a project promote it onto the recent list") {
     appSettings.autoBackupEnabled = false;
     JobSystem jobSystem;
     EffectRegistryState effectReg;
-    ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ExportMemory exportMemory;
+    ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     EventCapture<RememberRecentProjectEvent> remember;
     remember.attach(tp.eq);
     tp.eq.freeze();
@@ -2371,7 +2378,8 @@ TEST_CASE("An explicit close emits ProjectClosedEvent to suppress the next launc
     appSettings.autoBackupEnabled = false;
     JobSystem jobSystem;
     EffectRegistryState effectReg;
-    ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ExportMemory exportMemory;
+    ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     EventCapture<ProjectClosedEvent> closed;
     EventCapture<RememberRecentProjectEvent> remember;
     closed.attach(tp.eq);
@@ -2408,7 +2416,8 @@ TEST_CASE("RequestExit on a clean project confirms the exit") {
     appSettings.autoBackupEnabled = false;
     JobSystem jobSystem;
     EffectRegistryState effectReg;
-    ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ExportMemory exportMemory;
+    ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     EventCapture<ExitConfirmedEvent> exit;
     exit.attach(tp.eq);
     tp.eq.freeze();
@@ -2428,7 +2437,8 @@ TEST_CASE("OpenProjectRequest with an unreadable file fails the load and clears 
     appSettings.autoBackupEnabled = false;
     JobSystem jobSystem;
     EffectRegistryState effectReg;
-    ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ExportMemory exportMemory;
+    ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     EventCapture<ShowModalEvent> modals;
     modals.attach(tp.eq);
     tp.eq.freeze();
@@ -2803,7 +2813,8 @@ TEST_CASE("update() writes a dated auto-backup once the interval elapses on a ch
     appSettings.autoBackupEnabled = true; // arm the backup timer
     JobSystem jobSystem;
     EffectRegistryState effectReg;
-    ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ExportMemory exportMemory;
+    ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     tp.eq.freeze();
     jobSystem.start();
 
@@ -2856,7 +2867,8 @@ TEST_CASE("update() skips the auto-backup when the project is unchanged") {
     appSettings.autoBackupEnabled = true;
     JobSystem jobSystem;
     EffectRegistryState effectReg;
-    ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ExportMemory exportMemory;
+    ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     tp.eq.freeze();
     jobSystem.start();
 

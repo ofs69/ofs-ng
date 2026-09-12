@@ -75,8 +75,9 @@ static std::filesystem::path trustedGraphsPath() {
 }
 
 ProjectManager::ProjectManager(ScriptProject &project, EventQueue &eq, const AppSettings &appSettings,
-                               JobSystem &jobSystem, const EffectRegistryState &effectReg)
-    : project(project), eq(eq), appSettings(appSettings), jobSystem(jobSystem), effectReg(effectReg) {
+                               ExportMemory &exportMemory, JobSystem &jobSystem, const EffectRegistryState &effectReg)
+    : project(project), eq(eq), appSettings(appSettings), exportMemory(exportMemory), jobSystem(jobSystem),
+      effectReg(effectReg) {
     // Generic resume channel for JobAwait — a flow that moved blocking I/O to a worker resumes here
     // when the worker finishes. The handler is state-free; ProjectManager is currently its only user,
     // so it is registered alongside ProjectManager's own handlers.
@@ -1184,11 +1185,11 @@ void ProjectManager::applyLoadedProject(const Project &loaded, const std::filesy
         eq.push(RememberRecentProjectEvent{project.state.filePath});
 
     // Quick Export's remembered config is app-side (see recordLastExport), so it is restored from
-    // settings rather than from the project file.
+    // export_configs.json rather than from the project file.
     // COMPAT(2026-09-10): the else-branch adopts a config still carried by a pre-move .ofp and migrates
-    // it into settings once, so the memory survives the re-save that drops the field. Removable with
-    // Project::lastExport.
-    if (const ExportConfig *remembered = appSettings.findExport(project.state.filePath)) {
+    // it into the export store once, so the memory survives the re-save that drops the field. Removable
+    // with Project::lastExport.
+    if (const ExportConfig *remembered = exportMemory.find(project.state.filePath)) {
         project.state.lastExport = *remembered;
     } else if (loaded.lastExport) {
         project.state.lastExport = *loaded.lastExport;
@@ -2952,9 +2953,8 @@ void ProjectManager::recordLastExport(int format, std::vector<StandardAxis> axes
 void ProjectManager::persistLastExport() {
     if (!project.state.lastExport || project.state.filePath.empty())
         return;
-    eq.push(ModifyEvent<AppSettings>{[path = project.state.filePath, cfg = *project.state.lastExport](AppSettings &s) {
-        s.rememberExport(path, cfg);
-    }});
+    exportMemory.remember(project.state.filePath, *project.state.lastExport);
+    exportMemory.save();
 }
 
 } // namespace ofs

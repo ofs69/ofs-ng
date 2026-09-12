@@ -35,6 +35,7 @@ struct GFixture {
     AppSettings appSettings;
     JobSystem jobSystem;
     EffectRegistryState effectReg;
+    ExportMemory exportMemory;
     UndoSystem undo; // before pm: its snapshot handlers must register first
     ProjectManager pm;
     SelectionModeRegistry selReg;
@@ -45,7 +46,7 @@ struct GFixture {
     int activeChanged = 0;
 
     GFixture()
-        : undo(tp.project, tp.eq), pm(tp.project, tp.eq, appSettings, jobSystem, effectReg),
+        : undo(tp.project, tp.eq), pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg),
           sel(tp.project, tp.eq, selReg) {
         appSettings.autoBackupEnabled = false;
         tp.eq.on<AxisGroupingChangedEvent>([this](const AxisGroupingChangedEvent &) { ++groupingChanged; });

@@ -95,7 +95,7 @@ struct ProjectState {
     // "this session" net-edits delta. Transient: recomputed on every open, never serialized.
     int sessionBaselineActions = 0;
     // Last funscript export; drives dialog-less Quick Export. Not serialized with the project — it is
-    // restored from AppSettings::lastExports on load, so an export never marks the project dirty.
+    // restored from the app-side ExportMemory on load, so an export never marks the project dirty.
     std::optional<ExportConfig> lastExport;
     // Per-project offset into the auto-naming/coloring sequences (region mnemonics, chapter hues), so
     // two projects don't both open on "Bold Arc"/the same first color. Randomized for a fresh project

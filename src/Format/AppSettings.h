@@ -1,5 +1,4 @@
 #pragma once
-#include "Core/ExportConfig.h"
 #include "Core/FunscriptMetadata.h"
 #include "Core/SimulatorSettings.h"
 #include <filesystem>
@@ -72,22 +71,6 @@ void from_json(const nlohmann::json &j, WindowGeometry &g);
 // exported; Custom always opens `exportDir`. Persisted as its int value — the order is the on-disk contract.
 enum class ExportDirMode { VideoFolder = 0, LastUsed = 1, Custom = 2 };
 
-// A project's remembered Quick Export parameters, keyed by the project file it belongs to. This lives
-// app-side rather than in the .ofp because an export writes no document state: keeping it here is what
-// lets a Quick Export be remembered without marking the project dirty (the same call the simulator
-// settings make) or arming an auto-backup that would snapshot an unchanged script.
-struct ProjectExportMemory {
-    std::string projectPath; // UTF-8 absolute path to the .ofp the config belongs to
-    ExportConfig config;
-};
-
-void to_json(nlohmann::json &j, const ProjectExportMemory &m);
-void from_json(const nlohmann::json &j, ProjectExportMemory &m);
-
-// How many projects keep a remembered export. Generous enough that a normal rotation of projects never
-// forgets, bounded so settings.json can't grow without limit across years of use.
-inline constexpr size_t kMaxExportMemories = 32;
-
 struct AppSettings {
     std::vector<std::string> lastProjectPaths;
     // Whether the next launch reopens lastProjectPaths.front(). Armed whenever a project is opened/saved
@@ -150,18 +133,6 @@ struct AppSettings {
     bool webSocketServerEnabled = false;
     int webSocketPort = 8080;
     WindowGeometry windowGeometry;
-    // Per-project Quick Export configs, most-recently-exported first. Maintained through
-    // rememberExport() so the cap and the most-recent-first order are enforced in one place.
-    std::vector<ProjectExportMemory> lastExports;
-
-    // Record `config` as `projectPath`'s remembered export, promoting it to the front and evicting the
-    // least recently exported project past kMaxExportMemories. An empty path is ignored — an untitled
-    // project has nothing to key on, and its config lives only in the session.
-    void rememberExport(std::string projectPath, ExportConfig config);
-
-    // The remembered config for `projectPath`, or nullptr if that project has never exported (or has
-    // been evicted). The pointer is invalidated by the next rememberExport().
-    [[nodiscard]] const ExportConfig *findExport(const std::string &projectPath) const;
 
     static AppSettings load();
 

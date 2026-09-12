@@ -15,7 +15,8 @@ struct PmFixture {
     AppSettings appSettings;
     JobSystem jobSystem;
     EffectRegistryState effectReg;
-    ProjectManager pm{tp.project, tp.eq, appSettings, jobSystem, effectReg};
+    ExportMemory exportMemory;
+    ProjectManager pm{tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg};
     // Sole SelectRequestEvent subscriber — selection tests push SelectRequestEvent and the router
     // resolves it natively (per-axis loop + additive) through project.setSelection.
     SelectionModeRegistry selReg;

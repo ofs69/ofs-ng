@@ -55,7 +55,8 @@ TEST_CASE("ProjectManager: save to temp file clears the dirty flag") {
     appSettings.autoBackupEnabled = false;
     ofs::JobSystem jobSystem;
     ofs::EffectRegistryState effectReg;
-    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ofs::ExportMemory exportMemory;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     tp.eq.freeze();
     jobSystem.start();
 
@@ -92,7 +93,8 @@ TEST_CASE("ProjectManager: saving via the close prompt lands on a closed (welcom
     appSettings.autoBackupEnabled = false;
     ofs::JobSystem jobSystem;
     ofs::EffectRegistryState effectReg;
-    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ofs::ExportMemory exportMemory;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
 
     // Stand in for the ModalManager: answer the unsaved-changes prompt with "Save" (button index 0)
     // and resume the suspended flow, exactly as the real UI would.
@@ -147,7 +149,8 @@ TEST_CASE("ProjectManager: AddActionAtTimeEvent clamps a negative time to 0") {
     appSettings.autoBackupEnabled = false;
     ofs::JobSystem jobSystem;
     ofs::EffectRegistryState effectReg;
-    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ofs::ExportMemory exportMemory;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     tp.eq.freeze();
     jobSystem.start();
 
@@ -167,7 +170,8 @@ TEST_CASE("ProjectManager: AddActionAtTimeEvent clamps an out-of-range position 
     appSettings.autoBackupEnabled = false;
     ofs::JobSystem jobSystem;
     ofs::EffectRegistryState effectReg;
-    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ofs::ExportMemory exportMemory;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     tp.eq.freeze();
     jobSystem.start();
 
@@ -188,7 +192,8 @@ TEST_CASE("ProjectManager: SplitRegionEvent splits at the playhead into two grap
     appSettings.autoBackupEnabled = false;
     ofs::JobSystem jobSystem;
     ofs::EffectRegistryState effectReg;
-    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ofs::ExportMemory exportMemory;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     tp.eq.freeze();
     jobSystem.start();
 
@@ -225,7 +230,8 @@ TEST_CASE("ProjectManager: SplitRegionEvent no-ops when a half would fall below 
     appSettings.autoBackupEnabled = false;
     ofs::JobSystem jobSystem;
     ofs::EffectRegistryState effectReg;
-    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ofs::ExportMemory exportMemory;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     tp.eq.freeze();
     jobSystem.start();
 
@@ -248,7 +254,8 @@ TEST_CASE("ProjectManager: SplitRegionEvent no-ops on an unknown region id") {
     appSettings.autoBackupEnabled = false;
     ofs::JobSystem jobSystem;
     ofs::EffectRegistryState effectReg;
-    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ofs::ExportMemory exportMemory;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     tp.eq.freeze();
     jobSystem.start();
 
@@ -274,7 +281,8 @@ TEST_CASE("ProjectManager: SplitRegionEvent is one undo step (undo merges, redo 
     ofs::JobSystem jobSystem;
     ofs::EffectRegistryState effectReg;
     ofs::UndoSystem undo(tp.project, tp.eq); // before pm so its snapshot captures the pre-split state
-    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ofs::ExportMemory exportMemory;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     tp.eq.freeze();
     jobSystem.start();
 
@@ -315,7 +323,8 @@ TEST_CASE("ProjectManager: MoveActionEvent clamps a negative target time to 0") 
     appSettings.autoBackupEnabled = false;
     ofs::JobSystem jobSystem;
     ofs::EffectRegistryState effectReg;
-    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ofs::ExportMemory exportMemory;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     tp.eq.freeze();
     jobSystem.start();
 
@@ -340,7 +349,8 @@ TEST_CASE("ProjectManager: save then reload round-trips axis actions") {
     appSettings.autoBackupEnabled = false;
     ofs::JobSystem jobSystem;
     ofs::EffectRegistryState effectReg;
-    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ofs::ExportMemory exportMemory;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     tp.eq.freeze();
     jobSystem.start();
 
@@ -390,7 +400,8 @@ TEST_CASE("ProjectManager: a standard axis hidden from the strip keeps its data 
     appSettings.autoBackupEnabled = false;
     ofs::JobSystem jobSystem;
     ofs::EffectRegistryState effectReg;
-    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ofs::ExportMemory exportMemory;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     tp.eq.freeze();
     jobSystem.start();
 
@@ -441,7 +452,8 @@ TEST_CASE("ProjectManager: export with a target path writes files and records th
     appSettings.autoBackupEnabled = false;
     ofs::JobSystem jobSystem;
     ofs::EffectRegistryState effectReg;
-    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ofs::ExportMemory exportMemory;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     tp.eq.freeze();
     jobSystem.start();
 
@@ -480,7 +492,8 @@ TEST_CASE("ProjectManager: per-axis export names files by TCode track name") {
     appSettings.autoBackupEnabled = false;
     ofs::JobSystem jobSystem;
     ofs::EffectRegistryState effectReg;
-    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ofs::ExportMemory exportMemory;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     tp.eq.freeze();
     jobSystem.start();
 
@@ -514,7 +527,8 @@ TEST_CASE("ProjectManager: export writes the project's bookmarks and chapters in
     appSettings.autoBackupEnabled = false;
     ofs::JobSystem jobSystem;
     ofs::EffectRegistryState effectReg;
-    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ofs::ExportMemory exportMemory;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     tp.eq.freeze();
     jobSystem.start();
 
@@ -552,10 +566,8 @@ TEST_CASE("ProjectManager: Quick Export config survives a reopen through AppSett
     appSettings.autoBackupEnabled = false;
     ofs::JobSystem jobSystem;
     ofs::EffectRegistryState effectReg;
-    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
-    // OfsApp owns AppSettings in the app; stand in for its single-write-path handler here.
-    tp.eq.on<ofs::ModifyEvent<ofs::AppSettings>>(
-        [&](const ofs::ModifyEvent<ofs::AppSettings> &e) { e.apply(appSettings); });
+    ofs::ExportMemory exportMemory;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     tp.eq.freeze();
     jobSystem.start();
 
@@ -570,7 +582,7 @@ TEST_CASE("ProjectManager: Quick Export config survives a reopen through AppSett
 
     tp.eq.push(
         ofs::ExportFunscriptRequestEvent{.axes = {StandardAxis::L0}, .format = 0, .targetPath = outDir.string()});
-    REQUIRE(drainUntil(tp.eq, [&] { return appSettings.findExport(filePath.string()) != nullptr; }));
+    REQUIRE(drainUntil(tp.eq, [&] { return exportMemory.find(filePath.string()) != nullptr; }));
 
     tp.eq.push(ofs::SaveProjectEvent{false});
     tp.eq.drain();
@@ -600,9 +612,8 @@ TEST_CASE("ProjectManager: a pre-move project's export config is honoured and mi
     appSettings.autoBackupEnabled = false;
     ofs::JobSystem jobSystem;
     ofs::EffectRegistryState effectReg;
-    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
-    tp.eq.on<ofs::ModifyEvent<ofs::AppSettings>>(
-        [&](const ofs::ModifyEvent<ofs::AppSettings> &e) { e.apply(appSettings); });
+    ofs::ExportMemory exportMemory;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     tp.eq.freeze();
     jobSystem.start();
 
@@ -615,13 +626,13 @@ TEST_CASE("ProjectManager: a pre-move project's export config is honoured and mi
     REQUIRE(ofs::util::writeFile(filePath, cbor.data(), cbor.size()));
 
     tp.eq.push(ofs::OpenProjectRequestEvent{filePath.string()});
-    REQUIRE(drainUntil(tp.eq, [&] { return appSettings.findExport(filePath.string()) != nullptr; }));
+    REQUIRE(drainUntil(tp.eq, [&] { return exportMemory.find(filePath.string()) != nullptr; }));
 
     // Honoured: Quick Export replays the old target straight away.
     REQUIRE(tp.project.state.lastExport.has_value());
     CHECK(tp.project.state.lastExport->outputPath == "D:/old.funscript");
     // Migrated: it now lives app-side, so the field the re-save drops is no longer the only copy.
-    const ofs::ExportConfig *migrated = appSettings.findExport(filePath.string());
+    const ofs::ExportConfig *migrated = exportMemory.find(filePath.string());
     REQUIRE(migrated != nullptr);
     CHECK(migrated->format == 2);
     CHECK(migrated->outputPath == "D:/old.funscript");
@@ -637,9 +648,8 @@ TEST_CASE("ProjectManager: a failed export records nothing") {
     appSettings.autoBackupEnabled = false;
     ofs::JobSystem jobSystem;
     ofs::EffectRegistryState effectReg;
-    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
-    tp.eq.on<ofs::ModifyEvent<ofs::AppSettings>>(
-        [&](const ofs::ModifyEvent<ofs::AppSettings> &e) { e.apply(appSettings); });
+    ofs::ExportMemory exportMemory;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     ofs::test::EventCapture<ofs::NotifyEvent> notes;
     notes.attach(tp.eq);
     tp.eq.freeze();
@@ -661,7 +671,7 @@ TEST_CASE("ProjectManager: a failed export records nothing") {
 
     CHECK(notes.received.front().level == ofs::NotifyLevel::Error);
     CHECK_FALSE(tp.project.state.lastExport.has_value());
-    CHECK(appSettings.findExport(tp.project.state.filePath) == nullptr);
+    CHECK(exportMemory.find(tp.project.state.filePath) == nullptr);
     CHECK_FALSE(pm.isDirty());
 
     std::filesystem::remove_all(blocked);
@@ -677,9 +687,8 @@ TEST_CASE("ProjectManager: the first save claims an untitled project's export me
     appSettings.autoBackupEnabled = false;
     ofs::JobSystem jobSystem;
     ofs::EffectRegistryState effectReg;
-    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
-    tp.eq.on<ofs::ModifyEvent<ofs::AppSettings>>(
-        [&](const ofs::ModifyEvent<ofs::AppSettings> &e) { e.apply(appSettings); });
+    ofs::ExportMemory exportMemory;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     const auto filePath = std::filesystem::temp_directory_path() / "ofs_test_untitled_export.ofp";
     // Stand in for the ModalManager: an untitled save goes through the native Save picker.
     tp.eq.on<ofs::ShowModalEvent>([&](const ofs::ShowModalEvent &e) {
@@ -702,14 +711,14 @@ TEST_CASE("ProjectManager: the first save claims an untitled project's export me
     tp.eq.push(
         ofs::ExportFunscriptRequestEvent{.axes = {StandardAxis::L0}, .format = 0, .targetPath = outDir.string()});
     REQUIRE(drainUntil(tp.eq, [&] { return tp.project.state.lastExport.has_value(); }));
-    CHECK(appSettings.lastExports.empty()); // no key to persist under yet
+    CHECK(exportMemory.entries.empty()); // no key to persist under yet
 
     tp.eq.push(ofs::SaveProjectEvent{false});
     tp.eq.drain();
     REQUIRE(waitForSave(pm));
     tp.eq.drain(); // apply the settings write the save pushed
 
-    const ofs::ExportConfig *remembered = appSettings.findExport(ofs::util::toUtf8(filePath));
+    const ofs::ExportConfig *remembered = exportMemory.find(ofs::util::toUtf8(filePath));
     REQUIRE(remembered != nullptr);
     CHECK(remembered->format == 0);
     CHECK(remembered->outputPath == outDir.string());
@@ -737,7 +746,8 @@ TEST_CASE("ProjectManager: funscript import → project save/reload → export m
     appSettings.autoBackupEnabled = false;
     ofs::JobSystem jobSystem;
     ofs::EffectRegistryState effectReg;
-    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ofs::ExportMemory exportMemory;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     tp.eq.freeze();
     jobSystem.start();
 
@@ -784,7 +794,8 @@ TEST_CASE("ProjectManager: ImportFunscriptDataEvent places a chosen role and mak
     appSettings.autoBackupEnabled = false;
     ofs::JobSystem jobSystem;
     ofs::EffectRegistryState effectReg;
-    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ofs::ExportMemory exportMemory;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     ofs::test::EventCapture<ofs::NotifyEvent> notes;
     notes.attach(tp.eq);
     tp.eq.freeze();
@@ -813,7 +824,8 @@ TEST_CASE("ProjectManager: ImportFunscriptDataEvent routes a roleless axis to th
     appSettings.autoBackupEnabled = false;
     ofs::JobSystem jobSystem;
     ofs::EffectRegistryState effectReg;
-    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ofs::ExportMemory exportMemory;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     ofs::test::EventCapture<ofs::NotifyEvent> notes;
     notes.attach(tp.eq);
     tp.eq.freeze();
@@ -842,7 +854,8 @@ TEST_CASE("ProjectManager: ImportFunscriptDataEvent reports an error when scratc
     appSettings.autoBackupEnabled = false;
     ofs::JobSystem jobSystem;
     ofs::EffectRegistryState effectReg;
-    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ofs::ExportMemory exportMemory;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     ofs::test::EventCapture<ofs::NotifyEvent> notes;
     notes.attach(tp.eq);
     tp.eq.freeze();
@@ -872,7 +885,8 @@ TEST_CASE("ProjectManager: ImportFunscriptDataEvent applies as a single undo ste
     ofs::EffectRegistryState effectReg;
     // UndoSystem before ProjectManager so its snapshot captures the pre-import state.
     ofs::UndoSystem undo(tp.project, tp.eq);
-    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ofs::ExportMemory exportMemory;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     tp.eq.freeze();
     jobSystem.start();
 
@@ -913,7 +927,8 @@ TEST_CASE("ProjectManager: metadata round-trips through project save and reload"
     appSettings.autoBackupEnabled = false;
     ofs::JobSystem jobSystem;
     ofs::EffectRegistryState effectReg;
-    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ofs::ExportMemory exportMemory;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     tp.eq.freeze();
     jobSystem.start();
 
@@ -965,7 +980,8 @@ TEST_CASE("ProjectManager: per-plugin project data round-trips through save and 
     appSettings.autoBackupEnabled = false;
     ofs::JobSystem jobSystem;
     ofs::EffectRegistryState effectReg;
-    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ofs::ExportMemory exportMemory;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     tp.eq.freeze();
     jobSystem.start();
 
@@ -1007,7 +1023,8 @@ TEST_CASE("ProjectManager: playback position is saved and restored as a deferred
     appSettings.autoBackupEnabled = false;
     ofs::JobSystem jobSystem;
     ofs::EffectRegistryState effectReg;
-    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ofs::ExportMemory exportMemory;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     ofs::test::EventCapture<ofs::SeekEvent> seeks;
     seeks.attach(tp.eq);
     tp.eq.freeze();
@@ -1060,7 +1077,8 @@ TEST_CASE("ProjectManager: roundtrip.ofp actions survive ofp/funscript round-tri
     appSettings.autoBackupEnabled = false;
     ofs::JobSystem jobSystem;
     ofs::EffectRegistryState effectReg;
-    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ofs::ExportMemory exportMemory;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     tp.eq.freeze();
     jobSystem.start();
 
@@ -1112,7 +1130,8 @@ TEST_CASE("ProjectManager: reloading a project emits LoadProjectEvent and AxisSe
     appSettings.autoBackupEnabled = false;
     ofs::JobSystem jobSystem;
     ofs::EffectRegistryState effectReg;
-    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ofs::ExportMemory exportMemory;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
 
     ofs::test::EventCapture<ofs::LoadProjectEvent> loadCap;
     ofs::test::EventCapture<ofs::AxisSelectedEvent> selCap;
@@ -1159,7 +1178,8 @@ TEST_CASE("ProjectManager: a region's axis roles and node graph survive save/rel
     appSettings.autoBackupEnabled = false;
     ofs::JobSystem jobSystem;
     ofs::EffectRegistryState effectReg;
-    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ofs::ExportMemory exportMemory;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     tp.eq.freeze();
     jobSystem.start();
 
@@ -1208,7 +1228,8 @@ TEST_CASE("ProjectManager: loading a project replaces a region's invalid node gr
     appSettings.autoBackupEnabled = false;
     ofs::JobSystem jobSystem;
     ofs::EffectRegistryState effectReg;
-    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ofs::ExportMemory exportMemory;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     tp.eq.freeze();
     jobSystem.start();
 
@@ -1256,7 +1277,8 @@ TEST_CASE("ProjectManager: SaveEmbeddedScriptEvent materializes or refuses an em
     appSettings.autoBackupEnabled = false;
     ofs::JobSystem jobSystem;
     ofs::EffectRegistryState effectReg;
-    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ofs::ExportMemory exportMemory;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     ofs::test::EventCapture<ofs::CompileScriptEvent> compiles;
     ofs::test::EventCapture<ofs::ShowModalEvent> modals;
     compiles.attach(tp.eq);
@@ -1407,7 +1429,8 @@ TEST_CASE("ProjectManager: ReviewGraphScriptsEvent writes embedded scripts under
     appSettings.autoBackupEnabled = false;
     ofs::JobSystem jobSystem;
     ofs::EffectRegistryState effectReg;
-    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    ofs::ExportMemory exportMemory;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
     tp.eq.freeze();
     jobSystem.start();
 

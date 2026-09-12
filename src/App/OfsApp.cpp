@@ -131,6 +131,7 @@ bool OfsApp::init() {
         return false;
 
     appSettings = ofs::AppSettings::load();
+    exportMemory = ofs::ExportMemory::load();
     layoutStore = ofs::LayoutStore::load();
 
     // imgui.ini is disabled (see Application::initImGui), so restore the active layout ourselves here
@@ -303,8 +304,8 @@ bool OfsApp::init() {
         eventQueue.push(ofs::SetPauseOnSeekEvent{appSettings.pauseOnSeek});
         videoPlayerWindow = std::make_unique<ofs::VideoPlayerWindow>(eventQueue);
         undoSystem = std::make_unique<ofs::UndoSystem>(scriptProject, eventQueue, undoMemoryBytes(appSettings));
-        projectManager =
-            std::make_unique<ofs::ProjectManager>(scriptProject, eventQueue, appSettings, jobSystem, effectRegistry);
+        projectManager = std::make_unique<ofs::ProjectManager>(scriptProject, eventQueue, appSettings, exportMemory,
+                                                               jobSystem, effectRegistry);
         processingSystem = std::make_unique<ofs::ProcessingSystem>(scriptProject, effectRegistry, scriptRegistry,
                                                                    eventQueue, jobSystem);
         // Constructed here (before freeze) so its event handlers register; init() (loading the

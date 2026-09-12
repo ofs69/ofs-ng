@@ -8,6 +8,7 @@
 #include "Core/SceneViewTransition.h"
 #include "Core/StandardAxis.h"
 #include "Format/AppSettings.h"
+#include "Format/ExportMemory.h"
 #include "Format/Project.h"
 #include "Services/EffectRegistry.h"
 #include "Services/ScriptNodeEvents.h"
@@ -30,8 +31,8 @@ struct ScriptProject;
 
 class ProjectManager {
   public:
-    ProjectManager(ScriptProject &project, EventQueue &eq, const AppSettings &appSettings, JobSystem &jobSystem,
-                   const EffectRegistryState &effectReg);
+    ProjectManager(ScriptProject &project, EventQueue &eq, const AppSettings &appSettings, ExportMemory &exportMemory,
+                   JobSystem &jobSystem, const EffectRegistryState &effectReg);
     ~ProjectManager();
 
     void update(float dt);
@@ -85,11 +86,11 @@ class ProjectManager {
     std::string exportDirOverride() const;
     // Persist the just-used export parameters so Quick Export can replay them dialog-free.
     void recordLastExport(int format, std::vector<StandardAxis> axes, std::string outputPath);
-    // Write the session's remembered export config into AppSettings under the project's current path.
-    // The single writer of that store: called on a fresh export, and again whenever a save gives the
-    // document a new path (first save of an untitled project, Save As) so the entry is re-keyed and the
-    // memory follows the file. No-op while either half is missing — an untitled project has nothing to
-    // key on and keeps its config for the session only.
+    // Write the session's remembered export config into export_configs.json under the project's current
+    // path. The single writer of that store: called on a fresh export, and again whenever a save gives
+    // the document a new path (first save of an untitled project, Save As) so the entry is re-keyed and
+    // the memory follows the file. No-op while either half is missing — an untitled project has nothing
+    // to key on and keeps its config for the session only.
     void persistLastExport();
 
     // Request event handlers
@@ -243,6 +244,7 @@ class ProjectManager {
     ScriptProject &project;
     EventQueue &eq;
     const AppSettings &appSettings;
+    ExportMemory &exportMemory;
     JobSystem &jobSystem;
     const EffectRegistryState &effectReg;
     std::optional<PendingWrite> pendingWrite;

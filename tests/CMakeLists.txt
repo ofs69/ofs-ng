@@ -220,6 +220,7 @@ add_executable(ofs-unit-tests
 
         # Phase 5 — format / settings serialization tests
         format/test_app_settings.cpp
+        format/test_export_memory.cpp
         format/test_layout_store.cpp
         ui/test_theme.cpp
         ui/test_gl_viewport_rect.cpp
@@ -278,6 +279,7 @@ add_executable(ofs-unit-tests
         ${CMAKE_SOURCE_DIR}/src/Services/CustomCommandTemplate.cpp
         ${CMAKE_SOURCE_DIR}/src/Format/Funscript.cpp
         ${CMAKE_SOURCE_DIR}/src/Format/AppSettings.cpp
+        ${CMAKE_SOURCE_DIR}/src/Format/ExportMemory.cpp
         ${CMAKE_SOURCE_DIR}/src/Format/BackupArchive.cpp
         ${CMAKE_SOURCE_DIR}/src/Format/LayoutStore.cpp
         ${CMAKE_SOURCE_DIR}/src/Format/Project.cpp

@@ -464,8 +464,8 @@ void from_json(const nlohmann::json &j, Project &p) {
     // COMPAT(2026-06-30): timeline layout absent in pre-lanes projects; default Overlay (the prior look).
     p.timelineLayout = j.value("timelineLayout", TimelineLayout::Overlay);
     // COMPAT(2026-09-10): the Quick Export config used to live in the .ofp, which made an export mark
-    // the project dirty. It is app-side state now (AppSettings::lastExports); ProjectManager migrates
-    // what it reads here on the next load. Removable once no pre-date project files are in circulation.
+    // the project dirty. It is app-side state now (ExportMemory); ProjectManager migrates what it reads
+    // here on the next load. Removable once no pre-date project files are in circulation.
     if (j.contains("lastExport"))
         p.lastExport = j["lastExport"].get<ExportConfig>();
     // Absent or a non-object (corrupt) → empty object, never null.

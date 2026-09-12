@@ -11,6 +11,7 @@
 #include "Core/VectorSet.h"
 #include "Core/WaveformEvents.h"
 #include "Format/AppSettings.h"
+#include "Format/ExportMemory.h"
 #include "Format/LayoutStore.h"
 #include "Services/BindingSystem.h"
 #include "Services/CommandProviders.h"
@@ -183,6 +184,9 @@ class OfsApp : public ofs::Application {
     ofs::ScriptRegistryState scriptRegistry;
 
     ofs::AppSettings appSettings;
+    // Every project's Quick Export config, in its own file. ProjectManager records into it and saves it
+    // as exports happen, so it needs none of appSettingsDirty_'s deferred-flush bookkeeping.
+    ofs::ExportMemory exportMemory;
     // App-settings dirty flag: tracks unsaved AppSettings (global preferences). Deliberately named
     // to NOT be confused with the project dirty flag `project.state.settingsDirty` (set via
     // ProjectManager::setDirty), which tracks unsaved changes to the open .ofs document. The two are
