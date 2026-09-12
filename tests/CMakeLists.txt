@@ -207,6 +207,7 @@ add_executable(ofs-unit-tests
         services/test_job_await.cpp
         services/test_job_system.cpp
         services/test_project_manager.cpp
+        services/test_action_grid.cpp
         services/test_project_manager_handlers.cpp
         services/test_axis_grouping.cpp
         services/test_modal_manager.cpp
@@ -225,6 +226,7 @@ add_executable(ofs-unit-tests
         ui/test_theme.cpp
         ui/test_gl_viewport_rect.cpp
         ui/test_timeline_layout.cpp
+        ui/test_dot_decimation.cpp
         ui/test_video_render_size.cpp
         ui/test_script_statistics.cpp
         app/test_style_scale.cpp

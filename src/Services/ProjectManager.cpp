@@ -331,7 +331,7 @@ void ProjectManager::onRemoveSelectedActions(const RemoveSelectedActionsEvent &e
 }
 
 void ProjectManager::onAddActionAtTime(const AddActionAtTimeEvent &event) {
-    ScriptAxisAction newAction = clampedAction(event.time, event.pos);
+    ScriptAxisAction newAction = authoredAction(event.time, event.pos);
     forEachEditable(project, editTargets(project, event.axis, event.fanToGroup), [&](StandardAxis role, AxisState &) {
         project.mutate(
             role,
@@ -1789,17 +1789,23 @@ void ProjectManager::onMoveSelectionTime(const MoveSelectionTimeEvent &event) {
     // Fire at most one SeekEvent for the whole (possibly multi-axis) move — off the lead axis.
     std::optional<double> leadSeek;
 
+    // stepTime is a frame or beat period, which is almost never a whole millisecond, so the landing time
+    // is snapped onto the export grid. Snapping the landing rather than the delta is what keeps the points
+    // on the grid however many times they are nudged; a constant shift of on-grid points still lands them
+    // at least one slot apart, so the selection's shape survives intact.
+    auto nudged = [delta](double at) { return snapAuthoredTime(at + delta); };
+
     forEachEditable(project, targets, [&](StandardAxis role, AxisState &axis) {
         auto isSelected = [&](double at) { return axis.selection.contains(ScriptAxisAction{at, 0}); };
         if (!axis.selection.empty()) {
             for (const auto &action : axis.selection) {
-                double newAt = std::max(0.0, action.at + delta);
+                double newAt = nudged(action.at);
                 if (axis.actions.contains(ScriptAxisAction{newAt, 0}) && !isSelected(newAt))
                     return; // a selected point would land on an unselected one — skip this member
             }
 
             auto newSelView = axis.selection | std::views::transform([&](const auto &a) {
-                                  return ScriptAxisAction{std::max(0.0, a.at + delta), a.pos};
+                                  return ScriptAxisAction{nudged(a.at), a.pos};
                               });
             VectorSet<ScriptAxisAction> newSel(newSelView.begin(), newSelView.end());
 
@@ -1808,7 +1814,7 @@ void ProjectManager::onMoveSelectionTime(const MoveSelectionTimeEvent &event) {
                 [&](AxisState &a) {
                     auto rebuiltView = a.actions | std::views::transform([&](const auto &action) {
                                            if (isSelected(action.at))
-                                               return ScriptAxisAction{std::max(0.0, action.at + delta), action.pos};
+                                               return ScriptAxisAction{nudged(action.at), action.pos};
                                            return action;
                                        });
                     a.actions = VectorSet<ScriptAxisAction>(rebuiltView.begin(), rebuiltView.end());
@@ -1822,7 +1828,7 @@ void ProjectManager::onMoveSelectionTime(const MoveSelectionTimeEvent &event) {
             const ScriptAxisAction *closest = closestActionByTime(axis.actions, project.playback.cursorPos);
             if (!closest)
                 return;
-            double newAt = std::max(0.0, closest->at + delta);
+            double newAt = nudged(closest->at);
             if (axis.actions.contains(ScriptAxisAction{newAt, 0}))
                 return;
             moveAction(role, closest->at, newAt, closest->pos);
@@ -1835,7 +1841,9 @@ void ProjectManager::onMoveSelectionTime(const MoveSelectionTimeEvent &event) {
 }
 
 void ProjectManager::onMoveActionToCurrentTime(const MoveActionToCurrentTimeEvent &event) {
-    const double currentTime = project.playback.cursorPos;
+    // Snapped up front so the already-there and occupied-slot checks below test the time the move will
+    // actually write, not the raw playhead it would have been rounded from.
+    const double currentTime = snapAuthoredTime(project.playback.cursorPos);
     forEachEditable(project, editTargets(project, event.axis, event.fanToGroup),
                     [&](StandardAxis role, AxisState &axis) {
                         if (axis.actions.empty())
@@ -1917,11 +1925,14 @@ void ProjectManager::onPasteActions(const PasteActionsEvent &event) {
                 eq);
             maxEnd = std::max(maxEnd, clipEnd);
         } else {
-            const double destStart = clipStart + offsetTime;
-            const double destEnd = clipEnd + offsetTime;
-            // Widen the cleared range by a sub-millisecond epsilon so an existing action sitting exactly on
-            // a paste boundary is replaced, not left as a duplicate next to the pasted one (time keys are
-            // doubles and rarely compare exactly equal).
+            // pasteTime is the playhead — a full double — so every landing time snaps onto the export grid.
+            const double destStart = snapAuthoredTime(clipStart + offsetTime);
+            const double destEnd = snapAuthoredTime(clipEnd + offsetTime);
+            // COMPAT(2026-09-12): widen the cleared range by half a grid slot so an existing action sitting
+            // on a paste boundary is replaced rather than left as a duplicate beside the pasted one. Both
+            // sides of the comparison are on the grid now and compare exactly, so this only still matters
+            // for off-grid actions in a project saved before authored times were snapped. Removable once
+            // no such project is in circulation.
             constexpr double kPasteTimeEpsilon = 0.0005;
             project.mutate(
                 clip.role,
@@ -1929,7 +1940,7 @@ void ProjectManager::onPasteActions(const PasteActionsEvent &event) {
                     auto itStart = a.actions.lowerBound(ScriptAxisAction{destStart - kPasteTimeEpsilon, 0});
                     auto itEnd = a.actions.upperBound(ScriptAxisAction{destEnd + kPasteTimeEpsilon, 0});
                     auto clipView = clip.actions | std::views::transform([offsetTime](const auto &x) {
-                                        return ScriptAxisAction{x.at + offsetTime, x.pos};
+                                        return ScriptAxisAction{snapAuthoredTime(x.at + offsetTime), x.pos};
                                     });
                     a.actions.replaceRange(itStart, itEnd, clipView.begin(), clipView.end());
                 },
@@ -1952,8 +1963,27 @@ void ProjectManager::onRemoveActionAtTime(const RemoveActionAtTimeEvent &event) 
         });
 }
 
+// A move relocates one action; it never creates one, never lands on another, and never changes the
+// order actions sit in. The last of those is why the destination is clamped between the neighbours
+// rather than merely checked for a collision: a cursor can travel several grid slots between frames, so
+// a collision check alone lets a fast drag hop clean over a neighbour and silently reorder the script.
+// When the neighbours are adjacent there is no slot to move into and only the position changes — which
+// is the common gesture at a stroke reversal, exactly where neighbours sit one slot apart.
 void ProjectManager::moveAction(StandardAxis role, double fromAt, double toAt, int toPos) {
-    const ScriptAxisAction dest = clampedAction(toAt, toPos); // dragging left of t=0 / off-scale clamps
+    const auto &existing = project.axes[static_cast<size_t>(role)].actions;
+    const auto it = existing.find(ScriptAxisAction{fromAt, 0});
+    // Without this the erase below is a no-op and the insert adds a point: a caller whose fromAt has
+    // gone stale (its own last request was snapped, or another edit landed first) would spray a new
+    // action per call instead of moving one.
+    if (it == existing.end())
+        return;
+
+    ScriptAxisAction dest = authoredAction(toAt, toPos); // dragging left of t=0 / off-scale clamps
+    const auto next = std::next(it);
+    const double lo = it == existing.begin() ? 0.0 : snapAuthoredTime(std::prev(it)->at) + kActionTimeStep;
+    const double hi = next == existing.end() ? dest.at : snapAuthoredTime(next->at) - kActionTimeStep;
+    // Re-snap: the bounds are a grid value plus a step, which floating point leaves just off the grid.
+    dest.at = lo > hi ? fromAt : snapAuthoredTime(std::clamp(dest.at, lo, hi));
     project.mutate(
         role,
         [fromAt, dest](AxisState &a) {
@@ -1995,9 +2025,6 @@ void ProjectManager::onMoveAction(const MoveActionEvent &event) {
             return; // member has no point at this time — can't mirror, skip it
         const int memberPos = it->pos;
         const double memberTo = std::max(0.0, event.fromAt + dt);
-        // Skip if the destination is already occupied by a different (non-moving) action.
-        if (memberTo != event.fromAt && axis.actions.contains(ScriptAxisAction{memberTo, 0}))
-            return;
         moveAction(role, event.fromAt, memberTo, std::clamp(memberPos + dpos, 0, 100));
     });
 }
@@ -2856,8 +2883,10 @@ void ProjectManager::onSetTimelineLayout(const SetTimelineLayoutEvent &event) {
 void ProjectManager::onCommitAxisActions(const CommitAxisActionsEvent &event) {
     if (event.axis >= StandardAxis::Count)
         return;
-    // A plugin supplies these actions, so clamp each to the action invariants at this boundary.
-    auto clamped = event.actions | std::views::transform([](const auto &a) { return clampedAction(a.at, a.pos); });
+    // A plugin supplies these actions, so clamp each to the action invariants at this boundary. Snapping
+    // here rather than letting export round later means a plugin cannot leave two points in one grid slot
+    // sharing a single dot; VectorSet's sort collapses any pair that lands in the same slot.
+    auto clamped = event.actions | std::views::transform([](const auto &a) { return authoredAction(a.at, a.pos); });
     project.mutate(
         event.axis, [&](AxisState &a) { a.actions = VectorSet<ScriptAxisAction>(clamped.begin(), clamped.end()); }, eq);
 }

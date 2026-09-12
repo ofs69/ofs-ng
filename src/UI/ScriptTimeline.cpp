@@ -11,6 +11,7 @@
 #include "Localization/Translator.h"
 #include "UI/AxisColors.h"
 #include "UI/BandBar.h"
+#include "UI/DotDecimation.h"
 #include "UI/Icons.h"
 #include "UI/ImGuiHelpers.h"
 #include "UI/Modals.h"
@@ -167,29 +168,13 @@ static LaneRect laneRectForAxis(const ScriptProject &project, const LaneLayout &
     return laneRectAt(l, laneIndexOf(project, role));
 }
 
-// Time width of one dot-decimation bucket: dots closer than ~2*dotRadius() px are collapsed to one.
-// The bucket grid is anchored to absolute time 0 (`it->at / bucket`), so panning never re-shuffles
-// which dot in a cluster wins — that is what keeps decimation steady during playback. To also stay
-// steady across *zoom*, the bucket size is snapped to a fixed power-of-two ladder rather than varying
-// continuously with visibleTime. Within a ladder step the drawn set is bit-for-bit identical; at a
-// step boundary the buckets cleanly halve/double, so the visible set is a strict superset/subset of
-// its neighbor — dots reveal or merge in place instead of a different cluster member popping in.
-// Both the renderer and the hit-test call this so a clickable dot is exactly a drawn dot.
-static double dotBucketDuration(double visibleTime, float width) {
-    double minBucket = static_cast<double>(dotRadius()) * 2.0 * visibleTime / static_cast<double>(width);
-    if (!(minBucket > 0.0))
-        return 1.0; // degenerate (zero-width view); any positive value keeps the bucket math finite
-    constexpr double kLadderUnit = 0.001; // 1 ms — the absolute-time anchor the ladder is built on
-    double step = std::ceil(std::log2(minBucket / kLadderUnit));
-    return kLadderUnit * std::exp2(step);
-}
-
 // Enumerate the *visible* source dots of `role`'s axis — exactly the set the renderer draws, so a
 // clickable dot is always a drawn dot. Applies, in order: the zoom-out fade gate (nothing once the dots
-// have faded away), the zoom/pan-stable bucket decimation (one dot per bucket, see dotBucketDuration),
-// and suppression inside regions that hide source points. `fn(action)` runs for each surviving dot in
-// time order. Both the dot renderer (Pass 4) and findNearestAction iterate this, which is what keeps the
-// hit-test from matching a dot the renderer culled (a hidden-region point) — the two used to drift.
+// have faded away), suppression inside regions that hide source points, and the zoom/pan-stable bucket
+// decimation (the lowest- and highest-position action per bucket, see DotDecimation.h). `fn(action)`
+// runs for each surviving dot in time order. Both the dot renderer (Pass 4) and findNearestAction
+// iterate this, which is what keeps the hit-test from matching a dot the renderer culled (a
+// hidden-region point) — the two used to drift.
 template <class Fn>
 static void forEachVisibleDot(const ScriptProject &project, StandardAxis role,
                               const VectorSet<ScriptAxisAction> &actions, double visibleTime, double offsetTime,
@@ -213,31 +198,18 @@ static void forEachVisibleDot(const ScriptProject &project, StandardAxis role,
             reg.startTime <= winEnd)
             hidden[hiddenCount++] = {.start = reg.startTime, .end = reg.endTime};
 
-    auto itStart = actions.lowerBound(ScriptAxisAction{offsetTime, 0});
-    if (itStart != actions.begin())
-        --itStart;
-    auto itEnd = actions.upperBound(ScriptAxisAction{offsetTime + visibleTime, 0});
-    if (itEnd != actions.end())
-        ++itEnd;
-    const double timeBucketDuration = dotBucketDuration(visibleTime, width);
-    int lastBucket = -1;
-    if (itStart != actions.begin())
-        lastBucket = static_cast<int>(std::prev(itStart)->at / timeBucketDuration);
-    for (auto it = itStart; it != itEnd; ++it) {
-        int bucket = static_cast<int>(it->at / timeBucketDuration);
-        if (bucket == lastBucket)
-            continue;
-        lastBucket = bucket;
-        bool inHiddenRegion = false;
-        for (size_t h = 0; h < hiddenCount; ++h)
-            if (it->at >= hidden[h].start && it->at <= hidden[h].end) {
-                inHiddenRegion = true;
-                break;
-            }
-        if (inHiddenRegion)
-            continue;
-        fn(*it);
-    }
+    const double bucketDuration = ui::dotBucketDuration(dotRadius(), visibleTime, width);
+    auto itStart = actions.lowerBound(ScriptAxisAction{ui::bucketScanStart(offsetTime, bucketDuration), 0});
+    auto itEnd = actions.lowerBound(ScriptAxisAction{ui::bucketScanEnd(winEnd, bucketDuration), 0});
+    ui::forEachBucketDot(
+        itStart, itEnd, bucketDuration,
+        [hidden, hiddenCount](const ScriptAxisAction &a) {
+            for (size_t h = 0; h < hiddenCount; ++h)
+                if (a.at >= hidden[h].start && a.at <= hidden[h].end)
+                    return false;
+            return true;
+        },
+        std::forward<Fn>(fn));
 }
 
 static const ScriptAxisAction *findNearestAction(const ScriptProject &project, StandardAxis role,
@@ -1340,7 +1312,14 @@ void ScriptTimelineWindow::render(const ScriptProject &project, EventQueue &eq, 
         } else if (wheel != 0) {
             viewState.previousVisibleTime = viewState.visibleTime;
             viewState.targetVisibleTime *= (wheel > 0) ? 0.8 : 1.25;
-            viewState.targetVisibleTime = std::clamp(viewState.targetVisibleTime, 0.1, 300.0);
+            // The floor is set by the millisecond grid authored actions sit on. A bucket spans 2*dotRadius
+            // px and snaps to a power-of-two ladder over 1 ms, so the first bucket that can separate two
+            // adjacent grid slots is the 0.5 ms step — which needs a window of 0.0005 * width /
+            // (2*dotRadius), about 12 ms across a 400 px lane. Zooming all the way in therefore always
+            // resolves a cluster into its individual points, in a narrow Lanes row as well as a full-width
+            // band. A 1 ms bucket is not enough: it lands adjacent slots in the same bucket as often as not,
+            // because at->bucket division is not exact at the boundary.
+            viewState.targetVisibleTime = std::clamp(viewState.targetVisibleTime, 0.01, 300.0);
             viewState.zoomUpdateTime = ticks;
         }
         if (ImGui::IsMouseDragging(ImGuiMouseButton_Middle)) {
@@ -1489,31 +1468,37 @@ void ScriptTimelineWindow::render(const ScriptProject &project, EventQueue &eq, 
             float mouseY = ImGui::GetMousePos().y;
             bool altHeld = ImGui::GetIO().KeyAlt;
 
-            double newDragTime = altHeld ? editState.originalDragAt
-                                         : std::max(0.0, screenXToTime(mouseX, viewState.visibleTime, offsetTime,
-                                                                       scriptLinePos, scriptLineSize));
+            // Snap to the same grid ProjectManager stores on. dragFromAt is the dragged point's identity
+            // (a point is addressed by its time), so if the UI tracked the raw cursor time instead, the
+            // next frame's fromTime would name an action that no longer exists — and the move would leave
+            // the point behind and add a new one, once per frame, for the length of the drag.
+            double newDragTime = snapAuthoredTime(
+                altHeld ? editState.originalDragAt
+                        : screenXToTime(mouseX, viewState.visibleTime, offsetTime, scriptLinePos, scriptLineSize));
             // Map the vertical drag through the dragged axis's lane band so pos tracks the cursor 1:1
             // (a full-rect mapping would scale wrong once the lane is a fraction of the height).
             LaneRect dragLane = lanes ? laneRectForAxis(project, laneLayout_, editState.draggingAxis)
                                       : LaneRect{.pos = scriptLinePos, .size = scriptLineSize};
             int newDragPos = screenYToPos(mouseY, dragLane.pos, dragLane.size);
 
-            bool timeChanged = (newDragTime != editState.dragFromAt);
-            if (timeChanged || newDragPos != editState.dragPos) {
-                bool hasConflict = timeChanged && dragAx.actions.contains(ScriptAxisAction{newDragTime, 0});
-                if (!hasConflict) {
-                    // First move of the drag is the gesture boundary (snapshot); the rest continue it.
-                    eq.push(EditRequestEvent{.intent = {.kind = EditIntentKind::MovePoint,
-                                                        .axis = editState.draggingAxis,
-                                                        .time = newDragTime,
-                                                        .fromTime = editState.dragFromAt,
-                                                        .pos = newDragPos},
-                                             .gesture =
-                                                 editState.dragMoved ? GesturePhase::Continue : GesturePhase::Begin});
-                    editState.dragMoved = true;
-                    editState.dragFromAt = newDragTime;
-                    editState.dragPos = newDragPos;
-                }
+            // A point never displaces or passes through its neighbour: when the slot under the cursor is
+            // taken, the drag holds its time and only the position keeps following. Deciding that here
+            // rather than letting the move land is what keeps dragFromAt equal to the stored time.
+            if (newDragTime != editState.dragFromAt && dragAx.actions.contains(ScriptAxisAction{newDragTime, 0}))
+                newDragTime = editState.dragFromAt;
+
+            if (newDragTime != editState.dragFromAt || newDragPos != editState.dragPos) {
+                // First move of the drag is the gesture boundary (snapshot); the rest continue it.
+                eq.push(
+                    EditRequestEvent{.intent = {.kind = EditIntentKind::MovePoint,
+                                                .axis = editState.draggingAxis,
+                                                .time = newDragTime,
+                                                .fromTime = editState.dragFromAt,
+                                                .pos = newDragPos},
+                                     .gesture = editState.dragMoved ? GesturePhase::Continue : GesturePhase::Begin});
+                editState.dragMoved = true;
+                editState.dragFromAt = newDragTime;
+                editState.dragPos = newDragPos;
             }
 
             ImGui::SetMouseCursor(altHeld ? ImGuiMouseCursor_ResizeNS : ImGuiMouseCursor_Hand);

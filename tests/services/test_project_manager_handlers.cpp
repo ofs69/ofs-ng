@@ -308,12 +308,14 @@ TEST_CASE("A held move coalesces into one undo step (time)") {
     CHECK_FALSE(f.undo.canUndo()); // seeding/selection don't snapshot
 
     // Hold burst: only the first fire snapshots; the rest ride snapshot=false.
-    const double step = 1.0 / 30.0;
     f.push(MoveSelectionTimeEvent{.axis = StandardAxis::L0, .direction = StepDirection::Forward, .snapshot = true});
     f.push(MoveSelectionTimeEvent{.axis = StandardAxis::L0, .direction = StepDirection::Forward, .snapshot = false});
     f.push(MoveSelectionTimeEvent{.axis = StandardAxis::L0, .direction = StepDirection::Forward, .snapshot = false});
     f.drain();
-    CHECK(f.axis(StandardAxis::L0).actions[0].at == doctest::Approx(1.0 + 3 * step));
+    // Every nudge lands on the millisecond grid, so three separate fires are 33 + 33 + 33 ms — not the
+    // 100 ms one reps=3 fire gives. A frame period is not a whole millisecond, and the sub-millisecond
+    // remainder an unsnapped nudge would accumulate is not storable in the first place.
+    CHECK(f.axis(StandardAxis::L0).actions[0].at == doctest::Approx(1.099));
     CHECK(f.undo.canUndo());
 
     // One undo restores the pre-hold state, and there is nothing left to undo (single step).
@@ -352,7 +354,7 @@ TEST_CASE("A single tap is still one move and one undo step (defaults preserved)
 
     f.push(MoveSelectionTimeEvent{.axis = StandardAxis::L0, .direction = StepDirection::Forward, .seekAfter = false});
     f.drain();
-    CHECK(f.axis(StandardAxis::L0).actions[0].at == doctest::Approx(1.0 + 1.0 / 30.0));
+    CHECK(f.axis(StandardAxis::L0).actions[0].at == doctest::Approx(1.033)); // 1/30 s snapped to the grid
     CHECK(f.undo.canUndo());
 
     f.push(UndoEvent{});

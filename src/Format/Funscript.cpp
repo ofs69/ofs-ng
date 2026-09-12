@@ -322,22 +322,32 @@ VectorSet<ScriptAxisAction> Funscript::toActions() const {
     return result;
 }
 
-Funscript Funscript::fromActions(const VectorSet<ScriptAxisAction> &scriptActions) {
-    Funscript fs;
-    fs.actions.reserve(scriptActions.size());
-    // Round seconds→ms to the nearest millisecond (not truncate) so a timestamp like 3.4567 s
-    // exports as 3457 ms rather than losing the sub-ms remainder.
-    for (const auto &action : scriptActions)
-        fs.actions.push_back({.at = secondsToMs(action.at), .pos = action.pos});
-    return fs;
-}
-
+// Seconds→ms for export. Rounds to the nearest millisecond (not truncate) so a timestamp like 3.4567 s
+// exports as 3457 ms rather than losing the sub-ms remainder, and collapses any run that lands on the
+// same millisecond — a funscript keys its actions by `at`, so a repeated timestamp is invalid output and
+// a reader that dedups would drop one of the pair without saying so. Only actions less than a
+// millisecond apart can collide: authored ones never are (snapAuthoredTime puts them on the grid), but
+// processing-node output is full-precision double and is what gets exported wherever a region resolves.
+// The input is sorted and secondsToMs is monotonic, so a collided run is always adjacent.
 static std::vector<Funscript::Action> toActionVec(const VectorSet<ScriptAxisAction> &acts) {
     std::vector<Funscript::Action> result;
     result.reserve(acts.size());
-    for (const auto &a : acts)
-        result.push_back({.at = secondsToMs(a.at), .pos = a.pos});
+    for (const auto &a : acts) {
+        const int64_t ms = secondsToMs(a.at);
+        if (!result.empty() && result.back().at == ms)
+            continue; // keep the earliest of the run; the rest are not representable alongside it
+        result.push_back({.at = ms, .pos = a.pos});
+    }
+    if (result.size() != acts.size())
+        OFS_CORE_WARN("Export collapsed {} action(s) sharing a millisecond with a neighbour",
+                      acts.size() - result.size());
     return result;
+}
+
+Funscript Funscript::fromActions(const VectorSet<ScriptAxisAction> &scriptActions) {
+    Funscript fs;
+    fs.actions = toActionVec(scriptActions);
+    return fs;
 }
 
 static VectorSet<ScriptAxisAction> fromActionVec(const std::vector<Funscript::Action> &acts) {

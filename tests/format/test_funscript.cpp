@@ -485,3 +485,35 @@ TEST_CASE("fromAxes11/20 stamp the funscript version they produce") {
     CHECK(ofs::Funscript::fromAxes20({{"L0", acts}}).version == "2.0");
     CHECK(ofs::Funscript::fromActions(acts).version == "1.0");
 }
+
+// A funscript keys its actions by `at`, so two entries sharing a timestamp are invalid output. The
+// collision needs two actions less than a millisecond apart: authored actions can never be that close
+// (snapAuthoredTime puts them on the grid), but processing-node output is full-precision double and is
+// what gets exported in place of the source wherever a region resolves. Seconds→ms is the boundary
+// that has to guarantee uniqueness.
+TEST_CASE("Export collapses actions that round to the same millisecond") {
+    ofs::VectorSet<ofs::ScriptAxisAction> a;
+    a.insert({1.0001, 20});
+    a.insert({1.0004, 90}); // same ms as the previous
+    a.insert({1.0021, 40}); // its own ms
+    auto fs = ofs::Funscript::fromActions(a);
+
+    REQUIRE(fs.actions.size() == 2);
+    CHECK(fs.actions[0].at == 1000);
+    CHECK(fs.actions[0].pos == 20); // the earliest of a collapsed run survives
+    CHECK(fs.actions[1].at == 1002);
+}
+
+TEST_CASE("Multi-axis export collapses same-millisecond actions on every axis") {
+    ofs::VectorSet<ofs::ScriptAxisAction> l0;
+    l0.insert({1.0001, 20});
+    l0.insert({1.0004, 90});
+    ofs::VectorSet<ofs::ScriptAxisAction> r0;
+    r0.insert({2.0002, 30});
+    r0.insert({2.0003, 70});
+    auto fs = ofs::Funscript::fromAxes11({{"L0", l0}, {"R0", r0}});
+
+    CHECK(fs.actions.size() == 1); // L0 in root
+    REQUIRE(fs.axes.size() == 1);
+    CHECK(fs.axes[0].actions.size() == 1);
+}

@@ -77,7 +77,7 @@ the work in progress.
 | Ctrl+drag empty | Add to selection |
 | Click point | Select point + seek |
 | Ctrl+click point | Toggle point selection |
-| Drag point | Move (time + value) |
+| Drag point | Move (time + value); stops one slot short of a neighbouring point; never reorders |
 | Alt+drag point | Move value only (locks time) |
 | Middle-drag | Pan |
 | Middle double-click | Clear selection |
