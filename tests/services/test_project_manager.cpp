@@ -667,6 +667,57 @@ TEST_CASE("ProjectManager: a failed export records nothing") {
     std::filesystem::remove_all(blocked);
 }
 
+// An untitled project has no path to key the export memory on, so an export made before the first save
+// lives only in the session. The save that finally gives the document a path must claim it — the config
+// used to ride along in the .ofp, so forgetting it here would be a regression from that behaviour. Save
+// As re-keys through the same path.
+TEST_CASE("ProjectManager: the first save claims an untitled project's export memory") {
+    TestProject tp;
+    ofs::AppSettings appSettings;
+    appSettings.autoBackupEnabled = false;
+    ofs::JobSystem jobSystem;
+    ofs::EffectRegistryState effectReg;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, jobSystem, effectReg);
+    tp.eq.on<ofs::ModifyEvent<ofs::AppSettings>>(
+        [&](const ofs::ModifyEvent<ofs::AppSettings> &e) { e.apply(appSettings); });
+    const auto filePath = std::filesystem::temp_directory_path() / "ofs_test_untitled_export.ofp";
+    // Stand in for the ModalManager: an untitled save goes through the native Save picker.
+    tp.eq.on<ofs::ShowModalEvent>([&](const ofs::ShowModalEvent &e) {
+        if (!e.dialog || !e.resultStrSlot || !e.handle)
+            return;
+        *e.resultStrSlot = ofs::util::toUtf8(filePath);
+        e.handle.resume();
+    });
+    tp.eq.freeze();
+    jobSystem.start();
+
+    std::filesystem::remove(filePath);
+    tp.project.axes[0].showInStrip = true;
+    tp.project.mutate(StandardAxis::L0, [](ofs::AxisState &a) { a.actions.insert({1.0, 50}); }, tp.eq);
+    tp.eq.drain();
+    REQUIRE(tp.project.state.filePath.empty());
+
+    const auto outDir = std::filesystem::temp_directory_path() / "ofs_test_untitled_export_out";
+    std::filesystem::remove_all(outDir);
+    tp.eq.push(
+        ofs::ExportFunscriptRequestEvent{.axes = {StandardAxis::L0}, .format = 0, .targetPath = outDir.string()});
+    REQUIRE(drainUntil(tp.eq, [&] { return tp.project.state.lastExport.has_value(); }));
+    CHECK(appSettings.lastExports.empty()); // no key to persist under yet
+
+    tp.eq.push(ofs::SaveProjectEvent{false});
+    tp.eq.drain();
+    REQUIRE(waitForSave(pm));
+    tp.eq.drain(); // apply the settings write the save pushed
+
+    const ofs::ExportConfig *remembered = appSettings.findExport(ofs::util::toUtf8(filePath));
+    REQUIRE(remembered != nullptr);
+    CHECK(remembered->format == 0);
+    CHECK(remembered->outputPath == outDir.string());
+
+    std::filesystem::remove_all(outDir);
+    std::filesystem::remove(filePath);
+}
+
 TEST_CASE("Project::load returns nullopt for a missing file") {
     auto missingPath = std::filesystem::temp_directory_path() / "does_not_exist_xyz123.ofp";
     auto result = ofs::Project::load(missingPath);

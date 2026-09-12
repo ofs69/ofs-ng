@@ -1185,14 +1185,15 @@ void ProjectManager::applyLoadedProject(const Project &loaded, const std::filesy
 
     // Quick Export's remembered config is app-side (see recordLastExport), so it is restored from
     // settings rather than from the project file.
-    // COMPAT(2026-09-10): the else-branch migrates a config still carried by a pre-move .ofp into
-    // settings once, so the memory survives the re-save that drops the field. Removable with
+    // COMPAT(2026-09-10): the else-branch adopts a config still carried by a pre-move .ofp and migrates
+    // it into settings once, so the memory survives the re-save that drops the field. Removable with
     // Project::lastExport.
-    if (const ExportConfig *remembered = appSettings.findExport(project.state.filePath))
+    if (const ExportConfig *remembered = appSettings.findExport(project.state.filePath)) {
         project.state.lastExport = *remembered;
-    else if (project.state.lastExport)
-        eq.push(ModifyEvent<AppSettings>{[path = project.state.filePath, cfg = *project.state.lastExport](
-                                             AppSettings &s) { s.rememberExport(path, cfg); }});
+    } else if (loaded.lastExport) {
+        project.state.lastExport = *loaded.lastExport;
+        persistLastExport();
+    }
 
     // Select the saved active axis, or fall back to L0 if it's out of range.
     StandardAxis toSelect = loaded.activeAxisRole;
@@ -1291,6 +1292,10 @@ void ProjectManager::finalizePendingWrite(bool ok) {
         if (ok) {
             project.state.filePath = ofs::util::toUtf8(pendingWrite->path);
             eq.push(RememberRecentProjectEvent{project.state.filePath});
+            // A first save (untitled) or Save As re-keys the document. Carry the session's export memory
+            // to the new path, or it would be stranded under the old key — and an untitled project,
+            // which had no key to persist under at all, would lose it outright.
+            persistLastExport();
             setDirty(false);
             lastSaveTime = std::chrono::steady_clock::now();
             eq.push(NotifyEvent{.level = NotifyLevel::Success, .message = Str::PmProjectSaved.c_str()});
@@ -1538,9 +1543,6 @@ void ProjectManager::loadFromProject(const Project &proj) {
     project.state.modifiedAtUnix = proj.modifiedAtUnix;
     project.state.editSessionCount = proj.editSessionCount;
     project.state.autoNameSeed = proj.autoNameSeed;
-    // COMPAT(2026-09-10): only a pre-move .ofp carries this; applyLoadedProject prefers the
-    // app-side config and migrates whatever lands here.
-    project.state.lastExport = proj.lastExport;
     // The authored ids are applied verbatim to the stored fields; the effective fields start equal and
     // the routers validate them against their registries on the LoadProjectEvent, falling the *effective*
     // id back to follow-overlay / native if no loaded plugin registers it while leaving the stored id
@@ -2943,8 +2945,13 @@ void ProjectManager::recordLastExport(int format, std::vector<StandardAxis> axes
         ExportConfig{.format = format, .axes = std::move(axes), .outputPath = std::move(outputPath)};
     // Deliberately no setDirty(): an export writes no document state, so it must neither raise the
     // unsaved-changes prompt nor advance editRevision (which would arm an auto-backup whose only delta
-    // is this config, evicting a genuinely distinct snapshot). The config is app-side instead, keyed by
-    // the project path — an untitled project has no key yet and keeps it for the session only.
+    // is this config, evicting a genuinely distinct snapshot). It is persisted app-side instead.
+    persistLastExport();
+}
+
+void ProjectManager::persistLastExport() {
+    if (!project.state.lastExport || project.state.filePath.empty())
+        return;
     eq.push(ModifyEvent<AppSettings>{[path = project.state.filePath, cfg = *project.state.lastExport](AppSettings &s) {
         s.rememberExport(path, cfg);
     }});
