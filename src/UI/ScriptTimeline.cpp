@@ -633,6 +633,19 @@ void ScriptTimelineWindow::renderScriptLines(const ScriptProject &project, ImDra
             if (itEnd != displayActions.end())
                 ++itEnd;
 
+            // Pass 0: speed-limit halo, wider than the contrast outline so it frames an over-limit stroke
+            // without recoloring it — the heat color underneath still says how fast the stroke is. Only
+            // the heat-gradient lines get it; every other segment returns a transparent color, which
+            // AddPolyline skips.
+            if (speedLimit_.enabled && (isActive || lanes)) {
+                const ImU32 haloCol = (ofs::theme::GetColorU32(AppCol_SpeedLimit) & 0x00FFFFFFU) | (outlineAlpha << 24);
+                const float limit = speedLimit_.unitsPerSecond;
+                strokePolyline(itStart, itEnd, skipAt, outlineW + 4.0f,
+                               [haloCol, limit](const ScriptAxisAction *prev, const ScriptAxisAction *curr) -> ImU32 {
+                                   return exceedsSpeedLimit(*prev, *curr, limit) ? haloCol : 0;
+                               });
+            }
+
             // Pass 1: contrast outline
             const ImU32 outlineCol =
                 (ofs::theme::GetColorU32(AppCol_TimelineOutline) & 0x00FFFFFFU) | (outlineAlpha << 24);
@@ -1255,8 +1268,9 @@ bool ScriptTimelineWindow::renderSettingsBody(const ScriptProject &project, Even
 }
 
 void ScriptTimelineWindow::render(const ScriptProject &project, EventQueue &eq, VideoPlayer &videoPlayer,
-                                  WaveformRenderer &waveform) {
+                                  WaveformRenderer &waveform, const SpeedLimitSettings &speedLimit) {
     m_regionClickedThisFrame = false;
+    speedLimit_ = speedLimit;
 
     // NoNavInputs: this panel owns the unmodified arrow/Space editor shortcuts (frame-step, play/pause).
     // Without it, focusing the timeline would make ImGui keyboard nav claim those keys (see Application.cpp).

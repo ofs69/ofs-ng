@@ -415,6 +415,28 @@ void ConfigurationWindow::renderApplicationTab(EventQueue &eq) {
     }
     ImGui::Spacing();
 
+    // --- Speed limit ---
+    ImGui::SeparatorText(Str::PrefSpeedLimitSection);
+    if (beginForm("##speed_limit_form")) {
+        const SpeedLimitSettings limit = appSettings.speedLimit;
+        formRowHelp(Str::PrefSpeedLimitEnable, Str::PrefSpeedLimitEnableHint.c_str());
+        bool enabled = limit.enabled;
+        if (ImGui::Checkbox("###speed_limit_enabled", &enabled))
+            eq.push(ModifyEvent<AppSettings>{[enabled](AppSettings &s) { s.speedLimit.enabled = enabled; }});
+
+        formRow(Str::PrefSpeedLimitValue);
+        ImGui::BeginDisabled(!limit.enabled);
+        ImGui::SetNextItemWidth(-FLT_MIN);
+        float unitsPerSecond = limit.unitsPerSecond;
+        if (ImGui::DragFloat("###speed_limit_value", &unitsPerSecond, 5.0f, kMinSpeedLimit, kMaxSpeedLimit, "%.0f",
+                             ImGuiSliderFlags_AlwaysClamp))
+            eq.push(ModifyEvent<AppSettings>{
+                [unitsPerSecond](AppSettings &s) { s.speedLimit.unitsPerSecond = unitsPerSecond; }});
+        ImGui::EndDisabled();
+        endForm();
+    }
+    ImGui::Spacing();
+
     // --- View ---
     ImGui::SeparatorText(Str::PrefView);
     if (beginForm("##view_form")) {
@@ -621,6 +643,7 @@ constexpr ColorItem kTimelineColors[] = {
     {AppCol_ScriptSeekCursor, "Seek Cursor"},
     {AppCol_ScriptPlayCursor, "Play Cursor"},
     {AppCol_TempoMeasureLine, "Tempo Measure"},
+    {AppCol_SpeedLimit, "Speed Limit"},
 };
 
 constexpr ColorItem kVideoColors[] = {

@@ -1008,11 +1008,12 @@ void OfsApp::renderEditor() {
     }
 
     if (scriptTimelineWindow)
-        scriptTimelineWindow->render(scriptProject, eventQueue, *player, *waveformRenderer);
+        scriptTimelineWindow->render(scriptProject, eventQueue, *player, *waveformRenderer, appSettings.speedLimit);
     if (videoControlsWindow)
-        videoControlsWindow->render(scriptProject, eventQueue, *player, *videoPreview, *previewPopup);
+        videoControlsWindow->render(scriptProject, eventQueue, *player, *videoPreview, *previewPopup,
+                                    appSettings.speedLimit);
     if (scriptStatisticsWindow)
-        scriptStatisticsWindow->render(scriptProject, appSettings.showStatistics);
+        scriptStatisticsWindow->render(scriptProject, appSettings.showStatistics, appSettings.speedLimit);
     if (logWindow)
         logWindow->render(appState.showLogWindow);
     if (projectConfigWindow)

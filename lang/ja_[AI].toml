@@ -268,6 +268,22 @@ translation = "新規プロジェクトでメタデータを表示"
 english     = "Automatically open the Metadata editor window each time you create a new project."
 translation = "新しいプロジェクトを作成するたびに、メタデータ編集ウィンドウを自動的に開きます。"
 
+[PrefSpeedLimitSection]
+english     = "Speed Limit"
+translation = "速度制限"
+
+[PrefSpeedLimitEnable]
+english     = "Flag strokes over the speed limit"
+translation = "速度制限を超えるストロークを強調表示"
+
+[PrefSpeedLimitEnableHint]
+english     = "Strokes faster than the limit get a highlight on the timeline, marks on the seek bar heatmap, and a count in Statistics. Use the Next/Previous Stroke Over Speed Limit commands to step through them. Set the limit to the fastest speed your device can play."
+translation = "制限より速いストロークは、タイムラインで強調表示され、シークバーのヒートマップにマークされ、統計でカウントされます。「速度制限を超える次/前のストローク」コマンドで順に移動できます。制限はデバイスが再生できる最高速度に設定してください。"
+
+[PrefSpeedLimitValue]
+english     = "Speed limit (units/s)"
+translation = "速度制限 (ユニット/秒)"
+
 [TranscodeTitle]
 english     = "Optimize Video for Seeking"
 translation = "シーク向けに動画を最適化"
@@ -1909,6 +1925,14 @@ translation = "前のアクション（全スクリプト）"
 english     = "Next Action (All Scripts)"
 translation = "次のアクション（全スクリプト）"
 
+[CmdNavPrevOverSpeedLimit]
+english     = "Previous Stroke Over Speed Limit"
+translation = "速度制限を超える前のストローク"
+
+[CmdNavNextOverSpeedLimit]
+english     = "Next Stroke Over Speed Limit"
+translation = "速度制限を超える次のストローク"
+
 [CmdNavCycleAxisForward]
 english     = "Cycle Axis Forward"
 translation = "軸を前方に切り替え"
@@ -3531,6 +3555,10 @@ translation = "アクション (この軸):"
 [StatActionsAll]
 english     = "Actions (all axes):"
 translation = "アクション (全軸):"
+
+[StatOverSpeedLimit]
+english     = "Over speed limit:"
+translation = "速度制限超過:"
 
 [StatMs]
 english     = "{0} ms"

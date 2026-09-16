@@ -268,6 +268,22 @@ translation = "为新项目显示元数据"
 english     = "Automatically open the Metadata editor window each time you create a new project."
 translation = "每次创建新项目时，自动打开元数据编辑窗口。"
 
+[PrefSpeedLimitSection]
+english     = "Speed Limit"
+translation = "速度限制"
+
+[PrefSpeedLimitEnable]
+english     = "Flag strokes over the speed limit"
+translation = "标记超过速度限制的行程"
+
+[PrefSpeedLimitEnableHint]
+english     = "Strokes faster than the limit get a highlight on the timeline, marks on the seek bar heatmap, and a count in Statistics. Use the Next/Previous Stroke Over Speed Limit commands to step through them. Set the limit to the fastest speed your device can play."
+translation = "比限制更快的行程会在时间轴上高亮显示、在进度条热图上标记，并在统计中计数。使用“下一个/上一个超过速度限制的行程”命令逐个跳转。请将限制设为设备可以播放的最高速度。"
+
+[PrefSpeedLimitValue]
+english     = "Speed limit (units/s)"
+translation = "速度限制（单位/秒）"
+
 [TranscodeTitle]
 english     = "Optimize Video for Seeking"
 translation = "优化视频以加速跳转"
@@ -1909,6 +1925,14 @@ translation = "上一个动作（所有脚本）"
 english     = "Next Action (All Scripts)"
 translation = "下一个动作（所有脚本）"
 
+[CmdNavPrevOverSpeedLimit]
+english     = "Previous Stroke Over Speed Limit"
+translation = "上一个超过速度限制的行程"
+
+[CmdNavNextOverSpeedLimit]
+english     = "Next Stroke Over Speed Limit"
+translation = "下一个超过速度限制的行程"
+
 [CmdNavCycleAxisForward]
 english     = "Cycle Axis Forward"
 translation = "向前切换轴"
@@ -3531,6 +3555,10 @@ translation = "动作（本轴）："
 [StatActionsAll]
 english     = "Actions (all axes):"
 translation = "动作（所有轴）："
+
+[StatOverSpeedLimit]
+english     = "Over speed limit:"
+translation = "超过速度限制："
 
 [StatMs]
 english     = "{0} ms"

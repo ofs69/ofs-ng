@@ -268,6 +268,22 @@ translation = "Yeni projeler için üst verileri göster"
 english     = "Automatically open the Metadata editor window each time you create a new project."
 translation = "Her yeni proje oluşturduğunuzda Üst Veri düzenleme penceresini otomatik olarak açar."
 
+[PrefSpeedLimitSection]
+english     = "Speed Limit"
+translation = "Hız sınırı"
+
+[PrefSpeedLimitEnable]
+english     = "Flag strokes over the speed limit"
+translation = "Hız sınırını aşan hareketleri işaretle"
+
+[PrefSpeedLimitEnableHint]
+english     = "Strokes faster than the limit get a highlight on the timeline, marks on the seek bar heatmap, and a count in Statistics. Use the Next/Previous Stroke Over Speed Limit commands to step through them. Set the limit to the fastest speed your device can play."
+translation = "Sınırdan hızlı hareketler zaman çizelgesinde vurgulanır, arama çubuğu ısı haritasında işaretlenir ve İstatistikler'de sayılır. Aralarında gezinmek için Hız sınırını aşan sonraki/önceki hareket komutlarını kullanın. Sınırı cihazınızın oynatabildiği en yüksek hıza ayarlayın."
+
+[PrefSpeedLimitValue]
+english     = "Speed limit (units/s)"
+translation = "Hız sınırı (birim/sn)"
+
 [TranscodeTitle]
 english     = "Optimize Video for Seeking"
 translation = "Konumlama için Videoyu Optimize Et"
@@ -1909,6 +1925,14 @@ translation = "Önceki Eylem (Tüm Betikler)"
 english     = "Next Action (All Scripts)"
 translation = "Sonraki Eylem (Tüm Betikler)"
 
+[CmdNavPrevOverSpeedLimit]
+english     = "Previous Stroke Over Speed Limit"
+translation = "Hız sınırını aşan önceki hareket"
+
+[CmdNavNextOverSpeedLimit]
+english     = "Next Stroke Over Speed Limit"
+translation = "Hız sınırını aşan sonraki hareket"
+
 [CmdNavCycleAxisForward]
 english     = "Cycle Axis Forward"
 translation = "Ekseni İleri Döngüle"
@@ -3531,6 +3555,10 @@ translation = "Eylemler (bu eksen):"
 [StatActionsAll]
 english     = "Actions (all axes):"
 translation = "Eylemler (tüm eksenler):"
+
+[StatOverSpeedLimit]
+english     = "Over speed limit:"
+translation = "Hız sınırı üstü:"
 
 [StatMs]
 english     = "{0} ms"

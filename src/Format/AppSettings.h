@@ -1,6 +1,7 @@
 #pragma once
 #include "Core/FunscriptMetadata.h"
 #include "Core/SimulatorSettings.h"
+#include "Core/SpeedLimit.h"
 #include <filesystem>
 #include <nlohmann/json.hpp>
 #include <string>
@@ -81,6 +82,7 @@ struct AppSettings {
     SimulatorState simulator;
     InputSettings input;
     HoldRepeatSettings holdRepeat;
+    SpeedLimitSettings speedLimit;
     std::vector<MetadataPreset> metadataPresets;
     float volume = 1.0f;
     // UI sound feedback: short SFX played for notifications (success/error/warning). Independent of

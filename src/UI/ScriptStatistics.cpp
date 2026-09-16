@@ -1,15 +1,17 @@
-#include "UI/ScriptStatistics.h"
+﻿#include "UI/ScriptStatistics.h"
 
 #include "Core/ScriptProject.h"
 #include "Localization/Translator.h"
 #include "UI/Icons.h"
+#include "UI/Theme.h"
 #include "Util/FrameAllocator.h" // fmtScratch
 #include "imgui.h"
 #include <cmath>
 
 namespace ofs {
 
-void ScriptStatisticsWindow::render(const ScriptProject &project, bool &open) const {
+void ScriptStatisticsWindow::render(const ScriptProject &project, bool &open,
+                                    const SpeedLimitSettings &speedLimit) const {
     if (!open)
         return;
     if (!ImGui::Begin(Str::StatTitle.id("statistics"), &open, ImGuiWindowFlags_NoNavInputs)) {
@@ -66,7 +68,13 @@ void ScriptStatisticsWindow::render(const ScriptProject &project, bool &open) co
         const char *speedVal =
             haveSpan ? Str::StatUnitsPerSec.fmt(fmtScratch("{:6.2f}", std::abs(delta) / duration)) : kNoValue;
         const char *durVal = haveSpan ? Str::StatMs.fmt(fmtScratch("{:6.2f}", duration * 1000.0)) : kNoValue;
+        const bool overLimit =
+            haveSpan && speedLimit.enabled && exceedsSpeedLimit(*stroke.from, *stroke.to, speedLimit.unitsPerSecond);
+        if (overLimit)
+            ImGui::PushStyleColor(ImGuiCol_Text, ofs::theme::GetColorU32(AppCol_SpeedLimit));
         valRow(ICON_GAUGE, Str::StatSpeed, speedVal);
+        if (overLimit)
+            ImGui::PopStyleColor();
         valRow(ICON_TIMER, Str::StatDuration, durVal);
 
         // The row icon carries the direction (neutral up-down when there's no span); the value is the
@@ -87,6 +95,9 @@ void ScriptStatisticsWindow::render(const ScriptProject &project, bool &open) co
     if (ImGui::BeginTable("##stataction", 2, ImGuiTableFlags_SizingFixedFit)) {
         valRow(ICON_LIST, Str::StatActionsAxis, fmtScratch("{}", actions.size()));
         valRow(ICON_LAYERS_2, Str::StatActionsAll, fmtScratch("{}", totalAllAxes));
+        if (speedLimit.enabled)
+            valRow(ICON_ALERT_TRIANGLE, Str::StatOverSpeedLimit,
+                   fmtScratch("{}", countOverSpeedLimit(actions, speedLimit.unitsPerSecond)));
         ImGui::EndTable();
     }
 

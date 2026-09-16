@@ -5,6 +5,7 @@
 #include "helpers/TestState.h"
 #include <cmath>
 #include <imgui.h>
+#include <imgui_internal.h> // ImGuiItemFlags_Disabled
 #include <imgui_te_context.h>
 #include <imgui_te_engine.h>
 
@@ -70,6 +71,29 @@ void RegisterConfigTests(ImGuiTestEngine *e) {
         ctx->ItemClick("**/##hwdec"); // restore (also avoids the restart-required modal on close)
         ctx->Yield(2);
         IM_CHECK_EQ(s->hwdecEnabled, before);
+        closePrefs(ctx);
+    };
+
+    // ── Application tab: speed-limit checkbox gates the value drag ────────────────────
+    IM_REGISTER_TEST(e, "config", "app_speed_limit_toggle")->TestFunc = [](ImGuiTestContext *ctx) {
+        openAppTab(ctx);
+        const auto *s = getTestState().appSettings;
+        IM_CHECK_EQ(s->speedLimit.enabled, false);
+        IM_CHECK((ctx->ItemInfo("**/###speed_limit_value").ItemFlags & ImGuiItemFlags_Disabled) != 0);
+
+        ctx->ItemClick("**/###speed_limit_enabled");
+        ctx->Yield(2);
+        IM_CHECK_EQ(s->speedLimit.enabled, true);
+        IM_CHECK((ctx->ItemInfo("**/###speed_limit_value").ItemFlags & ImGuiItemFlags_Disabled) == 0);
+
+        ctx->ItemInputValue("**/###speed_limit_value", 250.0f);
+        ctx->Yield(2);
+        IM_CHECK_LT(std::abs(s->speedLimit.unitsPerSecond - 250.0f), 0.01f);
+
+        ctx->ItemInputValue("**/###speed_limit_value", ofs::SpeedLimitSettings{}.unitsPerSecond); // restore defaults
+        ctx->ItemClick("**/###speed_limit_enabled");
+        ctx->Yield(2);
+        IM_CHECK_EQ(s->speedLimit.enabled, false);
         closePrefs(ctx);
     };
 

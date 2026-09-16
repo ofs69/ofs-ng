@@ -190,6 +190,7 @@ add_executable(ofs-unit-tests
         core/test_vector_set.cpp
         core/test_processing_region.cpp
         core/test_time_slot.cpp
+        core/test_speed_limit.cpp
         core/test_processing_graph_ops.cpp
         core/test_frame_allocator.cpp
         core/test_scene_view.cpp

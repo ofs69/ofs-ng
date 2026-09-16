@@ -281,6 +281,22 @@ description = "Preferences › Application › Project: toggle that automaticall
 english     = "Automatically open the Metadata editor window each time you create a new project."
 description = "Preferences › Application › Project: help-marker tooltip explaining the show-metadata-for-new-projects toggle."
 
+[PrefSpeedLimitSection]
+english     = "Speed Limit"
+description = "Preferences › Application: section header for the device speed-limit settings (flagging strokes too fast for a device to play)."
+
+[PrefSpeedLimitEnable]
+english     = "Flag strokes over the speed limit"
+description = "Preferences › Application › Speed Limit: label for the checkbox that turns speed-limit flagging on."
+
+[PrefSpeedLimitEnableHint]
+english     = "Strokes faster than the limit get a highlight on the timeline, marks on the seek bar heatmap, and a count in Statistics. Use the Next/Previous Stroke Over Speed Limit commands to step through them. Set the limit to the fastest speed your device can play."
+description = "Preferences › Application › Speed Limit: help-marker tooltip explaining what the speed-limit toggle does."
+
+[PrefSpeedLimitValue]
+english     = "Speed limit (units/s)"
+description = "Preferences › Application › Speed Limit: label for the numeric speed limit, in position units (0-100) per second."
+
 [TranscodeTitle]
 english     = "Optimize Video for Seeking"
 description = "Intra-frame optimize options modal: window title."
@@ -2049,6 +2065,14 @@ description = "Command title: step to the nearest previous action across all axe
 english     = "Next Action (All Scripts)"
 description = "Command title: step to the nearest next action across all axes (via the active navigator)."
 
+[CmdNavPrevOverSpeedLimit]
+english     = "Previous Stroke Over Speed Limit"
+description = "Command title: seek to the start of the previous stroke on the active axis that is faster than the speed limit set in Preferences."
+
+[CmdNavNextOverSpeedLimit]
+english     = "Next Stroke Over Speed Limit"
+description = "Command title: seek to the start of the next stroke on the active axis that is faster than the speed limit set in Preferences."
+
 [CmdNavCycleAxisForward]
 english     = "Cycle Axis Forward"
 description = "Command title: make the next axis in the panel strip the active axis."
@@ -3741,6 +3765,10 @@ description = "Statistics — count of actions on the active axis (value is the 
 [StatActionsAll]
 english     = "Actions (all axes):"
 description = "Statistics — total action count across all present axes (value is the count)."
+
+[StatOverSpeedLimit]
+english     = "Over speed limit:"
+description = "Statistics — number of strokes on the active axis faster than the speed limit set in Preferences (value is the count)."
 
 [StatMs]
 english      = "{0} ms"

@@ -23,6 +23,7 @@ TEST_CASE("AppSettings round-trips all scalar fields through JSON") {
     in.lastProjectPaths = {"a.ofp", "b.ofp"};
     in.webSocketServerEnabled = true;
     in.webSocketPort = 9090;
+    in.speedLimit = {.enabled = true, .unitsPerSecond = 320.0f};
 
     nlohmann::json j;
     to_json(j, in);
@@ -41,6 +42,8 @@ TEST_CASE("AppSettings round-trips all scalar fields through JSON") {
     CHECK(out.liveReloadTranslations == true);
     CHECK(out.webSocketServerEnabled == true);
     CHECK(out.webSocketPort == 9090);
+    CHECK(out.speedLimit.enabled == true);
+    CHECK(out.speedLimit.unitsPerSecond == doctest::Approx(320.0f));
     REQUIRE(out.lastProjectPaths.size() == 2);
     CHECK(out.lastProjectPaths[0] == "a.ofp");
 }
@@ -58,6 +61,8 @@ TEST_CASE("AppSettings from_json on an empty object yields documented defaults")
     CHECK(out.language.empty());
     CHECK(out.lastProjectPaths.empty());
     CHECK(out.metadataPresets.empty());
+    CHECK(out.speedLimit.enabled == false);
+    CHECK(out.speedLimit.unitsPerSecond == doctest::Approx(600.0f));
     CHECK(out.webSocketServerEnabled == false);
     CHECK(out.webSocketPort == 8080);
 }

@@ -130,7 +130,8 @@ constexpr const char *kCustomColorNames[] = {"AxisL0",
                                              "ScriptPlayCursor",
                                              "Success",
                                              "Warning",
-                                             "Error"};
+                                             "Error",
+                                             "SpeedLimit"};
 static_assert(std::size(kCustomColorNames) == static_cast<int>(AppCol_COUNT) - static_cast<int>(ImGuiCol_COUNT),
               "kCustomColorNames out of sync with AppCol enum");
 
@@ -650,6 +651,9 @@ void fillBaseAppColors(Theme *dst) {
     dst->colors[AppCol_Success] = lit(0.45f, 0.80f, 0.45f);
     dst->colors[AppCol_Warning] = lit(0.95f, 0.70f, 0.20f);
     dst->colors[AppCol_Error] = lit(0.90f, 0.40f, 0.35f);
+    // Seed-independent (mirrored in gen_theme.py's _SPEED_LIMIT_COLOR): magenta is the one hue the default
+    // heat gradient never reaches.
+    dst->colors[AppCol_SpeedLimit] = lit(1.0f, 0.25f, 1.0f);
 }
 
 // Base defaults used by both schemes: stock ImGui colors + seed-independent app data.

@@ -1,7 +1,8 @@
-#include "Core/Events.h"
+﻿#include "Core/Events.h"
 #include "Core/ScriptAxisAction.h"
 #include "Core/StandardAxis.h"
 #include "Core/VectorSet.h"
+#include "Format/AppSettings.h"
 #include "Services/CommandRegistry.h"
 #include "Video/VideoPlayer.h"
 #include "helpers/TestState.h"
@@ -208,6 +209,43 @@ void RegisterCommandsTests(ImGuiTestEngine *e) {
         run("navigation.prev-action-multi");
         ctx->Yield(2);
         IM_CHECK_LT(std::abs(proj.playback.cursorPos - 1.0), 0.01);
+    };
+
+    IM_REGISTER_TEST(e, "commands", "nav_next_prev_over_speed_limit")->TestFunc = [](ImGuiTestContext *ctx) {
+        loadFixture(ctx);
+        auto &proj = *getTestState().project;
+        auto &eq = *getTestState().eventQueue;
+        // Strokes: 100 u/s, 1000 u/s (starts 2.0), ~56 u/s, 1000 u/s (starts 3.0). Default limit is 600.
+        seedL0(ctx, {{1.0, 0}, {2.0, 100}, {2.1, 0}, {3.0, 50}, {3.05, 100}});
+        eq.push(SeekEvent{0.5});
+        ctx->Yield(2);
+
+        // Off by default: hidden from the palette, and running it anyway doesn't move the playhead.
+        IM_CHECK(!getTestState().commandRegistry->find("navigation.next-over-speed-limit")->enabled());
+        run("navigation.next-over-speed-limit");
+        ctx->Yield(2);
+        IM_CHECK_LT(std::abs(proj.playback.cursorPos - 0.5), 0.01);
+
+        eq.push(ModifyEvent<AppSettings>{[](AppSettings &s) { s.speedLimit.enabled = true; }});
+        ctx->Yield(2);
+        IM_CHECK(getTestState().commandRegistry->find("navigation.next-over-speed-limit")->enabled());
+
+        run("navigation.next-over-speed-limit");
+        ctx->Yield(2);
+        IM_CHECK_LT(std::abs(proj.playback.cursorPos - 2.0), 0.01);
+        run("navigation.next-over-speed-limit");
+        ctx->Yield(2);
+        IM_CHECK_LT(std::abs(proj.playback.cursorPos - 3.0), 0.01);
+        run("navigation.next-over-speed-limit"); // none left ahead: stays put
+        ctx->Yield(2);
+        IM_CHECK_LT(std::abs(proj.playback.cursorPos - 3.0), 0.01);
+
+        run("navigation.prev-over-speed-limit");
+        ctx->Yield(2);
+        IM_CHECK_LT(std::abs(proj.playback.cursorPos - 2.0), 0.01);
+
+        eq.push(ModifyEvent<AppSettings>{[](AppSettings &s) { s.speedLimit.enabled = false; }});
+        ctx->Yield(2);
     };
 
     IM_REGISTER_TEST(e, "commands", "nav_next_prev_step")->TestFunc = [](ImGuiTestContext *ctx) {

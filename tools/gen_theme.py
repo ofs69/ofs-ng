@@ -355,6 +355,10 @@ _TEMPO_MEASURE_COLOR = _b(0xE7, 0x97, 0x5C)
 _TIMELINE_POINT = {"TimelineOutline": _b(0, 0, 0), "TimelinePoint": _b(255, 0, 0),
                    "TimelinePointSelected": _b(11, 252, 3)}
 
+# Halo/marks for strokes over the speed limit. Magenta: the one hue the heat gradient never reaches, so it
+# stays distinct from the (hottest-colored) strokes it frames. Mirrored in Theme.cpp fillBaseAppColors.
+_SPEED_LIMIT_COLOR = _b(255, 64, 255)
+
 _HEATMAP_MARKS = [
     (0.0, _b(235, 235, 245)), (0.2, _b(0x1E, 0x90, 255)), (0.4, _b(0, 255, 255)),
     (0.6, _b(0, 255, 0)), (0.8, _b(255, 255, 0)), (1.0, _b(255, 0, 0)),
@@ -377,6 +381,7 @@ def embed_app(dark):
     d.update(_SIM2D)
     d.update(_TIMELINE_POINT)
     d["TempoMeasureLine"] = _TEMPO_MEASURE_COLOR
+    d["SpeedLimit"] = _SPEED_LIMIT_COLOR
     return d
 
 
@@ -642,7 +647,7 @@ _APP_VARS = {
 # Number of entries the "colors" JSON object must contain.
 # = AppCol_COUNT - ImGuiCol_COUNT minus the 20 AxisDim* slots,
 #   which are always derived in C++ (fillAxisDimColors) and never serialised.
-_APP_COL_JSON_COUNT = 87
+_APP_COL_JSON_COUNT = 88
 
 
 def _c(rgba):

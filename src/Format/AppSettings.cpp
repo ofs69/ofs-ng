@@ -97,6 +97,16 @@ void from_json(const nlohmann::json &j, InputSettings &s) {
     s.smoothing = j.value("smoothing", d.smoothing);
 }
 
+void to_json(nlohmann::json &j, const SpeedLimitSettings &s) {
+    j = nlohmann::json::object({{"enabled", s.enabled}, {"unitsPerSecond", s.unitsPerSecond}});
+}
+
+void from_json(const nlohmann::json &j, SpeedLimitSettings &s) {
+    SpeedLimitSettings d;
+    s.enabled = j.value("enabled", d.enabled);
+    s.unitsPerSecond = std::clamp(j.value("unitsPerSecond", d.unitsPerSecond), kMinSpeedLimit, kMaxSpeedLimit);
+}
+
 void to_json(nlohmann::json &j, const HoldRepeatSettings &s) {
     j = nlohmann::json::object(
         {{"initialDelay", s.initialDelay}, {"interval", s.interval}, {"accel", s.accel}, {"maxRateHz", s.maxRateHz}});
@@ -140,6 +150,7 @@ void to_json(nlohmann::json &j, const AppSettings &s) {
                                 {"simulatorVisuals", s.simulator},
                                 {"input", s.input},
                                 {"holdRepeat", s.holdRepeat},
+                                {"speedLimit", s.speedLimit},
                                 {"metadataPresets", s.metadataPresets},
                                 {"volume", s.volume},
                                 {"uiSoundsEnabled", s.uiSoundsEnabled},
@@ -174,6 +185,9 @@ void from_json(const nlohmann::json &j, AppSettings &s) {
     s.simulator = j.value("simulatorVisuals", SimulatorState{});
     s.input = j.value("input", InputSettings{});
     s.holdRepeat = j.value("holdRepeat", HoldRepeatSettings{});
+    // COMPAT(2026-09-16): settings written before the speed limit existed have no key; the limit starts
+    // disabled. Retire once no pre-speed-limit settings files remain.
+    s.speedLimit = j.value("speedLimit", SpeedLimitSettings{});
     s.metadataPresets = j.value("metadataPresets", std::vector<MetadataPreset>{});
     s.volume = j.value("volume", 1.0f);
     s.uiSoundsEnabled = j.value("uiSoundsEnabled", true);

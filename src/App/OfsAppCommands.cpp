@@ -9,6 +9,7 @@
 #include "Core/IntentEvents.h"
 #include "Core/SceneViewEvents.h"
 #include "Core/ScriptProject.h"
+#include "Core/SpeedLimit.h"
 #include "Core/StandardAxis.h"
 #include "Core/TranscodeEvents.h"
 #include "Core/UpdateEvents.h"
@@ -467,6 +468,38 @@ void OfsApp::initCommands() {
                                           .granularity = ofs::StepGranularity::ActionAllAxes});
         },
         SDLK_UP, SDL_KMOD_CTRL);
+
+    // Step between the active axis's over-limit strokes, landing on a stroke's start. Resolved against the
+    // displayed (resolved) actions — the same strokes the timeline halo and heatmap marks flag. In the
+    // palette so a review pass can reach them without first binding a key; hidden while the limit is off.
+    auto makeStepOverSpeedLimit = [this](bool forward) {
+        return [this, forward](ofs::EventQueue &eq) {
+            const auto role = scriptProject.state.activeAxis;
+            if (!appSettings.speedLimit.enabled || role >= ofs::StandardAxis::Count)
+                return;
+            const auto &axis = scriptProject.axes[static_cast<size_t>(role)];
+            const auto &actions = axis.resolved ? axis.resolved->actions : axis.actions;
+            if (const auto t = ofs::findOverSpeedLimitStroke(actions, scriptProject.playback.cursorPos, forward,
+                                                             appSettings.speedLimit.unitsPerSecond))
+                eq.push(ofs::SeekEvent{*t});
+        };
+    };
+    commandRegistry.add(ofs::Command{
+        .id = "navigation.prev-over-speed-limit",
+        .group = "Navigation",
+        .title = Str::CmdNavPrevOverSpeedLimit,
+        .keywords = "fast stroke device max speed violation",
+        .run = makeStepOverSpeedLimit(false),
+        .isEnabled = [this] { return appSettings.speedLimit.enabled; },
+    });
+    commandRegistry.add(ofs::Command{
+        .id = "navigation.next-over-speed-limit",
+        .group = "Navigation",
+        .title = Str::CmdNavNextOverSpeedLimit,
+        .keywords = "fast stroke device max speed violation",
+        .run = makeStepOverSpeedLimit(true),
+        .isEnabled = [this] { return appSettings.speedLimit.enabled; },
+    });
 
     auto makeCycleAxis = [this](bool backward) {
         return [this, backward](ofs::EventQueue &eq) {

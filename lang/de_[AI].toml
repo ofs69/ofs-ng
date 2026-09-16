@@ -268,6 +268,22 @@ translation = "Metadaten bei neuen Projekten anzeigen"
 english     = "Automatically open the Metadata editor window each time you create a new project."
 translation = "Öffnet bei jedem neuen Projekt automatisch das Metadaten-Fenster."
 
+[PrefSpeedLimitSection]
+english     = "Speed Limit"
+translation = "Geschwindigkeitslimit"
+
+[PrefSpeedLimitEnable]
+english     = "Flag strokes over the speed limit"
+translation = "Hübe über dem Geschwindigkeitslimit markieren"
+
+[PrefSpeedLimitEnableHint]
+english     = "Strokes faster than the limit get a highlight on the timeline, marks on the seek bar heatmap, and a count in Statistics. Use the Next/Previous Stroke Over Speed Limit commands to step through them. Set the limit to the fastest speed your device can play."
+translation = "Hübe, die schneller als das Limit sind, werden in der Zeitleiste hervorgehoben, in der Heatmap der Suchleiste markiert und in der Statistik gezählt. Mit den Befehlen „Nächster/Vorheriger Hub über Geschwindigkeitslimit“ springst du zwischen ihnen. Setze das Limit auf die höchste Geschwindigkeit, die dein Gerät abspielen kann."
+
+[PrefSpeedLimitValue]
+english     = "Speed limit (units/s)"
+translation = "Geschwindigkeitslimit (Einh./s)"
+
 [TranscodeTitle]
 english     = "Optimize Video for Seeking"
 translation = "Video für Sprünge optimieren"
@@ -1909,6 +1925,14 @@ translation = "Vorherige Aktion (alle Skripte)"
 english     = "Next Action (All Scripts)"
 translation = "Nächste Aktion (alle Skripte)"
 
+[CmdNavPrevOverSpeedLimit]
+english     = "Previous Stroke Over Speed Limit"
+translation = "Vorheriger Hub über Geschwindigkeitslimit"
+
+[CmdNavNextOverSpeedLimit]
+english     = "Next Stroke Over Speed Limit"
+translation = "Nächster Hub über Geschwindigkeitslimit"
+
 [CmdNavCycleAxisForward]
 english     = "Cycle Axis Forward"
 translation = "Achse vorwärts wechseln"
@@ -3531,6 +3555,10 @@ translation = "Aktionen (diese Achse):"
 [StatActionsAll]
 english     = "Actions (all axes):"
 translation = "Aktionen (alle Achsen):"
+
+[StatOverSpeedLimit]
+english     = "Over speed limit:"
+translation = "Über Geschwindigkeitslimit:"
 
 [StatMs]
 english     = "{0} ms"

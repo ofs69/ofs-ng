@@ -2,10 +2,13 @@
 
 #include "Core/EventQueue.h"
 #include "Core/ScriptProject.h"
+#include "Core/SpeedLimit.h"
 #include "Heatmap.h"
 #include "UI/BandBar.h"
 #include <memory>
 #include <string>
+#include <utility>
+#include <vector>
 
 namespace ofs {
 
@@ -21,7 +24,7 @@ class VideoControlsWindow {
   public:
     explicit VideoControlsWindow(EventQueue &eventQueue);
     void render(const ScriptProject &project, EventQueue &eq, VideoPlayer &videoPlayer, const VideoPreview &preview,
-                TimelinePreviewPopup &previewPopup);
+                TimelinePreviewPopup &previewPopup, const SpeedLimitSettings &speedLimit);
 
   private:
     struct ControlsState {
@@ -67,8 +70,8 @@ class VideoControlsWindow {
     void onEvalComplete(const EvalCompleteEvent &event);
 
     bool drawTimelineWidget(const ScriptProject &project, EventQueue &eq, VideoPlayer &videoPlayer,
-                            const VideoPreview &preview, TimelinePreviewPopup &previewPopup, const char *label,
-                            float *position);
+                            const VideoPreview &preview, TimelinePreviewPopup &previewPopup,
+                            const SpeedLimitSettings &speedLimit, const char *label, float *position);
     void drawBookmarkBar(const ScriptProject &project, EventQueue &eq, VideoPlayer &videoPlayer);
 
     ControlsState controlsState;
@@ -77,6 +80,10 @@ class VideoControlsWindow {
     std::shared_ptr<Heatmap> heatmap;
     bool heatmapDirty = true;
     float lastHeatmapMaxSpeed = 0.0f;
+    // [start, end] times of the active axis's over-limit strokes, rebuilt with the heatmap texture and
+    // drawn as marks along the heatmap's top edge. Empty while the speed limit is off.
+    std::vector<std::pair<double, double>> overLimitStrokes;
+    SpeedLimitSettings lastSpeedLimit;
     int exportHeight = 64;  // clamped [32, 512] in the export popup
     bool exportFade = true; // bake the on-screen black→transparent fade into the PNG
 };

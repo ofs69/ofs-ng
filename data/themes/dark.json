@@ -155,7 +155,8 @@
     "TimelineOutline": "#000000",
     "TimelinePoint": "#FF0000",
     "TimelinePointSelected": "#0BFC03",
-    "TempoMeasureLine": "#E7975C"
+    "TempoMeasureLine": "#E7975C",
+    "SpeedLimit": "#FF40FF"
   },
   "imguiVars": {
     "WindowRounding": 6.0,

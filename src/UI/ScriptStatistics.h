@@ -1,6 +1,7 @@
 #pragma once
 
 #include "Core/ScriptAxisAction.h"
+#include "Core/SpeedLimit.h"
 #include "Core/VectorSet.h"
 
 #include <iterator>
@@ -12,7 +13,7 @@ struct ScriptProject;
 class ScriptStatisticsWindow {
   public:
     ScriptStatisticsWindow() = default;
-    void render(const ScriptProject &project, bool &open) const;
+    void render(const ScriptProject &project, bool &open, const SpeedLimitSettings &speedLimit) const;
 };
 
 namespace ui {

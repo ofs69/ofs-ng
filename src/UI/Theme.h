@@ -157,6 +157,9 @@ enum AppCol : int {
     AppCol_Success,
     AppCol_Warning,
     AppCol_Error,
+    // Halo behind script-line strokes over the speed limit, and the seek-bar heatmap marks for them. Must
+    // stay distinct from every heat-gradient hue, since the strokes it frames are the gradient's hottest.
+    AppCol_SpeedLimit,
     AppCol_COUNT,
 };
 

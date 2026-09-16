@@ -65,7 +65,7 @@ void VideoControlsWindow::onEvalComplete(const EvalCompleteEvent &) {
 
 bool VideoControlsWindow::drawTimelineWidget(const ScriptProject &project, EventQueue &eq, VideoPlayer &videoPlayer,
                                              const VideoPreview &preview, TimelinePreviewPopup &previewPopup,
-                                             const char *label, float *position) {
+                                             const SpeedLimitSettings &speedLimit, const char *label, float *position) {
     ImGuiWindow *window = ImGui::GetCurrentWindow();
     if (window->SkipItems)
         return false;
@@ -114,13 +114,22 @@ bool VideoControlsWindow::drawTimelineWidget(const ScriptProject &project, Event
         lastHeatmapMaxSpeed = currentMaxSpeed;
         heatmapDirty = true;
     }
+    if (speedLimit.enabled != lastSpeedLimit.enabled || speedLimit.unitsPerSecond != lastSpeedLimit.unitsPerSecond) {
+        lastSpeedLimit = speedLimit;
+        heatmapDirty = true;
+    }
 
     double duration = videoPlayer.getDuration();
     const auto activeIdx = static_cast<size_t>(project.state.activeAxis);
     if (heatmapDirty && duration > 0.0 && project.state.activeAxis < StandardAxis::Count) {
         const auto &axis = project.axes[activeIdx];
-        const auto *resolved = axis.resolved ? &axis.resolved->actions : nullptr;
-        heatmap->update(duration, resolved ? *resolved : axis.actions);
+        const auto &actions = axis.resolved ? axis.resolved->actions : axis.actions;
+        heatmap->update(duration, actions);
+        overLimitStrokes.clear();
+        if (speedLimit.enabled)
+            for (size_t i = 0; i + 1 < actions.size(); ++i)
+                if (exceedsSpeedLimit(actions[i], actions[i + 1], speedLimit.unitsPerSecond))
+                    overLimitStrokes.emplace_back(actions[i].at, actions[i + 1].at);
         heatmapDirty = false;
     }
 
@@ -135,6 +144,32 @@ bool VideoControlsWindow::drawTimelineWidget(const ScriptProject &project, Event
                             ofs::theme::GetColorU32(AppCol_VideoTimelineFill));
 
     heatmap->draw(drawList, frameBB.Min, frameBB.Max);
+
+    // Over-limit marks along the heatmap's top edge. Each stroke gets at least a 2px mark so a single short
+    // violation stays visible on a long video; marks that touch at this width merge into one rect.
+    if (!overLimitStrokes.empty() && duration > 0.0) {
+        const ImU32 markCol = ofs::theme::GetColorU32(AppCol_SpeedLimit);
+        const float markH = std::max(2.0f, std::round(frameBB.GetHeight() * 0.25f));
+        const auto toX = [&](double t) {
+            return frameBB.Min.x + frameBB.GetWidth() * static_cast<float>(std::clamp(t / duration, 0.0, 1.0));
+        };
+        constexpr float kMinMarkW = 2.0f;
+        float runX0 = 0.0f;
+        float runX1 = -1.0f;
+        for (const auto &[start, end] : overLimitStrokes) {
+            const float x0 = toX(start);
+            const float x1 = std::max(toX(end), x0 + kMinMarkW);
+            if (runX1 >= runX0 && x0 <= runX1) {
+                runX1 = std::max(runX1, x1);
+                continue;
+            }
+            if (runX1 >= runX0)
+                drawList->AddRectFilled({runX0, frameBB.Min.y}, {runX1, frameBB.Min.y + markH}, markCol);
+            runX0 = x0;
+            runX1 = x1;
+        }
+        drawList->AddRectFilled({runX0, frameBB.Min.y}, {runX1, frameBB.Min.y + markH}, markCol);
+    }
 
     // Soft themed outline around the heatmap so it reads as a contained element in both
     // light and dark themes. Drawn here (not in Heatmap.cpp, which stays a pure GL renderer).
@@ -648,7 +683,8 @@ void VideoControlsWindow::drawBookmarkBar(const ScriptProject &project, EventQue
 }
 
 void VideoControlsWindow::render(const ScriptProject &project, EventQueue &eq, VideoPlayer &videoPlayer,
-                                 const VideoPreview &preview, TimelinePreviewPopup &previewPopup) {
+                                 const VideoPreview &preview, TimelinePreviewPopup &previewPopup,
+                                 const SpeedLimitSettings &speedLimit) {
     if (!ImGui::Begin(Str::VpcTitle.id("video_controls"), nullptr,
                       ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoNavInputs)) {
         ImGui::End();
@@ -740,7 +776,8 @@ void VideoControlsWindow::render(const ScriptProject &project, EventQueue &eq, V
         }
 
         ImGui::TableSetColumnIndex(1);
-        if (drawTimelineWidget(project, eq, videoPlayer, preview, previewPopup, "###TimelineWidget", &position))
+        if (drawTimelineWidget(project, eq, videoPlayer, preview, previewPopup, speedLimit, "###TimelineWidget",
+                               &position))
             eq.push(SeekEvent{static_cast<double>(position * duration)});
 
         ImGui::TableSetColumnIndex(2);

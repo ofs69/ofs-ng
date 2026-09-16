@@ -36,7 +36,8 @@ class ScriptTimelineWindow {
   public:
     ScriptTimelineWindow();
 
-    void render(const ScriptProject &project, EventQueue &eq, VideoPlayer &videoPlayer, WaveformRenderer &waveform);
+    void render(const ScriptProject &project, EventQueue &eq, VideoPlayer &videoPlayer, WaveformRenderer &waveform,
+                const SpeedLimitSettings &speedLimit);
     [[nodiscard]] bool wasRegionClickedThisFrame() const { return m_regionClickedThisFrame; }
 
   private:
@@ -153,6 +154,8 @@ class ScriptTimelineWindow {
     int ctxRegionId = -1;
     double ctxRegionClickTime = 0.0;
     bool m_regionClickedThisFrame = false;
+    // This frame's speed-limit preference, latched at the top of render() for renderScriptLines.
+    SpeedLimitSettings speedLimit_;
     // Region whose band color is mid-edit in the context menu. Only the first change of a picker
     // gesture snapshots undo, so dragging through the picker collapses into one undo step.
     int m_colorEditRegionId = -1;
