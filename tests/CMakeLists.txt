@@ -260,6 +260,7 @@ add_executable(ofs-unit-tests
         services/test_video_transcoder.cpp
         services/test_waveform_peaks.cpp
         services/test_websocket_protocol.cpp
+        services/test_websocket_api.cpp
         video/test_playback_cursor.cpp
         localization/test_translator.cpp
 
@@ -299,6 +300,8 @@ add_executable(ofs-unit-tests
         # Pure waveform helpers (ofs::waveform): bucketing math + cache round-trip, no GL.
         ${CMAKE_SOURCE_DIR}/src/Services/WaveformPeaks.cpp
         ${CMAKE_SOURCE_DIR}/src/Services/WebSocketProtocol.cpp
+        ${CMAKE_SOURCE_DIR}/src/Services/WebSocketApi.cpp
+        ${CMAKE_SOURCE_DIR}/src/Util/Version.cpp
         ${CMAKE_SOURCE_DIR}/src/Video/PlaybackCursor.cpp
 )
 
@@ -309,6 +312,10 @@ target_include_directories(ofs-unit-tests PRIVATE
 # Generated StringsGenerated.h (included by Translator.h / test_translator.cpp) lives here.
 target_include_directories(ofs-unit-tests SYSTEM PRIVATE ${OFS_GENERATED_DIR})
 add_dependencies(ofs-unit-tests ofs_strings_gen)
+add_dependencies(ofs-unit-tests ofs_build_info)
+if (WIN32)
+    target_link_libraries(ofs-unit-tests PRIVATE ws2_32)
+endif ()
 
 target_compile_definitions(ofs-unit-tests PRIVATE
         OFS_TESTS_DIR="${CMAKE_CURRENT_SOURCE_DIR}"

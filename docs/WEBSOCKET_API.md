@@ -81,6 +81,11 @@ the primary stroke axis uses `<media-name>` and every other standard axis `<medi
 (e.g. `video` and `video.R1`), with **no `.funscript` extension**. Clients map a script to an axis by the
 last dot-separated segment of the name, so an extension there hides the tag from them.
 
+Scratch axes (`S0`–`S9`) are editor-only and are not published, either on connection or after edits.
+Classic OFS clients such as MultiFunPlayer can interpret these unsupported axis suffixes as primary
+stroke scripts, replacing L0. Copy or process scratch data into a standard output axis to send it to a
+player.
+
 ## Protocol limits
 
 - HTTP upgrade headers: 64 KiB maximum.
