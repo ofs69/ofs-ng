@@ -1,6 +1,6 @@
 ﻿#pragma once
 
-#include "Core/AppState.h" // TimelineLayout
+#include "Core/AppState.h" // TimelineLayout, TimelineViewState
 #include "Core/BookmarkChapterState.h"
 #include "Core/FunscriptMetadata.h"
 #include "Core/OverlaySettings.h"
@@ -76,6 +76,9 @@ struct Project {
     // Timeline script-line layout (Overlay z-stack vs per-axis Lanes). Persisted; mirrors
     // ScriptProject::timelineView.layout. Default Overlay.
     TimelineLayout timelineLayout = TimelineLayout::Overlay;
+    // Timeline zoom — seconds of visible timeline. Persisted; mirrors
+    // ScriptProject::timelineView.targetVisibleTime.
+    double timelineVisibleTime = TimelineViewState::kDefaultVisibleTime;
     // Per-plugin custom data: a JSON object shaped pluginName → { key → value }. Opaque to the host;
     // round-trips losslessly. Mirrors ScriptProject::pluginData. Object (never null) so it writes as {}.
     nlohmann::json pluginData = nlohmann::json::object();

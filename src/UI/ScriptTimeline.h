@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Core/AppState.h"
 #include "Core/ScriptAxisAction.h"
 #include "Core/StandardAxis.h"
 #include "Format/AppSettings.h"
@@ -40,9 +41,10 @@ class ScriptTimelineWindow {
 
   private:
     struct ViewState {
-        double visibleTime = 10.0;
-        double targetVisibleTime = 10.0;
-        double previousVisibleTime = 10.0;
+        double visibleTime = TimelineViewState::kDefaultVisibleTime;
+        double previousVisibleTime = TimelineViewState::kDefaultVisibleTime;
+        // The project zoom the current ease is heading to; a new project value restarts the ease from here.
+        double easeTarget = TimelineViewState::kDefaultVisibleTime;
         uint32_t zoomUpdateTime = 0;
     };
 

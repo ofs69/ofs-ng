@@ -198,6 +198,30 @@ void RegisterTimelineTests(ImGuiTestEngine *e) {
         ctx->Yield(20);         // let the 150 ms smooth-zoom settle
 
         IM_CHECK_LT(proj.timelineView.visibleTime, visibleBefore - 0.01);
+        // The zoom the view eases toward is what the project persists.
+        IM_CHECK_LT(proj.timelineView.targetVisibleTime, visibleBefore - 0.01);
+    };
+
+    // The view follows the project's zoom from any source: a SetTimelineZoomEvent, and a project load.
+    IM_REGISTER_TEST(e, "timeline", "view_follows_project_zoom")->TestFunc = [](ImGuiTestContext *ctx) {
+        auto &proj = *getTestState().project;
+        // The ease is timed in wall-clock ms, so wait on convergence rather than a fixed frame count. Yield
+        // first: a load resets the mirrored visibleTime to the default before the window renders its ease.
+        const auto easeTo = [&](double target) {
+            ctx->Yield(2);
+            for (int i = 0; i < 2000 && std::abs(proj.timelineView.visibleTime - target) > 1e-6; ++i)
+                ctx->Yield();
+            IM_CHECK_LT(std::abs(proj.timelineView.visibleTime - target), 1e-6);
+        };
+        loadFixture(ctx);
+
+        getTestState().eventQueue->push(ofs::SetTimelineZoomEvent{.visibleTime = 42.0});
+        easeTo(42.0);
+
+        // The fixture predates persisted zoom, so reloading it returns the view to the default span.
+        loadFixture(ctx);
+        IM_CHECK_EQ(proj.timelineView.targetVisibleTime, ofs::TimelineViewState::kDefaultVisibleTime);
+        easeTo(ofs::TimelineViewState::kDefaultVisibleTime);
     };
 
     // Middle-drag pans the view, which seeks the playhead.

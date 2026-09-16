@@ -1287,13 +1287,17 @@ void ScriptTimelineWindow::render(const ScriptProject &project, EventQueue &eq, 
     const ImVec2 scriptLineSize = {outerSize.x - stripW + stripMargin, outerSize.y - regionBarH - regionBarGap};
     const bool lanes = project.timelineView.layout == TimelineLayout::Lanes;
 
-    // Smooth zoom
+    // Smooth zoom: ease toward the project's zoom whenever it changes (wheel, project load, or close).
     auto ticks = static_cast<uint32_t>(SDL_GetTicks());
+    if (project.timelineView.targetVisibleTime != viewState.easeTarget) {
+        viewState.previousVisibleTime = viewState.visibleTime;
+        viewState.easeTarget = project.timelineView.targetVisibleTime;
+        viewState.zoomUpdateTime = ticks;
+    }
     float zoomProgress = std::clamp(static_cast<float>(ticks - viewState.zoomUpdateTime) / 150.0f, 0.0f, 1.0f);
     zoomProgress = easeOutExpo(zoomProgress);
-    viewState.visibleTime =
-        viewState.previousVisibleTime +
-        (viewState.targetVisibleTime - viewState.previousVisibleTime) * static_cast<double>(zoomProgress);
+    viewState.visibleTime = viewState.previousVisibleTime +
+                            (viewState.easeTarget - viewState.previousVisibleTime) * static_cast<double>(zoomProgress);
 
     double offsetTime = project.playback.cursorPos - viewState.visibleTime / 2.0;
 
@@ -1310,17 +1314,8 @@ void ScriptTimelineWindow::render(const ScriptProject &project, EventQueue &eq, 
         if (wheel != 0 && laneLayout_.maxScroll > 0.f && ImGui::GetIO().KeyShift) {
             laneScroll_ = std::max(0.f, laneScroll_ - wheel * laneLayout_.laneH); // ~one lane per notch
         } else if (wheel != 0) {
-            viewState.previousVisibleTime = viewState.visibleTime;
-            viewState.targetVisibleTime *= (wheel > 0) ? 0.8 : 1.25;
-            // The floor is set by the millisecond grid authored actions sit on. A bucket spans 2*dotRadius
-            // px and snaps to a power-of-two ladder over 1 ms, so the first bucket that can separate two
-            // adjacent grid slots is the 0.5 ms step — which needs a window of 0.0005 * width /
-            // (2*dotRadius), about 12 ms across a 400 px lane. Zooming all the way in therefore always
-            // resolves a cluster into its individual points, in a narrow Lanes row as well as a full-width
-            // band. A 1 ms bucket is not enough: it lands adjacent slots in the same bucket as often as not,
-            // because at->bucket division is not exact at the boundary.
-            viewState.targetVisibleTime = std::clamp(viewState.targetVisibleTime, 0.01, 300.0);
-            viewState.zoomUpdateTime = ticks;
+            eq.push(
+                SetTimelineZoomEvent{.visibleTime = project.timelineView.targetVisibleTime * (wheel > 0 ? 0.8 : 1.25)});
         }
         if (ImGui::IsMouseDragging(ImGuiMouseButton_Middle)) {
             double timeDelta =

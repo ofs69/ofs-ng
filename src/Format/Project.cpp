@@ -428,7 +428,8 @@ void to_json(nlohmann::json &j, const Project &p) {
                                 {"activeEditMode", p.activeEditMode},
                                 {"activeSelectionMode", p.activeSelectionMode},
                                 {"showAudioWaveform", p.showAudioWaveform},
-                                {"timelineLayout", p.timelineLayout}});
+                                {"timelineLayout", p.timelineLayout},
+                                {"timelineVisibleTime", p.timelineVisibleTime}});
     // Only persist plugin data when something is stored, so an untouched project doesn't carry a "{}".
     if (p.pluginData.is_object() && !p.pluginData.empty())
         j["pluginData"] = p.pluginData;
@@ -463,6 +464,11 @@ void from_json(const nlohmann::json &j, Project &p) {
     p.showAudioWaveform = j.value("showAudioWaveform", false);
     // COMPAT(2026-06-30): timeline layout absent in pre-lanes projects; default Overlay (the prior look).
     p.timelineLayout = j.value("timelineLayout", TimelineLayout::Overlay);
+    // COMPAT(2026-09-16): timeline zoom absent in projects saved before it was persisted; default to the
+    // app's standard 10 s span. Removable once no pre-2026-09 project files remain in use.
+    p.timelineVisibleTime = j.value("timelineVisibleTime", TimelineViewState::kDefaultVisibleTime);
+    p.timelineVisibleTime =
+        std::clamp(p.timelineVisibleTime, TimelineViewState::kMinVisibleTime, TimelineViewState::kMaxVisibleTime);
     // Absent or a non-object (corrupt) → empty object, never null.
     p.pluginData = nlohmann::json::object();
     if (auto it = j.find("pluginData"); it != j.end() && it->is_object())

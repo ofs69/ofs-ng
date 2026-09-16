@@ -2094,6 +2094,26 @@ TEST_CASE("SetTimelineShowWaveform toggles the waveform and dirties only on a re
     CHECK_FALSE(f.pm.isDirty()); // no-op doesn't dirty a clean project
 }
 
+TEST_CASE("SetTimelineZoom stores the clamped zoom and dirties only on a real change") {
+    PMFixture f;
+    f.showAxis(StandardAxis::L0);
+    f.proj().clearDirtyFlags();
+
+    f.push(SetTimelineZoomEvent{.visibleTime = 25.0});
+    f.drain();
+    CHECK(f.proj().timelineView.targetVisibleTime == doctest::Approx(25.0));
+    CHECK(f.pm.isDirty());
+
+    f.proj().clearDirtyFlags();
+    f.push(SetTimelineZoomEvent{.visibleTime = 25.0});
+    f.drain();
+    CHECK_FALSE(f.pm.isDirty());
+
+    f.push(SetTimelineZoomEvent{.visibleTime = 1e6});
+    f.drain();
+    CHECK(f.proj().timelineView.targetVisibleTime == doctest::Approx(TimelineViewState::kMaxVisibleTime));
+}
+
 // ── Scene capture ──────────────────────────────────────────────────────────────
 
 TEST_CASE("Capture events write the project-level scene view when outside any chapter") {

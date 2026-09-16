@@ -149,6 +149,7 @@ ProjectManager::ProjectManager(ScriptProject &project, EventQueue &eq, const App
     eq.on<SetTimelineShowPointsEvent>([this](const auto &e) { onSetTimelineShowPoints(e); });
     eq.on<SetTimelineShowWaveformEvent>([this](const auto &e) { onSetTimelineShowWaveform(e); });
     eq.on<SetTimelineLayoutEvent>([this](const auto &e) { onSetTimelineLayout(e); });
+    eq.on<SetTimelineZoomEvent>([this](const auto &e) { onSetTimelineZoom(e); });
     eq.on<DurationChangedEvent>([this](const DurationChangedEvent &e) { onDurationChanged(e); });
 
     // this->project below (not the same-named ctor parameter that shadows it here).
@@ -1549,6 +1550,7 @@ void ProjectManager::loadFromProject(const Project &proj) {
     project.activeSelectionMode = proj.activeSelectionMode;
     project.timelineView.showAudioWaveform = proj.showAudioWaveform;
     project.timelineView.layout = proj.timelineLayout;
+    project.timelineView.targetVisibleTime = proj.timelineVisibleTime;
     project.pluginData = proj.pluginData;
     project.metadata = proj.metadata;
     project.overlay = proj.overlaySettings;
@@ -1637,6 +1639,7 @@ void ProjectManager::saveToProject(Project &proj) const {
     proj.activeSelectionMode = project.storedSelectionMode;
     proj.showAudioWaveform = project.timelineView.showAudioWaveform;
     proj.timelineLayout = project.timelineView.layout;
+    proj.timelineVisibleTime = project.timelineView.targetVisibleTime;
     proj.pluginData = project.pluginData;
     proj.simP1 = project.simulator.p1;
     proj.simP2 = project.simulator.p2;
@@ -2878,6 +2881,15 @@ void ProjectManager::onSetTimelineLayout(const SetTimelineLayoutEvent &event) {
         return; // re-selecting the active layout is a no-op; don't dirty a clean project
     project.timelineView.layout = event.layout;
     setDirty(); // persisted with the project (Format/Project timelineLayout)
+}
+
+void ProjectManager::onSetTimelineZoom(const SetTimelineZoomEvent &event) {
+    const double visibleTime =
+        std::clamp(event.visibleTime, TimelineViewState::kMinVisibleTime, TimelineViewState::kMaxVisibleTime);
+    if (project.timelineView.targetVisibleTime == visibleTime)
+        return;
+    project.timelineView.targetVisibleTime = visibleTime;
+    setDirty(); // persisted with the project (Format/Project timelineVisibleTime)
 }
 
 void ProjectManager::onCommitAxisActions(const CommitAxisActionsEvent &event) {

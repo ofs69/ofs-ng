@@ -164,6 +164,7 @@ Project fullyPopulated() {
     p.activeEditMode = "ofs.core.alt";             // a non-default (plugin) id to prove it round-trips
     p.activeSelectionMode = "ofs.core.peaks";      // a non-default (plugin) id to prove it round-trips
     p.timelineLayout = ofs::TimelineLayout::Lanes; // non-default layout round-trips
+    p.timelineVisibleTime = 42.5;                  // non-default zoom round-trips
 
     // Per-plugin project data: two plugins' namespaced key→value stores, each a nested JSON value.
     p.pluginData = {{"Ofs.Core", {{"settings", {{"Mode", 1}, {"FixedTop", 90}}}}},
@@ -211,6 +212,7 @@ TEST_CASE("Project save/load round-trips every serialized field") {
     CHECK(loaded->activeEditMode == "ofs.core.alt");
     CHECK(loaded->activeSelectionMode == "ofs.core.peaks");
     CHECK(loaded->timelineLayout == ofs::TimelineLayout::Lanes);
+    CHECK(loaded->timelineVisibleTime == doctest::Approx(42.5));
     CHECK(loaded->playbackPosition == doctest::Approx(12.5));
     CHECK(loaded->createdAtUnix == 1750000000);
     CHECK(loaded->modifiedAtUnix == 1750050000);
@@ -241,6 +243,7 @@ TEST_CASE("Project::load fills defaults for a sparse document") {
     CHECK(loaded->activeEditMode == "native");                     // absent → native edit mode default
     CHECK(loaded->activeSelectionMode == "native");                // absent → native selection mode default
     CHECK(loaded->timelineLayout == ofs::TimelineLayout::Overlay); // absent → stacked-overlay default
+    CHECK(loaded->timelineVisibleTime == doctest::Approx(ofs::TimelineViewState::kDefaultVisibleTime));
 
     std::filesystem::remove(path);
 }
@@ -252,6 +255,15 @@ TEST_CASE("Project::load clamps an out-of-range resolution scale") {
     auto loaded = Project::load(path);
     REQUIRE(loaded.has_value());
     CHECK(loaded->videoPlayerState.resolutionScale == doctest::Approx(1.0f));
+    std::filesystem::remove(path);
+}
+
+TEST_CASE("Project::load clamps an out-of-range timeline zoom") {
+    const auto path = tempPath("ofs_test_project_zoom_clamp.ofp");
+    writeCbor(path, nlohmann::json{{"ofsProjectVersion", ofs::kProjectFileVersion}, {"timelineVisibleTime", 1e9}});
+    auto loaded = Project::load(path);
+    REQUIRE(loaded.has_value());
+    CHECK(loaded->timelineVisibleTime == doctest::Approx(ofs::TimelineViewState::kMaxVisibleTime));
     std::filesystem::remove(path);
 }
 

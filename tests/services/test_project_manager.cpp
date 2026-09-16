@@ -1129,6 +1129,39 @@ TEST_CASE("ProjectManager: reloading a project emits LoadProjectEvent and AxisSe
     std::filesystem::remove(filePath);
 }
 
+TEST_CASE("ProjectManager: the timeline zoom survives save/reload") {
+    TestProject tp;
+    ofs::AppSettings appSettings;
+    appSettings.autoBackupEnabled = false;
+    ofs::JobSystem jobSystem;
+    ofs::EffectRegistryState effectReg;
+    ofs::ExportMemory exportMemory;
+    ofs::ProjectManager pm(tp.project, tp.eq, appSettings, exportMemory, jobSystem, effectReg);
+
+    ofs::test::EventCapture<ofs::AxisSelectedEvent> selCap;
+    selCap.attach(tp.eq);
+    tp.eq.freeze();
+    jobSystem.start();
+
+    tp.project.axes[0].showInStrip = true;
+    tp.eq.push(ofs::SetTimelineZoomEvent{.visibleTime = 37.5});
+    tp.eq.drain();
+
+    auto filePath = std::filesystem::temp_directory_path() / "ofs_test_timeline_zoom.ofp";
+    tp.project.state.filePath = filePath.string();
+    tp.eq.push(ofs::SaveProjectEvent{false});
+    tp.eq.drain();
+    REQUIRE(waitForSave(pm));
+
+    selCap.received.clear();
+    tp.eq.push(ofs::OpenProjectRequestEvent{filePath.string()});
+    REQUIRE(drainUntil(tp.eq, [&] { return selCap.received.size() == 1; }));
+
+    CHECK(tp.project.timelineView.targetVisibleTime == doctest::Approx(37.5));
+
+    std::filesystem::remove(filePath);
+}
+
 // A region's axisRoles bitset is serialized as string tags (saveToProject) and rebuilt from those
 // tags on load (loadFromProject). The reload also re-validates each region's node graph and replaces
 // a structurally invalid one with a default. Both paths run only when a project carries regions.

@@ -78,6 +78,12 @@ struct UpdateTimelineViewEvent {
     double offsetTime;
 };
 
+// Set the timeline zoom (the span the view eases toward, not the per-frame eased value). Clamped to
+// TimelineViewState's zoom bounds and persisted with the project.
+struct SetTimelineZoomEvent {
+    double visibleTime;
+};
+
 struct SetTimelineShowPointsEvent {
     bool show;
 };
