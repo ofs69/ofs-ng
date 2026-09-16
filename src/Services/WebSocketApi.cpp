@@ -410,6 +410,10 @@ struct WebSocketApi::Impl {
             return emitted;
         for (size_t i = 0; i < kStandardAxisCount; ++i) {
             const auto role = static_cast<StandardAxis>(i);
+            // Scratch slots are editor-only. Classic OFS clients can treat their unknown S<n>
+            // suffixes as stroke scripts, replacing the real L0 that was sent first.
+            if (isScratchAxis(role))
+                continue;
             if (role == StandardAxis::L0 || project.axes[i].exists())
                 emitted = sink(funscriptEvent(project, role, currentDuration), i) && emitted;
         }
@@ -693,6 +697,8 @@ struct WebSocketApi::Impl {
             if (!dirtyAxes.test(i))
                 continue;
             const auto role = static_cast<StandardAxis>(i);
+            if (isScratchAxis(role))
+                continue;
             const bool exists = projectActive(project) && (role == StandardAxis::L0 || project.axes[i].exists());
             if (exists) {
                 broadcast(funscriptEvent(project, role, currentDuration));
