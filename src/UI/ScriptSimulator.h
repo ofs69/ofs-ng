@@ -63,10 +63,12 @@ class ScriptSimulator {
         bool updateTransforms{false};
     };
 
-    // scene3d must be declared before gltfScene so nodes outlive mesh pointers
+    // baselineMesh must outlive scene3d, and scene3d must outlive gltfScene's mesh pointers.
+    sg::Mesh baselineMesh;
     sg::SceneGraph scene3d;
     std::unique_ptr<sg::GltfScene> gltfScene;
     sg::SceneNode *strokerNode{};
+    sg::SceneNode *baselineNode{};
     Sim3DCallbackData callbackDataOrtho[2]{};    // [0]=top view, [1]=side view (inside window)
     Sim3DCallbackData callbackDataPerspective{}; // perspective overlay (over video)
 

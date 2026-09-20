@@ -181,6 +181,8 @@ void RegisterConfigTests(ImGuiTestEngine *e) {
         auto &proj = *getTestState().project;
         const bool indBefore = proj.simulator.enableIndicators; // default true
         const bool posBefore = proj.simulator.enablePosition;   // default false
+        const bool baselineBefore = proj.simulator.enableBaseline3d;
+        const bool distanceBefore = proj.simulator.enableDistanceLabel3d;
 
         ctx->ItemClick("**/##simindicators");
         ctx->Yield(2);
@@ -189,6 +191,14 @@ void RegisterConfigTests(ImGuiTestEngine *e) {
         ctx->ItemClick("**/##simshowpos");
         ctx->Yield(2);
         IM_CHECK_EQ(proj.simulator.enablePosition, !posBefore);
+
+        ctx->ItemClick("**/##simbaseline3d");
+        ctx->Yield(2);
+        IM_CHECK_EQ(proj.simulator.enableBaseline3d, !baselineBefore);
+
+        ctx->ItemClick("**/##simdistancelabel3d");
+        ctx->Yield(2);
+        IM_CHECK_EQ(proj.simulator.enableDistanceLabel3d, !distanceBefore);
 
         closePrefs(ctx);
     };

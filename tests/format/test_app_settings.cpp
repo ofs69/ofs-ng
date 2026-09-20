@@ -79,6 +79,8 @@ TEST_CASE("AppSettings simulator sub-struct round-trips (key is \"simulatorVisua
     in.simulator.use3dSimulator = true;
     in.simulator.labels3dMask = std::bitset<ofs::SimulatorState::kSim3dDofCount>(0b010101); // mixed on/off bits
     in.simulator.labels3dInDegrees = false;                                                 // flip from default (true)
+    in.simulator.enableBaseline3d = false;
+    in.simulator.enableDistanceLabel3d = false;
 
     nlohmann::json j;
     to_json(j, in);
@@ -90,6 +92,8 @@ TEST_CASE("AppSettings simulator sub-struct round-trips (key is \"simulatorVisua
     CHECK(out.simulator.use3dSimulator == true);
     CHECK(out.simulator.labels3dMask.to_ulong() == 0b010101UL);
     CHECK(out.simulator.labels3dInDegrees == false);
+    CHECK(out.simulator.enableBaseline3d == false);
+    CHECK(out.simulator.enableDistanceLabel3d == false);
 }
 
 TEST_CASE("AppSettings metadata presets round-trip name and metadata") {

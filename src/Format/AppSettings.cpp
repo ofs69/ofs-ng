@@ -22,6 +22,8 @@ void to_json(nlohmann::json &j, const SimulatorState &s) {
                                 {"enableIndicators", s.enableIndicators},
                                 {"enablePosition", s.enablePosition},
                                 {"enableHeightLines", s.enableHeightLines},
+                                {"enableBaseline3d", s.enableBaseline3d},
+                                {"enableDistanceLabel3d", s.enableDistanceLabel3d},
                                 {"swayRange", s.swayRange},
                                 {"strokeRange", s.strokeRange},
                                 {"surgeRange", s.surgeRange},
@@ -44,6 +46,8 @@ void from_json(const nlohmann::json &j, SimulatorState &s) {
     s.enableIndicators = j.value("enableIndicators", d.enableIndicators);
     s.enablePosition = j.value("enablePosition", d.enablePosition);
     s.enableHeightLines = j.value("enableHeightLines", d.enableHeightLines);
+    s.enableBaseline3d = j.value("enableBaseline3d", d.enableBaseline3d);
+    s.enableDistanceLabel3d = j.value("enableDistanceLabel3d", d.enableDistanceLabel3d);
     s.swayRange = j.value("swayRange", d.swayRange);
     s.strokeRange = j.value("strokeRange", d.strokeRange);
     s.surgeRange = j.value("surgeRange", d.surgeRange);

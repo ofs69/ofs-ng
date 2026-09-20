@@ -18,6 +18,11 @@ struct SimulatorState {
     bool enableIndicators = true;
     bool enablePosition = false;
     bool enableHeightLines = true;
+    // Perspective 3D parity with the original OFS_Simulator3D overlay. The baseline joins the
+    // fixed bottom of the stroke range to the model's transformed tip; its readout reports that
+    // model-space distance as a percentage of the full 2 * strokeRange travel.
+    bool enableBaseline3d = true;
+    bool enableDistanceLabel3d = true;
     // 3D mapping ranges: a 0–100 axis value maps symmetrically across ±range.
     // Linear ranges are in model-space units, rotation ranges in degrees.
     // Defaults reproduce the original hardcoded mapping (Godot's Simulator3D.cs).

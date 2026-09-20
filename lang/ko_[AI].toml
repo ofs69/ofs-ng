@@ -94,6 +94,14 @@ translation = "위치 표시"
 english     = "Height Lines"
 translation = "높이 선"
 
+[PrefBaseline3d]
+english     = "Baseline"
+translation = "기준선"
+
+[PrefDistanceLabel3d]
+english     = "Distance Readout"
+translation = "거리 표시"
+
 [PrefExtraLines]
 english     = "Extra Lines"
 translation = "추가 선"

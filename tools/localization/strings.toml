@@ -107,6 +107,14 @@ description = "Preferences › Simulator: toggle for the numeric position readou
 english     = "Height Lines"
 description = "Preferences › Simulator: toggle for horizontal height reference lines."
 
+[PrefBaseline3d]
+english     = "Baseline"
+description = "Preferences › Simulator: toggle for the line from the fixed stroke target to the moving 3D model."
+
+[PrefDistanceLabel3d]
+english     = "Distance Readout"
+description = "Preferences › Simulator: toggle for the percentage distance readout below the 3D model."
+
 [PrefExtraLines]
 english     = "Extra Lines"
 description = "Preferences › Simulator: number of extra reference lines to draw."

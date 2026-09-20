@@ -107,6 +107,10 @@ void ConfigurationWindow::renderSimulatorTab(const ScriptProject &project, Event
         changed |= ImGui::Checkbox("##simshowpos", &sim.enablePosition);
         formRowIcon(ICON_LIST, Str::PrefHeightLines);
         changed |= ImGui::Checkbox("##simheightlines", &sim.enableHeightLines);
+        formRowIcon(ICON_BASELINE, Str::PrefBaseline3d);
+        changed |= ImGui::Checkbox("##simbaseline3d", &sim.enableBaseline3d);
+        formRowIcon(ICON_RULER, Str::PrefDistanceLabel3d);
+        changed |= ImGui::Checkbox("##simdistancelabel3d", &sim.enableDistanceLabel3d);
         formRowIcon(nullptr, Str::PrefExtraLines);
         ImGui::SetNextItemWidth(-FLT_MIN);
         changed |= ImGui::DragInt("##extracount", &sim.extraLinesCount, 1.f, 0, 20);
@@ -172,6 +176,8 @@ void ConfigurationWindow::renderSimulatorTab(const ScriptProject &project, Event
             s.enableIndicators = sim.enableIndicators;
             s.enablePosition = sim.enablePosition;
             s.enableHeightLines = sim.enableHeightLines;
+            s.enableBaseline3d = sim.enableBaseline3d;
+            s.enableDistanceLabel3d = sim.enableDistanceLabel3d;
             s.swayRange = sim.swayRange;
             s.strokeRange = sim.strokeRange;
             s.surgeRange = sim.surgeRange;

@@ -94,6 +94,14 @@ translation = "Показывать позицию"
 english     = "Height Lines"
 translation = "Линии высоты"
 
+[PrefBaseline3d]
+english     = "Baseline"
+translation = "Базовая линия"
+
+[PrefDistanceLabel3d]
+english     = "Distance Readout"
+translation = "Показание расстояния"
+
 [PrefExtraLines]
 english     = "Extra Lines"
 translation = "Дополнительные линии"

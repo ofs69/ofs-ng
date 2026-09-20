@@ -13,6 +13,7 @@
 #include "UI/GlViewportRect.h"
 #include "UI/Icons.h"
 #include "UI/ImGuiHelpers.h"
+#include "UI/SimulatorBaseline.h"
 #include "UI/Theme.h"
 #include "Util/FrameAllocator.h"
 #include "Util/Log.h"
@@ -60,6 +61,14 @@ uint32_t applyOpacity(const ImColor &col, float opacity) {
     ImColor c = col;
     c.Value.w *= opacity;
     return c;
+}
+
+ImVec4 baselineVisualColor(float percent) {
+    if (percent > 100.f)
+        return ofs::theme::GetStyleColorVec4(AppCol_Error);
+    const float warningMix = std::clamp((percent - 90.f) / 10.f, 0.f, 1.f);
+    return ImLerp(ImGui::GetStyleColorVec4(ImGuiCol_Text),
+                  ImColor(ofs::standardAxisColor(ofs::StandardAxis::L0)).Value, warningMix);
 }
 
 // A soft elliptical darkening behind the 3D model. Over bright or busy video a light model blends in;
@@ -421,6 +430,9 @@ ScriptSimulator::ScriptSimulator(EventQueue &eq) {
         }
         if (gltfScene && !gltfScene->roots.empty()) {
             strokerNode = gltfScene->roots.front();
+            baselineMesh = sg::Mesh::cube();
+            baselineNode = scene3d.createNode(nullptr);
+            baselineNode->mesh = &baselineMesh;
         }
     }
 }
@@ -502,6 +514,22 @@ void ScriptSimulator::render3D(const ScriptProject &project, EventQueue &eq, dou
         glm::mix(glm::radians(-state.twistRange), glm::radians(state.twistRange), axisVal(StandardAxis::R0));
     t.rotation = glm::angleAxis(-rollAngle, glm::vec3{0, 0, 1}) * glm::angleAxis(pitchAngle, glm::vec3{1, 0, 0}) *
                  glm::angleAxis(twistAngle, glm::vec3{0, 1, 0});
+
+    const SimulatorBaselineGeometry baseline = simulatorBaselineGeometry(t, state.strokeRange);
+    if (baselineNode != nullptr) {
+        baselineNode->mesh = state.enableBaseline3d ? &baselineMesh : nullptr;
+        if (state.enableBaseline3d) {
+            const glm::vec3 span = baseline.tip - baseline.target;
+            const float length = glm::length(span);
+            baselineNode->localTransform.position = (baseline.tip + baseline.target) * 0.5f;
+            baselineNode->localTransform.rotation =
+                length > 1e-4f ? rotationBetween(glm::vec3{0.f, 1.f, 0.f}, span / length) : glm::quat{};
+            baselineNode->localTransform.scale = {0.018f, std::max(length, 1e-4f), 0.018f};
+
+            const ImVec4 color = baselineVisualColor(baseline.percent);
+            baselineNode->color = {color.x, color.y, color.z, color.w};
+        }
+    }
 
     // ---- Orthographic views inside the Simulator window ----
 
@@ -785,6 +813,14 @@ void ScriptSimulator::render3D(const ScriptProject &project, EventQueue &eq, dou
     }
     if (ImGui::BeginPopup("Sim3DContext")) {
         // Menu items push events like every other UI write — never mutate ScriptProject directly.
+        ImGui::SeparatorText(Str::SimDisplay);
+        if (ImGui::MenuItem(Str::PrefBaseline3d.id("sim_baseline_3d"), nullptr, state.enableBaseline3d))
+            eq.push(ModifyEvent<SimulatorState>{
+                [](SimulatorState &s) { s.enableBaseline3d = !s.enableBaseline3d; }});
+        if (ImGui::MenuItem(Str::PrefDistanceLabel3d.id("sim_distance_label_3d"), nullptr,
+                            state.enableDistanceLabel3d))
+            eq.push(ModifyEvent<SimulatorState>{
+                [](SimulatorState &s) { s.enableDistanceLabel3d = !s.enableDistanceLabel3d; }});
         ImGui::SeparatorText(Str::Sim3dLabels);
         constexpr StandardAxis dofs[] = {StandardAxis::L0, StandardAxis::L1, StandardAxis::L2,
                                          StandardAxis::R0, StandardAxis::R1, StandardAxis::R2};
@@ -1062,6 +1098,25 @@ bool ScriptSimulator::renderOverlay(ImDrawList *dl, const ScriptProject &project
                                       : fmtScratch("{} {:.0f}%", standardAxisShortName(role), v * 100.f);
                 text({tip.x + 4.f, tip.y - lineH * 0.5f}, col(role), lbl);
             }
+        }
+
+        if (state.enableDistanceLabel3d) {
+            const SimulatorBaselineGeometry baseline =
+                simulatorBaselineGeometry(strokerNode->localTransform, state.strokeRange);
+            const float opacity = ofs::theme::GetStyleVar(AppVar_SimGlobalOpacity);
+            const ImU32 textCol = applyOpacity(ImColor(baselineVisualColor(baseline.percent)), opacity);
+            const char *label = fmtScratch("{:.0f}%", baseline.percent);
+            const ImVec2 labelSize = ImGui::CalcTextSize(label);
+            const float padX = ImGui::GetFontSize() * 0.55f;
+            const float padY = ImGui::GetFontSize() * 0.25f;
+            const ImVec2 labelPos{perspMin.x + (r.size.x - labelSize.x) * 0.5f,
+                                  perspMax.y - labelSize.y - padY * 2.f - ImGui::GetFontSize() * 0.35f};
+            const ImVec2 badgeMin{labelPos.x - padX, labelPos.y - padY};
+            const ImVec2 badgeMax{labelPos.x + labelSize.x + padX, labelPos.y + labelSize.y + padY};
+            dl->AddRectFilled(badgeMin, badgeMax,
+                              applyOpacity(ImColor(ofs::theme::GetColorU32(AppCol_SimScrim)), opacity),
+                              ImGui::GetFontSize() * 0.3f);
+            dl->AddText(labelPos, textCol, label);
         }
 
         // Shift-hover place: a value readout pinned to the cursor so the placement value is always

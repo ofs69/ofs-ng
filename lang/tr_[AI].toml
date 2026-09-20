@@ -94,6 +94,14 @@ translation = "Konumu Göster"
 english     = "Height Lines"
 translation = "Yükseklik Çizgileri"
 
+[PrefBaseline3d]
+english     = "Baseline"
+translation = "Taban çizgisi"
+
+[PrefDistanceLabel3d]
+english     = "Distance Readout"
+translation = "Mesafe göstergesi"
+
 [PrefExtraLines]
 english     = "Extra Lines"
 translation = "Ek Çizgiler"
