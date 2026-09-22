@@ -31,14 +31,15 @@ in the key-binding editor; this page covers the pointer.
 
 ## Window (drag and drop)
 
-What a dropped file does depends on whether a project is open — a drop can never replace
-the work in progress.
+What a dropped file does depends on whether a project is open. Only `.funscript` drops merge into
+the open project; any other drop is a whole-project open and goes through the unsaved-changes prompt
+first.
 
 | Gesture | Action |
 |---------|--------|
-| Drop video / `.ofp` / `.funscript` (no project open) | Open it — media starts a project (adopting sibling funscripts), `.ofp` loads, a lone `.funscript` starts a media-less project |
+| Drop video / `.ofp` / `.funscript` (no project open) | Open it — media resumes a same-stem `.ofp` beside it when one exists, otherwise starts a project (adopting sibling funscripts); `.ofp` loads; a lone `.funscript` starts a media-less project |
 | Drop one or more `.funscript` (project open) | Import them into the current project through the axis picker |
-| Drop anything else (project open) | Refused — use **File > Open** to switch projects |
+| Drop video / `.ofp` (project open) | Close the current project (prompting to save if dirty) and open the drop as above — in a mixed drop the first non-funscript path wins |
 
 ## Timeline
 
