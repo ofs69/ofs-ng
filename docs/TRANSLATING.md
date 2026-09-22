@@ -2,7 +2,7 @@
 
 Every user-visible string lives once in `tools/localization/strings.toml` (the English source of truth)
 and is reached through the generated `Str::`/`Tr` API — see the *Localized strings* section of
-[`CLAUDE.md`](../CLAUDE.md) for the call-site rules. This document covers the other half: keeping the
+[`AGENTS.md`](../AGENTS.md) for the call-site rules. This document covers the other half: keeping the
 per-language catalogs in step with that source and adding new languages, all through one tool —
 **`tools/translations.py`** — instead of hand-editing a dozen 3,000-line TOML files.
 

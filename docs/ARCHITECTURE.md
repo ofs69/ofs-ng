@@ -1,12 +1,12 @@
 # Architecture
 
-This is the **prose companion** to the rules in [`../CLAUDE.md`](../CLAUDE.md). CLAUDE.md is the
+This is the **prose companion** to the rules in [`../AGENTS.md`](../AGENTS.md). AGENTS.md is the
 normative contract — the MUST/MUST NOT list any change has to respect, and the field-by-field source of
 truth (which in turn defers to `src/Core/ScriptProject.h`). This document explains *why* the design is
 shaped that way and walks the data flows that the rules exist to protect. It deliberately holds **no code
 listings** — the headers are the source of truth and rot if duplicated; where a detail matters, this file
-names the type or file to read. Where the two documents overlap, CLAUDE.md wins; if you find them
-disagreeing, CLAUDE.md is right and this file has drifted.
+names the type or file to read. Where the two documents overlap, AGENTS.md wins; if you find them
+disagreeing, AGENTS.md is right and this file has drifted.
 
 ## Overview
 
@@ -27,7 +27,7 @@ pools:
 `AxisState axes[kStandardAxisCount]` indexed by the `StandardAxis` enum, plus the top-level state structs
 (`state`, `overlay`, `simulator`, …), the always-sorted `regions`, the opaque `pluginData` store, and the
 `active*`/`stored*` interaction-selection ids. The header is the source of truth for the full field list;
-CLAUDE.md → *ScriptProject* carries the mutation rules. Each `AxisState` holds its `role`, the visibility
+AGENTS.md → *ScriptProject* carries the mutation rules. Each `AxisState` holds its `role`, the visibility
 flags (`isVisible`, `showInStrip`, `isLocked`), a `dirty` flag, the `actions` and `selection` sorted sets,
 and two transient processing fields (`resolved`, `pendingEval`) managed by `ProcessingSystem`. Two
 invariants are worth seeing in prose:
@@ -59,14 +59,14 @@ handlers in push order.
 
 The contract that makes this safe — register all handlers before any worker exists, `freeze()` before
 `jobSystem.start()`, `drain()` exactly once per frame as the first thing in `onUpdate()`, push (never call)
-across system boundaries — lives in CLAUDE.md → *EventQueue*. The reason it works without locks: handlers
+across system boundaries — lives in AGENTS.md → *EventQueue*. The reason it works without locks: handlers
 are registered once at startup, so the handler table is effectively read-only during operation, and `push()`
 from a worker only enqueues — the handler still runs on the main thread at the next `drain()`.
 
 ## Services
 
 Services own behavior; they do not own project state. The full table and the no-direct-calls rule are in
-CLAUDE.md → *Services*. The piece that needs prose is the **request/apply split** for interaction, because
+AGENTS.md → *Services*. The piece that needs prose is the **request/apply split** for interaction, because
 it is easy to mistake for a rule violation:
 
 `EditIntentRouter`, `NavigatorRouter`, and `SelectIntentRouter` are each the *sole* subscriber to one
@@ -134,7 +134,7 @@ target can never itself dangle.
 
 ## Threading
 
-The allowed-operations split (main vs. worker) and the no-untracked-threads rule are in CLAUDE.md →
+The allowed-operations split (main vs. worker) and the no-untracked-threads rule are in AGENTS.md →
 *Threading model*. The short version: workers only read an `AxisSnapshot` (a value copy) and `push()` a
 result; they never touch `ScriptProject` or call a service. Two consequences of that model deserve prose
 here, because they are the load-bearing parts of plugin safety:
@@ -165,7 +165,7 @@ from `OfsApp::~OfsApp` before the manager is destroyed.
 ## Frame loop and data flows
 
 `drain()` is always first, so worker results from the previous frame are applied before the UI renders — a
-one-frame latency for async results, intentional and acceptable. The four-step loop itself is in CLAUDE.md →
+one-frame latency for async results, intentional and acceptable. The four-step loop itself is in AGENTS.md →
 *Frame loop*. What that diagram doesn't show is how a single user gesture threads through the queue.
 
 ### Axis mutation — a drag gesture (coalesced undo)
@@ -204,7 +204,7 @@ than a `bool` so its address can be handed to plugin/script discrete nodes as a 
 monotonic; C++ only ever touches it through `cancel()` / `isCancelled()`. The caller stores the
 `shared_ptr<EvalJob>` in `AxisState::pendingEval`, the worker captures the same pointer, and UI reads
 `pendingEval != nullptr` to show a spinner. The cancel-before-resubmit and check-`isCancelled()`-at-loop-
-boundaries rules are in CLAUDE.md → *Async job contract*.
+boundaries rules are in AGENTS.md → *Async job contract*.
 
 ## Processing nodes
 
@@ -286,7 +286,7 @@ the exact members.
 
 It is owned by `ScriptSimulator`, not shared. `SceneNode*` pointers are stable for the graph's lifetime;
 `updateTransforms()`/`render()` are main-thread-only; and it never touches `ScriptProject` or `EventQueue` —
-the owning system reads `ScriptProject::simulator` and updates node transforms each frame. See CLAUDE.md →
+the owning system reads `ScriptProject::simulator` and updates node transforms each frame. See AGENTS.md →
 *SceneGraph*.
 
 ## Plugin API surface
@@ -297,7 +297,7 @@ signature:
 
 - **A plugin author never sees the C ABI.** `unsafe`, `IntPtr`, `delegate* unmanaged`, UTF-8 marshaling, and
   the main-thread queue all live behind `internal` types; a plugin sees ordinary C#. The ABI is internal to
-  one shipped unit (native host + its `Ofs.Api`, always rebuilt together) — see CLAUDE.md → *Plugin system*
+  one shipped unit (native host + its `Ofs.Api`, always rebuilt together) — see AGENTS.md → *Plugin system*
   for why breaking the ABI does not break plugins and only the `Ofs.Api` assembly version gates compatibility.
 - **Axis edits are buffered and committed as one undo step.** A plugin mutates an axis through a buffered edit
   and an explicit `Commit()`; everything between is one atomic undo step (an uncommitted edit is a clean
@@ -310,7 +310,7 @@ signature:
 
 ## Where things live
 
-The plugin system (C ABI, `PluginCtx`, the ABI-version guard) is documented in CLAUDE.md → *Plugin system*
+The plugin system (C ABI, `PluginCtx`, the ABI-version guard) is documented in AGENTS.md → *Plugin system*
 and the C# surface in the `Ofs.Api` source; the interaction extension points and the processing-node model are
-in the sections above. The directory-by-directory layering contract is in CLAUDE.md → *Target file layout* —
+in the sections above. The directory-by-directory layering contract is in AGENTS.md → *Target file layout* —
 browse `src/` for the current files rather than relying on a tree duplicated here.

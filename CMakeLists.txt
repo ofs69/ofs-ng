@@ -49,7 +49,7 @@ endif ()
 # === Path-encoding guard ===
 # tools/check_path_encoding.py flags the lossy std::filesystem::path<->string conversions that
 # silently drop non-ASCII on Windows (ANSI codepage); see src/Util/PathUtil.h and the path rules
-# in CLAUDE.md. Wired into the build so a violation fails compilation instead of waiting for a
+# in AGENTS.md. Wired into the build so a violation fails compilation instead of waiting for a
 # manual pre-commit run. The stamp + DEPENDS list keep it incremental: it only re-runs when a
 # source file (or the script) changes.
 find_package(Python3 COMPONENTS Interpreter QUIET)
