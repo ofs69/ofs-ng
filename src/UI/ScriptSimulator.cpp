@@ -67,8 +67,8 @@ ImVec4 baselineVisualColor(float percent) {
     if (percent > 100.f)
         return ofs::theme::GetStyleColorVec4(AppCol_Error);
     const float warningMix = std::clamp((percent - 90.f) / 10.f, 0.f, 1.f);
-    return ImLerp(ImGui::GetStyleColorVec4(ImGuiCol_Text),
-                  ImColor(ofs::standardAxisColor(ofs::StandardAxis::L0)).Value, warningMix);
+    return ImLerp(ImGui::GetStyleColorVec4(ImGuiCol_Text), ImColor(ofs::standardAxisColor(ofs::StandardAxis::L0)).Value,
+                  warningMix);
 }
 
 // A soft elliptical darkening behind the 3D model. Over bright or busy video a light model blends in;
@@ -815,10 +815,8 @@ void ScriptSimulator::render3D(const ScriptProject &project, EventQueue &eq, dou
         // Menu items push events like every other UI write — never mutate ScriptProject directly.
         ImGui::SeparatorText(Str::SimDisplay);
         if (ImGui::MenuItem(Str::PrefBaseline3d.id("sim_baseline_3d"), nullptr, state.enableBaseline3d))
-            eq.push(ModifyEvent<SimulatorState>{
-                [](SimulatorState &s) { s.enableBaseline3d = !s.enableBaseline3d; }});
-        if (ImGui::MenuItem(Str::PrefDistanceLabel3d.id("sim_distance_label_3d"), nullptr,
-                            state.enableDistanceLabel3d))
+            eq.push(ModifyEvent<SimulatorState>{[](SimulatorState &s) { s.enableBaseline3d = !s.enableBaseline3d; }});
+        if (ImGui::MenuItem(Str::PrefDistanceLabel3d.id("sim_distance_label_3d"), nullptr, state.enableDistanceLabel3d))
             eq.push(ModifyEvent<SimulatorState>{
                 [](SimulatorState &s) { s.enableDistanceLabel3d = !s.enableDistanceLabel3d; }});
         ImGui::SeparatorText(Str::Sim3dLabels);
@@ -966,6 +964,9 @@ bool ScriptSimulator::renderOverlay(ImDrawList *dl, const ScriptProject &project
         // neutral tick at origin and a marker at the live value; rotations are concentric needle-dials
         // centred on the model; Surge (world Z, straight down the view axis) can't show as a line, so it
         // reads out as a depth label. All strings use fmtScratch (no per-frame heap allocation).
+        // The depth label owns the bottom edge; the distance readout below stacks above whatever it
+        // reserves so the two never overlap.
+        float bottomReserved = 0.f;
         if (state.labels3dMask.any()) {
             const ofs::theme::Theme &theme = ofs::theme::getActive();
             const float opacity = ofs::theme::GetStyleVar(AppVar_SimGlobalOpacity);
@@ -1067,6 +1068,7 @@ bool ScriptSimulator::renderOverlay(ImDrawList *dl, const ScriptProject &project
                                              dofWord(StandardAxis::L1), v * 100.f, Str::SimDepth.sv());
                 text({origin.x - ImGui::CalcTextSize(lbl).x * 0.5f, perspMax.y - lineH - 4.f}, col(StandardAxis::L1),
                      lbl);
+                bottomReserved = lineH + 4.f;
             }
 
             // Rotation dials — concentric needle gauges centred on the model. Reference needle points up
@@ -1109,8 +1111,8 @@ bool ScriptSimulator::renderOverlay(ImDrawList *dl, const ScriptProject &project
             const ImVec2 labelSize = ImGui::CalcTextSize(label);
             const float padX = ImGui::GetFontSize() * 0.55f;
             const float padY = ImGui::GetFontSize() * 0.25f;
-            const ImVec2 labelPos{perspMin.x + (r.size.x - labelSize.x) * 0.5f,
-                                  perspMax.y - labelSize.y - padY * 2.f - ImGui::GetFontSize() * 0.35f};
+            const float labelY = perspMax.y - bottomReserved - labelSize.y - padY * 2.f - ImGui::GetFontSize() * 0.35f;
+            const ImVec2 labelPos{perspMin.x + (r.size.x - labelSize.x) * 0.5f, labelY};
             const ImVec2 badgeMin{labelPos.x - padX, labelPos.y - padY};
             const ImVec2 badgeMax{labelPos.x + labelSize.x + padX, labelPos.y + labelSize.y + padY};
             dl->AddRectFilled(badgeMin, badgeMax,
