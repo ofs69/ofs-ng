@@ -54,11 +54,11 @@ class ProjectManager {
     // guardUnsaved / the start* continuations is a direct child of that one co::Fire, so the
     // ModalManager always holds the running flow's own handle — clean teardown, no nested-frame leak.
     co::Fire guardUnsaved(std::function<void()> proceed);
-    co::Fire startOpenOrNewProject();           // doClose + one picker: .ofp opens, funscript/media start a new project
+    co::Fire startOpenOrNewProject(); // doClose + one picker: .ofp opens, funscript/media start a new project
     // Dispatch a chosen/dropped path: .ofp opens; funscript starts new; media opens a same-stem sibling
     // .ofp when present, otherwise starts a new project with sibling-funscript discovery.
     void openPathByExtension(std::string file);
-    void setupDefaultAxes();                    // restore the default L0–R3 device axes on a fresh project
+    void setupDefaultAxes();                        // restore the default L0–R3 device axes on a fresh project
     co::Fire initNewProject(std::string mediaPath); // default axes + funscript auto-discovery for a fresh project
     // New project around a script. Coroutine: the sibling-media scan runs on the main thread (cheap —
     // no parsing), but the funscript itself is parsed on a JobSystem worker via JobAwait.
