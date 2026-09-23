@@ -10,6 +10,8 @@ alike (Claude Code reads it automatically). The rules below are not style prefer
 invariant that the threading model, the undo system, the localization pipeline, or the plugin ABI
 depends on. When in doubt, follow them literally.
 
+If `AGENTS.local.md` exists, always read it.
+
 ## Documentation map
 
 Deeper references live in `docs/`:

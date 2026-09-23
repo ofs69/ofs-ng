@@ -34,3 +34,5 @@ docs/imgui_test_engine.wiki/
 docs/apidocs/_site/
 docs/apidocs/api/*.yml
 docs/apidocs/api/.manifest
+
+AGENTS.local.md
