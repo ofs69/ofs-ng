@@ -1,4 +1,5 @@
 #pragma once
+#include "TitleBarHitTest.h"
 #include <SDL3/SDL.h>
 #include <functional>
 #include <string>
@@ -121,15 +122,6 @@ class Window {
     // off the window move/resize events in pollEvents.
     void updateRestoreGeometry();
 
-    // Draggable/resizable regions for the borderless hit test, refreshed each frame.
-    struct TitleBarHitInfo {
-        float height = 0.0f;       // title bar strip height (window points)
-        float buttonsLeftX = 0.0f; // caption buttons start here; drag region is to the left
-        float searchLeftX = 0.0f;  // interactive carve-out (search box): left edge
-        float searchRightX = 0.0f; // interactive carve-out (search box): right edge
-        bool maximized = false;    // suppress edge-resize zones while maximized
-        bool enabled = false;      // true once the borderless custom title bar is active
-    };
     static SDL_HitTestResult SDLCALL hitTest(SDL_Window *win, const SDL_Point *area, void *data);
 
     // Re-asserts the Win11 DWM rounded-corner opt-in (set once in enableCustomTitleBar). SDL's

@@ -256,6 +256,7 @@ add_executable(ofs-unit-tests
         util/test_fault_throttle.cpp
         util/test_smoothed_float.cpp
         util/test_semver.cpp
+        platform/test_title_bar_hit_test.cpp
         util/test_pref_version_guard.cpp
         services/test_command_registry.cpp
         services/test_video_transcoder.cpp
@@ -304,6 +305,7 @@ add_executable(ofs-unit-tests
         ${CMAKE_SOURCE_DIR}/src/Services/WebSocketApi.cpp
         ${CMAKE_SOURCE_DIR}/src/Util/Version.cpp
         ${CMAKE_SOURCE_DIR}/src/Video/PlaybackCursor.cpp
+        ${CMAKE_SOURCE_DIR}/src/Platform/TitleBarHitTest.cpp
 )
 
 target_include_directories(ofs-unit-tests PRIVATE

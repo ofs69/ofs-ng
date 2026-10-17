@@ -452,51 +452,12 @@ int Window::getPixelHeight() const {
 
 SDL_HitTestResult SDLCALL Window::hitTest(SDL_Window *win, const SDL_Point *area, void *data) {
     const auto *info = static_cast<const TitleBarHitInfo *>(data);
-    if (!info || !info->enabled)
+    if (!info)
         return SDL_HITTEST_NORMAL;
 
     int w = 0, h = 0;
     SDL_GetWindowSize(win, &w, &h);
-
-    constexpr int kBorder = 6; // edge-resize thickness, window points
-    const int x = area->x;
-    const int y = area->y;
-
-    if (!info->maximized) {
-        const bool left = x < kBorder;
-        const bool right = x >= w - kBorder;
-        const bool top = y < kBorder;
-        const bool bottom = y >= h - kBorder;
-        if (top && left)
-            return SDL_HITTEST_RESIZE_TOPLEFT;
-        if (top && right)
-            return SDL_HITTEST_RESIZE_TOPRIGHT;
-        if (bottom && left)
-            return SDL_HITTEST_RESIZE_BOTTOMLEFT;
-        if (bottom && right)
-            return SDL_HITTEST_RESIZE_BOTTOMRIGHT;
-        if (left)
-            return SDL_HITTEST_RESIZE_LEFT;
-        if (right)
-            return SDL_HITTEST_RESIZE_RIGHT;
-        if (top)
-            return SDL_HITTEST_RESIZE_TOP;
-        if (bottom)
-            return SDL_HITTEST_RESIZE_BOTTOM;
-    }
-
-    // Interactive carve-out (e.g. the command-palette search box): stays normal client area so ImGui
-    // receives the click instead of the OS starting a window drag.
-    if (y < static_cast<int>(info->height) && info->searchRightX > info->searchLeftX &&
-        x >= static_cast<int>(info->searchLeftX) && x < static_cast<int>(info->searchRightX))
-        return SDL_HITTEST_NORMAL;
-
-    // Title bar strip, left of the caption buttons, is the drag handle. The OS maps this to a caption,
-    // giving move + double-click-maximize + snap for free.
-    if (y < static_cast<int>(info->height) && x < static_cast<int>(info->buttonsLeftX))
-        return SDL_HITTEST_DRAGGABLE;
-
-    return SDL_HITTEST_NORMAL;
+    return classifyTitleBarHit(*info, SDL_GetWindowFlags(win), w, h, *area);
 }
 
 void Window::enableCustomTitleBar() {
@@ -533,7 +494,6 @@ void Window::setTitleBarLayout(float height, float buttonsLeftX, float searchLef
     titleBarHit.buttonsLeftX = buttonsLeftX;
     titleBarHit.searchLeftX = searchLeftX;
     titleBarHit.searchRightX = searchRightX;
-    titleBarHit.maximized = isMaximized();
 }
 
 void Window::minimize() {
