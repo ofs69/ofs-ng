@@ -87,6 +87,9 @@ bool VideoPreview::createEngine() {
     if constexpr (ofs::kHeadless)
         return false;
 
+    if (!MpvLoader::load())
+        return false;
+
     mpv = MpvLoader::mpv_create();
     if (!mpv) {
         OFS_CORE_ERROR("Failed to create preview mpv instance");

@@ -282,8 +282,8 @@ ofs_excludes=(
     # and the host consumer fails its version check (libcurl wants OPENSSL_3.2.0; libgio wants
     # MOUNT_2_40). Worse, libmount DT_NEEDEDs libselinux, which is excluded above and simply ABSENT on
     # a non-SELinux distro (Arch, and any host without it) — so the bundled libmount fails to load at
-    # all, taking libmpv down with it (the loader then falls through to its .so.1 probe and reports the
-    # misleading "libmpv.so.1: cannot open shared object file"). No bundled lib needs libmount/libblkid;
+    # all, taking libmpv down with it (MpvLoader logs the libmpv.so.2 dlerror naming the missing
+    # dependency before it falls through to its .so.1 probe). No bundled lib needs libmount/libblkid;
     # libssl/libcrypto's only bundled consumer (librabbitmq, an ffmpeg protocol backend OFS never uses)
     # is fine against the host's newer, backward-compatible openssl.
     'libssl.so*' 'libcrypto.so*' 'libmount.so*' 'libblkid.so*'
