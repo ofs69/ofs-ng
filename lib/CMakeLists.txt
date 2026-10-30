@@ -187,7 +187,7 @@ target_include_directories(imgui_test_engine SYSTEM PUBLIC
 target_link_libraries(imgui_test_engine PRIVATE imgui_te)
 target_compile_definitions(imgui_test_engine
     PRIVATE IMGUI_ENABLE_TEST_ENGINE
-    PUBLIC  IMGUI_TEST_ENGINE_ENABLE_COROUTINE_STDTHREAD_IMPL=1
+    PUBLIC  IMGUI_TEST_ENGINE_ENABLE_COROUTINE_STDTHREAD_IMPL=1 IMGUI_TEST_ENGINE_ENABLE_CAPTURE=1
 )
 target_compile_features(imgui_test_engine PUBLIC cxx_std_20)
 if(MSVC)

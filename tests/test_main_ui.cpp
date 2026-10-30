@@ -4,15 +4,18 @@
 #include "Core/ScriptProject.h"
 #include "Format/AppSettings.h"
 #include "Localization/Translator.h"
+#include "Platform/Headless.h"
 #include "Services/UpdateChecker.h"
 #include "Util/CrashHandler.h"
 #include "Util/Log.h"
 #include "Util/PathUtil.h"
 #include "helpers/OfsAppTestAccess.h"
 #include "helpers/TestState.h"
+#include "helpers/VisualCapture.h"
 #include <SDL3/SDL_main.h>
 #include <SDL3/SDL_video.h>
 #include <filesystem>
+#include <glad/gl.h>
 #include <imgui.h>
 #include <imgui_te_context.h>
 #include <imgui_te_coroutine.h>
@@ -33,9 +36,12 @@ TestSharedState &getTestState() {
 
 class OfsTestApp : public OfsApp {
   public:
-    explicit OfsTestApp(const char *testFilter) : OfsApp(g_project, g_eventQueue), testFilter_(testFilter) {}
+    explicit OfsTestApp(const char *testFilter, std::string captureDirectory)
+        : OfsApp(g_project, g_eventQueue), testFilter_(testFilter), captureDirectory_(std::move(captureDirectory)) {}
 
     ~OfsTestApp() override {
+        if (captureTexture_ != 0)
+            glDeleteTextures(1, &captureTexture_);
         if (testEngine_) {
             // Stop then destroy here, in the most-derived dtor, so the engine is torn down before the
             // base ~Application runs shutdownImGui(). Destroying the engine while the ImGui context is
@@ -50,6 +56,12 @@ class OfsTestApp : public OfsApp {
     bool init() override {
         if (!OfsApp::init())
             return false;
+
+        if (!captureDirectory_.empty()) {
+            SDL_RestoreWindow(window->getNativeWindow());
+            SDL_SetWindowSize(window->getNativeWindow(), 1920, 1080);
+            SDL_SetWindowPosition(window->getNativeWindow(), SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED);
+        }
 
         g_testState.project = &g_project;
         g_testState.eventQueue = &g_eventQueue;
@@ -81,7 +93,10 @@ class OfsTestApp : public OfsApp {
         io.ConfigSavedSettings = false;
         io.CoroutineFuncs = Coroutine_ImplStdThread_GetInterface();
         ImGuiTestEngine_Start(testEngine_, ImGui::GetCurrentContext());
-        RegisterAllTests(testEngine_);
+        if (captureDirectory_.empty())
+            RegisterAllTests(testEngine_);
+        else
+            captureTexture_ = registerVisualCapture(testEngine_, captureDirectory_);
         ImGuiTestEngine_QueueTests(testEngine_, ImGuiTestGroup_Tests, testFilter_);
         return true;
     }
@@ -109,6 +124,8 @@ class OfsTestApp : public OfsApp {
   private:
     ImGuiTestEngine *testEngine_ = nullptr;
     const char *testFilter_ = nullptr;
+    std::string captureDirectory_;
+    unsigned int captureTexture_ = 0;
 
     void logResults() {
         // The runtime --log-level filter quiets the app's per-frame logging, but the
@@ -175,6 +192,7 @@ int main(int argc, char *argv[]) {
     ofs::installCrashHandlerHeadless(ImGuiTestEngine_CrashHandler);
 
     const char *filter = nullptr;
+    std::string captureDirectory;
     std::string_view language;                                // empty => built-in English
     spdlog::level::level_enum logLevel = spdlog::level::warn; // quiet by default
     for (int i = 1; i < argc; ++i) {
@@ -185,10 +203,16 @@ int main(int argc, char *argv[]) {
             language = arg.substr(sizeof("--language=") - 1);
         else if (arg.starts_with("--log-level="))
             logLevel = parseLogLevel(arg.substr(sizeof("--log-level=") - 1));
+        else if (arg.starts_with("--capture-ui="))
+            captureDirectory = arg.substr(sizeof("--capture-ui=") - 1);
+    }
+    if (ofs::kHeadless && !captureDirectory.empty()) {
+        OFS_CORE_ERROR("--capture-ui requires the real OpenGL ofs-ui-tests binary");
+        return -1;
     }
     ofs::Log::getCoreLogger()->set_level(logLevel);
 
-    OfsTestApp app(filter);
+    OfsTestApp app(filter, std::move(captureDirectory));
     // Run the whole suite under a translation to prove every localized widget keeps a stable,
     // language-independent ###id: the suites address widgets by id, never by visible text, so a
     // pass here means the translated labels never changed widget identity. Load the language BEFORE

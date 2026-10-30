@@ -559,6 +559,7 @@ set(OFS_UI_TEST_SUITE_SRC
         test_main_ui.cpp
         helpers/OfsAppTestAccess.cpp
         helpers/PluginManagerTestAccess.cpp
+        helpers/VisualCapture.cpp
         ui/register_all.cpp
         ui/suite_processing.cpp
         ui/suite_undo.cpp
