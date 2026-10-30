@@ -115,7 +115,8 @@ void LogWindow::render(bool &open) {
     }
 
     ImGui::SameLine();
-    if (textFilter_.Draw(Str::LogFilter.id("logfilter"), ImGui::GetFontSize() * 12.0f))
+    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 12.0f);
+    if (textFilter_.DrawWithHint(Str::LogFilter.id("logfilter"), ""))
         filterDirty_ = true;
 
     if (filterDirty_) {

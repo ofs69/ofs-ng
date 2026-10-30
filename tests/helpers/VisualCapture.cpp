@@ -2,6 +2,7 @@
 
 #include "Core/Events.h"
 #include "Core/SimulatorSettings.h"
+#include "UI/Theme.h"
 #include "Util/PathUtil.h"
 #include "Video/DummyVideoPlayer.h"
 #include "helpers/TestState.h"
@@ -16,6 +17,7 @@
 #include <imgui_te_context.h>
 #include <imgui_te_engine.h>
 #include <nlohmann/json.hpp>
+#include <spdlog/fmt/fmt.h>
 
 namespace {
 bool captureFramebuffer(ImGuiID viewportId, int x, int y, int width, int height, unsigned int *pixels, void *) {
@@ -61,6 +63,89 @@ bool saveCapture(ImGuiTestContext *ctx, const std::string &directory, const char
     IM_CHECK_RETV(ctx->CaptureScreenshot(ImGuiCaptureFlags_Instant | ImGuiCaptureFlags_HideMouseCursor), false);
     return std::filesystem::exists(ofs::util::fromUtf8(path)) &&
            std::filesystem::file_size(ofs::util::fromUtf8(path)) > 0;
+}
+
+bool settleTimelineZoom(ImGuiTestContext *ctx, double span) {
+    getTestState().eventQueue->push(ofs::SetTimelineZoomEvent{span});
+    ctx->Yield(3);
+    const auto deadline = SDL_GetTicks() + 2000;
+    while (std::abs(getTestState().project->timelineView.visibleTime - span) > 0.000001) {
+        IM_CHECK_RETV(SDL_GetTicks() < deadline, false);
+        ctx->Yield();
+    }
+    return true;
+}
+
+void captureTimelinePatterns(ImGuiTestContext *ctx, const std::string &directory) {
+    auto &events = *getTestState().eventQueue;
+    auto &project = *getTestState().project;
+    for (const auto &region : project.regions)
+        events.push(ofs::DeleteRegionEvent{region.id});
+    events.push(ofs::ClearRegionSelectionEvent{});
+    events.push(ofs::SetTimelineLayoutEvent{ofs::TimelineLayout::Overlay});
+    ctx->MouseMoveToPos(ImGui::GetMainViewport()->Pos + ImVec2(1.f, 1.f));
+    for (int axis = 1; axis < 6; ++axis)
+        events.push(
+            ofs::ToggleAxisPanelVisibilityEvent{.axisRole = static_cast<ofs::StandardAxis>(axis), .inPanel = false});
+    ctx->Yield(3);
+    const char *names[] = {"smooth", "alternating", "plateaus", "needles", "dense-burst"};
+    nlohmann::json scenarios = nlohmann::json::array();
+    const auto originalTheme = ofs::theme::getActive();
+    for (int pattern = 0; pattern < 5; ++pattern) {
+        ofs::VectorSet<ofs::ScriptAxisAction> actions;
+        if (pattern == 4) {
+            actions.insert({0.0, 50});
+            for (int i = 0; i <= 500; ++i)
+                actions.insert({29.75 + i * 0.001, (i * 73 + i * i * 17) % 101});
+            actions.insert({60.0, 50});
+        } else if (pattern == 3) {
+            for (int i = 0; i < 60; ++i) {
+                actions.insert({i + 0.000, 95});
+                actions.insert({i + 0.002, 15});
+                actions.insert({i + 0.998, 15});
+            }
+        } else {
+            for (int i = 0; i <= 2400; ++i) {
+                int position = static_cast<int>(50.0 + 43.0 * std::sin(i * 0.105));
+                if (pattern == 1)
+                    position = i % 2 == 0 ? 5 : 95;
+                else if (pattern == 2)
+                    position = (i / 12) % 2 == 0 ? 15 : 85;
+                actions.insert({i * 0.025, position});
+            }
+        }
+        events.push(ofs::CommitAxisActionsEvent{.axis = ofs::StandardAxis::L0, .actions = actions});
+        events.push(ofs::SeekEvent{30.0});
+        ctx->Yield(3);
+        for (double span : {0.04, 0.4, 4.0, 60.0}) {
+            IM_CHECK(settleTimelineZoom(ctx, span));
+            const std::string name = fmt::format("pattern-{}-{}ms.png", names[pattern], static_cast<int>(span * 1000));
+            IM_CHECK(saveCapture(ctx, directory, name.c_str(), "Timeline###timeline"));
+            scenarios.push_back({{"file", name},
+                                 {"pattern", names[pattern]},
+                                 {"visible_seconds", span},
+                                 {"line_width", ofs::theme::GetStyleVar(AppVar_TimelineLineWidth)}});
+        }
+        if (pattern == 1 || pattern == 3) {
+            auto thickTheme = originalTheme;
+            thickTheme.vars[AppVar_TimelineLineWidth].x = 4.f;
+            ofs::theme::apply(thickTheme);
+            ctx->Yield(3);
+            for (double span : {0.4, 4.0, 60.0}) {
+                IM_CHECK(settleTimelineZoom(ctx, span));
+                const std::string name =
+                    fmt::format("pattern-{}-{}ms-thick.png", names[pattern], static_cast<int>(span * 1000));
+                IM_CHECK(saveCapture(ctx, directory, name.c_str(), "Timeline###timeline"));
+                scenarios.push_back(
+                    {{"file", name}, {"pattern", names[pattern]}, {"visible_seconds", span}, {"line_width", 4.f}});
+            }
+            ofs::theme::apply(originalTheme);
+            ctx->Yield(3);
+        }
+    }
+    std::ofstream manifest(ofs::util::fromUtf8(directory) / L"patterns.json");
+    manifest << scenarios.dump(2) << '\n';
+    IM_CHECK(manifest.good());
 }
 } // namespace
 
@@ -156,6 +241,8 @@ unsigned int registerVisualCapture(ImGuiTestEngine *engine, std::string &outputD
         ctx->MenuClick("//##MainMenuBar/###menu_view/###menu_view_log");
         ctx->Yield(5);
         IM_CHECK(saveCapture(ctx, outputDirectory, "11-log-filter.png", "Log###log"));
+        ctx->WindowClose("Log###log");
+        captureTimelinePatterns(ctx, outputDirectory);
 
         const auto &io = ImGui::GetIO();
         const nlohmann::json metadata = {

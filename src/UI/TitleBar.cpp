@@ -81,7 +81,7 @@ bool captionButton(const char *id, ImVec2 topLeft, ImVec2 size, Glyph glyph, boo
 
     switch (glyph) {
     case Glyph::Minimize:
-        dl->AddLine(ImVec2(c.x - g, c.y), ImVec2(c.x + g, c.y), fg, t);
+        dl->AddLineH(c.x - g, c.x + g, ImFloor(c.y), fg, t);
         break;
     case Glyph::Maximize:
         dl->AddRect(ImVec2(c.x - g, c.y - g), ImVec2(c.x + g, c.y + g), fg, 0.0f, t);

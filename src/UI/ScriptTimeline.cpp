@@ -458,7 +458,7 @@ void ScriptTimelineWindow::renderScriptLines(const ScriptProject &project, ImDra
         const ImU32 sepCol = ofs::theme::GetColorU32(AppCol_StripSeparator);
         for (int li = 1; li < scriptLineCount; ++li) {
             LaneRect lr = laneRectAt(laneLayout_, li);
-            drawList->AddLine({lr.pos.x, lr.pos.y}, {lr.pos.x + lr.size.x, lr.pos.y}, sepCol, 1.0f);
+            drawList->AddLineH(lr.pos.x, lr.pos.x + lr.size.x, ImFloor(lr.pos.y), sepCol, 1.0f);
         }
     }
 
@@ -476,7 +476,7 @@ void ScriptTimelineWindow::renderScriptLines(const ScriptProject &project, ImDra
             ImU32 gridCol =
                 (i == 4) ? ofs::theme::GetColorU32(AppCol_GridLineMid) : ofs::theme::GetColorU32(AppCol_GridLine);
             float lineW = (i == 4) ? ofs::theme::GetStyleVar(AppVar_GridLineMidWidth) : 1.0f;
-            drawList->AddLine({gp.x, y}, {gp.x + gs.x, y}, gridCol, lineW);
+            drawList->AddLineH(gp.x, gp.x + gs.x, ImFloor(y), gridCol, lineW);
         }
     };
     if (lanes)
@@ -512,23 +512,10 @@ void ScriptTimelineWindow::renderScriptLines(const ScriptProject &project, ImDra
         return ImColor(color[0], color[1], color[2], 1.0f);
     };
 
-    // Stroke a run of points as AddPolyline calls with flush miter joints — far
-    // cheaper than per-segment AddLine (it shares join vertices instead of
-    // duplicating an end-cap per segment) and gap-free. The color is queried per
-    // segment; a run is flushed and restarted at the shared vertex whenever the
-    // color changes (so the per-segment heat gradient still works — adjacent
-    // same-bucket segments stay in one run) or the turn exceeds the miter limit.
-    // With a constant color the run only ever breaks on the miter limit.
-    //
-    // Miter rationale: ImGui's miters are unbounded, so at a near-reversal the
-    // join length blows up into a long spike. Zoomed far out the script line
-    // compresses into a sawtooth of reversals, surfacing those spikes as black
-    // needles. We break the run whenever the turn exceeds the limit, ending both
-    // sides with a flat butt cap — no spike, no extra geometry. A tighter limit
-    // butt-caps more turns, trading a few sub-pixel seams for fewer sharp caps.
-    // cos(turn) < kMiterCosLimit ⇔ miter factor > ~1.4. Points are buffered into
-    // the per-frame arena (no heap churn).
-    constexpr float kMiterCosLimit = 0.0f; // break joins on turns sharper than 90°
+    // The contrast outline is wider than the colored stroke, so even bounded miters
+    // can protrude beyond the action dots at acute reversals. Break turns sharper
+    // than 90 degrees into separate runs; equal-color segments otherwise share joins.
+    constexpr float kMiterCosLimit = 0.0f;
     auto strokePolyline = [&](const auto &itBegin, const auto &itEnd, double skipAt, float width, auto colorOf) {
         const auto cap = static_cast<size_t>(std::distance(itBegin, itEnd));
         if (cap < 2)
@@ -543,7 +530,7 @@ void ScriptTimelineWindow::renderScriptLines(const ScriptProject &project, ImDra
         bool haveDir = false;
         auto flush = [&] {
             if (n >= 2)
-                drawList->AddPolyline(pts, n, runCol, width); // open polyline (flags default 0)
+                drawList->AddPolyline(pts, n, runCol, width);
             n = 0;
         };
         for (auto it = itBegin; it != itEnd; ++it) {
@@ -562,10 +549,10 @@ void ScriptTimelineWindow::renderScriptLines(const ScriptProject &project, ImDra
                 float len2 = dx * dx + dy * dy;
                 if (len2 < kLodThreshSq) // LOD: drop sub-threshold segments
                     continue;
-                float invLen = 1.0f / std::sqrt(len2);
-                ImVec2 dir(dx * invLen, dy * invLen);
+                const float invLen = 1.0f / std::sqrt(len2);
+                const ImVec2 dir(dx * invLen, dy * invLen);
                 ImU32 segCol = colorOf(prev, &(*it));
-                bool sharp = haveDir && lastDir.x * dir.x + lastDir.y * dir.y < kMiterCosLimit;
+                const bool sharp = haveDir && lastDir.x * dir.x + lastDir.y * dir.y < kMiterCosLimit;
                 if (n == 0) { // first segment of a run: seed start vertex + color
                     pts[n++] = lastPt;
                     runCol = segCol;
@@ -1552,25 +1539,23 @@ void ScriptTimelineWindow::renderPlayhead(VideoPlayer &videoPlayer, const ImVec2
     const float kSeekCursorWidth = ofs::theme::GetStyleVar(AppVar_ScriptSeekCursorWidth);
 
     float actualX =
-        ImFloor(timeToScreenX(videoPlayer.getActualPosition(), viewState.visibleTime, offsetTime, pos, size)) + 0.5f;
+        ImFloor(timeToScreenX(videoPlayer.getActualPosition(), viewState.visibleTime, offsetTime, pos, size));
     if (actualX >= pos.x && actualX <= pos.x + size.x) {
         const ImU32 playCol = ofs::theme::GetColorU32(AppCol_ScriptPlayCursor);
-        constexpr float triOfs = 0.5f;
-        dl->AddLine({actualX, pos.y}, {actualX, pos.y + size.y}, playCol, kPlayCursorWidth);
+        const float capX = actualX + kPlayCursorWidth * 0.5f;
+        dl->AddLineV(actualX, pos.y, pos.y + size.y, playCol, kPlayCursorWidth);
         float capH = ImGui::GetFontSize() * 0.4f;
         float capW = capH * 0.6f;
-        dl->AddTriangleFilled({actualX - capW + triOfs, pos.y}, {actualX + capW + triOfs, pos.y},
-                              {actualX + triOfs, pos.y + capH}, playCol);
+        dl->AddTriangleFilled({capX - capW, pos.y}, {capX + capW, pos.y}, {capX, pos.y + capH}, playCol);
     }
 
-    float curX = ImFloor(pos.x + size.x * 0.5f) + 0.5f;
+    float curX = ImFloor(pos.x + size.x * 0.5f);
     const ImU32 seekCol = ofs::theme::GetColorU32(AppCol_ScriptSeekCursor);
-    constexpr float triOfs = 0.5f;
-    dl->AddLine({curX, pos.y}, {curX, pos.y + size.y}, seekCol, kSeekCursorWidth);
+    const float capX = curX + kSeekCursorWidth * 0.5f;
+    dl->AddLineV(curX, pos.y, pos.y + size.y, seekCol, kSeekCursorWidth);
     float capH = ImGui::GetFontSize() * 0.55f;
     float capW = capH * 0.65f;
-    dl->AddTriangleFilled({curX - capW + triOfs, pos.y}, {curX + capW + triOfs, pos.y}, {curX + triOfs, pos.y + capH},
-                          seekCol);
+    dl->AddTriangleFilled({capX - capW, pos.y}, {capX + capW, pos.y}, {capX, pos.y + capH}, seekCol);
 }
 
 void ScriptTimelineWindow::renderOverlay(const ScriptProject &project, const ImVec2 &pos, const ImVec2 &size,
@@ -1618,7 +1603,7 @@ void ScriptTimelineWindow::renderOverlay(const ScriptProject &project, const ImV
                 ImU32 color = applyAlpha(isCoarse ? ofs::theme::GetColorU32(AppCol_OverlayLineMajor)
                                                   : ofs::theme::GetColorU32(AppCol_OverlayLineMinor),
                                          alpha);
-                drawList->AddLine({x, pos.y}, {x, pos.y + size.y}, color, isCoarse ? coarseWidth : 1.0f);
+                drawList->AddLineV(ImFloor(x), pos.y, pos.y + size.y, color, isCoarse ? coarseWidth : 1.0f);
             }
         }
     } else if (modeState.overlay == ScriptingOverlay::Tempo) {
@@ -1650,8 +1635,8 @@ void ScriptTimelineWindow::renderOverlay(const ScriptProject &project, const ImV
                     continue;
                 const double t = offset + static_cast<double>(s) * beatTime;
                 const float x = timeToScreenX(t, viewState.visibleTime, offsetTime, pos, size);
-                drawList->AddLine({x, pos.y}, {x, pos.y + size.y}, isMeasure ? measureColor : subColor,
-                                  isMeasure ? coarseWidth : 1.0f);
+                drawList->AddLineV(ImFloor(x), pos.y, pos.y + size.y, isMeasure ? measureColor : subColor,
+                                   isMeasure ? coarseWidth : 1.0f);
 
                 if (isMeasure) {
                     const int measureIdx = static_cast<int>(std::floor(static_cast<double>(s) / measurePeriod));
